@@ -57,7 +57,10 @@ internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField>
         fields.lastOrNull { it.isEnabled } ?: fields.last()
     }
 
-/** A match is derived from device values, never from the last Apply button press. */
+/**
+ * Whether the device currently has the values of the preset's enabled fields. Several presets can match at once, for
+ * example when they enable different subsets of the same settings, so this alone doesn't say which preset is applied.
+ */
 internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean {
     val enabledFields = soundPresetFields(quickPreset).filter { it.isEnabled }
     return enabledFields.isNotEmpty() && enabledFields.all { field ->
@@ -65,10 +68,34 @@ internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String
     }
 }
 
+internal enum class SoundPresetStatus {
+    /** The preset the user applied last, and the device still has all of its values. */
+    Applied,
+
+    /** The device has the preset's values, but it wasn't the last one applied. */
+    MatchesCurrent,
+    NotApplied,
+}
+
+/**
+ * Only the last preset the user applied can be [SoundPresetStatus.Applied]. It stops being applied as soon as one of
+ * its enabled settings is changed, since then the device no longer has its values.
+ */
+internal fun soundPresetStatus(
+    quickPreset: QuickPreset,
+    settings: Map<String, Setting>,
+    lastAppliedName: String?,
+): SoundPresetStatus = when {
+    !isSoundPresetApplied(quickPreset, settings) -> SoundPresetStatus.NotApplied
+    quickPreset.name == lastAppliedName -> SoundPresetStatus.Applied
+    else -> SoundPresetStatus.MatchesCurrent
+}
+
 @Composable
 fun SoundPresetsPage(
     quickPresets: List<QuickPreset>,
     settings: List<Pair<String, Setting>>,
+    lastAppliedName: String?,
     onActivate: (String) -> Unit,
     onCreate: (String) -> Unit,
     onEdit: (String) -> Unit,
@@ -152,6 +179,7 @@ fun SoundPresetsPage(
                 SoundPresetCard(
                     preset = preset,
                     settings = settingsById,
+                    status = soundPresetStatus(preset, settingsById, lastAppliedName),
                     onActivate = { onActivate(preset.name) },
                     onEdit = { onEdit(preset.name) },
                     onDelete = { deleteName = preset.name },
@@ -171,12 +199,13 @@ fun SoundPresetsPage(
 private fun SoundPresetCard(
     preset: QuickPreset,
     settings: Map<String, Setting>,
+    status: SoundPresetStatus,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val enabledFields = remember(preset) { soundPresetFields(preset).filter { it.isEnabled } }
-    val applied = isSoundPresetApplied(preset, settings)
+    val applied = status == SoundPresetStatus.Applied
     var showMenu by remember { mutableStateOf(false) }
     val menuDescription = stringResource(R.string.sound_preset_more, preset.name)
     Card(
@@ -253,12 +282,15 @@ private fun SoundPresetCard(
                     }
                 }
             }
-            if (applied) {
+            if (status != SoundPresetStatus.NotApplied) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(painterResource(R.drawable.check_circle_24px), contentDescription = null)
+                    // Only the check mark says the preset was applied, since other presets can match the device too
+                    if (applied) {
+                        Icon(painterResource(R.drawable.check_circle_24px), contentDescription = null)
+                    }
                     Text(stringResource(R.string.sound_preset_matches), style = MaterialTheme.typography.labelLarge)
                 }
             }

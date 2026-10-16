@@ -64,6 +64,9 @@ fun OpenSCQ30Root(viewModel: OpenSCQ30RootViewModel = hiltViewModel()) {
                                 showDeviceList = true
                             },
                             setSettingValues = { deviceSettings.setSettingValues(it) },
+                            setSettingValueForResult = { settingId, value ->
+                                deviceSettings.setSettingValueForResult(settingId, value)
+                            },
                             allSettingsFlow = deviceSettings.allSettingsFlow,
                             categoryIdsFlow = deviceSettings.categoryIdsFlow,
                             getSettingsInCategoryFlow = { deviceSettings.getSettingsInCategoryFlow(it) },

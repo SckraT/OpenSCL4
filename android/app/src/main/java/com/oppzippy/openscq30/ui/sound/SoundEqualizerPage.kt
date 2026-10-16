@@ -43,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,9 +100,9 @@ fun SoundEqualizerPage(
     }
     val custom = settingsById[CUSTOM_PROFILE] as? Setting.ModifiableSelectSetting
     var editedBands by remember(equalizer?.setting) { mutableStateOf<Map<Int, Short>>(emptyMap()) }
-    var showNumericEntry by remember { mutableStateOf(false) }
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var deleteProfile by remember { mutableStateOf<String?>(null) }
+    var showNumericEntry by rememberSaveable { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var deleteProfile by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
@@ -457,7 +459,8 @@ private fun NumericEqualizerSheet(
     onDismiss: () -> Unit,
     onApply: (List<Short>) -> Unit,
 ) {
-    var values by remember {
+    // A rotation or other activity recreation shouldn't throw away values that were typed but not applied yet
+    var values by rememberSaveable(stateSaver = listSaver<List<String>, String>(save = { it }, restore = { it })) {
         mutableStateOf(equalizer.value.map { formatEqualizerValue(it, equalizer.setting.fractionDigits) })
     }
     val parsed = values.map { parseEqualizerValue(it, equalizer.setting) }
@@ -548,8 +551,8 @@ private fun NumericEqualizerSheet(
 
 @Composable
 private fun SaveEqualizerDialog(existingNames: List<String>, onDismiss: () -> Unit, onSave: (String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var confirmOverwrite by remember { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var confirmOverwrite by rememberSaveable { mutableStateOf(false) }
     val trimmedName = name.trim()
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -27,10 +27,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,7 @@ import com.oppzippy.openscq30.ui.sound.SoundEqualizerPage
 import com.oppzippy.openscq30.ui.sound.SoundModesPage
 import com.oppzippy.openscq30.ui.sound.SoundOverview
 import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
+import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
 import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
@@ -83,6 +86,7 @@ fun DeviceSettingsScreen(
     onBack: () -> Unit = {},
     connectionStatus: ConnectionStatus,
     setSettingValues: (List<Pair<String, Value>>) -> Unit,
+    setSettingValueForResult: suspend (String, Value) -> Result<Unit>,
     allSettingsFlow: Flow<List<Pair<String, Setting>>>,
     categoryIdsFlow: Flow<List<String>>,
     getSettingsInCategoryFlow: (String) -> Flow<List<Pair<String, Setting>>>,
@@ -140,6 +144,9 @@ fun DeviceSettingsScreen(
     val rootRoute = route in setOf(HOME, PRESETS, APP_SETTINGS)
     var showMenu by remember { mutableStateOf(false) }
     var confirmDisconnect by remember { mutableStateOf(false) }
+    // Which presets match the device is derived from its settings, but several can match at once, so the one the user
+    // applied last is remembered separately. Survives rotation, and starts over for a new connection.
+    var lastAppliedPreset by rememberSaveable(connection.deviceManager) { mutableStateOf<String?>(null) }
 
     fun openCategory(id: String) = navController.navigate("category/${Uri.encode(id)}")
     if (confirmDisconnect) {
@@ -319,7 +326,11 @@ fun DeviceSettingsScreen(
                 SoundPresetsPage(
                     presets,
                     settings,
-                    activateQuickPreset,
+                    lastAppliedPreset,
+                    onActivate = {
+                        lastAppliedPreset = it
+                        activateQuickPreset(it)
+                    },
                     createQuickPreset,
                     onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
                     onDelete = deleteQuickPreset,
@@ -408,7 +419,9 @@ fun DeviceSettingsScreen(
                 if (categorySettings.isEmpty()) {
                     Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
                 } else {
-                    SoundSettingsListPage(categorySettings, setSettingValues)
+                    CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
+                        SoundSettingsListPage(categorySettings, setSettingValues)
+                    }
                 }
             }
             composable("notifications") {

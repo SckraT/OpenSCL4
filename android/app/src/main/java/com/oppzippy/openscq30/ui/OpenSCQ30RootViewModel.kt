@@ -270,6 +270,21 @@ class DeviceSettingsManager(
         }
     }
 
+    /**
+     * Sets a single setting like [setSettingValues], but waits for the device and reports the failure to the caller
+     * instead of only showing a generic toast, so that the UI can show what went wrong next to what the user entered.
+     */
+    suspend fun setSettingValueForResult(settingId: String, value: Value): Result<Unit> = try {
+        device.setSettingValues(listOf(SettingIdValuePair(settingId, value)))
+        Result.success(Unit)
+    } catch (ex: OpenScq30Exception) {
+        Log.e(TAG, "error setting value of $settingId", ex)
+        Result.failure(ex)
+    } catch (ex: IllegalStateException) {
+        Log.w(TAG, "device was closed, not setting value of $settingId", ex)
+        Result.failure(ex)
+    }
+
     val categoryIdsFlow: Flow<List<String>>
         get() = deviceManager.watchForChangeNotification.map {
             try {

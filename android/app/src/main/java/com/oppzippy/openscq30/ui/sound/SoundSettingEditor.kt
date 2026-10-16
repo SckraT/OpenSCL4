@@ -42,7 +42,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,10 +70,17 @@ import com.oppzippy.openscq30.ui.devicesettings.composables.Equalizer
 import com.oppzippy.openscq30.ui.devicesettings.composables.ReadOnlyEqualizer
 import com.oppzippy.openscq30.ui.utils.ModifiableSelect
 import com.oppzippy.openscq30.ui.utils.throttledState
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
+
+/**
+ * Sets a setting and waits for the result, for settings whose editors have to keep what the user entered if setting it
+ * fails, such as importing. Editors fall back to a fire and forget change when nothing provides this.
+ */
+val LocalSettingValueSetter = staticCompositionLocalOf<(suspend (String, Value) -> Result<Unit>)?> { null }
 
 /** Renders the backend capability directly, including options unknown to this UI version. */
 @Composable
@@ -165,8 +175,16 @@ fun SoundSettingEditor(
                 onChange((it.hour * 60 + it.minute).toValue())
             }
 
-            is Setting.ImportStringSetting -> SoundImportSetting(name, setting.confirmationMessage) {
-                onChange(it.toValue())
+            is Setting.ImportStringSetting -> {
+                val setValue = LocalSettingValueSetter.current
+                SoundImportSetting(name, setting.confirmationMessage) { text ->
+                    if (setValue != null) {
+                        setValue(settingId, text.toValue())
+                    } else {
+                        onChange(text.toValue())
+                        Result.success(Unit)
+                    }
+                }
             }
 
             is Setting.ModifiableSelectSetting -> Column(Modifier.padding(20.dp)) {
@@ -251,7 +269,7 @@ private fun SoundSelectSetting(
     optional: Boolean,
     onSelect: (String?) -> Unit,
 ) {
-    var isOpen by remember { mutableStateOf(false) }
+    var isOpen by rememberSaveable { mutableStateOf(false) }
     Surface(onClick = { isOpen = true }, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(20.dp),
@@ -367,7 +385,7 @@ private fun SoundMultiSelectSetting(
     onRemove: ((String) -> Unit)? = null,
     isConnections: Boolean = false,
 ) {
-    var removeOption by remember { mutableStateOf<String?>(null) }
+    var removeOption by rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(name, style = MaterialTheme.typography.titleMedium)
         if (select.options.isEmpty()) {
@@ -475,7 +493,7 @@ private fun SoundInformationSetting(name: String, value: String) {
 
 @Composable
 private fun SoundActionSetting(name: String, onExecute: () -> Unit) {
-    var isConfirming by remember { mutableStateOf(false) }
+    var isConfirming by rememberSaveable { mutableStateOf(false) }
     TextButton(
         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(8.dp),
         onClick = { isConfirming = true },
@@ -524,23 +542,50 @@ private fun SoundTimeSetting(name: String, time: LocalTime, onChange: (LocalTime
 }
 
 @Composable
-private fun SoundImportSetting(name: String, confirmation: String?, onImport: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
-    var confirming by remember { mutableStateOf(false) }
+private fun SoundImportSetting(name: String, confirmation: String?, onImport: suspend (String) -> Result<Unit>) {
+    // The text is only cleared once the import succeeded, so a failed import can be fixed instead of retyped. It also
+    // has to survive the activity being recreated, since it is usually pasted in from somewhere else.
+    var text by rememberSaveable { mutableStateOf("") }
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    var importError by rememberSaveable { mutableStateOf<String?>(null) }
+    var importing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    fun import() {
+        if (importing) return
+        importing = true
+        importError = null
+        scope.launch {
+            onImport(text)
+                .onSuccess { text = "" }
+                .onFailure { importError = it.message ?: it.toString() }
+            importing = false
+        }
+    }
+
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(value = text, onValueChange = {
-            text = it
-        }, label = { Text(name) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = text,
+            onValueChange = {
+                text = it
+                importError = null
+            },
+            label = { Text(name) },
+            isError = importError != null,
+            supportingText = importError?.let { message ->
+                { Text(stringResource(R.string.sound_import_failed, message)) }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
         Button(
             onClick = {
                 if (confirmation == null) {
-                    onImport(text)
-                    text = ""
+                    import()
                 } else {
                     confirming = true
                 }
             },
-            enabled = text.isNotBlank(),
+            enabled = text.isNotBlank() && !importing,
         ) { Text(stringResource(R.string.import_)) }
     }
     if (confirming) {
@@ -550,9 +595,8 @@ private fun SoundImportSetting(name: String, confirmation: String?, onImport: (S
             text = { Text(confirmation.orEmpty()) },
             confirmButton = {
                 TextButton(onClick = {
-                    onImport(text)
-                    text = ""
                     confirming = false
+                    import()
                 }) {
                     Text(stringResource(R.string.confirm))
                 }

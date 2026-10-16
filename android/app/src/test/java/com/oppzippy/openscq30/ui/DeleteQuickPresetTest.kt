@@ -12,6 +12,7 @@ import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
@@ -33,6 +34,7 @@ class DeleteQuickPresetTest {
 
         every { device.model() } returns MODEL
         coEvery { quickPresetsHandler.quickPresets(any()) } returns emptyList()
+        justRun { quickPresetsHandler.close() }
 
         val session = mockk<OpenScq30Session>()
         every { session.quickPresetHandler() } returns quickPresetsHandler

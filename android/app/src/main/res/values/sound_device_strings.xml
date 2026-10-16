@@ -25,4 +25,5 @@
     <string name="sound_device_spatial_headline">Inside the sound.</string>
     <string name="sound_device_spatial_description">A wider soundstage for your favourite content.</string>
     <string name="sound_device_spatial_note">On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here.</string>
+    <string name="sound_import_failed">Import failed: %1$s</string>
 </resources>

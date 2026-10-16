@@ -25,4 +25,5 @@
     <string name="sound_device_spatial_headline">Внутри звука.</string>
     <string name="sound_device_spatial_description">Более широкая звуковая сцена для любимого контента.</string>
     <string name="sound_device_spatial_note">На Liberty 4 Pro настройка эквалайзера отключит пространственный звук. Выбранный режим можно включить снова здесь.</string>
+    <string name="sound_import_failed">Не удалось импортировать: %1$s</string>
 </resources>

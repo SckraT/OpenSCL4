@@ -108,4 +108,43 @@ class SoundPresetsTest {
         assertEquals(listOf(last), soundPresetFields(preset))
         assertFalse(isSoundPresetApplied(preset, mapOf("spatialAudio" to Setting.ToggleSetting(false))))
     }
+
+    // Two presets that enable different settings can both match the device at the same time
+    private val anc = QuickPreset("ANC", listOf(QuickPresetField("wear", true.toValue(), true)))
+    private val equalizer = QuickPreset("Equalizer", listOf(QuickPresetField("safeVolume", false.toValue(), true)))
+    private val deviceMatchingBoth = mapOf(
+        "wear" to Setting.ToggleSetting(true),
+        "safeVolume" to Setting.ToggleSetting(false),
+    )
+
+    @Test
+    fun onlyTheLastAppliedPresetIsAppliedWhenSeveralMatch() {
+        assertEquals(SoundPresetStatus.Applied, soundPresetStatus(anc, deviceMatchingBoth, "ANC"))
+        assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(equalizer, deviceMatchingBoth, "ANC"))
+    }
+
+    @Test
+    fun matchingPresetIsNotAppliedWhenNothingWasApplied() {
+        assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(anc, deviceMatchingBoth, null))
+        assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(equalizer, deviceMatchingBoth, null))
+    }
+
+    @Test
+    fun lastAppliedPresetStopsBeingAppliedWhenOneOfItsSettingsChanges() {
+        val changed = deviceMatchingBoth + ("wear" to Setting.ToggleSetting(false))
+        assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(anc, changed, "ANC"))
+        assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(equalizer, changed, "ANC"))
+    }
+
+    @Test
+    fun changingASettingThePresetDoesNotUseKeepsItApplied() {
+        val changed = deviceMatchingBoth + ("safeVolume" to Setting.ToggleSetting(true))
+        assertEquals(SoundPresetStatus.Applied, soundPresetStatus(anc, changed, "ANC"))
+    }
+
+    @Test
+    fun presetWithoutEnabledFieldsIsNeverApplied() {
+        val empty = QuickPreset("Empty", listOf(QuickPresetField("wear", true.toValue(), false)))
+        assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(empty, deviceMatchingBoth, "Empty"))
+    }
 }
