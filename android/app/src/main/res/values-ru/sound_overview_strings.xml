@@ -33,4 +33,5 @@
     <string name="sound_overview_one_earbud_title">Подключён только один наушник</string>
     <string name="sound_overview_one_earbud_message">Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника.</string>
     <string name="sound_overview_needs_both_earbuds">Доступен, когда подключены оба наушника</string>
+    <string name="sound_overview_one_earbud_presets">Эквалайзер из пресетов применится, когда подключатся оба наушника.</string>
 </resources>

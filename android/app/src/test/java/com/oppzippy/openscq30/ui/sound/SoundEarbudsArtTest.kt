@@ -39,4 +39,11 @@ class SoundEarbudsArtTest {
     fun devicesWithoutTwsStatusAreNotTreatedAsOneEarbud() {
         assertFalse(isOnlyOneEarbudConnected(emptyMap()))
     }
+
+    @Test
+    fun onlyTheEqualizerCategoryNeedsBothEarbuds() {
+        assertTrue(categoryNeedsBothEarbuds("equalizer"))
+        assertFalse(categoryNeedsBothEarbuds("equalizerImportExport"))
+        assertFalse(categoryNeedsBothEarbuds("soundModes"))
+    }
 }

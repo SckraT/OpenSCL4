@@ -147,4 +147,19 @@ class SoundPresetsTest {
         val empty = QuickPreset("Empty", listOf(QuickPresetField("wear", true.toValue(), false)))
         assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(empty, deviceMatchingBoth, "Empty"))
     }
+
+    @Test
+    fun presetsWithAnEnabledEqualizerFieldNeedBothEarbuds() {
+        val equalizerPreset = QuickPreset(
+            "Bass",
+            listOf(QuickPresetField("presetEqualizerProfile", "BassBooster".toValue(), true)),
+        )
+        val disabledEqualizer = QuickPreset(
+            "Off",
+            listOf(QuickPresetField("volumeAdjustments", "x".toValue(), false)),
+        )
+        assertTrue(presetsUseBothEarbudSettings(listOf(anc, equalizerPreset)))
+        assertFalse(presetsUseBothEarbudSettings(listOf(anc, disabledEqualizer)))
+        assertFalse(presetsUseBothEarbudSettings(emptyList()))
+    }
 }

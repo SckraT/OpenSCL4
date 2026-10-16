@@ -328,13 +328,22 @@ internal fun batteryProgress(raw: String): Float? {
 internal fun isOnlyOneEarbudConnected(values: Map<String, Setting>): Boolean =
     (values["twsStatus"] as? Setting.InformationSetting)?.value == "Disconnected"
 
+/** Settings the device only exposes while both earbuds are connected. */
+internal val BOTH_EARBUDS_SETTING_IDS = setOf("presetEqualizerProfile", "customEqualizerProfile", "volumeAdjustments")
+
+/** Whether a settings category is empty while only one earbud is connected because all of it needs both earbuds. */
+internal fun categoryNeedsBothEarbuds(categoryId: String): Boolean = categoryId == "equalizer"
+
 @Composable
-private fun SoundOneEarbudNotice() {
+internal fun SoundOneEarbudNotice(
+    modifier: Modifier = Modifier,
+    message: String = stringResource(R.string.sound_overview_one_earbud_message),
+) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             Modifier.padding(16.dp),
@@ -347,10 +356,7 @@ private fun SoundOneEarbudNotice() {
                     stringResource(R.string.sound_overview_one_earbud_title),
                     style = MaterialTheme.typography.titleSmall,
                 )
-                Text(
-                    stringResource(R.string.sound_overview_one_earbud_message),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Text(message, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

@@ -68,6 +68,11 @@ internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String
     }
 }
 
+/** Whether any preset would change settings that are only available while both earbuds are connected. */
+internal fun presetsUseBothEarbudSettings(quickPresets: List<QuickPreset>): Boolean = quickPresets.any { preset ->
+    soundPresetFields(preset).any { it.isEnabled && it.settingId in BOTH_EARBUDS_SETTING_IDS }
+}
+
 internal enum class SoundPresetStatus {
     /** The preset the user applied last, and the device still has all of its values. */
     Applied,
@@ -100,6 +105,7 @@ fun SoundPresetsPage(
     onCreate: (String) -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
+    notice: (@Composable () -> Unit)? = null,
 ) {
     val settingsById = remember(settings) { settings.toMap() }
     var showCreate by rememberSaveable { mutableStateOf(false) }
@@ -151,6 +157,9 @@ fun SoundPresetsPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        if (notice != null) {
+            item { notice() }
         }
         if (quickPresets.isEmpty()) {
             item {

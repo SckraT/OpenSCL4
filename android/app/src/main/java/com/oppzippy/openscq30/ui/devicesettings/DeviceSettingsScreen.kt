@@ -58,6 +58,8 @@ import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
 import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
+import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
+import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.SoundCapabilities
 import com.oppzippy.openscq30.ui.sound.SoundCasePage
 import com.oppzippy.openscq30.ui.sound.SoundComfortPage
@@ -69,10 +71,13 @@ import com.oppzippy.openscq30.ui.sound.SoundEqualizerPage
 import com.oppzippy.openscq30.ui.sound.SoundModesPage
 import com.oppzippy.openscq30.ui.sound.SoundOverview
 import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
-import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
+import com.oppzippy.openscq30.ui.sound.SoundOneEarbudNotice
 import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
 import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
+import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
+import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
+import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
@@ -112,6 +117,7 @@ fun DeviceSettingsScreen(
     }
     val loadedSettings by remember(connection.deviceManager) { allSettingsFlow }.collectAsState(initial = null)
     val settings = loadedSettings.orEmpty()
+    val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
     val categories by remember(connection.deviceManager) { categoryIdsFlow }.collectAsState(emptyList())
     val byCategory by remember(categories, connection.deviceManager) {
         if (categories.isEmpty()) {
@@ -314,9 +320,14 @@ fun DeviceSettingsScreen(
             }
             composable("sound") { SoundModesPage(modeSettings, setSettingValues) }
             composable("equalizer") {
-                SoundEqualizerPage(settings, setSettingValues, onImportExport = {
-                    openCategory("equalizerImportExport")
-                })
+                // the earbuds can disconnect from each other while this page is open
+                if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                    SoundOneEarbudNotice(Modifier.padding(20.dp))
+                } else {
+                    SoundEqualizerPage(settings, setSettingValues, onImportExport = {
+                        openCategory("equalizerImportExport")
+                    })
+                }
             }
             composable("controls") { SoundControlsPage(controlSettings, setSettingValues) }
             composable("comfort") { SoundComfortPage(comfortSettings, setSettingValues) }
@@ -335,6 +346,11 @@ fun DeviceSettingsScreen(
                     createQuickPreset,
                     onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
                     onDelete = deleteQuickPreset,
+                    notice = if (oneEarbudOnly && presetsUseBothEarbudSettings(presets)) {
+                        { SoundOneEarbudNotice(message = stringResource(R.string.sound_overview_one_earbud_presets)) }
+                    } else {
+                        null
+                    },
                 )
             }
             composable(
@@ -373,16 +389,20 @@ fun DeviceSettingsScreen(
                         stringResource(R.string.sound_overview_all_settings),
                         style = MaterialTheme.typography.headlineMedium,
                     )
+                    if (oneEarbudOnly) SoundOneEarbudNotice()
                     categories.forEach { id ->
+                        val unavailable = oneEarbudOnly && categoryNeedsBothEarbuds(id) &&
+                            byCategory[id].isNullOrEmpty()
                         SoundDashboardLink(
                             translateCategoryId(
                                 id,
                             ),
-                            null,
+                            if (unavailable) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
                             Screen.SettingsCategory(id).screenInfo().icon,
                             onClick = {
                                 openCategory(id)
                             },
+                            enabled = !unavailable,
                         )
                     }
                     SoundDashboardLink(
@@ -417,7 +437,9 @@ fun DeviceSettingsScreen(
             ) { current ->
                 val id = current.arguments?.getString("id").orEmpty()
                 val categorySettings = byCategory[id].orEmpty()
-                if (categorySettings.isEmpty()) {
+                if (categorySettings.isEmpty() && oneEarbudOnly && categoryNeedsBothEarbuds(id)) {
+                    SoundOneEarbudNotice(Modifier.padding(20.dp))
+                } else if (categorySettings.isEmpty()) {
                     Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
                 } else {
                     CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
