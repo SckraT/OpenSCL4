@@ -377,6 +377,48 @@ mod tests {
         device.assert_setting_values(vec![(SettingId::SpatialAudio, false.into())]);
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn equalizer_becomes_available_when_the_other_earbud_connects() {
+        // connected with only one earbud: host device 1, tws not connected
+        let mut state = vec![
+            1, 0, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53, 52, 68, 69, 55, 55,
+            53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9, 0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA,
+            254, 254, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 0, 1, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139,
+            141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133, 114, 60,
+            60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10, 0x66, 0x66, 0x32, 0x33, 0xFF,
+            0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1, 255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0,
+            1, 95, 0, 0, 1, 0, 0, 0, 0, 110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+        ];
+        let device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(packet::Command([1, 1]), state),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        assert!(
+            device.inner().setting(&SettingId::VolumeAdjustments).is_none(),
+            "the equalizer is hidden while only one earbud is connected"
+        );
+        let mut changes = device.inner().watch_for_changes();
+        changes.mark_unchanged();
+
+        // the other earbud connects
+        device
+            .receive(packet::Inbound::new(packet::Command([1, 2]), vec![1, 1]))
+            .await;
+
+        assert!(changes.has_changed().unwrap(), "listeners must be told to re-read settings");
+        assert!(
+            device.inner().setting(&SettingId::VolumeAdjustments).is_some(),
+            "the equalizer should be available once both earbuds are connected"
+        );
+    }
+
     async fn connect_demo_device() -> Arc<dyn OpenSCQ30Device + Send + Sync> {
         let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
         let model = DeviceModel::SoundcoreA3954;
