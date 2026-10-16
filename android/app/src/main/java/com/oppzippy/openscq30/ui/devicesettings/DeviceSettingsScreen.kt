@@ -295,6 +295,7 @@ fun DeviceSettingsScreen(
                         hasComfort = comfortSettings.isNotEmpty(),
                         hasConnections = connectionSettings.isNotEmpty(),
                         hasCase = caseSettings.isNotEmpty(),
+                        hasEqualizerCategory = "equalizer" in categories,
                         onSound = {
                             navController.navigate("sound")
                         }, onEqualizer = { navController.navigate("equalizer") },

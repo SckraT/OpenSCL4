@@ -30,4 +30,7 @@
     <string name="sound_overview_preset_missing">Этот пресет больше недоступен.</string>
     <string name="sound_overview_notifications">Управление из уведомления</string>
     <string name="sound_overview_legacy">Устаревшие профили эквалайзера</string>
+    <string name="sound_overview_one_earbud_title">Подключён только один наушник</string>
+    <string name="sound_overview_one_earbud_message">Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника.</string>
+    <string name="sound_overview_needs_both_earbuds">Доступен, когда подключены оба наушника</string>
 </resources>

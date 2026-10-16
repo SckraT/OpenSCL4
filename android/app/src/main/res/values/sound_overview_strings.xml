@@ -30,4 +30,7 @@
     <string name="sound_overview_preset_missing">This preset is no longer available.</string>
     <string name="sound_overview_notifications">Notification controls</string>
     <string name="sound_overview_legacy">Legacy equalizer profiles</string>
+    <string name="sound_overview_one_earbud_title">Only one earbud is connected</string>
+    <string name="sound_overview_one_earbud_message">The equalizer and some other settings become available when both earbuds are connected.</string>
+    <string name="sound_overview_needs_both_earbuds">Available when both earbuds are connected</string>
 </resources>

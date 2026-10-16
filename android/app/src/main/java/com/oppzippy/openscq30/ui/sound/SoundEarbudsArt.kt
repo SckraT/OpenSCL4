@@ -10,20 +10,25 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.EarbudsColor
+import com.oppzippy.openscq30.features.preferences.preferredEarbudsColor
 
-/** Light themes show the silver Liberty 4 Pro and dark themes the black one, so it stands out from the card. */
+/**
+ * The earbuds chosen in the settings, or, when following the theme, the silver Liberty 4 Pro in light themes and the
+ * black one in dark themes, so it stands out from the card.
+ */
 @DrawableRes
-internal fun earbudsArtImage(scheme: ColorScheme): Int = if (scheme.surface.luminance() >= 0.5f) {
-    R.drawable.sound_liberty_4_pro_silver
-} else {
-    R.drawable.sound_liberty_4_pro_black
-}
+internal fun earbudsArtImage(scheme: ColorScheme, color: EarbudsColor? = null): Int =
+    when (color ?: if (scheme.surface.luminance() >= 0.5f) EarbudsColor.Silver else EarbudsColor.Black) {
+        EarbudsColor.Silver -> R.drawable.sound_liberty_4_pro_silver
+        EarbudsColor.Black -> R.drawable.sound_liberty_4_pro_black
+    }
 
 /** Decorative Liberty 4 Pro earbuds for the device overview. */
 @Composable
-fun SoundEarbudsArt(modifier: Modifier = Modifier) {
+fun SoundEarbudsArt(modifier: Modifier = Modifier, color: EarbudsColor? = preferredEarbudsColor()) {
     Image(
-        painterResource(earbudsArtImage(MaterialTheme.colorScheme)),
+        painterResource(earbudsArtImage(MaterialTheme.colorScheme, color)),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier,

@@ -23,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -48,6 +49,7 @@ fun SoundOverview(
     hasComfort: Boolean,
     hasConnections: Boolean,
     hasCase: Boolean,
+    hasEqualizerCategory: Boolean = false,
     onSound: () -> Unit,
     onEqualizer: () -> Unit,
     onControls: () -> Unit,
@@ -149,6 +151,10 @@ fun SoundOverview(
                 }
             }
         }
+        val oneEarbudOnly = isOnlyOneEarbudConnected(values)
+        if (oneEarbudOnly) {
+            SoundOneEarbudNotice()
+        }
         val ambient = values["ambientSoundMode"] as? Setting.SelectSetting
         if (hasSound) {
             SoundSectionHeading(stringResource(R.string.sound_overview_sound_mode), onClick = onSound)
@@ -219,6 +225,17 @@ fun SoundOverview(
                 profileName ?: stringResource(R.string.custom),
                 R.drawable.equalizer_24px,
                 onEqualizer,
+            )
+        } else if (hasEqualizerCategory && oneEarbudOnly) {
+            // The equalizer can't be read or changed until both earbuds are connected. Keep it in place with the
+            // reason instead of letting it disappear.
+            SoundSectionHeading(stringResource(R.string.sound_overview_your_sound))
+            SoundDashboardLink(
+                stringResource(R.string.equalizer),
+                stringResource(R.string.sound_overview_needs_both_earbuds),
+                R.drawable.equalizer_24px,
+                onClick = {},
+                enabled = false,
             )
         }
         if (hasControls || hasComfort) {
@@ -304,6 +321,41 @@ internal fun batteryProgress(raw: String): Float? {
     }
 }
 
+/**
+ * The earbuds report whether they are connected to each other. With one of them in the case, settings that need both,
+ * such as the equalizer, are not available.
+ */
+internal fun isOnlyOneEarbudConnected(values: Map<String, Setting>): Boolean =
+    (values["twsStatus"] as? Setting.InformationSetting)?.value == "Disconnected"
+
+@Composable
+private fun SoundOneEarbudNotice() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(painterResource(R.drawable.earbuds_2_24px), contentDescription = null)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.sound_overview_one_earbud_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(R.string.sound_overview_one_earbud_message),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
 @DrawableRes
 internal fun soundModeIcon(option: String): Int = when (option) {
     "NoiseCanceling" -> R.drawable.sound_noise
@@ -332,15 +384,17 @@ fun SoundDashboardLink(
     @DrawableRes icon: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
-            Modifier.padding(18.dp).heightIn(min = 48.dp),
+            Modifier.padding(18.dp).heightIn(min = 48.dp).alpha(if (enabled) 1f else 0.6f),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -364,12 +418,14 @@ fun SoundDashboardLink(
                     )
                 }
             }
-            Icon(
-                painterResource(R.drawable.sound_chevron),
-                null,
-                Modifier.size(19.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (enabled) {
+                Icon(
+                    painterResource(R.drawable.sound_chevron),
+                    null,
+                    Modifier.size(19.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

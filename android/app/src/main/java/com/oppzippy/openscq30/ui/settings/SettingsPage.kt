@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.ui.theme.ThemeType
 import com.oppzippy.openscq30.widget.SettingWidgetReceiver
 
@@ -97,6 +98,7 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
     val autoConnect by viewModel.autoConnect.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
+    val earbudsColor by viewModel.earbudsColor.collectAsState()
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var showWidgetHelp by remember { mutableStateOf(false) }
@@ -156,6 +158,7 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SettingsSectionTitle(stringResource(R.string.appearance))
                 ThemeSelection(theme = theme, onThemeChange = viewModel::setTheme)
+                EarbudsColorSelection(color = earbudsColor, onColorChange = viewModel::setEarbudsColor)
                 SettingsGroup {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingsToggle(
@@ -267,24 +270,53 @@ private fun SettingsSectionTitle(text: String) {
 
 @Composable
 private fun ThemeSelection(theme: ThemeType?, onThemeChange: (ThemeType?) -> Unit) {
-    val themes = listOf(
-        null to stringResource(R.string.system_theme),
-        ThemeType.Light to stringResource(R.string.light),
-        ThemeType.Dark to stringResource(R.string.dark),
+    SegmentedSelection(
+        options = listOf(
+            null to stringResource(R.string.system_theme),
+            ThemeType.Light to stringResource(R.string.light),
+            ThemeType.Dark to stringResource(R.string.dark),
+        ),
+        selected = theme,
+        onSelect = onThemeChange,
     )
+}
+
+@Composable
+private fun EarbudsColorSelection(color: EarbudsColor?, onColorChange: (EarbudsColor?) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.sound_earbuds_color),
+            modifier = Modifier.padding(start = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SegmentedSelection(
+            options = listOf(
+                null to stringResource(R.string.sound_earbuds_color_theme),
+                EarbudsColor.Silver to stringResource(R.string.sound_earbuds_color_silver),
+                EarbudsColor.Black to stringResource(R.string.sound_earbuds_color_black),
+            ),
+            selected = color,
+            onSelect = onColorChange,
+        )
+    }
+}
+
+@Composable
+private fun <T> SegmentedSelection(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp).selectableGroup(),
     ) {
-        themes.forEach { (value, label) ->
+        options.forEach { (value, label) ->
             Surface(
                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).selectable(
-                    selected = theme == value,
+                    selected = selected == value,
                     role = Role.RadioButton,
-                    onClick = { onThemeChange(value) },
+                    onClick = { onSelect(value) },
                 ),
                 shape = RoundedCornerShape(20.dp),
-                color = if (theme ==
+                color = if (selected ==
                     value
                 ) {
                     MaterialTheme.colorScheme.surfaceContainerLowest

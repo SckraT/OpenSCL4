@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import com.oppzippy.openscq30.features.autoconnect.AutoConnectService
+import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.ui.theme.ThemeType
 import com.oppzippy.openscq30.ui.utils.ToastHandler
@@ -29,6 +30,7 @@ class SettingsViewModel @Inject constructor(
     val autoConnect = preferences.autoConnectFlow
     val theme = preferences.themeFlow
     val dynamicColorEnabled = preferences.dynamicColorFlow
+    val earbudsColor = preferences.earbudsColorFlow
 
     fun setAutoConnect(value: Boolean) {
         preferences.autoConnect = value
@@ -46,6 +48,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setDynamicColor(enabled: Boolean) {
         preferences.dynamicColor = enabled
+    }
+
+    fun setEarbudsColor(color: EarbudsColor?) {
+        preferences.earbudsColor = color
     }
 
     fun copyLogs() {

@@ -25,6 +25,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         private const val PREFERENCE_AUTO_CONNECT = "autoConnect"
         private const val PREFERENCE_THEME = "theme"
         private const val PREFERENCE_DYNAMIC_COLOR = "dynamicColor"
+        private const val PREFERENCE_EARBUDS_COLOR = "earbudsColor"
     }
 
     private val preferences = context.getSharedPreferences("preferences", Context.MODE_PRIVATE)
@@ -59,10 +60,34 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         set = { preferences.edit { putBoolean(PREFERENCE_DYNAMIC_COLOR, it) } },
     )
 
+    // null follows the theme: silver earbuds in light themes, black ones in dark themes
+    private val earbudsColorPreference = Preference(
+        get = {
+            preferences.getString(PREFERENCE_EARBUDS_COLOR, null)?.let { name ->
+                try {
+                    EarbudsColor.valueOf(name)
+                } catch (ex: IllegalArgumentException) {
+                    Log.e(TAG, "error parsing earbuds color: $name", ex)
+                    null
+                }
+            }
+        },
+        set = {
+            preferences.edit {
+                if (it != null) {
+                    putString(PREFERENCE_EARBUDS_COLOR, it.name)
+                } else {
+                    remove(PREFERENCE_EARBUDS_COLOR)
+                }
+            }
+        },
+    )
+
     private val preferenceKeysToPreferences = mapOf(
         PREFERENCE_AUTO_CONNECT to autoConnectPreference,
         PREFERENCE_THEME to themePreference,
         PREFERENCE_DYNAMIC_COLOR to dynamicColorPreference,
+        PREFERENCE_EARBUDS_COLOR to earbudsColorPreference,
     )
 
     // Marked as -keepclassmembers in proguard-rules so that it doesn't get optimized out. This would lead to it getting
@@ -114,6 +139,17 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
     var dynamicColor: Boolean
         get() = dynamicColorPreference.flow.value
         set(theme) = dynamicColorPreference.set(theme)
+
+    val earbudsColorFlow = earbudsColorPreference.flow
+    var earbudsColor: EarbudsColor?
+        get() = earbudsColorPreference.flow.value
+        set(color) = earbudsColorPreference.set(color)
+}
+
+/** Which earbuds the device overview shows, independently of the theme. */
+enum class EarbudsColor {
+    Silver,
+    Black,
 }
 
 private data class Preference<T>(val get: () -> T, val set: (T) -> Unit) {
@@ -138,3 +174,13 @@ fun prefersDarkTheme(themeViewModel: ThemeViewModel = hiltViewModel()): Boolean 
 @Composable
 fun prefersDynamicColor(themeViewModel: ThemeViewModel = hiltViewModel()): Boolean =
     themeViewModel.dynamicColorFlow.collectAsState().value
+
+@HiltViewModel
+class EarbudsColorViewModel @Inject constructor(preferences: Preferences) : ViewModel() {
+    val earbudsColorFlow = preferences.earbudsColorFlow
+}
+
+/** The earbuds color chosen in the settings, or null to follow the theme. */
+@Composable
+fun preferredEarbudsColor(viewModel: EarbudsColorViewModel = hiltViewModel()): EarbudsColor? =
+    viewModel.earbudsColorFlow.collectAsState().value
