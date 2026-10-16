@@ -5,10 +5,6 @@ package com.oppzippy.openscq30.ui.deviceselection
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.LocalActivity
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +34,7 @@ import kotlinx.serialization.Serializable
 fun DeviceSelectionScreen(
     onDeviceSelected: (device: PairedDevice) -> Unit,
     viewModel: DeviceSelectionViewModel = hiltViewModel(),
+    onDeviceUnpaired: (PairedDevice) -> Unit = {},
 ) {
     val bluetoothPermission = if (Build.VERSION.SDK_INT >= 31) {
         Manifest.permission.BLUETOOTH_CONNECT
@@ -55,18 +52,7 @@ fun DeviceSelectionScreen(
         NavHost(
             navController = navController,
             startDestination = Screen.Connect,
-            enterTransition = {
-                slideInHorizontally { width -> width / 2 } + fadeIn()
-            },
-            exitTransition = {
-                slideOutHorizontally { width -> -width / 2 } + fadeOut()
-            },
-            popEnterTransition = {
-                slideInHorizontally { width -> -width / 2 } + fadeIn()
-            },
-            popExitTransition = {
-                slideOutHorizontally { width -> width / 2 } + fadeOut()
-            },
+
         ) {
             composable<Screen.Connect> {
                 val activity = LocalActivity.current!!
@@ -74,7 +60,9 @@ fun DeviceSelectionScreen(
                 DeviceListingScreen(
                     devices = viewModel.pairedDevices.collectAsState().value,
                     onDeviceClick = { onDeviceSelected(it) },
-                    onUnpair = { viewModel.unpair(activity, it) },
+                    onUnpair = { device ->
+                        viewModel.unpair(activity, device, onUnpaired = { onDeviceUnpaired(device) })
+                    },
                     onAddDeviceClick = { navController.navigate(Screen.SelectModelForPairing) },
                     onRefreshClick = { viewModel.refreshPairedDevices() },
                     onSettingsClick = { navController.navigate(Screen.Settings) },

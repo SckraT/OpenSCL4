@@ -55,7 +55,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         },
     )
     private val dynamicColorPreference = Preference(
-        get = { preferences.getBoolean(PREFERENCE_DYNAMIC_COLOR, true) },
+        get = { preferences.getBoolean(PREFERENCE_DYNAMIC_COLOR, false) },
         set = { preferences.edit { putBoolean(PREFERENCE_DYNAMIC_COLOR, it) } },
     )
 

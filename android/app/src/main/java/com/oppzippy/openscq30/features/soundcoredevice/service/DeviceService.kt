@@ -37,9 +37,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -89,15 +88,33 @@ class DeviceService : LifecycleService() {
     @Inject
     lateinit var featuredSettingSlotDao: FeaturedSettingSlotDao
 
-    val connectionStatusFlow: MutableStateFlow<ConnectionStatus> =
-        MutableStateFlow(ConnectionStatus.AwaitingConnection)
+    private val connectionController = DeviceConnectionController(
+        scope = lifecycleScope,
+        connectDevice = { macAddress ->
+            val device = session.connectWithBackends(
+                connectionBackends(applicationContext, lifecycleScope),
+                macAddress,
+            )
+            try {
+                DeviceConnectionManager(device)
+            } catch (ex: Exception) {
+                device.close()
+                throw ex
+            }
+        },
+        onConnectionFailure = { ex ->
+            Log.w(TAG, "error connecting to device", ex)
+            Toast.makeText(applicationContext, R.string.error_connecting, Toast.LENGTH_SHORT).show()
+        },
+    )
+    val connectionStatusFlow: MutableStateFlow<ConnectionStatus> = connectionController.connectionStatusFlow
 
     private var quickPresetNames = connectionStatusFlow.flatMapLatest { connectionStatus ->
         if (connectionStatus is ConnectionStatus.Connected) {
             val device = connectionStatus.deviceManager.device
             quickPresetSlotDao.allNames(device.model())
         } else {
-            emptyFlow()
+            flowOf(emptyList())
         }
     }.stateIn(lifecycleScope, SharingStarted.Lazily, emptyList())
     private var featuredSettingIds = connectionStatusFlow.flatMapLatest { connectionStatus ->
@@ -105,7 +122,7 @@ class DeviceService : LifecycleService() {
             val device = connectionStatus.deviceManager.device
             featuredSettingSlotDao.allSettingIds(device.model())
         } else {
-            emptyFlow()
+            flowOf(emptyList())
         }
     }.stateIn(lifecycleScope, SharingStarted.Lazily, emptyList())
 
@@ -114,6 +131,7 @@ class DeviceService : LifecycleService() {
             when (intent?.action) {
                 ACTION_DISCONNECT -> {
                     Log.i(TAG, "got disconnect request, initiating stop service")
+                    connectionController.close()
                     stopSelf()
                 }
 
@@ -190,7 +208,7 @@ class DeviceService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        _isRunning.value = true
+        createNotificationChannel()
 
         lifecycleScope.launch { quickPresetNames.collectLatest { sendNotification() } }
         lifecycleScope.launch { featuredSettingIds.collectLatest { sendNotification() } }
@@ -202,34 +220,6 @@ class DeviceService : LifecycleService() {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
-        createNotificationChannel()
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-
-        val notification = buildNotification()
-        startForeground(NOTIFICATION_ID, notification)
-
-        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
-            lifecycleScope.launch {
-                try {
-                    val device = session.connectWithBackends(
-                        connectionBackends(applicationContext, lifecycleScope),
-                        macAddress,
-                    )
-                    connectionStatusFlow.value = ConnectionStatus.Connected(DeviceConnectionManager(device))
-                } catch (ex: OpenScq30Exception) {
-                    Log.w(TAG, "error connecting to device", ex)
-                    Toast.makeText(applicationContext, R.string.error_connecting, Toast.LENGTH_SHORT).show()
-                    connectionStatusFlow.value = ConnectionStatus.Disconnected
-                }
-            }
-            connectionStatusFlow.compareAndSet(
-                ConnectionStatus.AwaitingConnection,
-                ConnectionStatus.Connecting(macAddress),
-            )
-        }
         // when we are connected to a device that becomes disconnected, update our connection status to disconnected
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest { connectionStatus ->
@@ -239,15 +229,19 @@ class DeviceService : LifecycleService() {
                             com.oppzippy.openscq30.lib.bindings.ConnectionStatus.Disconnected
                         ) {
                             Log.d(TAG, "device disconnected")
-                            connectionStatusFlow.value = ConnectionStatus.Disconnected
+                            if (connectionStatusFlow.value === connectionStatus) connectionController.close()
                         }
                     }
                 }
             }
         }
         lifecycleScope.launch {
-            connectionStatusFlow.first { it == ConnectionStatus.Disconnected }
-            stopSelf()
+            connectionStatusFlow.collectLatest {
+                if (it == ConnectionStatus.Disconnected) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            }
         }
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest {
@@ -270,6 +264,20 @@ class DeviceService : LifecycleService() {
             }
         }
 
+        _isRunning.value = true
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+
+        val notification = buildNotification()
+        startForeground(NOTIFICATION_ID, notification)
+
+        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
+            connectionController.connect(macAddress)
+            sendNotification()
+        }
+
         return START_REDELIVER_INTENT
     }
 
@@ -278,12 +286,7 @@ class DeviceService : LifecycleService() {
         Log.i(TAG, "stopping service")
         unregisterReceiver(broadcastReceiver)
         cancelNotification()
-        connectionStatusFlow.value.let {
-            if (it is ConnectionStatus.Connected) {
-                connectionStatusFlow.value = ConnectionStatus.Disconnected
-                it.deviceManager.close()
-            }
-        }
+        connectionController.close()
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)
         }
@@ -304,6 +307,8 @@ class DeviceService : LifecycleService() {
     }
 
     private fun sendNotification() {
+        // Slot collectors may still emit while a stopped service has bound clients.
+        if (connectionStatusFlow.value == ConnectionStatus.Disconnected) return
         val notificationManager =
             getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, buildNotification())

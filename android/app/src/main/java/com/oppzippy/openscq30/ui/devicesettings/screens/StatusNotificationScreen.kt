@@ -5,7 +5,11 @@ import android.content.Intent
 import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -70,7 +74,7 @@ private fun StatusNotificationInner(
     quickPresetSlots: List<String?>,
     onQuickPresetSlotChange: (Int, String?) -> Unit,
 ) {
-    Column {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp)) {
         featuredSettingSlots.forEachIndexed { index, settingId ->
             OptionalSelect(
                 name = stringResource(R.string.featured_setting_x, index + 1),

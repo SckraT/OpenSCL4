@@ -1,0 +1,33 @@
+<resources>
+    <string name="sound_overview_your_device">ВАШЕ УСТРОЙСТВО</string>
+    <string name="sound_overview_device">Устройство</string>
+    <string name="sound_overview_devices">Мои устройства</string>
+    <string name="sound_overview_left">Левый</string>
+    <string name="sound_overview_right">Правый</string>
+    <string name="sound_overview_case">Кейс</string>
+    <string name="sound_overview_battery">Заряд</string>
+    <string name="sound_overview_sound_mode">Режим звука</string>
+    <string name="sound_overview_customize">Настроить</string>
+    <string name="sound_overview_your_sound">Ваше звучание</string>
+    <string name="sound_overview_controls">Управление</string>
+    <string name="sound_overview_comfort">Комфорт</string>
+    <string name="sound_overview_connections">Подключения</string>
+    <string name="sound_overview_spatial">Пространственный звук</string>
+    <string name="sound_overview_on">Включён</string>
+    <string name="sound_overview_off">Выключен</string>
+    <string name="sound_overview_all_settings">Все настройки наушников</string>
+    <string name="sound_overview_all_settings_hint">Дополнительные функции и сведения об устройстве</string>
+    <string name="sound_overview_device_actions">Действия с устройством</string>
+    <string name="sound_overview_disconnect">Отключить управление</string>
+    <string name="sound_overview_disconnect_hint">Сопряжение и аудиоподключение Bluetooth сохранятся.</string>
+    <string name="sound_overview_disconnect_confirm">Отключить управление наушниками?</string>
+    <string name="sound_overview_connecting">Подключаем наушники</string>
+    <string name="sound_overview_connecting_hint">Откройте кейс или включите наушники. Управление станет доступно после подключения.</string>
+    <string name="sound_overview_disconnected">Связь потеряна</string>
+    <string name="sound_overview_disconnected_hint">Проверьте, что наушники рядом и подключены к телефону по Bluetooth.</string>
+    <string name="sound_overview_retry">Подключить снова</string>
+    <string name="sound_overview_no_settings">Сейчас нет доступных настроек.</string>
+    <string name="sound_overview_preset_missing">Этот пресет больше недоступен.</string>
+    <string name="sound_overview_notifications">Управление из уведомления</string>
+    <string name="sound_overview_legacy">Устаревшие профили эквалайзера</string>
+</resources>

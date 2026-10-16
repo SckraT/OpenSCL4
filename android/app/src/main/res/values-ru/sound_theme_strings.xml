@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_settings_headline">По вашему вкусу.</string>
+    <string name="sound_settings_description">Приложение, которым удобно пользоваться.</string>
+    <string name="sound_your_color">Ваш цвет.\nВаше настроение.</string>
+    <string name="sound_wallpaper_colors">Цвета обоев</string>
+    <string name="sound_wallpaper_colors_description">Использовать системную палитру</string>
+    <string name="sound_app_language">Язык приложения</string>
+    <string name="sound_quick_access">Быстрый доступ</string>
+    <string name="sound_notification_controls">Уведомление с управлением</string>
+    <string name="sound_notification_controls_description">Управление устройством вне приложения</string>
+    <string name="sound_widget">Виджет на главный экран</string>
+    <string name="sound_widget_description">Пресеты и часто используемые настройки</string>
+    <string name="sound_widget_help">Нажмите и удерживайте пустую область главного экрана, выберите «Виджеты» и добавьте виджет OpenSCQ30. Для настройки его элементов управления подключитесь к наушникам.</string>
+    <string name="sound_auto_connect_description">Подключаться, когда наушники доступны</string>
+    <string name="sound_diagnostics">Диагностика</string>
+    <string name="sound_logs_description">Скопировать последние записи для поиска причины неполадок</string>
+    <string name="sound_my_devices">Мои устройства</string>
+    <string name="sound_your_devices">Ваши устройства.</string>
+    <string name="sound_your_devices_description">Все знакомые наушники в одном месте.</string>
+    <string name="sound_no_devices_yet">Ваш звук начинается здесь.</string>
+    <string name="sound_add_first_device">Добавьте наушники, чтобы настроить звук и управление.</string>
+    <string name="sound_add_device">Добавить устройство</string>
+    <string name="sound_pairing_system_hint">Выберите модель наушников. Сопряжение продолжится в системном окне Android.</string>
+    <string name="sound_device_actions">Действия с %1$s</string>
+    <string name="sound_saved_device">Сохранённое устройство</string>
+    <string name="sound_open_device">Открыть</string>
+    <string name="sound_find_your_model">Найдём вашу модель.</string>
+    <string name="sound_find_your_model_description">Выберите точную модель, чтобы видеть доступные для неё настройки.</string>
+    <string name="sound_ready_to_pair">Подключим наушники?</string>
+    <string name="sound_prepare_pairing">Включите Bluetooth и держите наушники рядом. Android поможет завершить сопряжение.</string>
+    <string name="sound_demo_mode_description">Знакомство с интерфейсом без настоящих наушников</string>
+    <string name="sound_pairing_no_devices">Убедитесь, что наушники включены, затем вернитесь и попробуйте ещё раз.</string>
+    <string name="sound_demo_mode_active">Деморежим использует пример данных и не управляет настоящими наушниками.</string>
+</resources>

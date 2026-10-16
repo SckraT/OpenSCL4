@@ -43,6 +43,7 @@ impl QuickPresetsHandler {
         device: &(dyn OpenSCQ30Device + Send + Sync),
         name: String,
     ) -> storage::Result<()> {
+        let mut captured_setting_ids = HashSet::new();
         let fields = device
             .categories()
             .iter()
@@ -55,6 +56,8 @@ impl QuickPresetsHandler {
                         | SettingId::ExportCustomEqualizerProfiles,
                 )
             })
+            // A setting can appear in multiple categories, but a preset should capture it only once.
+            .filter(|setting_id| captured_setting_ids.insert(*setting_id))
             .filter_map(|setting_id| {
                 device
                     .setting(&setting_id)
@@ -113,5 +116,113 @@ impl QuickPresetsHandler {
         self.database
             .delete_quick_preset(device.model(), name)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{api::settings::Setting, devices::DeviceModel};
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn saves_shared_settings_once_in_category_order_and_retains_enabled_fields() {
+        let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
+        let model = DeviceModel::SoundcoreA3954;
+        let registry = model.demo_device_registry(database.clone()).await.unwrap();
+        let device = registry.connect(model.demo_mac_address()).await.unwrap();
+        let handler = QuickPresetsHandler::new(database.clone());
+        let name = "Liberty 4 Pro".to_owned();
+        let category_setting_ids = device
+            .categories()
+            .iter()
+            .flat_map(|category_id| device.settings_in_category(category_id))
+            .collect::<Vec<_>>();
+        assert!(
+            category_setting_ids
+                .iter()
+                .filter(|&&setting_id| setting_id == SettingId::SpatialAudio)
+                .count()
+                > 1,
+            "the real device exposes spatial audio in more than one category"
+        );
+
+        handler.save(device.as_ref(), name.clone()).await.unwrap();
+        let saved = database
+            .fetch_quick_preset(model, name.clone())
+            .await
+            .unwrap();
+        let expected_setting_ids = category_setting_ids
+            .iter()
+            .copied()
+            .filter(|setting_id| {
+                !matches!(
+                    setting_id,
+                    SettingId::ImportCustomEqualizerProfiles
+                        | SettingId::ExportCustomEqualizerProfiles
+                ) && device
+                    .setting(setting_id)
+                    .is_some_and(|setting| setting.mode().is_writable())
+            })
+            .collect::<HashSet<_>>();
+        let captured_setting_ids = saved
+            .fields
+            .iter()
+            .map(|field| field.setting_id)
+            .collect::<HashSet<_>>();
+        assert_eq!(captured_setting_ids, expected_setting_ids);
+        assert_eq!(saved.fields.len(), expected_setting_ids.len());
+        assert!(saved.fields.iter().all(|field| !field.is_enabled));
+
+        let first_appearance_indices = saved
+            .fields
+            .iter()
+            .map(|field| {
+                category_setting_ids
+                    .iter()
+                    .position(|&setting_id| setting_id == field.setting_id)
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            first_appearance_indices
+                .windows(2)
+                .all(|pair| pair[0] < pair[1])
+        );
+
+        handler
+            .toggle_field(device.as_ref(), name.clone(), SettingId::SpatialAudio, true)
+            .await
+            .unwrap();
+        let Some(Setting::Toggle { value }) = device.setting(&SettingId::WearingDetection) else {
+            panic!("Liberty 4 Pro supports wearing detection");
+        };
+        device
+            .set_setting_values(vec![(SettingId::WearingDetection, (!value).into())])
+            .await
+            .unwrap();
+        handler.save(device.as_ref(), name.clone()).await.unwrap();
+        let refreshed = database.fetch_quick_preset(model, name).await.unwrap();
+        assert_eq!(
+            refreshed
+                .fields
+                .iter()
+                .map(|field| field.setting_id)
+                .collect::<Vec<_>>(),
+            saved
+                .fields
+                .iter()
+                .map(|field| field.setting_id)
+                .collect::<Vec<_>>()
+        );
+        for field in refreshed.fields {
+            assert_eq!(
+                field.is_enabled,
+                field.setting_id == SettingId::SpatialAudio
+            );
+            if field.setting_id == SettingId::WearingDetection {
+                assert_eq!(field.value, (!value).into());
+            }
+        }
     }
 }

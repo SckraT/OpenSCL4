@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_permission_bluetooth_purpose">Разрешите доступ к устройствам поблизости, чтобы видеть сопряжённые наушники и настраивать их звучание.</string>
+    <string name="sound_permission_notification_purpose">Разрешите уведомления, чтобы управлять наушниками и включать пресеты во время работы с другими приложениями.</string>
+    <string name="sound_permission_settings_hint">Если запрос разрешения не появляется, доступ можно предоставить в системных настройках приложения.</string>
+    <string name="sound_permission_open_settings">Открыть настройки приложения</string>
+    <string name="sound_permission_bluetooth_disabled">Bluetooth выключен</string>
+    <string name="sound_permission_bluetooth_disabled_hint">Включите Bluetooth в системных настройках, затем снова попробуйте подключиться к наушникам.</string>
+    <string name="sound_permission_open_bluetooth_settings">Настройки Bluetooth</string>
+</resources>

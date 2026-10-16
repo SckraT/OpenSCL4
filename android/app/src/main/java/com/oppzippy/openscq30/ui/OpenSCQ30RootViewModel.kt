@@ -30,12 +30,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -51,8 +53,12 @@ class OpenSCQ30RootViewModel @Inject constructor(
     val version2BreakingChangesMessage: Version2BreakingChangesMessage,
     val toastHandler: ToastHandler = ToastHandler(),
 ) : AndroidViewModel(application) {
-    private val deviceServiceConnection = DeviceServiceConnection()
-    val connectionStatusFlow = deviceServiceConnection.connectionStatusFlow.asStateFlow()
+    private var isDeviceServiceBound = false
+    private var lastSelectedMacAddress: String? = null
+    private var pendingMacAddress: String? = null
+    private val deviceServiceConnection = DeviceServiceConnection { unbindDeviceService() }
+    private val visibleConnectionStatusFlow = MutableStateFlow<ConnectionStatus>(ConnectionStatus.Disconnected)
+    val connectionStatusFlow = visibleConnectionStatusFlow.asStateFlow()
 
     var deviceSettingsManager = MutableStateFlow<DeviceSettingsManager?>(null)
         private set
@@ -66,12 +72,31 @@ class OpenSCQ30RootViewModel @Inject constructor(
             DeviceService.isRunning.collectLatest { isRunning ->
                 if (isRunning) {
                     bindDeviceService()
+                } else {
+                    unbindDeviceService()
                 }
             }
         }
 
         viewModelScope.launch {
-            connectionStatusFlow.collect {
+            deviceServiceConnection.connectionStatusFlow.collect {
+                when (it) {
+                    is ConnectionStatus.Connecting -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
+                    is ConnectionStatus.Connected -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
+                    ConnectionStatus.Disconnected -> {
+                        pendingMacAddress = null
+                        unbindDeviceService()
+                    }
+
+                    ConnectionStatus.AwaitingConnection -> Unit
+                }
+                updateVisibleConnectionStatus()
                 deviceSettingsManager.value?.close()
                 if (it is ConnectionStatus.Connected) {
                     deviceSettingsManager.value = DeviceSettingsManager(
@@ -90,31 +115,110 @@ class OpenSCQ30RootViewModel @Inject constructor(
         }
     }
 
+    private fun rememberConnectionAddress(macAddress: String?) {
+        // An existing binding can report its old connection before the next start intent is handled.
+        if (pendingMacAddress == null || macAddress == null ||
+            pendingMacAddress.equals(macAddress, ignoreCase = true)
+        ) {
+            lastSelectedMacAddress = macAddress ?: lastSelectedMacAddress
+            pendingMacAddress = null
+        }
+    }
+
+    private fun updateVisibleConnectionStatus() {
+        visibleConnectionStatusFlow.value = pendingMacAddress?.let { ConnectionStatus.Connecting(it) }
+            ?: deviceServiceConnection.connectionStatusFlow.value
+    }
+
     fun selectDevice(macAddress: String) {
+        val currentAddress = when (val status = connectionStatusFlow.value) {
+            is ConnectionStatus.Connecting -> status.macAddress
+            is ConnectionStatus.Connected -> status.macAddress
+            else -> null
+        }
+        if ((pendingMacAddress == null && currentAddress.equals(macAddress, ignoreCase = true)) ||
+            pendingMacAddress.equals(macAddress, ignoreCase = true)
+        ) {
+            return
+        }
+        lastSelectedMacAddress = macAddress
+        pendingMacAddress = macAddress
+        updateVisibleConnectionStatus()
         val intent = intentFactory(application, DeviceService::class.java)
         intent.putExtra(DeviceService.INTENT_EXTRA_MAC_ADDRESS, macAddress)
-        application.startForegroundService(intent)
+        try {
+            application.startForegroundService(intent)
+        } catch (ex: SecurityException) {
+            handleServiceStartFailure(ex)
+            return
+        } catch (ex: IllegalStateException) {
+            handleServiceStartFailure(ex)
+            return
+        }
         bindDeviceService()
     }
 
+    fun onDeviceUnpaired(macAddress: String) {
+        val activeAddress = when (val status = connectionStatusFlow.value) {
+            is ConnectionStatus.Connecting -> status.macAddress
+            is ConnectionStatus.Connected -> status.macAddress
+            else -> null
+        }
+        if (activeAddress.equals(macAddress, ignoreCase = true)) stopDeviceService()
+        if (lastSelectedMacAddress.equals(macAddress, ignoreCase = true)) lastSelectedMacAddress = null
+    }
+
+    fun retryConnection() {
+        lastSelectedMacAddress?.let { selectDevice(it) }
+    }
+
+    private fun handleServiceStartFailure(ex: Exception) {
+        pendingMacAddress = null
+        updateVisibleConnectionStatus()
+        Log.e(TAG, "failed to start service", ex)
+    }
+
     private fun bindDeviceService() {
+        if (isDeviceServiceBound) return
         try {
-            application.bindService(
+            isDeviceServiceBound = application.bindService(
                 intentFactory(application, DeviceService::class.java),
                 deviceServiceConnection,
                 0,
             )
+            if (!isDeviceServiceBound) pendingMacAddress = null
+            updateVisibleConnectionStatus()
         } catch (ex: SecurityException) {
+            pendingMacAddress = null
+            updateVisibleConnectionStatus()
             Log.e(TAG, "failed to bind service", ex)
-            stopDeviceService()
         }
     }
 
+    private fun unbindDeviceService() {
+        pendingMacAddress = null
+        if (isDeviceServiceBound) {
+            isDeviceServiceBound = false
+            application.unbindService(deviceServiceConnection)
+        }
+        deviceServiceConnection.close()
+        updateVisibleConnectionStatus()
+    }
+
     override fun onCleared() {
-        stopDeviceService()
+        unbindDeviceService()
+        deviceSettingsManager.value?.close()
+        deviceSettingsManager.value = null
+        super.onCleared()
     }
 
     fun stopDeviceService() {
+        pendingMacAddress = null
+        // stopService alone leaves the native connection open if a widget screen is also bound.
+        val disconnectIntent = intentFactory(DeviceService.ACTION_DISCONNECT)
+        disconnectIntent.setPackage(application.packageName)
+        application.sendBroadcast(disconnectIntent)
+        unbindDeviceService()
         application.stopService(intentFactory(application, DeviceService::class.java))
     }
 }
@@ -145,6 +249,7 @@ class DeviceSettingsManager(
 
     override fun close() {
         coroutineScope.cancel()
+        quickPresetHandler.close()
     }
 
     fun setSettingValues(settingValues: List<Pair<String, Value>>) {
@@ -173,7 +278,7 @@ class DeviceSettingsManager(
                 Log.w(TAG, "device was closed, can't update category ids", ex)
                 emptyList()
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
     fun getSettingsInCategoryFlow(categoryId: String): Flow<List<Pair<String, Setting>>> =
         deviceManager.watchForChangeNotification.map {
@@ -185,13 +290,14 @@ class DeviceSettingsManager(
                 Log.w(TAG, "device was closed, can't get settings in category $categoryId", ex)
                 emptyList()
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
     val allSettingsFlow: Flow<List<Pair<String, Setting>>>
         get() = deviceManager.watchForChangeNotification.map {
             try {
                 device.categories()
                     .flatMap { device.settingsInCategory(it) }
+                    .distinct()
                     .mapNotNull { settingId ->
                         device.setting(settingId)?.let { setting -> Pair(settingId, setting) }
                     }
@@ -199,7 +305,7 @@ class DeviceSettingsManager(
                 Log.w(TAG, "device was closed, can't get all settings", ex)
                 emptyList()
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
     val featuredSettingSlots = featuredSettingSlotDao.allSettingIds(device.model()).map { slots ->
         // Show a fixed number of slots
@@ -269,9 +375,16 @@ class DeviceSettingsManager(
 
     fun toggleQuickPresetSetting(name: String, settingId: String, enabled: Boolean) {
         coroutineScope.launch {
-            quickPresetHandler.toggleField(device, name, settingId, enabled)
-            // TODO either modify in place instead of re-fetching all presets, or fetch only the modified preset
-            refreshQuickPresets()
+            try {
+                quickPresetHandler.toggleField(device, name, settingId, enabled)
+                // TODO either modify in place instead of re-fetching all presets, or fetch only the modified preset
+                refreshQuickPresets()
+            } catch (ex: OpenScq30Exception) {
+                Log.e(TAG, "error changing quick preset setting", ex)
+                toastHandler.add(R.string.error_changing_settings, Toast.LENGTH_SHORT)
+            } catch (ex: IllegalStateException) {
+                Log.w(TAG, "device was closed, not changing quick preset setting", ex)
+            }
         }
     }
 

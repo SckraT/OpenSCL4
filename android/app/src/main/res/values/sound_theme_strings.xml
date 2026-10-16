@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_settings_headline">Make it yours.</string>
+    <string name="sound_settings_description">An app that feels comfortable to use.</string>
+    <string name="sound_your_color">Your color.\nYour mood.</string>
+    <string name="sound_wallpaper_colors">Wallpaper colors</string>
+    <string name="sound_wallpaper_colors_description">Use your system color palette</string>
+    <string name="sound_app_language">App language</string>
+    <string name="sound_quick_access">Quick access</string>
+    <string name="sound_notification_controls">Notification controls</string>
+    <string name="sound_notification_controls_description">Control your device outside the app</string>
+    <string name="sound_widget">Home screen widget</string>
+    <string name="sound_widget_description">Presets and frequently used settings</string>
+    <string name="sound_widget_help">Touch and hold an empty area of your home screen, choose Widgets, then add the OpenSCQ30 widget. Connect to your headphones to configure its controls.</string>
+    <string name="sound_auto_connect_description">Reconnect when your headphones are available</string>
+    <string name="sound_diagnostics">Diagnostics</string>
+    <string name="sound_logs_description">Copy recent app logs to help troubleshoot issues</string>
+    <string name="sound_my_devices">My devices</string>
+    <string name="sound_your_devices">Your devices.</string>
+    <string name="sound_your_devices_description">All your familiar headphones in one place.</string>
+    <string name="sound_no_devices_yet">Your sound starts here.</string>
+    <string name="sound_add_first_device">Add your headphones to adjust sound and controls.</string>
+    <string name="sound_add_device">Add device</string>
+    <string name="sound_pairing_system_hint">Choose your headphone model. Pairing continues in the Android system dialog.</string>
+    <string name="sound_device_actions">Actions for %1$s</string>
+    <string name="sound_saved_device">Saved device</string>
+    <string name="sound_open_device">Open</string>
+    <string name="sound_find_your_model">Find your model.</string>
+    <string name="sound_find_your_model_description">Choose the exact model so you see the controls your device supports.</string>
+    <string name="sound_ready_to_pair">Ready to connect?</string>
+    <string name="sound_prepare_pairing">Turn on Bluetooth and keep your headphones nearby. Android will help you complete pairing.</string>
+    <string name="sound_demo_mode_description">Explore the interface without real headphones</string>
+    <string name="sound_pairing_no_devices">Make sure your headphones are turned on, then return and try again.</string>
+    <string name="sound_demo_mode_active">Demo mode uses simulated device data and does not control real headphones.</string>
+</resources>

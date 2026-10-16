@@ -185,7 +185,15 @@ fn enabled_fields(
                 Ok((setting_id, is_enabled))
             },
         )?
-        .collect::<Result<HashMap<_, _>, _>>()
+        .try_fold(HashMap::new(), |mut fields, field| {
+            let (setting_id, is_enabled) = field?;
+            // Legacy captures may contain the same setting in more than one category.
+            fields
+                .entry(setting_id)
+                .and_modify(|enabled| *enabled |= is_enabled)
+                .or_insert(is_enabled);
+            Ok(fields)
+        })
 }
 
 pub fn toggle_field(
@@ -195,23 +203,32 @@ pub fn toggle_field(
     setting_id: SettingId,
     is_enabled: bool,
 ) -> Result<(), Error> {
-    // Find the index of the field, then set isEnabled for that index
+    // Update every occurrence in old captures, retaining field values and their activation order.
     let changed_rows = connection.execute(
         r#"
-        WITH target_field_index AS (
+        WITH preset_fields AS (
             SELECT
-                key
+                CAST(key AS INTEGER) AS field_index,
+                quick_preset.fields -> ('$[' || key || ']') AS field_json
             FROM
                 quick_preset, json_each(quick_preset.fields)
             WHERE
-                device_model = ?1 AND name = ?2 AND
-                value ->> 'settingId' = ?3
+                device_model = ?1 AND name = ?2
+        ), updated_fields AS (
+            SELECT
+                field_index,
+                field_json ->> 'settingId' = ?3 AS is_target,
+                CASE WHEN field_json ->> 'settingId' = ?3
+                    THEN jsonb_replace(field_json, '$.isEnabled', json(?4))
+                    ELSE jsonb(field_json)
+                END AS field
+            FROM preset_fields
         )
         UPDATE quick_preset
         SET
-            fields = jsonb_replace(fields, '$[' || (SELECT key FROM target_field_index) || '].isEnabled', json(?4))
+            fields = (SELECT jsonb_group_array(field ORDER BY field_index) FROM updated_fields)
         WHERE
-            device_model = ?1 AND name = ?2 AND (SELECT COUNT(*) FROM target_field_index) = 1"#,
+            device_model = ?1 AND name = ?2 AND EXISTS (SELECT 1 FROM updated_fields WHERE is_target)"#,
         (
             SqliteDeviceModel(model),
             name,
@@ -569,6 +586,130 @@ mod tests {
         assert_eq!(
             test_data[0], other_device_fetched_preset,
             "the other device's quick preset should not be modified",
+        );
+    }
+
+    fn legacy_duplicate_preset() -> QuickPreset {
+        QuickPreset {
+            name: "Legacy duplicate preset".into(),
+            fields: vec![
+                QuickPresetField {
+                    setting_id: SettingId::SpatialAudio,
+                    value: false.into(),
+                    is_enabled: true,
+                },
+                QuickPresetField {
+                    setting_id: SettingId::AmbientSoundMode,
+                    value: Cow::from("normal").into(),
+                    is_enabled: true,
+                },
+                QuickPresetField {
+                    setting_id: SettingId::SpatialAudio,
+                    value: true.into(),
+                    is_enabled: false,
+                },
+            ],
+        }
+    }
+
+    fn legacy_connection() -> Connection {
+        let mut connection = Connection::open_in_memory().unwrap();
+        crate::storage::migration::migrate(&mut connection, crate::storage::migration::MIGRATIONS)
+            .unwrap();
+        connection
+    }
+
+    #[test]
+    fn test_toggle_all_legacy_duplicate_fields_preserving_order_and_values() {
+        let connection = legacy_connection();
+        let preset = legacy_duplicate_preset();
+        let mut expected_fields = serde_json::to_value(&preset.fields).unwrap();
+        // Future fields that cannot be decoded must be retained without affecting this update.
+        expected_fields
+            .as_array_mut()
+            .unwrap()
+            .insert(1, serde_json::json!("future field"));
+        let fields_json = serde_json::to_string(&expected_fields).unwrap();
+        for model in [DeviceModel::SoundcoreA3954, DeviceModel::SoundcoreA3004] {
+            connection
+                .execute(
+                    "INSERT INTO quick_preset (device_model, name, fields) VALUES (?1, ?2, jsonb(?3))",
+                    (SqliteDeviceModel(model), &preset.name, &fields_json),
+                )
+                .unwrap();
+        }
+
+        for is_enabled in [false, true] {
+            toggle_field(
+                &connection,
+                DeviceModel::SoundcoreA3954,
+                preset.name.clone(),
+                SettingId::SpatialAudio,
+                is_enabled,
+            )
+            .unwrap();
+            for field in expected_fields.as_array_mut().unwrap() {
+                if field.get("settingId") == Some(&serde_json::json!("spatialAudio")) {
+                    field["isEnabled"] = is_enabled.into();
+                }
+            }
+            let actual_fields: String = connection
+                .query_row(
+                    "SELECT json(fields) FROM quick_preset WHERE device_model = ?1 AND name = ?2",
+                    (SqliteDeviceModel(DeviceModel::SoundcoreA3954), &preset.name),
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&actual_fields).unwrap(),
+                expected_fields,
+                "only the matching enabled flags should change, in place",
+            );
+        }
+        let other_model_fields: String = connection
+            .query_row(
+                "SELECT json(fields) FROM quick_preset WHERE device_model = ?1 AND name = ?2",
+                (SqliteDeviceModel(DeviceModel::SoundcoreA3004), &preset.name),
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&other_model_fields).unwrap(),
+            serde_json::from_str::<serde_json::Value>(&fields_json).unwrap(),
+            "the other device's raw fields, including future values, must not change",
+        );
+    }
+
+    #[test]
+    fn test_upsert_retains_enabled_flag_from_any_legacy_duplicate() {
+        let mut connection = legacy_connection();
+        let preset = legacy_duplicate_preset();
+        connection
+            .execute(
+                "INSERT INTO quick_preset (device_model, name, fields) VALUES (?1, ?2, jsonb(?3))",
+                (
+                    SqliteDeviceModel(DeviceModel::SoundcoreA3954),
+                    &preset.name,
+                    serde_json::to_string(&preset.fields).unwrap(),
+                ),
+            )
+            .unwrap();
+
+        let mut refreshed_preset = preset.clone();
+        refreshed_preset.fields.pop();
+        refreshed_preset.fields[0].value = true.into();
+        refreshed_preset.fields[0].is_enabled = false;
+        upsert(
+            &mut connection,
+            DeviceModel::SoundcoreA3954,
+            refreshed_preset.clone(),
+        )
+        .unwrap();
+
+        refreshed_preset.fields[0].is_enabled = true;
+        assert_eq!(
+            fetch(&connection, DeviceModel::SoundcoreA3954, preset.name).unwrap(),
+            refreshed_preset,
         );
     }
 

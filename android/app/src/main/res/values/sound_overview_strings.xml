@@ -1,0 +1,33 @@
+<resources>
+    <string name="sound_overview_your_device">YOUR DEVICE</string>
+    <string name="sound_overview_device">Device</string>
+    <string name="sound_overview_devices">My devices</string>
+    <string name="sound_overview_left">Left</string>
+    <string name="sound_overview_right">Right</string>
+    <string name="sound_overview_case">Case</string>
+    <string name="sound_overview_battery">Battery</string>
+    <string name="sound_overview_sound_mode">Sound mode</string>
+    <string name="sound_overview_customize">Customize</string>
+    <string name="sound_overview_your_sound">Your sound</string>
+    <string name="sound_overview_controls">Controls</string>
+    <string name="sound_overview_comfort">Comfort</string>
+    <string name="sound_overview_connections">Connections</string>
+    <string name="sound_overview_spatial">Spatial audio</string>
+    <string name="sound_overview_on">On</string>
+    <string name="sound_overview_off">Off</string>
+    <string name="sound_overview_all_settings">All device settings</string>
+    <string name="sound_overview_all_settings_hint">Additional features and device information</string>
+    <string name="sound_overview_device_actions">Device actions</string>
+    <string name="sound_overview_disconnect">Disconnect controls</string>
+    <string name="sound_overview_disconnect_hint">Audio Bluetooth pairing will stay connected.</string>
+    <string name="sound_overview_disconnect_confirm">Disconnect from these headphones?</string>
+    <string name="sound_overview_connecting">Connecting to your headphones</string>
+    <string name="sound_overview_connecting_hint">Open the case or turn on your headphones. Controls will appear once connected.</string>
+    <string name="sound_overview_disconnected">Connection lost</string>
+    <string name="sound_overview_disconnected_hint">Check that your headphones are nearby and connected to your phone by Bluetooth.</string>
+    <string name="sound_overview_retry">Connect again</string>
+    <string name="sound_overview_no_settings">No settings are currently available.</string>
+    <string name="sound_overview_preset_missing">This preset is no longer available.</string>
+    <string name="sound_overview_notifications">Notification controls</string>
+    <string name="sound_overview_legacy">Legacy equalizer profiles</string>
+</resources>

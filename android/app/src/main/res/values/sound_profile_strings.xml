@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_profile_eq_heading">Sound, your way.</string>
+    <string name="sound_profile_eq_description">Choose a profile or adjust each frequency.</string>
+    <string name="sound_profile_band_count">%1$d-band equalizer</string>
+    <string name="sound_profile_db">dB</string>
+    <string name="sound_profile_low_frequencies">Low frequencies</string>
+    <string name="sound_profile_high_frequencies">High frequencies</string>
+    <string name="sound_profile_scroll_bands">Scroll the bands to see more frequencies</string>
+    <string name="sound_profile_read_only">This device only supports the built-in equalizer profiles.</string>
+    <string name="sound_profile_enter_values">Enter values</string>
+    <string name="sound_profile_reset">Reset</string>
+    <string name="sound_profile_spatial_warning">Changing the equalizer disables spatial audio.</string>
+    <string name="sound_profile_save">Save profile</string>
+    <string name="sound_profile_eq_unavailable">Equalizer values are unavailable for this device.</string>
+    <string name="sound_profile_saved_profiles">My profiles</string>
+    <string name="sound_profile_delete_named">Delete profile %1$s</string>
+    <string name="sound_profile_import_export">Import / export JSON</string>
+    <string name="sound_profile_delete_title">Delete equalizer profile?</string>
+    <string name="sound_profile_band_accessibility">%1$s, %2$s dB</string>
+    <string name="sound_profile_chart_description">Equalizer curve. Drag to adjust a frequency, or use the sliders below.</string>
+    <string name="sound_profile_precise_title">Precise adjustments</string>
+    <string name="sound_profile_numeric_range">Values in decibels, from %1$s to %2$s.</string>
+    <string name="sound_profile_invalid_value">Enter a supported value</string>
+    <string name="sound_profile_change_sign">Change sign for %1$s</string>
+    <string name="sound_profile_apply">Apply</string>
+    <string name="sound_profile_save_description">Save the current device equalizer values as a reusable profile.</string>
+    <string name="sound_profile_overwrite_warning">A profile named “%1$s” already exists. Replace its saved values?</string>
+    <string name="sound_profile_replace">Replace profile</string>
+    <string name="sound_profile_save_short">Save</string>
+</resources>

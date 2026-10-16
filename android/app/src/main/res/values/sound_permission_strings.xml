@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_permission_bluetooth_purpose">Allow access to nearby devices to see your paired headphones and change their sound settings.</string>
+    <string name="sound_permission_notification_purpose">Allow notifications to keep your headphone controls and presets within reach while you use other apps.</string>
+    <string name="sound_permission_settings_hint">If the permission dialog does not appear, you can allow access in the app’s system settings.</string>
+    <string name="sound_permission_open_settings">Open app settings</string>
+    <string name="sound_permission_bluetooth_disabled">Bluetooth is off</string>
+    <string name="sound_permission_bluetooth_disabled_hint">Turn on Bluetooth in system settings, then try connecting to your headphones again.</string>
+    <string name="sound_permission_open_bluetooth_settings">Open Bluetooth settings</string>
+</resources>

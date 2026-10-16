@@ -1,24 +1,32 @@
 package com.oppzippy.openscq30
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasTextExactly
-import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
 import com.oppzippy.openscq30.actions.addAndConnectToDemoDevice
 import com.oppzippy.openscq30.extensions.assertRangeValueApproxEquals
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
@@ -29,136 +37,217 @@ import org.junit.Test
 
 @HiltAndroidTest
 class SettingTest : OpenSCQ30RootTestBase() {
+    private fun connectDemo(model: String) {
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel(model))
+        composeRule.waitUntil(uiTimeoutMillis(10_000)) {
+            composeRule.onAllNodesWithContentDescription(getString(R.string.sound_overview_device_actions))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        // The connection can be ready while native capability reads are still running in the background.
+        waitForNode(hasText(getString(R.string.equalizer)))
+    }
+
+    private fun waitForNode(matcher: SemanticsMatcher) {
+        composeRule.waitUntil(uiTimeoutMillis()) { composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private fun waitForSelected(text: String) = waitForNode(
+        hasText(text) and SemanticsMatcher.expectValue(SemanticsProperties.Selected, true),
+    )
+
+    private fun waitForToggle(text: String, checked: Boolean) = waitForNode(
+        hasText(text) and SemanticsMatcher.expectValue(
+            SemanticsProperties.ToggleableState,
+            if (checked) ToggleableState.On else ToggleableState.Off,
+        ),
+    )
+
+    private fun openEqualizer() {
+        composeRule.onNodeWithText(getString(R.string.equalizer)).performScrollTo().performClick()
+    }
+
+    private fun openAllSettingsCategory(id: String) {
+        composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
+        waitForNode(hasText(translateCategoryId(id)) and hasClickAction())
+        composeRule.onNode(hasText(translateCategoryId(id)) and hasClickAction()).performScrollTo().performClick()
+    }
+
+    private fun saveEqualizerProfile(name: String) {
+        composeRule.onNodeWithText(getString(R.string.sound_profile_save)).performScrollTo().performClick()
+        composeRule.onNodeWithText(getString(R.string.name)).performTextInput(name)
+        composeRule.onNodeWithText(getString(R.string.sound_profile_save_short)).performClick()
+        val replace = composeRule.onAllNodes(hasText(getString(R.string.sound_profile_replace)) and hasClickAction())
+        if (replace.fetchSemanticsNodes().isNotEmpty()) replace[0].performClick()
+        waitForNode(hasText(name))
+        composeRule.onNodeWithText(name).performScrollTo().assertExists()
+    }
+
+    private fun deleteEqualizerProfile(name: String) {
+        composeRule.onNodeWithContentDescription(getString(R.string.sound_profile_delete_named, name))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithText(getString(R.string.delete)).performClick()
+        composeRule.waitUntil(uiTimeoutMillis()) {
+            composeRule.onAllNodes(hasText(name)).fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.onNodeWithText(name).assertDoesNotExist()
+    }
+
     @Test
     fun testWindNoiseSuppression() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
-        composeRule.onNodeWithText(translateCategoryId("soundModes")).performClick()
+        connectDemo("SoundcoreA3959")
+        composeRule.onNodeWithText(getString(R.string.sound_overview_customize)).performScrollTo().performClick()
         composeRule.onNodeWithText(translateSettingId("windNoiseSuppression"))
+            .performScrollTo()
             .assertIsOff()
             .performClick()
-            .assertIsOn()
+        waitForToggle(translateSettingId("windNoiseSuppression"), true)
+        composeRule.onNodeWithText(translateSettingId("windNoiseSuppression")).assertIsOn()
     }
 
     @Test
     fun testCustomNoiseCanceling() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("soundModes")).performClick()
+        connectDemo("SoundcoreA3951")
+        composeRule.onNodeWithText(getString(R.string.sound_overview_customize)).performScrollTo().performClick()
+        composeRule.onNodeWithText("Noise Canceling").performScrollTo().performClick()
         composeRule.onNodeWithTag(translateSettingId("customNoiseCanceling") + " slider")
+            .performScrollTo()
             .assertRangeValueApproxEquals(0f)
-            .performTouchInput { click(centerRight) }
-            .assertRangeValueApproxEquals(10f)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(10f) }
+        composeRule.waitUntil(uiTimeoutMillis()) {
+            composeRule.onNodeWithTag(translateSettingId("customNoiseCanceling") + " slider")
+                .fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current == 10f
+        }
+        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        composeRule.onNodeWithText(getString(R.string.sound_overview_customize)).performScrollTo().performClick()
+        composeRule.waitUntil(uiTimeoutMillis()) {
+            composeRule.onNodeWithTag(translateSettingId("customNoiseCanceling") + " slider")
+                .fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current == 10f
+        }
+        composeRule.onNodeWithTag(translateSettingId("customNoiseCanceling") + " slider")
+            .performScrollTo().assertRangeValueApproxEquals(10f)
     }
 
     @Test
     fun testNoiseCancelingMode() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("soundModes")).performClick()
+        connectDemo("SoundcoreA3951")
+        composeRule.onNodeWithText(getString(R.string.sound_overview_customize)).performScrollTo().performClick()
         composeRule.onNodeWithText("Noise Canceling").performClick()
-        composeRule.onNodeWithText("Normal").performClick().assertExists()
-        composeRule.onNodeWithText("Noise Canceling").assertDoesNotExist()
+        waitForSelected("Noise Canceling")
+        composeRule.onNodeWithText("Noise Canceling").assertIsSelected()
+        composeRule.onNodeWithText("Normal").performClick()
+        waitForSelected("Normal")
+        composeRule.onNodeWithText("Normal").assertIsSelected()
+        composeRule.onNodeWithText("Noise Canceling").assertIsNotSelected()
+        // The selection comes back from the device and survives leaving the page.
+        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        composeRule.onNodeWithText("Normal").assertIsSelected()
     }
 
     @Test
     fun testPresetEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-        composeRule.onNodeWithText("Acoustic").performClick()
-        // TODO assert that Acoustic is selected
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        composeRule.onNodeWithText("Acoustic").performScrollTo().performClick()
+        waitForSelected("Acoustic")
+        composeRule.onNodeWithText("Acoustic").assertIsSelected()
+        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        openEqualizer()
+        composeRule.onNodeWithText("Acoustic").performScrollTo().assertIsSelected()
     }
 
     @Test
     fun testCustomEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-        composeRule.onNodeWithText(getString(R.string.custom)).performClick()
-
-        // Add a custom equalizer profile
-        composeRule.onNodeWithContentDescription(getString(R.string.add)).performClick()
-        composeRule.onNodeWithText(getString(R.string.name)).performTextInput("Test Profile 2")
-        composeRule.onNodeWithText(getString(R.string.create)).performClick()
-
-        // Select it
-        composeRule.onNodeWithText(getString(R.string.none)).performClick()
-        composeRule.onNodeWithText("Test Profile 2").performClick().assertExists()
-
-        // Delete it
-        composeRule.onNodeWithContentDescription(getString(R.string.delete)).performClick()
-        composeRule.onNodeWithText(getString(R.string.delete)).performClick()
-        composeRule.onNodeWithText("Test Profile 2").assertDoesNotExist()
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        saveEqualizerProfile("Test Profile 2")
+        composeRule.onNodeWithText("Test Profile 2").performClick()
+        waitForNode(hasContentDescription(getString(R.string.in_effect)))
+        composeRule.onNodeWithContentDescription(getString(R.string.in_effect)).assertExists()
+        deleteEqualizerProfile("Test Profile 2")
     }
 
     @Test
     fun testExportEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-
-        // Add a custom equalizer profile
-        // TODO add multiple profiles
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-        composeRule.onNodeWithText(getString(R.string.custom)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.add)).performClick()
-        composeRule.onNodeWithText(getString(R.string.name)).performTextInput("Test Profile")
-        composeRule.onNodeWithText(getString(R.string.create)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-
-        // Select it for export
-        composeRule.onNodeWithText(translateCategoryId("equalizerImportExport")).performClick()
-        composeRule.onNode(hasTextExactly("Test Profile") and isToggleable()).performClick()
-        composeRule.waitForIdle()
-        composeRule.onNode(hasTextExactly("Test Profile") and isToggleable()).assertIsOn()
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        saveEqualizerProfile("Test Profile")
+        composeRule.onNodeWithText(getString(R.string.sound_profile_import_export)).performScrollTo().performClick()
+        composeRule.onNode(hasText("Test Profile") and isToggleable()).performScrollTo().performClick()
+        waitForToggle("Test Profile", true)
+        composeRule.onNode(hasText("Test Profile") and isToggleable()).assertIsOn()
     }
 
     @Test
     fun testEqualizer() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-        composeRule.onNodeWithText(getString(R.string.custom)).performClick()
-        val firstBandTextInput = hasTestTag("equalizerInput100")
-        composeRule.onNode(firstBandTextInput).performTextClearance()
-        composeRule.onNode(firstBandTextInput).performTextInput("2")
-        composeRule.onNode(firstBandTextInput).assertTextContains("2.0")
-        composeRule.onAllNodesWithTag("equalizerSlider").onFirst().performTouchInput { swipeLeft(centerY, left) }
-        composeRule.onNode(firstBandTextInput).assertTextContains("-12.0")
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        composeRule.onNodeWithText(getString(R.string.sound_profile_enter_values)).performScrollTo().performClick()
+        val frequency = getString(R.string.hz, 100)
+        composeRule.onNode(hasText(frequency) and hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasText(frequency) and hasSetTextAction()).performTextInput("2")
+        composeRule.onNodeWithText(getString(R.string.sound_profile_apply)).performScrollTo().performClick()
+        val bandDescription = getString(R.string.sound_profile_band_accessibility, frequency, "2")
+        waitForNode(hasContentDescription(bandDescription))
+        composeRule.onNodeWithContentDescription(bandDescription).performScrollTo().assertExists()
+        composeRule.onNodeWithContentDescription(bandDescription)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(-120f) }
+        waitForNode(hasContentDescription(getString(R.string.sound_profile_band_accessibility, frequency, "-12")))
+        composeRule.onNodeWithContentDescription(
+            getString(R.string.sound_profile_band_accessibility, frequency, "-12"),
+        ).assertExists()
+        // Reopening numeric entry proves that the backend received the slider value.
+        composeRule.onNodeWithText(getString(R.string.sound_profile_enter_values)).performScrollTo().performClick()
+        composeRule.onNode(hasText(frequency) and hasSetTextAction()).assertTextContains("-12")
+        composeRule.onNode(hasText(frequency) and hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasText(frequency) and hasSetTextAction()).performTextInput("1000")
+        composeRule.onNodeWithText(getString(R.string.sound_profile_apply)).performScrollTo().assertIsNotEnabled()
     }
 
     @Test
     fun testImportString() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
-        composeRule.onNodeWithText(translateCategoryId("equalizerImportExport")).performClick()
-        composeRule.onNodeWithText(translateSettingId("importCustomEqualizerProfiles")).performTextInput(
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        composeRule.onNodeWithText(getString(R.string.sound_profile_import_export)).performScrollTo().performClick()
+        composeRule.onNodeWithText(
+            translateSettingId("importCustomEqualizerProfiles"),
+        ).performScrollTo().performTextInput(
             """[{"name": "test profile", "volumeAdjustments": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}]""",
         )
-        composeRule.onNodeWithContentDescription(getString(R.string.import_)).performClick()
+        composeRule.onNodeWithText(getString(R.string.import_)).performScrollTo().performClick()
         composeRule.onNodeWithText(getString(R.string.confirm)).performClick()
-        composeRule.onNodeWithText("test profile").assertExists()
+        waitForNode(hasText("test profile"))
+        composeRule.onNodeWithText("test profile").performScrollTo().assertExists()
     }
 
     @Test
     fun testA3116PresetEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3116"))
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-        composeRule.onNodeWithText("Bass Up").performClick()
-        composeRule.onNode(hasTextExactly(getString(R.string.none)) and hasAnyAncestor(isDialog()))
-            .performClick()
+        connectDemo("SoundcoreA3116")
+        // The complete settings page retains the speaker's optional built-in profile control.
+        openAllSettingsCategory("equalizer")
+        waitForNode(hasTestTag("sound_setting_presetEqualizerProfile"))
+        composeRule.onNode(hasClickAction() and hasAnyAncestor(hasTestTag("sound_setting_presetEqualizerProfile")))
+            .performScrollTo().performClick()
+        composeRule.onNode(hasText("Bass Up") and isSelectable()).performScrollTo().performClick()
+        composeRule.onNodeWithText("Bass Up").assertExists()
+        composeRule.onNode(hasClickAction() and hasAnyAncestor(hasTestTag("sound_setting_presetEqualizerProfile")))
+            .performScrollTo().performClick()
+        composeRule.onNode(
+            hasText(getString(R.string.none)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected),
+        ).performScrollTo().performClick()
+        composeRule.waitUntil(uiTimeoutMillis()) {
+            composeRule.onAllNodes(hasText("Bass Up")).fetchSemanticsNodes().isEmpty()
+        }
         composeRule.onNodeWithText("Bass Up").assertDoesNotExist()
     }
 
     @Test
     fun testA3116CustomEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3116"))
-        composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
-
-        // Add a custom equalizer profile
-        composeRule.onNodeWithContentDescription(getString(R.string.add)).performClick()
-        composeRule.onNodeWithText(getString(R.string.name)).performTextInput("Test Profile")
-        composeRule.onNodeWithText(getString(R.string.create)).performClick()
-
-        // Select it
-        composeRule.onNodeWithText(getString(R.string.none)).performClick()
-        composeRule.onNodeWithText("Test Profile").performClick().assertExists()
-
-        // Delete it
-        composeRule.onNodeWithContentDescription(getString(R.string.delete)).performClick()
-        composeRule.onNodeWithText(getString(R.string.delete)).performClick()
-        composeRule.onNodeWithText("Test Profile").assertDoesNotExist()
+        connectDemo("SoundcoreA3116")
+        openEqualizer()
+        saveEqualizerProfile("Test Profile")
+        composeRule.onNodeWithText("Test Profile").performClick()
+        waitForNode(hasContentDescription(getString(R.string.in_effect)))
+        composeRule.onNodeWithContentDescription(getString(R.string.in_effect)).assertExists()
+        deleteEqualizerProfile("Test Profile")
     }
 }

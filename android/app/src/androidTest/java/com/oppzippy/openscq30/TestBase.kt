@@ -69,3 +69,8 @@ open class EmptyActivityTestBase(
     val composeRule: AndroidComposeTestRule<ActivityScenarioRule<TestActivity>, TestActivity> =
         createAndroidComposeRule<TestActivity>(),
 ) : TestBase<TestActivity>(composeRule)
+
+/** Allow software emulators more time without changing the default or skipping state assertions. */
+internal fun uiTimeoutMillis(default: Long = 15_000L): Long =
+    InstrumentationRegistry.getArguments().getString("uiTimeoutMillis")
+        ?.toLongOrNull()?.takeIf { it > 0 } ?: default

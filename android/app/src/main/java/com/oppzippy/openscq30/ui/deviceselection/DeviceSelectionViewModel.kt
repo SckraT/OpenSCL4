@@ -131,12 +131,13 @@ class DeviceSelectionViewModel @Inject constructor(
         )
     }
 
-    fun unpair(activity: Activity, pairedDevice: PairedDevice) {
+    fun unpair(activity: Activity, pairedDevice: PairedDevice, onUnpaired: () -> Unit = {}) {
         viewModelScope.launch {
             // Unpair before removing the association, since if something goes wrong, it's less broken to still be
             // associated but not be paired with openscq30_lib rather than the other way around. The other way around would
             // show the user a device available to connect to that we can't actually connect to.
             session.unpair(pairedDevice.macAddress)
+            onUnpaired()
             refreshPairedDevices()
             if (!pairedDevice.isDemo) {
                 val deviceManager = activity.getSystemService(CompanionDeviceManager::class.java)
