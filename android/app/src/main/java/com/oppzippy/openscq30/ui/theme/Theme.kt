@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceTheme
 import androidx.glance.material3.ColorProviders
 
-private val lightColorScheme = lightColorScheme(
+internal val lightColorScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
     primaryContainer = primaryContainerLight,
@@ -53,7 +53,7 @@ private val lightColorScheme = lightColorScheme(
     surfaceContainerHighest = surfaceContainerHighestLight,
 )
 
-private val darkColorScheme = darkColorScheme(
+internal val darkColorScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     primaryContainer = primaryContainerDark,

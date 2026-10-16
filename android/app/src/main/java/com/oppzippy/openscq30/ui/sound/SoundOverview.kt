@@ -1,7 +1,6 @@
 package com.oppzippy.openscq30.ui.sound
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,12 +68,7 @@ fun SoundOverview(
         Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
             Box(Modifier.fillMaxWidth().heightIn(min = 172.dp)) {
                 if (!largeText && deviceModel == "SoundcoreA3954") {
-                    Image(
-                        painterResource(R.drawable.sound_earbuds_art),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.align(Alignment.CenterEnd).size(190.dp),
-                    )
+                    SoundEarbudsArt(Modifier.align(Alignment.CenterEnd).padding(8.dp).size(184.dp))
                 } else if (!largeText) {
                     Icon(
                         painterResource(R.drawable.headphones_24px),
