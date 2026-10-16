@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -19,10 +20,14 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.prefersDarkTheme
 import com.oppzippy.openscq30.features.preferences.prefersDynamicColor
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.ui.deviceselection.ActiveDevice
+import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceSelectionScreen
+import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
 import com.oppzippy.openscq30.ui.devicesettings.DeviceSettingsScreen
 import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun OpenSCQ30Root(viewModel: OpenSCQ30RootViewModel = hiltViewModel()) {
@@ -103,7 +108,17 @@ fun OpenSCQ30Root(viewModel: OpenSCQ30RootViewModel = hiltViewModel()) {
                     )
                 }
             } else {
-                DeviceSelectionScreen(onDeviceSelected = {
+                val activeSettings by remember(deviceSettings) {
+                    deviceSettings?.allSettingsFlow ?: flowOf(emptyList())
+                }.collectAsState(emptyList())
+                val activeDevice = when (val current = status) {
+                    is ConnectionStatus.Connected -> (current.macAddress ?: requestedMacAddress)?.let {
+                        ActiveDevice(it, ActiveDeviceState.Connected, deviceBatteries(activeSettings.toMap()))
+                    }
+                    is ConnectionStatus.Connecting -> ActiveDevice(current.macAddress, ActiveDeviceState.Connecting)
+                    else -> null
+                }
+                DeviceSelectionScreen(activeDevice = activeDevice, onDeviceSelected = {
                     requestedMacAddress = it.macAddress
                     showDeviceList = false
                     viewModel.selectDevice(it.macAddress)

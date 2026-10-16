@@ -35,6 +35,7 @@ fun DeviceSelectionScreen(
     onDeviceSelected: (device: PairedDevice) -> Unit,
     viewModel: DeviceSelectionViewModel = hiltViewModel(),
     onDeviceUnpaired: (PairedDevice) -> Unit = {},
+    activeDevice: ActiveDevice? = null,
 ) {
     val bluetoothPermission = if (Build.VERSION.SDK_INT >= 31) {
         Manifest.permission.BLUETOOTH_CONNECT
@@ -59,7 +60,12 @@ fun DeviceSelectionScreen(
 
                 DeviceListingScreen(
                     devices = viewModel.pairedDevices.collectAsState().value,
-                    onDeviceClick = { onDeviceSelected(it) },
+                    activeDevice = activeDevice,
+                    lastDeviceMacAddress = viewModel.lastDeviceMacAddress.collectAsState().value,
+                    onDeviceClick = {
+                        viewModel.rememberLastDevice(it.macAddress)
+                        onDeviceSelected(it)
+                    },
                     onUnpair = { device ->
                         viewModel.unpair(activity, device, onUnpaired = { onDeviceUnpaired(device) })
                     },

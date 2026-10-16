@@ -36,4 +36,9 @@
     <string name="sound_earbuds_color_theme">Как тема</string>
     <string name="sound_earbuds_color_silver">Серебристые</string>
     <string name="sound_earbuds_color_black">Чёрные</string>
+    <string name="sound_other_devices">Другие устройства</string>
+    <string name="sound_device_not_connected_hint">Подключите, чтобы видеть заряд и менять настройки.</string>
+    <string name="sound_device_connecting">Подключение…</string>
+    <string name="sound_device_connect">Подключить</string>
+    <string name="sound_no_devices_title">Добавьте наушники</string>
 </resources>

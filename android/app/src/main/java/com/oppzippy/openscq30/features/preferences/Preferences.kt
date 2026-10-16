@@ -26,6 +26,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         private const val PREFERENCE_THEME = "theme"
         private const val PREFERENCE_DYNAMIC_COLOR = "dynamicColor"
         private const val PREFERENCE_EARBUDS_COLOR = "earbudsColor"
+        private const val PREFERENCE_LAST_DEVICE = "lastDeviceMacAddress"
     }
 
     private val preferences = context.getSharedPreferences("preferences", Context.MODE_PRIVATE)
@@ -83,11 +84,22 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         },
     )
 
+    // the device the user opened most recently, shown at the top of the device list while nothing is connected
+    private val lastDevicePreference = Preference(
+        get = { preferences.getString(PREFERENCE_LAST_DEVICE, null) },
+        set = {
+            preferences.edit {
+                if (it != null) putString(PREFERENCE_LAST_DEVICE, it) else remove(PREFERENCE_LAST_DEVICE)
+            }
+        },
+    )
+
     private val preferenceKeysToPreferences = mapOf(
         PREFERENCE_AUTO_CONNECT to autoConnectPreference,
         PREFERENCE_THEME to themePreference,
         PREFERENCE_DYNAMIC_COLOR to dynamicColorPreference,
         PREFERENCE_EARBUDS_COLOR to earbudsColorPreference,
+        PREFERENCE_LAST_DEVICE to lastDevicePreference,
     )
 
     // Marked as -keepclassmembers in proguard-rules so that it doesn't get optimized out. This would lead to it getting
@@ -144,6 +156,11 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
     var earbudsColor: EarbudsColor?
         get() = earbudsColorPreference.flow.value
         set(color) = earbudsColorPreference.set(color)
+
+    val lastDeviceMacAddressFlow = lastDevicePreference.flow
+    var lastDeviceMacAddress: String?
+        get() = lastDevicePreference.flow.value
+        set(macAddress) = lastDevicePreference.set(macAddress)
 }
 
 /** Which earbuds the device overview shows, independently of the theme. */
