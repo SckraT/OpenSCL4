@@ -1,12 +1,10 @@
 package com.oppzippy.openscq30
 
 import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -45,28 +43,23 @@ class MigrateLegacyEqualizerProfilesTest : OpenSCQ30RootTestBase() {
             composeRule.onAllNodesWithContentDescription(getString(R.string.sound_overview_device_actions))
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.waitUntil(uiTimeoutMillis()) {
-            composeRule.onAllNodes(hasText(getString(R.string.sound_overview_all_settings)))
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
-        composeRule.waitUntil(uiTimeoutMillis()) {
-            composeRule.onAllNodes(hasText(getString(R.string.sound_overview_legacy)) and hasClickAction())
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNode(hasText(getString(R.string.sound_overview_legacy)) and hasClickAction())
-            .performScrollTo().performClick()
-        composeRule.onNodeWithText("Test Legacy Profile").assertExists()
-        composeRule.onNodeWithText(getString(R.string.migrate)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        // the equalizer page offers to move the old profile over
         composeRule.waitUntil(uiTimeoutMillis()) {
             composeRule.onAllNodes(hasText(getString(R.string.equalizer))).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText(getString(R.string.equalizer)).performScrollTo().performClick()
+        val found = composeRule.activity.resources.getQuantityString(R.plurals.sound_profile_legacy_found, 1, 1)
         composeRule.waitUntil(uiTimeoutMillis()) {
-            composeRule.onAllNodes(hasText("Test Legacy Profile")).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(hasText(found)).fetchSemanticsNodes().isNotEmpty()
         }
+        composeRule.onNodeWithText(getString(R.string.sound_profile_migrate_all)).performClick()
+        // once moved, the profile is a saved one and the offer is gone
+        composeRule.waitUntil(uiTimeoutMillis()) {
+            composeRule.onAllNodes(
+                hasContentDescription(getString(R.string.sound_profile_more_named, "Test Legacy Profile")),
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText(found).assertDoesNotExist()
         composeRule.onNodeWithText("Test Legacy Profile").performScrollTo().performClick()
         composeRule.waitUntil(uiTimeoutMillis()) {
             composeRule.onAllNodes(

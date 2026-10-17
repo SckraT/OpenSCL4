@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -62,6 +63,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
 import com.oppzippy.openscq30.lib.wrapper.Select
@@ -76,13 +78,20 @@ private const val PRESET_PROFILE = "presetEqualizerProfile"
 private const val CUSTOM_PROFILE = "customEqualizerProfile"
 private const val VOLUME_ADJUSTMENTS = "volumeAdjustments"
 
-/** Device values remain authoritative; drag previews are committed as one vector on release. */
+/**
+ * Device values remain authoritative; drag previews are committed as one vector on release. Saved profiles are managed
+ * here as well: importing, exporting and moving over profiles from OpenSCQ30 1.x.
+ */
 @Composable
 fun SoundEqualizerPage(
     settings: List<Pair<String, Setting>>,
     setSettings: (List<Pair<String, Value>>) -> Unit,
-    onImportExport: () -> Unit,
+    importExportSettings: List<Pair<String, Setting>>,
+    legacyProfiles: List<LegacyEqualizerProfile>,
+    onMigrateLegacyProfiles: (List<LegacyEqualizerProfile>) -> Unit,
+    onImport: suspend (String) -> Result<Unit>,
 ) {
+    val context = LocalContext.current
     val settingsById = settings.toMap()
     val equalizer = settingsById[VOLUME_ADJUSTMENTS] as? Setting.EqualizerSetting
     val preset = settingsById[PRESET_PROFILE]
@@ -103,6 +112,9 @@ fun SoundEqualizerPage(
     var showNumericEntry by rememberSaveable { mutableStateOf(false) }
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var deleteProfile by rememberSaveable { mutableStateOf<String?>(null) }
+    val savedProfiles = rememberSavedProfiles(importExportSettings, setSettings)
+    val profileNames = custom?.setting?.options.orEmpty()
+    val unmigrated = unmigratedLegacyProfiles(legacyProfiles, profileNames)
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
@@ -114,6 +126,10 @@ fun SoundEqualizerPage(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        if (equalizer != null && custom != null && unmigrated.isNotEmpty()) {
+            LegacyProfilesBanner(unmigrated, equalizer.setting, onMigrateLegacyProfiles)
+        }
 
         if (presetSelect != null) {
             Row(
@@ -278,36 +294,22 @@ fun SoundEqualizerPage(
             Card(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     custom.setting.options.forEachIndexed { index, option ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            TextButton(
-                                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                                onClick = { setSettings(listOf(CUSTOM_PROFILE to option.toValue())) },
-                            ) {
-                                if (custom.value == option && presetValue == null) {
-                                    Icon(
-                                        painterResource(R.drawable.check_24px),
-                                        contentDescription = stringResource(R.string.in_effect),
-                                    )
-                                }
-                                Text(custom.setting.localizedLabel(index))
-                            }
-                            IconButton(onClick = { deleteProfile = option }) {
-                                Icon(
-                                    painterResource(R.drawable.remove_24px),
-                                    contentDescription = stringResource(R.string.sound_profile_delete_named, option),
-                                )
-                            }
-                        }
+                        val saved = savedProfiles[option]
+                        SavedProfileRow(
+                            label = custom.setting.localizedLabel(index),
+                            inEffect = custom.value == option && presetValue == null,
+                            curve = equalizer?.let { saved?.deviceValues(it.setting.fractionDigits) },
+                            equalizer = equalizer?.setting,
+                            onSelect = { setSettings(listOf(CUSTOM_PROFILE to option.toValue())) },
+                            onShare = saved?.let { { shareProfiles(context, listOf(it)) } },
+                            onDelete = { deleteProfile = option },
+                        )
                     }
                 }
             }
         }
-        OutlinedButton(modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), onClick = onImportExport) {
-            Text(stringResource(R.string.sound_profile_import_export))
+        if (importExportSettings.isNotEmpty()) {
+            ProfileTransferSection(profileNames, savedProfiles, equalizer?.setting, onImport)
         }
     }
 

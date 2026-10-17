@@ -55,11 +55,13 @@ import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
+import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
 import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
+import com.oppzippy.openscq30.ui.sound.ProfileTransferSection
 import com.oppzippy.openscq30.ui.sound.SoundCapabilities
 import com.oppzippy.openscq30.ui.sound.SoundCasePage
 import com.oppzippy.openscq30.ui.sound.SoundComfortPage
@@ -81,6 +83,7 @@ import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
+import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -111,7 +114,7 @@ fun DeviceSettingsScreen(
     onFeaturedSettingSlotChange: (Int, String?) -> Unit,
     onQuickPresetLoadCurrentSettings: (String) -> Unit,
     legacyEqualizerProfilesFlow: Flow<List<LegacyEqualizerProfile>>,
-    onMigrateLegacyEqualizerProfile: (LegacyEqualizerProfile) -> Unit,
+    onMigrateLegacyEqualizerProfiles: (List<LegacyEqualizerProfile>) -> Unit,
     onDisconnect: () -> Unit = {},
 ) {
     val fontScale = LocalDensity.current.fontScale
@@ -134,6 +137,7 @@ fun DeviceSettingsScreen(
         }
     }.collectAsState(emptyMap())
     val presets by remember(connection.deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
+    val legacyProfiles by remember(connection.deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     val modeSettings = settings.filter {
         it.first in SoundCapabilities.modes ||
             byCategory["soundModes"].orEmpty().any { s -> s.first == it.first }
@@ -382,13 +386,32 @@ fun DeviceSettingsScreen(
                 OverviewLayoutEditor(connection.deviceManager.device.model(), available)
             }
             composable("equalizer") {
+                val transferSettings = byCategory["equalizerImportExport"].orEmpty()
+                val importProfiles: suspend (String) -> Result<Unit> = {
+                    setSettingValueForResult("importCustomEqualizerProfiles", it.toValue())
+                }
                 // the earbuds can disconnect from each other while this page is open
                 if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
-                    SoundOneEarbudNotice(Modifier.padding(20.dp))
+                    // profiles are kept on the phone, so they can still be imported and exported
+                    Column(
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        SoundOneEarbudNotice()
+                        if (transferSettings.isNotEmpty()) {
+                            val savedProfiles = rememberSavedProfiles(transferSettings, setSettingValues)
+                            ProfileTransferSection(savedProfiles.keys.toList(), savedProfiles, null, importProfiles)
+                        }
+                    }
                 } else {
-                    SoundEqualizerPage(settings, setSettingValues, onImportExport = {
-                        openCategory("equalizerImportExport")
-                    })
+                    SoundEqualizerPage(
+                        settings = settings,
+                        setSettings = setSettingValues,
+                        importExportSettings = transferSettings,
+                        legacyProfiles = legacyProfiles,
+                        onMigrateLegacyProfiles = onMigrateLegacyEqualizerProfiles,
+                        onImport = importProfiles,
+                    )
                 }
             }
             composable("controls") { SoundControlsPage(controlSettings, setSettingValues) }
@@ -452,7 +475,9 @@ fun DeviceSettingsScreen(
                         style = MaterialTheme.typography.headlineMedium,
                     )
                     if (oneEarbudOnly) SoundOneEarbudNotice()
-                    categories.forEach { id ->
+                    // the equalizer page has the import and export of profiles as well
+                    val equalizerPage = dedicatedRoute("equalizer") != null
+                    categories.filterNot { equalizerPage && it == "equalizerImportExport" }.forEach { id ->
                         val unavailable = oneEarbudOnly && categoryNeedsBothEarbuds(id) &&
                             byCategory[id].isNullOrEmpty()
                         SoundDashboardLink(
@@ -478,16 +503,15 @@ fun DeviceSettingsScreen(
                             navController.navigate("notifications")
                         },
                     )
-                    SoundDashboardLink(
-                        stringResource(
-                            R.string.sound_overview_legacy,
-                        ),
-                        null,
-                        R.drawable.update_24px,
-                        onClick = {
-                            navController.navigate("legacy")
-                        },
-                    )
+                    // the equalizer page offers to move old profiles over itself
+                    if (!equalizerPage && legacyProfiles.isNotEmpty()) {
+                        SoundDashboardLink(
+                            stringResource(R.string.sound_overview_legacy),
+                            null,
+                            R.drawable.update_24px,
+                            onClick = { navController.navigate("legacy") },
+                        )
+                    }
                 }
             }
             composable(
@@ -527,10 +551,7 @@ fun DeviceSettingsScreen(
                 )
             }
             composable("legacy") {
-                val legacy by remember(connection.deviceManager) {
-                    legacyEqualizerProfilesFlow
-                }.collectAsState(emptyList())
-                MigrateLegacyEqualizerProfilesScreen(legacy, onMigrateLegacyEqualizerProfile)
+                MigrateLegacyEqualizerProfilesScreen(legacyProfiles) { onMigrateLegacyEqualizerProfiles(listOf(it)) }
             }
         }
     }

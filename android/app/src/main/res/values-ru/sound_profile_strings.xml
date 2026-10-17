@@ -15,7 +15,6 @@
     <string name="sound_profile_eq_unavailable">Значения эквалайзера для этого устройства недоступны.</string>
     <string name="sound_profile_saved_profiles">Мои профили</string>
     <string name="sound_profile_delete_named">Удалить профиль «%1$s»</string>
-    <string name="sound_profile_import_export">Импорт / экспорт JSON</string>
     <string name="sound_profile_delete_title">Удалить профиль эквалайзера?</string>
     <string name="sound_profile_band_accessibility">%1$s, %2$s дБ</string>
     <string name="sound_profile_chart_description">Кривая эквалайзера. Проведите по графику, чтобы изменить частоту, или используйте ползунки ниже.</string>
@@ -28,4 +27,51 @@
     <string name="sound_profile_overwrite_warning">Профиль «%1$s» уже существует. Заменить сохранённые значения?</string>
     <string name="sound_profile_replace">Заменить профиль</string>
     <string name="sound_profile_save_short">Сохранить</string>
+    <string name="sound_profile_transfer_title">Импорт и экспорт</string>
+    <string name="sound_profile_transfer_description">Делитесь профилями, храните их в файле или переносите на другой телефон.</string>
+    <string name="sound_profile_export_title">Экспорт</string>
+    <string name="sound_profile_select_all">Выбрать все</string>
+    <string name="sound_profile_share">Поделиться</string>
+    <string name="sound_profile_save_file">Сохранить в файл</string>
+    <string name="sound_profile_copy">Копировать</string>
+    <string name="sound_profile_copied">Скопировано</string>
+    <string name="sound_profile_file_saved">Сохранено в файл</string>
+    <string name="sound_profile_file_save_failed">Не удалось сохранить файл</string>
+    <string name="sound_profile_import_title">Импорт</string>
+    <string name="sound_profile_paste">Вставить</string>
+    <string name="sound_profile_open_file">Открыть файл</string>
+    <string name="sound_profile_not_profiles">Это не файл профилей эквалайзера</string>
+    <string name="sound_profile_clipboard_empty">Буфер обмена пуст</string>
+    <string name="sound_profile_file_too_large">Файл слишком большой</string>
+    <string name="sound_profile_file_read_failed">Не удалось прочитать файл</string>
+    <string name="sound_profile_import_preview_title">Импорт профилей</string>
+    <string name="sound_profile_import_new">Новый</string>
+    <string name="sound_profile_import_replaces">Заменит сохранённый профиль</string>
+    <string name="sound_profile_import_wrong_bands">%1$d полос, а у устройства %2$d</string>
+    <string name="sound_profile_import_out_of_range">Значения вне диапазона устройства</string>
+    <string name="sound_profile_import_blocked">Профили, отмеченные красным, не подходят для этого устройства, поэтому файл нельзя импортировать.</string>
+    <plurals name="sound_profile_import_button">
+        <item quantity="one">Импортировать %d профиль</item>
+        <item quantity="few">Импортировать %d профиля</item>
+        <item quantity="many">Импортировать %d профилей</item>
+        <item quantity="other">Импортировать %d профиля</item>
+    </plurals>
+    <plurals name="sound_profile_imported">
+        <item quantity="one">Импортирован %d профиль</item>
+        <item quantity="few">Импортировано %d профиля</item>
+        <item quantity="many">Импортировано %d профилей</item>
+        <item quantity="other">Импортировано %d профиля</item>
+    </plurals>
+    <plurals name="sound_profile_legacy_found">
+        <item quantity="one">%d профиль из старой версии OpenSCQ30</item>
+        <item quantity="few">%d профиля из старой версии OpenSCQ30</item>
+        <item quantity="many">%d профилей из старой версии OpenSCQ30</item>
+        <item quantity="other">%d профиля из старой версии OpenSCQ30</item>
+    </plurals>
+    <string name="sound_profile_legacy_description">Перенесите их в свои профили, чтобы пользоваться ими с этим устройством.</string>
+    <string name="sound_profile_migrate_all">Перенести все</string>
+    <string name="sound_profile_legacy_show">Показать</string>
+    <string name="sound_profile_legacy_hide">Скрыть</string>
+    <string name="sound_profile_more_named">Ещё для «%1$s»</string>
+    <string name="sound_profile_export_empty">Сохраните профиль, чтобы его экспортировать.</string>
 </resources>

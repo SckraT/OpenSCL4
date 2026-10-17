@@ -15,7 +15,6 @@
     <string name="sound_profile_eq_unavailable">Equalizer values are unavailable for this device.</string>
     <string name="sound_profile_saved_profiles">My profiles</string>
     <string name="sound_profile_delete_named">Delete profile %1$s</string>
-    <string name="sound_profile_import_export">Import / export JSON</string>
     <string name="sound_profile_delete_title">Delete equalizer profile?</string>
     <string name="sound_profile_band_accessibility">%1$s, %2$s dB</string>
     <string name="sound_profile_chart_description">Equalizer curve. Drag to adjust a frequency, or use the sliders below.</string>
@@ -28,4 +27,45 @@
     <string name="sound_profile_overwrite_warning">A profile named “%1$s” already exists. Replace its saved values?</string>
     <string name="sound_profile_replace">Replace profile</string>
     <string name="sound_profile_save_short">Save</string>
+    <string name="sound_profile_transfer_title">Import and export</string>
+    <string name="sound_profile_transfer_description">Share profiles, keep them in a file or move them to another phone.</string>
+    <string name="sound_profile_export_title">Export</string>
+    <string name="sound_profile_select_all">Select all</string>
+    <string name="sound_profile_share">Share</string>
+    <string name="sound_profile_save_file">Save to file</string>
+    <string name="sound_profile_copy">Copy</string>
+    <string name="sound_profile_copied">Copied</string>
+    <string name="sound_profile_file_saved">Saved to the file</string>
+    <string name="sound_profile_file_save_failed">Could not save the file</string>
+    <string name="sound_profile_import_title">Import</string>
+    <string name="sound_profile_paste">Paste</string>
+    <string name="sound_profile_open_file">Open file</string>
+    <string name="sound_profile_not_profiles">This is not an equalizer profiles file</string>
+    <string name="sound_profile_clipboard_empty">The clipboard is empty</string>
+    <string name="sound_profile_file_too_large">The file is too large</string>
+    <string name="sound_profile_file_read_failed">Could not read the file</string>
+    <string name="sound_profile_import_preview_title">Import profiles</string>
+    <string name="sound_profile_import_new">New</string>
+    <string name="sound_profile_import_replaces">Replaces the saved profile</string>
+    <string name="sound_profile_import_wrong_bands">%1$d bands, this device has %2$d</string>
+    <string name="sound_profile_import_out_of_range">Values outside this device’s range</string>
+    <string name="sound_profile_import_blocked">Profiles marked in red can not be used with this device, so the file can not be imported.</string>
+    <plurals name="sound_profile_import_button">
+        <item quantity="one">Import %d profile</item>
+        <item quantity="other">Import %d profiles</item>
+    </plurals>
+    <plurals name="sound_profile_imported">
+        <item quantity="one">Imported %d profile</item>
+        <item quantity="other">Imported %d profiles</item>
+    </plurals>
+    <plurals name="sound_profile_legacy_found">
+        <item quantity="one">%d profile from an older OpenSCQ30</item>
+        <item quantity="other">%d profiles from an older OpenSCQ30</item>
+    </plurals>
+    <string name="sound_profile_legacy_description">Move them to your saved profiles to use them with this device.</string>
+    <string name="sound_profile_migrate_all">Move all</string>
+    <string name="sound_profile_legacy_show">Show</string>
+    <string name="sound_profile_legacy_hide">Hide</string>
+    <string name="sound_profile_more_named">More for %1$s</string>
+    <string name="sound_profile_export_empty">Save a profile to export it.</string>
 </resources>

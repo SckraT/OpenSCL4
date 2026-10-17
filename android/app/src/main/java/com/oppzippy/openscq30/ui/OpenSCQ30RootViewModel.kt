@@ -411,31 +411,37 @@ class DeviceSettingsManager(
 
     val legacyEqualizerProfilesFlow = legacyEqualizerProfileDao.all()
 
-    fun migrateLegacyEqualizerProfile(legacyEqualizerProfile: LegacyEqualizerProfile) {
-        val oldVolumeAdjustments = device.setting("volumeAdjustments") ?: return
-        if (oldVolumeAdjustments !is Setting.EqualizerSetting) return
-
+    /**
+     * Saves old profiles as custom profiles of this device. They are moved one after another, since each one briefly
+     * puts its values on the device and then the old values back.
+     */
+    fun migrateLegacyEqualizerProfiles(legacyEqualizerProfiles: List<LegacyEqualizerProfile>) {
         coroutineScope.launch {
-            try {
-                device.setSettingValues(
-                    listOf(
-                        SettingIdValuePair(
-                            "volumeAdjustments",
-                            legacyEqualizerProfile.getVolumeAdjustments().map { (it * 10.0).roundToInt().toShort() }
-                                .toValue(),
-                        ),
-                        SettingIdValuePair(
-                            "customEqualizerProfile",
-                            Value.ModifiableSelectCommand(
-                                ModifiableSelectCommandInner.Add(legacyEqualizerProfile.name),
+            for (legacyEqualizerProfile in legacyEqualizerProfiles) {
+                val oldVolumeAdjustments = device.setting("volumeAdjustments")
+                if (oldVolumeAdjustments !is Setting.EqualizerSetting) return@launch
+                try {
+                    device.setSettingValues(
+                        listOf(
+                            SettingIdValuePair(
+                                "volumeAdjustments",
+                                legacyEqualizerProfile.getVolumeAdjustments().map { (it * 10.0).roundToInt().toShort() }
+                                    .toValue(),
                             ),
+                            SettingIdValuePair(
+                                "customEqualizerProfile",
+                                Value.ModifiableSelectCommand(
+                                    ModifiableSelectCommandInner.Add(legacyEqualizerProfile.name),
+                                ),
+                            ),
+                            SettingIdValuePair("volumeAdjustments", oldVolumeAdjustments.toValue()),
                         ),
-                        SettingIdValuePair("volumeAdjustments", oldVolumeAdjustments.toValue()),
-                    ),
-                )
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error migrating legacy equalizer profile", ex)
-                toastHandler.add(R.string.error_migrating_legacy_profile, Toast.LENGTH_SHORT)
+                    )
+                } catch (ex: OpenScq30Exception) {
+                    Log.e(TAG, "error migrating legacy equalizer profile", ex)
+                    toastHandler.add(R.string.error_migrating_legacy_profile, Toast.LENGTH_SHORT)
+                    return@launch
+                }
             }
         }
     }
