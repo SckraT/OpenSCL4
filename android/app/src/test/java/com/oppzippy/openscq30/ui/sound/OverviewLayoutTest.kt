@@ -38,6 +38,17 @@ class OverviewLayoutTest {
     }
 
     @Test
+    fun powerAndPromptsAreOnlyInTheFullSet() {
+        assertEquals(false, OverviewLayout.of(OverviewPreset.Standard).blocks.toMap()[OverviewBlock.Power])
+        assertEquals(true, OverviewLayout.of(OverviewPreset.Full).blocks.toMap()[OverviewBlock.Power])
+        // a layout saved before the block existed gets it hidden, and is still the standard set
+        val saved = OverviewLayout.Default.blocks.filter { it.first != OverviewBlock.Power }
+            .joinToString(",") { (block, visible) -> if (visible) block.id else "!${block.id}" }
+        val parsed = OverviewLayout.parse(saved)
+        assertEquals(false, parsed.blocks.toMap()[OverviewBlock.Power])
+    }
+
+    @Test
     fun aChangedLayoutIsNoLongerAPreset() {
         assertNull(OverviewLayout.Default.withVisibility(OverviewBlock.Spatial, false).preset)
         assertNull(OverviewLayout.Default.moved(0, 1).preset)

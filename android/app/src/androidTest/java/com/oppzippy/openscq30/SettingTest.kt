@@ -32,7 +32,6 @@ import androidx.compose.ui.test.performTextInput
 import androidx.core.content.getSystemService
 import com.oppzippy.openscq30.actions.addAndConnectToDemoDevice
 import com.oppzippy.openscq30.extensions.assertRangeValueApproxEquals
-import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -75,10 +74,10 @@ class SettingTest : OpenSCQ30RootTestBase() {
         waitForNode(hasText(getString(R.string.sound_profile_paste)))
     }
 
-    private fun openAllSettingsCategory(id: String) {
+    private fun openAllSettingsGroup(title: String) {
         composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
-        waitForNode(hasText(translateCategoryId(id)) and hasClickAction())
-        composeRule.onNode(hasText(translateCategoryId(id)) and hasClickAction()).performScrollTo().performClick()
+        waitForNode(hasText(title) and hasClickAction())
+        composeRule.onNode(hasText(title) and hasClickAction()).performScrollTo().performClick()
     }
 
     private fun saveEqualizerProfile(name: String) {
@@ -258,12 +257,12 @@ class SettingTest : OpenSCQ30RootTestBase() {
     fun testA3116PresetEqualizerProfile() {
         connectDemo("SoundcoreA3116")
         // All settings open the same equalizer page as the device screen, for the speaker as well.
-        openAllSettingsCategory("equalizer")
+        openAllSettingsGroup(getString(R.string.equalizer))
         composeRule.onNode(hasText("Bass Up") and isSelectable()).performScrollTo().performClick()
         waitForSelected("Bass Up")
         composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
         composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-        openAllSettingsCategory("equalizer")
+        openAllSettingsGroup(getString(R.string.equalizer))
         composeRule.onNode(hasText("Bass Up") and isSelectable()).performScrollTo().assertIsSelected()
     }
 

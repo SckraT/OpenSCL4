@@ -12,7 +12,11 @@
     <string name="sound_overview_controls">Controls</string>
     <string name="sound_overview_comfort">Comfort</string>
     <string name="sound_overview_connections">Connections</string>
-    <string name="sound_overview_spatial">Spatial audio</string>
+    <string name="sound_overview_effects">Sound and effects</string>
+    <string name="sound_overview_power">Power and prompts</string>
+    <string name="sound_overview_sleep">Sleep</string>
+    <string name="sound_overview_spatial_on">Spatial audio on</string>
+    <string name="sound_overview_spatial_off">Spatial audio off</string>
     <string name="sound_overview_on">On</string>
     <string name="sound_overview_off">Off</string>
     <string name="sound_overview_all_settings">All device settings</string>
@@ -28,7 +32,6 @@
     <string name="sound_overview_retry">Connect again</string>
     <string name="sound_overview_no_settings">No settings are currently available.</string>
     <string name="sound_overview_preset_missing">This preset is no longer available.</string>
-    <string name="sound_overview_notifications">Notification controls</string>
     <string name="sound_overview_legacy">Legacy equalizer profiles</string>
     <string name="sound_overview_one_earbud_title">Only one earbud is connected</string>
     <string name="sound_overview_one_earbud_message">The equalizer and some other settings become available when both earbuds are connected.</string>
