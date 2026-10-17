@@ -13,7 +13,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.preferredEarbudsColor
 
-/** Unbranded illustrations from the Soundcore catalog. Visually similar models share one. */
+/** Unbranded illustrations drawn in one shared style. Visually similar models share one. */
 enum class DeviceArt(@DrawableRes val silver: Int, @DrawableRes val black: Int) {
     Headphones(R.drawable.sound_art_headphones_silver, R.drawable.sound_art_headphones_black),
     MotionPlus(R.drawable.sound_art_motion_plus_silver, R.drawable.sound_art_motion_plus_black),
