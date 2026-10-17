@@ -91,9 +91,12 @@ fun DeviceHeroCard(
                             fontWeight = FontWeight.Medium,
                         )
                         Spacer(Modifier.size(6.dp))
+                        // the badge keeps a full-size touch target, so the row centers its items instead of lining up
+                        // their tops
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically,
                         ) {
                             DeviceStatusPill(state)
                             if (oneEarbudBadge) OneEarbudBadge()
@@ -211,10 +214,11 @@ private fun OneEarbudBadge() {
         color = MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
     ) {
+        // the same size as the status pill beside it
         Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(painterResource(R.drawable.earbuds_2_24px), null, Modifier.size(14.dp))
             Text(stringResource(R.string.sound_one_earbud_badge), style = MaterialTheme.typography.labelMedium)
