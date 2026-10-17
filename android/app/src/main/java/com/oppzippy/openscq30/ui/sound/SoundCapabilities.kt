@@ -54,3 +54,10 @@ internal object SoundCapabilities {
  */
 internal fun coveredByPage(categorySettingIds: Collection<String>, pageSettingIds: Set<String>): Boolean =
     categorySettingIds.isNotEmpty() && pageSettingIds.containsAll(categorySettingIds)
+
+/**
+ * Whether the equalizer category opens the equalizer page. While only one earbud is connected the device offers no
+ * equalizer settings, but the page still says why, and saved profiles can still be imported and exported there.
+ */
+internal fun equalizerOpensItsPage(categorySettingIds: Collection<String>, oneEarbudOnly: Boolean): Boolean =
+    coveredByPage(categorySettingIds, BOTH_EARBUDS_SETTING_IDS) || (oneEarbudOnly && categorySettingIds.isEmpty())
