@@ -18,6 +18,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.quicksettings.LdacTileService
 import com.oppzippy.openscq30.features.soundcoredevice.connectionBackends
 import com.oppzippy.openscq30.features.statusnotification.storage.FeaturedSettingSlotDao
 import com.oppzippy.openscq30.features.statusnotification.storage.QuickPresetSlotDao
@@ -25,6 +26,7 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
+import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
 import dagger.hilt.android.AndroidEntryPoint
@@ -76,6 +78,10 @@ class DeviceService : LifecycleService() {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
+
+        // the connected device's LDAC setting, or null without a device that has one, for the Quick Settings tile
+        private val _ldacState = MutableStateFlow<Boolean?>(null)
+        val ldacState = _ldacState.asStateFlow()
     }
 
     @Inject
@@ -283,6 +289,26 @@ class DeviceService : LifecycleService() {
             }
         }
 
+        lifecycleScope.launch {
+            connectionStatusFlow.collectLatest { connectionStatus ->
+                if (connectionStatus is ConnectionStatus.Connected) {
+                    val device = connectionStatus.deviceManager.device
+                    connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
+                        _ldacState.value = try {
+                            (device.setting("ldac") as? Setting.ToggleSetting)?.value
+                        } catch (ex: IllegalStateException) {
+                            Log.w(TAG, "device was closed, LDAC unknown", ex)
+                            null
+                        }
+                        LdacTileService.requestUpdate(applicationContext)
+                    }
+                } else {
+                    _ldacState.value = null
+                    LdacTileService.requestUpdate(applicationContext)
+                }
+            }
+        }
+
         _isRunning.value = true
     }
 
@@ -309,6 +335,8 @@ class DeviceService : LifecycleService() {
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)
         }
+        _ldacState.value = null
+        LdacTileService.requestUpdate(applicationContext)
         _isRunning.value = false
     }
 

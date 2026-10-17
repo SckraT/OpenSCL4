@@ -46,4 +46,6 @@
     <string name="sound_device_connecting">Подключение…</string>
     <string name="sound_device_connect">Подключить</string>
     <string name="sound_no_devices_title">Добавьте наушники</string>
+    <string name="sound_ldac_tile">LDAC</string>
+    <string name="sound_ldac_tile_unavailable">Нет устройства с LDAC</string>
 </resources>

@@ -46,4 +46,6 @@
     <string name="sound_device_connecting">Connecting…</string>
     <string name="sound_device_connect">Connect</string>
     <string name="sound_no_devices_title">Add your headphones</string>
+    <string name="sound_ldac_tile">LDAC</string>
+    <string name="sound_ldac_tile_unavailable">No device with LDAC</string>
 </resources>
