@@ -79,6 +79,7 @@ import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
 import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
 import com.oppzippy.openscq30.ui.sound.coveredByPage
+import com.oppzippy.openscq30.ui.sound.equalizerOpensItsPage
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
@@ -168,15 +169,16 @@ fun DeviceSettingsScreen(
     // A category with a page of its own opens that page, the same one the device screen opens, as long as the page
     // shows all of the category's settings.
     fun dedicatedRoute(id: String): String? {
+        val categorySettingIds = byCategory[id].orEmpty().map { it.first }
+        if (id == "equalizer") return "equalizer".takeIf { equalizerOpensItsPage(categorySettingIds, oneEarbudOnly) }
         val (route, pageSettingIds) = when (id) {
             "soundModes" -> "sound" to modeSettings.map { it.first }.toSet()
-            "equalizer" -> "equalizer" to BOTH_EARBUDS_SETTING_IDS
             "buttonConfiguration" -> "controls" to controlSettings.map { it.first }.toSet()
             "case" -> "case" to caseSettings.map { it.first }.toSet()
             "dualConnections" -> "connections" to connectionSettings.map { it.first }.toSet()
             else -> return null
         }
-        return route.takeIf { coveredByPage(byCategory[id].orEmpty().map { it.first }, pageSettingIds) }
+        return route.takeIf { coveredByPage(categorySettingIds, pageSettingIds) }
     }
     if (confirmDisconnect) {
         AlertDialog(
@@ -480,6 +482,7 @@ fun DeviceSettingsScreen(
                     categories.filterNot { equalizerPage && it == "equalizerImportExport" }.forEach { id ->
                         val unavailable = oneEarbudOnly && categoryNeedsBothEarbuds(id) &&
                             byCategory[id].isNullOrEmpty()
+                        val route = dedicatedRoute(id)
                         SoundDashboardLink(
                             translateCategoryId(
                                 id,
@@ -487,10 +490,10 @@ fun DeviceSettingsScreen(
                             if (unavailable) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
                             Screen.SettingsCategory(id).screenInfo().icon,
                             onClick = {
-                                val route = dedicatedRoute(id)
                                 if (route != null) navController.navigate(route) else openCategory(id)
                             },
-                            enabled = !unavailable,
+                            // a page of its own still has something to show, such as importing equalizer profiles
+                            enabled = !unavailable || route != null,
                         )
                     }
                     SoundDashboardLink(
