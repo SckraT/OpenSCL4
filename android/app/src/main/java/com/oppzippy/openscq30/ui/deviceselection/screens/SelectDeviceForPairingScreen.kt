@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.ConnectionDescriptor
+import com.oppzippy.openscq30.ui.deviceselection.splitBrand
+import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +77,28 @@ fun SelectDeviceForPairingScreen(
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            item {
+                Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                splitBrand(translateDeviceModel(model)).second,
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                            Text(
+                                model.removePrefix("Soundcore"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                            )
+                        }
+                        DeviceArtOrIcon(model, Modifier.size(140.dp))
+                    }
+                }
+            }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.sound_ready_to_pair), style = MaterialTheme.typography.headlineMedium)

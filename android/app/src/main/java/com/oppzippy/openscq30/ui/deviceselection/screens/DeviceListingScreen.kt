@@ -69,8 +69,7 @@ import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
 import com.oppzippy.openscq30.ui.deviceselection.featuredDevice
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
-import com.oppzippy.openscq30.ui.sound.SoundDeviceArt
-import com.oppzippy.openscq30.ui.sound.deviceArt
+import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
 import kotlinx.coroutines.launch
 
@@ -214,7 +213,9 @@ private fun FeaturedDeviceCard(
     onUnpair: () -> Unit,
 ) {
     val (brand, name) = splitBrand(translateDeviceModel(device.model))
+    // Tapping anywhere on the card does what its button does, as on the rows below it.
     Surface(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -233,8 +234,8 @@ private fun FeaturedDeviceCard(
                         Spacer(Modifier.size(6.dp))
                         DeviceStatusPill(state)
                     }
-                    DeviceImage(
-                        device,
+                    DeviceArtOrIcon(
+                        device.model,
                         dimmed = state != ActiveDeviceState.Connected,
                         modifier = Modifier.size(132.dp),
                     )
@@ -372,7 +373,7 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
                 Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                DeviceImage(device, dimmed = false, modifier = Modifier.size(44.dp))
+                DeviceArtOrIcon(device.model, Modifier.size(44.dp))
             }
             Column(Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium)
@@ -383,24 +384,6 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
                 )
             }
             DeviceMenu(device, onUnpair)
-        }
-    }
-}
-
-@Composable
-private fun DeviceImage(device: PairedDevice, dimmed: Boolean, modifier: Modifier) {
-    val artModifier = modifier.alpha(if (dimmed) 0.6f else 1f)
-    val art = deviceArt(device.model)
-    if (art != null) {
-        SoundDeviceArt(art, artModifier)
-    } else {
-        Box(artModifier, contentAlignment = Alignment.Center) {
-            Icon(
-                painterResource(R.drawable.headphones_24px),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(0.55f),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
         }
     }
 }

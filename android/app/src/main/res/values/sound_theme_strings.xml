@@ -27,6 +27,11 @@
     <string name="sound_open_device">Open</string>
     <string name="sound_find_your_model">Find your model.</string>
     <string name="sound_find_your_model_description">Choose the exact model so you see the controls your device supports.</string>
+    <string name="sound_kind_all">All</string>
+    <string name="sound_kind_earbuds">Earbuds</string>
+    <string name="sound_kind_over_ear">Over-ear</string>
+    <string name="sound_kind_open">Open-ear</string>
+    <string name="sound_kind_speakers">Speakers</string>
     <string name="sound_ready_to_pair">Ready to connect?</string>
     <string name="sound_prepare_pairing">Turn on Bluetooth and keep your headphones nearby. Android will help you complete pairing.</string>
     <string name="sound_demo_mode_description">Explore the interface without real headphones</string>

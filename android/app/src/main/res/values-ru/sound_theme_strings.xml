@@ -27,6 +27,11 @@
     <string name="sound_open_device">Открыть</string>
     <string name="sound_find_your_model">Найдём вашу модель.</string>
     <string name="sound_find_your_model_description">Выберите точную модель, чтобы видеть доступные для неё настройки.</string>
+    <string name="sound_kind_all">Все</string>
+    <string name="sound_kind_earbuds">Внутриканальные</string>
+    <string name="sound_kind_over_ear">Полноразмерные</string>
+    <string name="sound_kind_open">Открытые</string>
+    <string name="sound_kind_speakers">Колонки</string>
     <string name="sound_ready_to_pair">Подключим наушники?</string>
     <string name="sound_prepare_pairing">Включите Bluetooth и держите наушники рядом. Android поможет завершить сопряжение.</string>
     <string name="sound_demo_mode_description">Знакомство с интерфейсом без настоящих наушников</string>

@@ -44,6 +44,16 @@ class SoundDeviceArtTest {
     }
 
     @Test
+    fun modelsAreGroupedByKind() {
+        assertEquals(DeviceKind.Earbuds, deviceArt("SoundcoreA3954")?.kind)
+        assertEquals(DeviceKind.Earbuds, deviceArt("SoundcoreA3968")?.kind)
+        assertEquals(DeviceKind.OverEar, deviceArt("SoundcoreA3028")?.kind)
+        assertEquals(DeviceKind.OpenEar, deviceArt("SoundcoreA3330")?.kind)
+        assertEquals(DeviceKind.OpenEar, deviceArt("SoundcoreA3876")?.kind)
+        assertEquals(DeviceKind.Speaker, deviceArt("SoundcoreA3116")?.kind)
+    }
+
+    @Test
     fun unknownModelsHaveNoIllustration() {
         assertNull(deviceArt("SoundcoreA9999"))
         assertNull(deviceArt("A3954"))

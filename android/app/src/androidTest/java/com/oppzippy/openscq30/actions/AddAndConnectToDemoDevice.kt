@@ -2,11 +2,10 @@ package com.oppzippy.openscq30.actions
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,6 +13,7 @@ import androidx.compose.ui.test.performScrollToNode
 import com.oppzippy.openscq30.MainActivity
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
+import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.uiTimeoutMillis
 import kotlinx.coroutines.runBlocking
 import org.junit.rules.TestRule
@@ -29,11 +29,11 @@ fun <Rule : TestRule, A : ComponentActivity> addAndConnectToDemoDevice(
     if (savedDemo == null) {
         addDemoDevice(composeRule, modelName)
     }
-    val deviceMatcher = hasText(modelName) and if (savedDemo != null) {
-        hasText(savedDemo.macAddress)
-    } else {
-        hasText(composeRule.activity.getString(R.string.demo))
-    }
+    // My devices shows the name without the brand and marks demo devices ("Demo" on a row, "SOUNDCORE · DEMO" on the
+    // featured card); both are tappable as a whole.
+    val demoLabel = composeRule.activity.getString(R.string.demo)
+    val deviceMatcher = hasClickAction() and hasText(splitBrand(modelName).second) and
+        hasText(demoLabel, substring = true, ignoreCase = true)
     // Pairing returns to the list before the native paired-device refresh completes.
     awaitListItem(composeRule, deviceMatcher)
     composeRule.onNode(deviceMatcher).performClick()
@@ -43,11 +43,13 @@ fun <Rule : TestRule, A : ComponentActivity> addDemoDevice(
     composeRule: AndroidComposeTestRule<Rule, A>,
     modelName: String,
 ) {
-    val addDescription = composeRule.activity.getString(R.string.add)
-    awaitListItem(composeRule, hasContentDescription(addDescription))
-    composeRule.onNodeWithContentDescription(addDescription).performClick()
-    composeRule.onNodeWithTag("modelList").performScrollToNode(hasText(modelName))
-    composeRule.onNodeWithText(modelName).performClick()
+    val addLabel = composeRule.activity.getString(R.string.sound_add_device)
+    awaitListItem(composeRule, hasText(addLabel))
+    composeRule.onNodeWithText(addLabel).performClick()
+    // The model cards show the name without the brand.
+    val cardName = splitBrand(modelName).second
+    composeRule.onNodeWithTag("modelList").performScrollToNode(hasText(cardName))
+    composeRule.onNodeWithText(cardName).performClick()
     composeRule.onNodeWithText(composeRule.activity.getString(R.string.demo_mode)).performClick()
     awaitListItem(composeRule, hasText(modelName))
     composeRule.onNodeWithText(modelName).performClick()

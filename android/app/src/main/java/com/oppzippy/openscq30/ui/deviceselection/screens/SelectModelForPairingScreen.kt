@@ -1,20 +1,26 @@
 package com.oppzippy.openscq30.ui.deviceselection.screens
 
+import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,11 +33,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -42,12 +49,26 @@ import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.deviceModels
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
+import com.oppzippy.openscq30.ui.deviceselection.splitBrand
+import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
+import com.oppzippy.openscq30.ui.sound.DeviceKind
+import com.oppzippy.openscq30.ui.sound.deviceArt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectModelForPairingScreen(onModelSelected: (String) -> Unit, onBackClick: () -> Unit) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedKind by rememberSaveable { mutableStateOf<DeviceKind?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
+    val largeText = LocalDensity.current.fontScale > 1.4f
+    val models = remember { deviceModels().map { it to translateDeviceModel(it) } }
+    val kinds = remember(models) {
+        DeviceKind.entries.filter { kind -> models.any { deviceArt(it.first)?.kind == kind } }
+    }
+    val filteredModels = models.filter { (model, name) ->
+        (selectedKind == null || deviceArt(model)?.kind == selectedKind) &&
+            (model.contains(searchQuery, true) || name.contains(searchQuery, true))
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -67,93 +88,101 @@ fun SelectModelForPairingScreen(onModelSelected: (String) -> Unit, onBackClick: 
             )
         },
     ) { innerPadding ->
-        Column(Modifier.padding(innerPadding).fillMaxSize()) {
-            Column(
-                Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(stringResource(R.string.sound_find_your_model), style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    stringResource(R.string.sound_find_your_model_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.search)) },
-                    leadingIcon = { Icon(painterResource(R.drawable.search_24px), contentDescription = null) },
-                    shape = MaterialTheme.shapes.medium,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-                )
-            }
-            LazyColumn(
-                modifier = Modifier.testTag("modelList").fillMaxSize(),
-                contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                val filteredDeviceModels = deviceModels()
-                    .map { it to translateDeviceModel(it) }
-                    .filter { (model, name) -> model.contains(searchQuery, true) || name.contains(searchQuery, true) }
-                if (filteredDeviceModels.isEmpty()) {
-                    item {
-                        Text(
-                            stringResource(R.string.no_items_found),
-                            modifier = Modifier.padding(20.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                } else {
-                    items(filteredDeviceModels, key = { it.first }) { (model, name) ->
-                        Surface(
-                            onClick = { onModelSelected(model) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        ) {
-                            Row(
-                                Modifier.heightIn(min = 88.dp).padding(20.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                Icon(
-                                    painterResource(
-                                        when {
-                                            model.startsWith(
-                                                "SoundcoreA30",
-                                            ) || model == "SoundcoreDevelopment" -> R.drawable.headphones_24px
-
-                                            model.startsWith("SoundcoreA31") -> R.drawable.speaker_24px
-
-                                            else -> R.drawable.earbuds_2_24px
-                                        },
-                                    ),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(36.dp),
-                                )
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(name, style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        model,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Icon(
-                                    painterResource(R.drawable.arrow_back_24px),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp).rotate(180f),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+        LazyVerticalGrid(
+            columns = if (largeText) GridCells.Fixed(1) else GridCells.Adaptive(minSize = 156.dp),
+            modifier = Modifier.testTag("modelList").padding(innerPadding).fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.sound_find_your_model), style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        stringResource(R.string.sound_find_your_model_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(stringResource(R.string.search)) },
+                        leadingIcon = { Icon(painterResource(R.drawable.search_24px), contentDescription = null) },
+                        shape = MaterialTheme.shapes.medium,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                    )
+                    if (kinds.size > 1) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            KindChip(R.string.sound_kind_all, selectedKind == null) { selectedKind = null }
+                            kinds.forEach { kind ->
+                                KindChip(kind.label, selectedKind == kind) { selectedKind = kind }
                             }
                         }
                     }
                 }
-                item { Spacer(Modifier.size(12.dp)) }
+            }
+            if (filteredModels.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        stringResource(R.string.no_items_found),
+                        modifier = Modifier.padding(20.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(filteredModels, key = { it.first }) { (model, name) ->
+                    ModelCard(model, name, onClick = { onModelSelected(model) })
+                }
+            }
+        }
+    }
+}
+
+@get:StringRes
+private val DeviceKind.label: Int
+    get() = when (this) {
+        DeviceKind.Earbuds -> R.string.sound_kind_earbuds
+        DeviceKind.OverEar -> R.string.sound_kind_over_ear
+        DeviceKind.OpenEar -> R.string.sound_kind_open
+        DeviceKind.Speaker -> R.string.sound_kind_speakers
+    }
+
+@Composable
+private fun KindChip(@StringRes label: Int, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = selected, onClick = onClick, label = { Text(stringResource(label)) })
+}
+
+@Composable
+private fun ModelCard(model: String, name: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+    ) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                Modifier.fillMaxWidth().height(120.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                DeviceArtOrIcon(model, Modifier.size(108.dp))
+            }
+            Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp)) {
+                Text(
+                    splitBrand(name).second,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    model.removePrefix("Soundcore"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

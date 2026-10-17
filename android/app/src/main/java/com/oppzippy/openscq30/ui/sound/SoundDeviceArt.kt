@@ -2,10 +2,15 @@ package com.oppzippy.openscq30.ui.sound
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -13,18 +18,26 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.preferredEarbudsColor
 
+/** What kind of device a model is, for filtering the model list. */
+enum class DeviceKind {
+    Earbuds,
+    OverEar,
+    OpenEar,
+    Speaker,
+}
+
 /** Unbranded illustrations drawn in one shared style. Visually similar models share one. */
-enum class DeviceArt(@DrawableRes val silver: Int, @DrawableRes val black: Int) {
-    Headphones(R.drawable.sound_art_headphones_silver, R.drawable.sound_art_headphones_black),
-    MotionPlus(R.drawable.sound_art_motion_plus_silver, R.drawable.sound_art_motion_plus_black),
-    OpenClip(R.drawable.sound_art_open_clip_silver, R.drawable.sound_art_open_clip_black),
-    OpenHook(R.drawable.sound_art_open_hook_silver, R.drawable.sound_art_open_hook_black),
-    SportHook(R.drawable.sound_art_sport_hook_silver, R.drawable.sound_art_sport_hook_black),
-    WingedBuds(R.drawable.sound_art_buds_winged_silver, R.drawable.sound_art_buds_winged_black),
-    CompactBuds(R.drawable.sound_art_buds_compact_silver, R.drawable.sound_art_buds_compact_black),
-    ClassicStem(R.drawable.sound_art_stem_classic_silver, R.drawable.sound_art_stem_classic_black),
-    LibertyStem(R.drawable.sound_art_stem_premium_silver, R.drawable.sound_art_stem_premium_black),
-    OpenStem(R.drawable.sound_art_stem_open_silver, R.drawable.sound_art_stem_open_black),
+enum class DeviceArt(@DrawableRes val silver: Int, @DrawableRes val black: Int, val kind: DeviceKind) {
+    Headphones(R.drawable.sound_art_headphones_silver, R.drawable.sound_art_headphones_black, DeviceKind.OverEar),
+    MotionPlus(R.drawable.sound_art_motion_plus_silver, R.drawable.sound_art_motion_plus_black, DeviceKind.Speaker),
+    OpenClip(R.drawable.sound_art_open_clip_silver, R.drawable.sound_art_open_clip_black, DeviceKind.OpenEar),
+    OpenHook(R.drawable.sound_art_open_hook_silver, R.drawable.sound_art_open_hook_black, DeviceKind.OpenEar),
+    SportHook(R.drawable.sound_art_sport_hook_silver, R.drawable.sound_art_sport_hook_black, DeviceKind.Earbuds),
+    WingedBuds(R.drawable.sound_art_buds_winged_silver, R.drawable.sound_art_buds_winged_black, DeviceKind.Earbuds),
+    CompactBuds(R.drawable.sound_art_buds_compact_silver, R.drawable.sound_art_buds_compact_black, DeviceKind.Earbuds),
+    ClassicStem(R.drawable.sound_art_stem_classic_silver, R.drawable.sound_art_stem_classic_black, DeviceKind.Earbuds),
+    LibertyStem(R.drawable.sound_art_stem_premium_silver, R.drawable.sound_art_stem_premium_black, DeviceKind.Earbuds),
+    OpenStem(R.drawable.sound_art_stem_open_silver, R.drawable.sound_art_stem_open_black, DeviceKind.Earbuds),
 }
 
 private val deviceArtByModel: Map<String, DeviceArt> = mapOf(
@@ -65,4 +78,23 @@ fun SoundDeviceArt(art: DeviceArt, modifier: Modifier = Modifier, color: Earbuds
         contentScale = ContentScale.Fit,
         modifier = modifier,
     )
+}
+
+/** The illustration of the model, or a generic headphones icon for models without one. */
+@Composable
+fun DeviceArtOrIcon(model: String, modifier: Modifier = Modifier, dimmed: Boolean = false) {
+    val artModifier = modifier.alpha(if (dimmed) 0.6f else 1f)
+    val art = deviceArt(model)
+    if (art != null) {
+        SoundDeviceArt(art, artModifier)
+    } else {
+        Box(artModifier, contentAlignment = Alignment.Center) {
+            Icon(
+                painterResource(R.drawable.headphones_24px),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(0.55f),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
 }
