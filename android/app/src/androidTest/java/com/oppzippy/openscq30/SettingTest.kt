@@ -10,11 +10,9 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
@@ -222,22 +220,14 @@ class SettingTest : OpenSCQ30RootTestBase() {
     @Test
     fun testA3116PresetEqualizerProfile() {
         connectDemo("SoundcoreA3116")
-        // The complete settings page retains the speaker's optional built-in profile control.
+        // All settings open the same equalizer page as the device screen, for the speaker as well.
         openAllSettingsCategory("equalizer")
-        waitForNode(hasTestTag("sound_setting_presetEqualizerProfile"))
-        composeRule.onNode(hasClickAction() and hasAnyAncestor(hasTestTag("sound_setting_presetEqualizerProfile")))
-            .performScrollTo().performClick()
         composeRule.onNode(hasText("Bass Up") and isSelectable()).performScrollTo().performClick()
-        composeRule.onNodeWithText("Bass Up").assertExists()
-        composeRule.onNode(hasClickAction() and hasAnyAncestor(hasTestTag("sound_setting_presetEqualizerProfile")))
-            .performScrollTo().performClick()
-        composeRule.onNode(
-            hasText(getString(R.string.none)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected),
-        ).performScrollTo().performClick()
-        composeRule.waitUntil(uiTimeoutMillis()) {
-            composeRule.onAllNodes(hasText("Bass Up")).fetchSemanticsNodes().isEmpty()
-        }
-        composeRule.onNodeWithText("Bass Up").assertDoesNotExist()
+        waitForSelected("Bass Up")
+        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
+        openAllSettingsCategory("equalizer")
+        composeRule.onNode(hasText("Bass Up") and isSelectable()).performScrollTo().assertIsSelected()
     }
 
     @Test

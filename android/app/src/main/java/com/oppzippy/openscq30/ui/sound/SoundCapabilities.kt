@@ -46,3 +46,10 @@ internal object SoundCapabilities {
         "noiseCancelingModeInCycle",
     )
 }
+
+/**
+ * Whether a page shows every setting of a category, so that the category can open the page instead of the plain list
+ * of its settings. An empty category has nothing to show on the page.
+ */
+internal fun coveredByPage(categorySettingIds: Collection<String>, pageSettingIds: Set<String>): Boolean =
+    categorySettingIds.isNotEmpty() && pageSettingIds.containsAll(categorySettingIds)
