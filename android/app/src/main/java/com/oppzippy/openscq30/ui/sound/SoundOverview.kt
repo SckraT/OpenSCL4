@@ -69,8 +69,9 @@ fun SoundOverview(
     ) {
         Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
             Box(Modifier.fillMaxWidth().heightIn(min = 172.dp)) {
-                if (!largeText && deviceModel == "SoundcoreA3954") {
-                    SoundEarbudsArt(Modifier.align(Alignment.CenterEnd).padding(8.dp).size(184.dp))
+                val art = deviceArt(deviceModel)
+                if (!largeText && art != null) {
+                    SoundDeviceArt(art, Modifier.align(Alignment.CenterEnd).padding(8.dp).size(184.dp))
                 } else if (!largeText) {
                     Icon(
                         painterResource(R.drawable.headphones_24px),

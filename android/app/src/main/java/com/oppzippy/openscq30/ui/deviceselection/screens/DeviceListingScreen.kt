@@ -69,11 +69,11 @@ import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
 import com.oppzippy.openscq30.ui.deviceselection.featuredDevice
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
-import com.oppzippy.openscq30.ui.sound.SoundEarbudsArt
+import com.oppzippy.openscq30.ui.sound.SoundDeviceArt
+import com.oppzippy.openscq30.ui.sound.deviceArt
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
 import kotlinx.coroutines.launch
 
-private const val LIBERTY_4_PRO = "SoundcoreA3954"
 private val ConnectedDot = Color(0xFF3F9A52)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -233,7 +233,7 @@ private fun FeaturedDeviceCard(
                         Spacer(Modifier.size(6.dp))
                         DeviceStatusPill(state)
                     }
-                    DeviceArt(
+                    DeviceImage(
                         device,
                         dimmed = state != ActiveDeviceState.Connected,
                         modifier = Modifier.size(132.dp),
@@ -372,7 +372,7 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
                 Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                DeviceArt(device, dimmed = false, modifier = Modifier.size(44.dp))
+                DeviceImage(device, dimmed = false, modifier = Modifier.size(44.dp))
             }
             Column(Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium)
@@ -388,10 +388,11 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
 }
 
 @Composable
-private fun DeviceArt(device: PairedDevice, dimmed: Boolean, modifier: Modifier) {
+private fun DeviceImage(device: PairedDevice, dimmed: Boolean, modifier: Modifier) {
     val artModifier = modifier.alpha(if (dimmed) 0.6f else 1f)
-    if (device.model == LIBERTY_4_PRO) {
-        SoundEarbudsArt(artModifier)
+    val art = deviceArt(device.model)
+    if (art != null) {
+        SoundDeviceArt(art, artModifier)
     } else {
         Box(artModifier, contentAlignment = Alignment.Center) {
             Icon(

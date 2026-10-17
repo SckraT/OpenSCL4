@@ -32,10 +32,10 @@
     <string name="sound_demo_mode_description">Знакомство с интерфейсом без настоящих наушников</string>
     <string name="sound_pairing_no_devices">Убедитесь, что наушники включены, затем вернитесь и попробуйте ещё раз.</string>
     <string name="sound_demo_mode_active">Деморежим использует пример данных и не управляет настоящими наушниками.</string>
-    <string name="sound_earbuds_color">Наушники на главном экране</string>
+    <string name="sound_earbuds_color">Цвет устройства на рисунках</string>
     <string name="sound_earbuds_color_theme">Как тема</string>
-    <string name="sound_earbuds_color_silver">Серебристые</string>
-    <string name="sound_earbuds_color_black">Чёрные</string>
+    <string name="sound_earbuds_color_silver">Серебристый</string>
+    <string name="sound_earbuds_color_black">Чёрный</string>
     <string name="sound_other_devices">Другие устройства</string>
     <string name="sound_device_not_connected_hint">Подключите, чтобы видеть заряд и менять настройки.</string>
     <string name="sound_device_connecting">Подключение…</string>

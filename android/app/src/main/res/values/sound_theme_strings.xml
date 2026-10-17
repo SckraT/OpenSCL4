@@ -32,7 +32,7 @@
     <string name="sound_demo_mode_description">Explore the interface without real headphones</string>
     <string name="sound_pairing_no_devices">Make sure your headphones are turned on, then return and try again.</string>
     <string name="sound_demo_mode_active">Demo mode uses simulated device data and does not control real headphones.</string>
-    <string name="sound_earbuds_color">Earbuds on the device screen</string>
+    <string name="sound_earbuds_color">Device color in illustrations</string>
     <string name="sound_earbuds_color_theme">Match theme</string>
     <string name="sound_earbuds_color_silver">Silver</string>
     <string name="sound_earbuds_color_black">Black</string>
