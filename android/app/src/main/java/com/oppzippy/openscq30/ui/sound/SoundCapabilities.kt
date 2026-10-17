@@ -17,7 +17,8 @@ internal object SoundCapabilities {
             "headTracking",
             "dolbyAudio",
         )
-    val connections = setOf("dualConnections", "dualConnectionsDevices", "ldac")
+    // LDAC is a codec, not a connection: it is a quick toggle on the device card and in Miscellaneous
+    val connections = setOf("dualConnections", "dualConnectionsDevices")
     val case =
         setOf(
             "caseBatteryLevel",
