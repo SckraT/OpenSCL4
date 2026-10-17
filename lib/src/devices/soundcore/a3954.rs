@@ -337,6 +337,65 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn disabling_spatial_audio_resends_the_custom_equalizer_unchanged() {
+        let mut device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(
+                    packet::Command([1, 1]),
+                    vec![
+                        0, 1, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53,
+                        52, 68, 69, 55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9,
+                        0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120,
+                        120, 120, 120, 120, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1,
+                        145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139, 141, 122,
+                        111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133,
+                        114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+                        0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1,
+                        255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0,
+                        110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+                    ],
+                ),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        let custom_eq = vec![(
+            SettingId::VolumeAdjustments,
+            Value::I16Vec(vec![60, 0, 0, 0, 0, 0, 0, -60]),
+        )];
+        // the packet that applies the custom equalizer (see set_eq_packet)
+        let set_custom_eq = packet::Outbound::new(
+            packet::Command([3, 135]),
+            vec![
+                254, 254, 0, 0, 180, 120, 120, 120, 120, 120, 120, 60, 120, 120, 180, 120, 120,
+                120, 120, 120, 120, 60, 120, 120, 0, 0, 0, 145, 147, 139, 141, 122, 111, 105, 100,
+                60, 60, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147,
+                139, 130, 122, 133, 133, 114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60,
+                60, 180, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 60, 0, 120, 0, 120, 0,
+                180, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 60, 0, 120, 0, 120, 0, 0,
+                0,
+            ],
+        );
+        device
+            .assert_set_settings_response(custom_eq, vec![set_custom_eq.clone()])
+            .await;
+        device
+            .set_settings(vec![(SettingId::SpatialAudio, true.into())])
+            .await;
+
+        // Turning spatial audio off sends the equalizer again, and it has to be exactly the custom one.
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::SpatialAudio, false.into())],
+                vec![set_custom_eq],
+            )
+            .await;
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn changing_eq_disables_spatial_audio() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
