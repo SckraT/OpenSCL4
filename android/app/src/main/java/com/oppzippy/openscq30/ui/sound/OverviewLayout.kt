@@ -11,7 +11,9 @@ enum class OverviewBlock(val id: String, @StringRes val title: Int, @DrawableRes
     QuickPresets("quickPresets", R.string.quick_presets, R.drawable.bolt_24px),
     Controls("controls", R.string.sound_overview_controls, R.drawable.sound_hand),
     Comfort("comfort", R.string.sound_overview_comfort, R.drawable.sound_heart),
-    Spatial("spatial", R.string.sound_overview_spatial, R.drawable.speaker_24px),
+    // the id stays "spatial" for layouts saved before the block covered all sound effects
+    Spatial("spatial", R.string.sound_overview_effects, R.drawable.speaker_24px),
+    Power("power", R.string.sound_overview_power, R.drawable.power_settings_new_24px),
     Connections("connections", R.string.sound_overview_connections, R.drawable.devices_other_24px),
     Case("case", R.string.sound_overview_case, R.drawable.earbud_case_24px),
 }
@@ -50,7 +52,7 @@ data class OverviewLayout(val blocks: List<Pair<OverviewBlock, Boolean>>) {
             OverviewBlock.entries.map { block ->
                 block to when (preset) {
                     OverviewPreset.Minimal -> block == OverviewBlock.SoundMode || block == OverviewBlock.Equalizer
-                    OverviewPreset.Standard -> block != OverviewBlock.QuickPresets
+                    OverviewPreset.Standard -> block != OverviewBlock.QuickPresets && block != OverviewBlock.Power
                     OverviewPreset.Full -> true
                 }
             },

@@ -64,6 +64,8 @@ fun SoundOverview(
     hasComfort: Boolean,
     hasConnections: Boolean,
     hasCase: Boolean,
+    hasEffects: Boolean,
+    hasPower: Boolean,
     hasEqualizerCategory: Boolean = false,
     macAddress: String? = null,
     quickPresets: List<String> = emptyList(),
@@ -75,6 +77,7 @@ fun SoundOverview(
     onComfort: () -> Unit,
     onConnections: () -> Unit,
     onSpatial: () -> Unit,
+    onPower: () -> Unit,
     onCase: () -> Unit,
     onAllSettings: () -> Unit,
     onEditLayout: () -> Unit = {},
@@ -128,7 +131,8 @@ fun SoundOverview(
                         OverviewBlock.QuickPresets -> quickPresets.isNotEmpty()
                         OverviewBlock.Controls -> hasControls
                         OverviewBlock.Comfort -> hasComfort
-                        OverviewBlock.Spatial -> values.containsKey("spatialAudio")
+                        OverviewBlock.Spatial -> hasEffects
+                        OverviewBlock.Power -> hasPower
                         OverviewBlock.Connections -> hasConnections
                         OverviewBlock.Case -> hasCase
                     }
@@ -175,16 +179,24 @@ fun SoundOverview(
                         block == OverviewBlock.Controls || block == OverviewBlock.Comfort ->
                             OverviewShortcut(block, onControls, onComfort, Modifier.fillMaxWidth())
                         block == OverviewBlock.Spatial -> SoundDashboardLink(
-                            stringResource(R.string.sound_overview_spatial),
-                            stringResource(
-                                if ((values["spatialAudio"] as? Setting.ToggleSetting)?.value == true) {
-                                    R.string.sound_overview_on
+                            stringResource(R.string.sound_overview_effects),
+                            // whether spatial audio is on, for the devices that have it
+                            (values["spatialAudio"] as? Setting.ToggleSetting)?.let {
+                                val state = if (it.value) {
+                                    R.string.sound_overview_spatial_on
                                 } else {
-                                    R.string.sound_overview_off
-                                },
-                            ),
+                                    R.string.sound_overview_spatial_off
+                                }
+                                stringResource(state)
+                            },
                             R.drawable.speaker_24px,
                             onSpatial,
+                        )
+                        block == OverviewBlock.Power -> SoundDashboardLink(
+                            stringResource(R.string.sound_overview_power),
+                            null,
+                            R.drawable.power_settings_new_24px,
+                            onPower,
                         )
                         block == OverviewBlock.Connections -> SoundDashboardLink(
                             stringResource(R.string.sound_overview_connections),

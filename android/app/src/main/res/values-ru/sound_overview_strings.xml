@@ -12,7 +12,11 @@
     <string name="sound_overview_controls">Управление</string>
     <string name="sound_overview_comfort">Комфорт</string>
     <string name="sound_overview_connections">Подключения</string>
-    <string name="sound_overview_spatial">Пространственный звук</string>
+    <string name="sound_overview_effects">Звук и эффекты</string>
+    <string name="sound_overview_power">Питание и подсказки</string>
+    <string name="sound_overview_sleep">Сон</string>
+    <string name="sound_overview_spatial_on">Пространственный звук включён</string>
+    <string name="sound_overview_spatial_off">Пространственный звук выключен</string>
     <string name="sound_overview_on">Включён</string>
     <string name="sound_overview_off">Выключен</string>
     <string name="sound_overview_all_settings">Все настройки наушников</string>
@@ -28,7 +32,6 @@
     <string name="sound_overview_retry">Подключить снова</string>
     <string name="sound_overview_no_settings">Сейчас нет доступных настроек.</string>
     <string name="sound_overview_preset_missing">Этот пресет больше недоступен.</string>
-    <string name="sound_overview_notifications">Управление из уведомления</string>
     <string name="sound_overview_legacy">Устаревшие профили эквалайзера</string>
     <string name="sound_overview_one_earbud_title">Подключён только один наушник</string>
     <string name="sound_overview_one_earbud_message">Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника.</string>

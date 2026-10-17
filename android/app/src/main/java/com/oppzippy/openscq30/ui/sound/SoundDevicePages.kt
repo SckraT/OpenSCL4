@@ -300,23 +300,27 @@ fun SoundCasePage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair
     }
 }
 
+/** How the sound gets to the device and what is done to it: the codec, latency, spatial audio and other effects. */
 @Composable
-fun SoundSpatialPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
+fun SoundEffectsPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
+    val spatial = settings.any { it.first == "spatialAudio" }
     SoundDevicePage(
         headline = R.string.sound_device_spatial_headline,
-        description = R.string.sound_device_spatial_description,
+        description = R.string.sound_device_effects_description,
     ) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-            Column(
-                Modifier.fillMaxWidth().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(
-                    painterResource(R.drawable.headphones_24px),
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+        if (spatial) {
+            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                Column(
+                    Modifier.fillMaxWidth().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        painterResource(R.drawable.headphones_24px),
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
         }
         settings.forEach { (id, setting) ->
@@ -340,7 +344,18 @@ fun SoundSpatialPage(settings: List<Pair<String, Setting>>, setSettings: (List<P
                 SoundSettingEditor(id, setting, setSettings)
             }
         }
-        SoundDeviceNote(R.string.sound_device_spatial_note)
+        if (spatial) SoundDeviceNote(R.string.sound_device_spatial_note)
+    }
+}
+
+/** When the device turns itself off, and the voice prompts it gives. */
+@Composable
+fun SoundPowerPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
+    SoundDevicePage(
+        headline = R.string.sound_device_power_headline,
+        description = R.string.sound_device_power_description,
+    ) {
+        settings.forEach { (id, setting) -> SoundSettingEditor(id, setting, setSettings) }
     }
 }
 

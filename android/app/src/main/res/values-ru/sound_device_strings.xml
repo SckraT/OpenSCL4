@@ -23,7 +23,9 @@
     <string name="sound_device_case_feature_description">Показывать функцию на экране кейса</string>
     <string name="sound_device_case_note">Здесь выбираются функции экрана кейса. Язык кейса не зависит от языка приложения.</string>
     <string name="sound_device_spatial_headline">Внутри звука.</string>
-    <string name="sound_device_spatial_description">Более широкая звуковая сцена для любимого контента.</string>
+    <string name="sound_device_effects_description">Кодек, задержка и обработка звука.</string>
+    <string name="sound_device_power_headline">Всегда наготове.</string>
+    <string name="sound_device_power_description">Когда устройство выключается и что оно вам подсказывает.</string>
     <string name="sound_device_spatial_note">На Liberty 4 Pro настройка эквалайзера отключит пространственный звук. Выбранный режим можно включить снова здесь.</string>
     <string name="sound_import_failed">Не удалось импортировать: %1$s</string>
 </resources>

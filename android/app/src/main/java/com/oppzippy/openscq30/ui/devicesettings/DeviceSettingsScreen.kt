@@ -51,7 +51,6 @@ import androidx.navigation.navArgument
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
-import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
@@ -62,7 +61,6 @@ import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.ProfileTransferSection
-import com.oppzippy.openscq30.ui.sound.SoundCapabilities
 import com.oppzippy.openscq30.ui.sound.SoundCasePage
 import com.oppzippy.openscq30.ui.sound.SoundComfortPage
 import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
@@ -76,15 +74,17 @@ import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
 import com.oppzippy.openscq30.ui.sound.SoundOneEarbudNotice
 import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
 import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
-import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
-import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
-import com.oppzippy.openscq30.ui.sound.coveredByPage
+import com.oppzippy.openscq30.ui.sound.SettingGroup
+import com.oppzippy.openscq30.ui.sound.SoundEffectsPage
+import com.oppzippy.openscq30.ui.sound.SoundPowerPage
 import com.oppzippy.openscq30.ui.sound.equalizerOpensItsPage
+import com.oppzippy.openscq30.ui.sound.groupSettings
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
+import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -94,6 +94,8 @@ private const val HOME = "overview"
 private const val PRESETS = "presets"
 private const val APP_SETTINGS = "appSettings"
 private const val OVERVIEW_LAYOUT = "overviewLayout"
+private const val ALL_SETTINGS = "allSettings"
+private const val POWER = "power"
 
 @Composable
 fun DeviceSettingsScreen(
@@ -139,21 +141,16 @@ fun DeviceSettingsScreen(
     }.collectAsState(emptyMap())
     val presets by remember(connection.deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
     val legacyProfiles by remember(connection.deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
-    val modeSettings = settings.filter {
-        it.first in SoundCapabilities.modes ||
-            byCategory["soundModes"].orEmpty().any { s -> s.first == it.first }
-    }
-    val controlSettings = settings.filter {
-        SoundCapabilities.isControl(it.first) ||
-            byCategory["buttonConfiguration"].orEmpty().any { s -> s.first == it.first }
-    }
-    val comfortSettings = settings.filter { it.first in SoundCapabilities.comfort }
-    val connectionSettings = settings.filter { it.first in SoundCapabilities.connections }
-    val caseSettings = settings.filter {
-        it.first in SoundCapabilities.case ||
-            byCategory["case"].orEmpty().any { s -> s.first == it.first }
-    }
-    val spatialSettings = settings.filter { it.first in SoundCapabilities.spatial }
+    // every setting has one group, and the group's page is where it is shown
+    val grouped = remember(settings, byCategory) { groupSettings(settings, byCategory) }
+    fun groupSettingsOf(group: SettingGroup) = grouped[group].orEmpty()
+    val modeSettings = groupSettingsOf(SettingGroup.SoundModes)
+    val controlSettings = groupSettingsOf(SettingGroup.Controls)
+    val comfortSettings = groupSettingsOf(SettingGroup.Comfort)
+    val connectionSettings = groupSettingsOf(SettingGroup.Connections)
+    val caseSettings = groupSettingsOf(SettingGroup.Case)
+    val effectSettings = groupSettingsOf(SettingGroup.SoundEffects)
+    val powerSettings = groupSettingsOf(SettingGroup.Power)
     val navController = rememberNavController()
     val entry by navController.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: HOME
@@ -164,21 +161,19 @@ fun DeviceSettingsScreen(
     // applied last is remembered separately. Survives rotation, and starts over for a new connection.
     var lastAppliedPreset by rememberSaveable(connection.deviceManager) { mutableStateOf<String?>(null) }
 
-    fun openCategory(id: String) = navController.navigate("category/${Uri.encode(id)}")
+    val equalizerPage = equalizerOpensItsPage(byCategory["equalizer"].orEmpty().map { it.first }, oneEarbudOnly)
 
-    // A category with a page of its own opens that page, the same one the device screen opens, as long as the page
-    // shows all of the category's settings.
-    fun dedicatedRoute(id: String): String? {
-        val categorySettingIds = byCategory[id].orEmpty().map { it.first }
-        if (id == "equalizer") return "equalizer".takeIf { equalizerOpensItsPage(categorySettingIds, oneEarbudOnly) }
-        val (route, pageSettingIds) = when (id) {
-            "soundModes" -> "sound" to modeSettings.map { it.first }.toSet()
-            "buttonConfiguration" -> "controls" to controlSettings.map { it.first }.toSet()
-            "case" -> "case" to caseSettings.map { it.first }.toSet()
-            "dualConnections" -> "connections" to connectionSettings.map { it.first }.toSet()
-            else -> return null
-        }
-        return route.takeIf { coveredByPage(categorySettingIds, pageSettingIds) }
+    // the page of a group: the one the device screen opens too, or else the plain list of the group's settings
+    fun groupRoute(group: SettingGroup): String = when (group) {
+        SettingGroup.SoundModes -> "sound"
+        SettingGroup.Equalizer -> if (equalizerPage) "equalizer" else "group/${group.id}"
+        SettingGroup.SoundEffects -> "spatial"
+        SettingGroup.Controls -> "controls"
+        SettingGroup.Comfort -> "comfort"
+        SettingGroup.Power -> POWER
+        SettingGroup.Connections -> "connections"
+        SettingGroup.Case -> "case"
+        else -> "group/${group.id}"
     }
     if (confirmDisconnect) {
         AlertDialog(
@@ -207,11 +202,15 @@ fun DeviceSettingsScreen(
         "comfort" -> stringResource(R.string.sound_overview_comfort)
         "connections" -> stringResource(R.string.sound_overview_connections)
         "case" -> stringResource(R.string.sound_overview_case)
-        "spatial" -> stringResource(R.string.sound_overview_spatial)
-        "notifications" -> stringResource(R.string.sound_overview_notifications)
+        "spatial" -> stringResource(R.string.sound_overview_effects)
+        POWER -> stringResource(R.string.sound_overview_power)
+        "notifications" -> stringResource(R.string.sound_notification_controls)
         "legacy" -> stringResource(R.string.sound_overview_legacy)
         "preset/{name}" -> entry?.arguments?.getString("name") ?: stringResource(R.string.edit)
-        "category/{id}" -> entry?.arguments?.getString("id")?.let { translateCategoryId(it) }.orEmpty()
+        "group/{id}" -> {
+            val id = entry?.arguments?.getString("id")
+            SettingGroup.entries.firstOrNull { it.id == id }?.title().orEmpty()
+        }
         else -> stringResource(R.string.sound_overview_all_settings)
     }
     Scaffold(
@@ -241,18 +240,24 @@ fun DeviceSettingsScreen(
                         )
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.sound_overview_devices)) }, onClick = {
-                            showMenu =
-                                false
-                            onBack()
-                        })
-                        DropdownMenuItem(text = {
-                            Text(stringResource(R.string.sound_overview_all_settings))
-                        }, onClick = {
-                            showMenu =
-                                false
-                            navController.navigate("allSettings")
-                        })
+                        // the device screen has a button for my devices already
+                        if (route != HOME) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.sound_overview_devices)) },
+                                onClick = {
+                                    showMenu = false
+                                    onBack()
+                                },
+                            )
+                        }
+                        if (route != ALL_SETTINGS) {
+                            DropdownMenuItem(text = {
+                                Text(stringResource(R.string.sound_overview_all_settings))
+                            }, onClick = {
+                                showMenu = false
+                                navController.navigate(ALL_SETTINGS)
+                            })
+                        }
                         if (route == HOME) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.sound_overview_edit)) }, onClick = {
                                 showMenu = false
@@ -343,6 +348,8 @@ fun DeviceSettingsScreen(
                         hasComfort = comfortSettings.isNotEmpty(),
                         hasConnections = connectionSettings.isNotEmpty(),
                         hasCase = caseSettings.isNotEmpty(),
+                        hasEffects = effectSettings.isNotEmpty(),
+                        hasPower = powerSettings.isNotEmpty(),
                         hasEqualizerCategory = "equalizer" in categories,
                         macAddress = connection.macAddress,
                         quickPresets = presets.map { it.name },
@@ -361,9 +368,10 @@ fun DeviceSettingsScreen(
                         onConnections = {
                             navController.navigate("connections")
                         }, onSpatial = { navController.navigate("spatial") },
+                        onPower = { navController.navigate(POWER) },
                         onCase = {
                             navController.navigate("case")
-                        }, onAllSettings = { navController.navigate("allSettings") },
+                        }, onAllSettings = { navController.navigate(ALL_SETTINGS) },
                         setSettings = setSettingValues,
                     )
                 }
@@ -381,7 +389,8 @@ fun DeviceSettingsScreen(
                     add(OverviewBlock.QuickPresets)
                     if (controlSettings.isNotEmpty()) add(OverviewBlock.Controls)
                     if (comfortSettings.isNotEmpty()) add(OverviewBlock.Comfort)
-                    if (settings.any { it.first == "spatialAudio" }) add(OverviewBlock.Spatial)
+                    if (effectSettings.isNotEmpty()) add(OverviewBlock.Spatial)
+                    if (powerSettings.isNotEmpty()) add(OverviewBlock.Power)
                     if (connectionSettings.isNotEmpty()) add(OverviewBlock.Connections)
                     if (caseSettings.isNotEmpty()) add(OverviewBlock.Case)
                 }
@@ -420,7 +429,8 @@ fun DeviceSettingsScreen(
             composable("comfort") { SoundComfortPage(comfortSettings, setSettingValues) }
             composable("connections") { SoundConnectionsPage(connectionSettings, setSettingValues) }
             composable("case") { SoundCasePage(caseSettings, setSettingValues) }
-            composable("spatial") { SoundSpatialPage(spatialSettings, setSettingValues) }
+            composable("spatial") { SoundEffectsPage(effectSettings, setSettingValues) }
+            composable(POWER) { SoundPowerPage(powerSettings, setSettingValues) }
             composable(PRESETS) {
                 SoundPresetsPage(
                     presets,
@@ -467,7 +477,7 @@ fun DeviceSettingsScreen(
                     onNotificationSettings = { navController.navigate("notifications") },
                 )
             }
-            composable("allSettings") {
+            composable(ALL_SETTINGS) {
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -477,35 +487,19 @@ fun DeviceSettingsScreen(
                         style = MaterialTheme.typography.headlineMedium,
                     )
                     if (oneEarbudOnly) SoundOneEarbudNotice()
-                    // the equalizer page has the import and export of profiles as well
-                    val equalizerPage = dedicatedRoute("equalizer") != null
-                    categories.filterNot { equalizerPage && it == "equalizerImportExport" }.forEach { id ->
-                        val unavailable = oneEarbudOnly && categoryNeedsBothEarbuds(id) &&
-                            byCategory[id].isNullOrEmpty()
-                        val route = dedicatedRoute(id)
+                    // the equalizer page is there with one earbud as well, to say why and to import and export
+                    SettingGroup.entries.filter {
+                        grouped[it].orEmpty().isNotEmpty() || (it == SettingGroup.Equalizer && equalizerPage)
+                    }.forEach { group ->
+                        val needsBothEarbuds = group == SettingGroup.Equalizer && oneEarbudOnly &&
+                            byCategory["equalizer"].isNullOrEmpty()
                         SoundDashboardLink(
-                            translateCategoryId(
-                                id,
-                            ),
-                            if (unavailable) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
-                            Screen.SettingsCategory(id).screenInfo().icon,
-                            onClick = {
-                                if (route != null) navController.navigate(route) else openCategory(id)
-                            },
-                            // a page of its own still has something to show, such as importing equalizer profiles
-                            enabled = !unavailable || route != null,
+                            group.title(),
+                            if (needsBothEarbuds) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
+                            group.icon,
+                            onClick = { navController.navigate(groupRoute(group)) },
                         )
                     }
-                    SoundDashboardLink(
-                        stringResource(
-                            R.string.sound_overview_notifications,
-                        ),
-                        null,
-                        R.drawable.notifications_24px,
-                        onClick = {
-                            navController.navigate("notifications")
-                        },
-                    )
                     // the equalizer page offers to move old profiles over itself
                     if (!equalizerPage && legacyProfiles.isNotEmpty()) {
                         SoundDashboardLink(
@@ -518,22 +512,20 @@ fun DeviceSettingsScreen(
                 }
             }
             composable(
-                "category/{id}",
+                "group/{id}",
                 arguments = listOf(
                     navArgument("id") {
                         type = NavType.StringType
                     },
                 ),
             ) { current ->
-                val id = current.arguments?.getString("id").orEmpty()
-                val categorySettings = byCategory[id].orEmpty()
-                if (categorySettings.isEmpty() && oneEarbudOnly && categoryNeedsBothEarbuds(id)) {
-                    SoundOneEarbudNotice(Modifier.padding(20.dp))
-                } else if (categorySettings.isEmpty()) {
+                val group = SettingGroup.entries.firstOrNull { it.id == current.arguments?.getString("id") }
+                val groupSettings = group?.let { groupSettingsOf(it) }.orEmpty()
+                if (groupSettings.isEmpty()) {
                     Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
                 } else {
                     CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
-                        SoundSettingsListPage(categorySettings, setSettingValues)
+                        SoundSettingsListPage(groupSettings, setSettingValues)
                     }
                 }
             }

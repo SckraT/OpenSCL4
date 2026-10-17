@@ -23,7 +23,9 @@
     <string name="sound_device_case_feature_description">Show this function on the case screen</string>
     <string name="sound_device_case_note">Choose the features available on your case screen. The case language is independent of the app language.</string>
     <string name="sound_device_spatial_headline">Inside the sound.</string>
-    <string name="sound_device_spatial_description">A wider soundstage for your favourite content.</string>
+    <string name="sound_device_effects_description">Codec, latency and how the sound is processed.</string>
+    <string name="sound_device_power_headline">Always ready.</string>
+    <string name="sound_device_power_description">When the device turns off and what it tells you.</string>
     <string name="sound_device_spatial_note">On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here.</string>
     <string name="sound_import_failed">Import failed: %1$s</string>
 </resources>

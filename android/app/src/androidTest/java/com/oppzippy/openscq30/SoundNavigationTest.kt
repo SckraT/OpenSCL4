@@ -31,6 +31,7 @@ import com.oppzippy.openscq30.actions.awaitListItem
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
+import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
@@ -92,6 +93,21 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
         composeRule.onNode(savedCard).performClick()
         waitForNavigation(R.string.sound_overview_device)
         assertSame("Opening the connected device must not reconnect it", originalConnection, connectedDevice())
+    }
+
+    @Test
+    fun allSettingsAreGroupedByWhatTheyAreFor() {
+        connectLiberty4Pro()
+        composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
+        waitForNode(hasText(getString(R.string.sound_overview_effects)) and hasClickAction())
+        composeRule.onNode(hasText(translateCategoryId("deviceInformation")) and hasClickAction()).assertExists()
+        // nothing of the Liberty 4 Pro is left over, and the notification controls are in the app settings
+        composeRule.onNodeWithText(translateCategoryId("miscellaneous")).assertDoesNotExist()
+        composeRule.onNodeWithText(getString(R.string.sound_notification_controls)).assertDoesNotExist()
+        composeRule.onNode(hasText(getString(R.string.sound_overview_power)) and hasClickAction())
+            .performScrollTo().performClick()
+        waitForNode(hasText(getString(R.string.sound_device_power_headline)))
+        composeRule.onNodeWithText(translateSettingId("autoPowerOff")).assertExists()
     }
 
     @Test
