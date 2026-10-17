@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
+import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.ui.theme.ThemeType
 import com.oppzippy.openscq30.widget.SettingWidgetReceiver
 
@@ -99,6 +100,8 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
     val theme by viewModel.theme.collectAsState()
     val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
     val earbudsColor by viewModel.earbudsColor.collectAsState()
+    val soundModesView by viewModel.soundModesView.collectAsState()
+    val showOneEarbudBadge by viewModel.showOneEarbudBadge.collectAsState()
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var showWidgetHelp by remember { mutableStateOf(false) }
@@ -159,6 +162,7 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
                 SettingsSectionTitle(stringResource(R.string.appearance))
                 ThemeSelection(theme = theme, onThemeChange = viewModel::setTheme)
                 EarbudsColorSelection(color = earbudsColor, onColorChange = viewModel::setEarbudsColor)
+                SoundModesViewSelection(view = soundModesView, onViewChange = viewModel::setSoundModesView)
                 SettingsGroup {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingsToggle(
@@ -170,6 +174,14 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
                         )
                         SettingsDivider()
                     }
+                    SettingsToggle(
+                        title = stringResource(R.string.sound_one_earbud_badge_setting),
+                        description = stringResource(R.string.sound_one_earbud_badge_setting_description),
+                        icon = R.drawable.earbuds_2_24px,
+                        checked = showOneEarbudBadge,
+                        onCheckedChange = viewModel::setShowOneEarbudBadge,
+                    )
+                    SettingsDivider()
                     SettingsAction(
                         title = stringResource(R.string.sound_app_language),
                         description = locale.getDisplayName(locale).replaceFirstChar { it.titlecase(locale) },
@@ -298,6 +310,26 @@ private fun EarbudsColorSelection(color: EarbudsColor?, onColorChange: (EarbudsC
             ),
             selected = color,
             onSelect = onColorChange,
+        )
+    }
+}
+
+@Composable
+private fun SoundModesViewSelection(view: SoundModesView, onViewChange: (SoundModesView) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.sound_modes_view),
+            modifier = Modifier.padding(start = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SegmentedSelection(
+            options = listOf(
+                SoundModesView.Tiles to stringResource(R.string.sound_modes_view_tiles),
+                SoundModesView.Scale to stringResource(R.string.sound_modes_view_scale),
+            ),
+            selected = view,
+            onSelect = onViewChange,
         )
     }
 }

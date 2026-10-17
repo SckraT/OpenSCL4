@@ -54,6 +54,21 @@ class SoundDeviceArtTest {
     }
 
     @Test
+    fun ldacIsTheDefaultQuickToggle() {
+        assertEquals(listOf("ldac"), quickToggleIds(null, listOf("wearingDetection", "ldac")))
+        assertEquals(emptyList<String>(), quickToggleIds(null, listOf("wearingDetection")))
+    }
+
+    @Test
+    fun chosenQuickTogglesKeepTheirOrderAndDropUnavailableOnes() {
+        assertEquals(
+            listOf("wearingDetection", "ldac"),
+            quickToggleIds("wearingDetection,removed,ldac,ldac", listOf("ldac", "wearingDetection")),
+        )
+        assertEquals(emptyList<String>(), quickToggleIds("", listOf("ldac")))
+    }
+
+    @Test
     fun unknownModelsHaveNoIllustration() {
         assertNull(deviceArt("SoundcoreA9999"))
         assertNull(deviceArt("A3954"))

@@ -46,6 +46,27 @@
     <string name="sound_device_connecting">Подключение…</string>
     <string name="sound_device_connect">Подключить</string>
     <string name="sound_no_devices_title">Добавьте наушники</string>
+    <string name="sound_overview_preset_minimal">Минимальный</string>
+    <string name="sound_overview_preset_standard">Обычный</string>
+    <string name="sound_overview_preset_full">Полный</string>
+    <string name="sound_scale_transparency">Прозрачность, сила %1$d</string>
+    <string name="sound_scale_noise_canceling">Шумоподавление, сила %1$d</string>
+    <string name="sound_one_earbud_badge">1 наушник</string>
+    <string name="sound_quick_toggles">Быстрые переключатели</string>
+    <string name="sound_quick_toggles_add">Добавить переключатели</string>
+    <string name="sound_done">Готово</string>
+    <string name="sound_overview_edit">Изменить главный экран</string>
+    <string name="sound_overview_edit_headline">Ваш главный экран.</string>
+    <string name="sound_overview_edit_description">Включите нужные блоки и перетащите их за ручку, чтобы изменить порядок.</string>
+    <string name="sound_overview_presets">Готовые наборы</string>
+    <string name="sound_overview_blocks">Блоки</string>
+    <string name="sound_overview_move_up">Переместить выше</string>
+    <string name="sound_overview_move_down">Переместить ниже</string>
+    <string name="sound_modes_view">Режимы звука</string>
+    <string name="sound_modes_view_tiles">Плитки</string>
+    <string name="sound_modes_view_scale">Шкала 1–11</string>
+    <string name="sound_one_earbud_badge_setting">Значок одного наушника</string>
+    <string name="sound_one_earbud_badge_setting_description">Показывать, когда подключён только один наушник</string>
     <string name="sound_ldac_tile">LDAC</string>
     <string name="sound_ldac_tile_unavailable">Нет устройства с LDAC</string>
 </resources>

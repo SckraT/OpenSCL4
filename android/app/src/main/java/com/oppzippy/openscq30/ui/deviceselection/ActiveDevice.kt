@@ -18,6 +18,8 @@ data class ActiveDevice(
     val macAddress: String,
     val state: ActiveDeviceState,
     val batteries: List<DeviceBattery> = emptyList(),
+    /** Only one earbud is connected, and the user wants to be told. */
+    val oneEarbudOnly: Boolean = false,
 )
 
 /**
@@ -42,6 +44,22 @@ fun deviceBatteries(settings: Map<String, Setting>): List<DeviceBattery> = listO
     (settings[id] as? Setting.InformationSetting)?.let {
         DeviceBattery(label, it.translatedValue, batteryProgress(it.value))
     }
+}
+
+/**
+ * With only one earbud connected, the device reports no level for the other one; show it as a dash in its place so it
+ * is clear which earbud is missing.
+ */
+fun withMissingEarbud(batteries: List<DeviceBattery>, oneEarbudOnly: Boolean): List<DeviceBattery> {
+    if (!oneEarbudOnly) return batteries
+    val left = R.string.sound_overview_left
+    val right = R.string.sound_overview_right
+    val hasLeft = batteries.any { it.label == left }
+    val hasRight = batteries.any { it.label == right }
+    if (hasLeft == hasRight) return batteries
+    val missing = DeviceBattery(if (hasLeft) right else left, "—", null)
+    val earbuds = batteries.filter { it.label == left || it.label == right } + missing
+    return earbuds.sortedBy { if (it.label == left) 0 else 1 } + batteries.filter { it.label != left && it.label != right }
 }
 
 /** Model names start with the brand, which the list shows separately: "Soundcore Liberty 4 Pro". */

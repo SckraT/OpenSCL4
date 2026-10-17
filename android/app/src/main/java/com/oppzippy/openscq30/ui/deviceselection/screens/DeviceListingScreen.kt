@@ -2,7 +2,6 @@ package com.oppzippy.openscq30.ui.deviceselection.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -27,7 +25,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -46,21 +43,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
@@ -70,10 +63,9 @@ import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
 import com.oppzippy.openscq30.ui.deviceselection.featuredDevice
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
+import com.oppzippy.openscq30.ui.sound.DeviceHeroCard
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
 import kotlinx.coroutines.launch
-
-private val ConnectedDot = Color(0xFF3F9A52)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,6 +157,7 @@ fun DeviceListingScreen(
                             device = featured,
                             state = featuredState?.state,
                             batteries = featuredState?.batteries.orEmpty(),
+                            oneEarbudOnly = featuredState?.oneEarbudOnly == true,
                             onOpen = { onDeviceClick(featured) },
                             onUnpair = { deviceToUnpair = featured },
                         )
@@ -209,150 +202,40 @@ private fun FeaturedDeviceCard(
     device: PairedDevice,
     state: ActiveDeviceState?,
     batteries: List<DeviceBattery>,
+    oneEarbudOnly: Boolean,
     onOpen: () -> Unit,
     onUnpair: () -> Unit,
 ) {
-    val (brand, name) = splitBrand(translateDeviceModel(device.model))
     // Tapping anywhere on the card does what its button does, as on the rows below it.
-    Surface(
+    DeviceHeroCard(
+        model = device.model,
+        isDemo = device.isDemo,
+        state = state,
+        batteries = if (state == ActiveDeviceState.Connected) batteries else emptyList(),
+        macAddress = device.macAddress,
+        oneEarbudBadge = state == ActiveDeviceState.Connected && oneEarbudOnly,
+        hint = if (state == null) stringResource(R.string.sound_device_not_connected_hint) else null,
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        topEnd = { DeviceMenu(device, onUnpair) },
     ) {
-        Box {
-            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        DeviceBrand(brand, device.isDemo)
-                        Text(
-                            name,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 26.sp, lineHeight = 30.sp),
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Spacer(Modifier.size(6.dp))
-                        DeviceStatusPill(state)
-                    }
-                    DeviceArtOrIcon(
-                        device.model,
-                        dimmed = state != ActiveDeviceState.Connected,
-                        modifier = Modifier.size(132.dp),
-                    )
-                }
-                when {
-                    state == ActiveDeviceState.Connected && batteries.isNotEmpty() -> BatteryTiles(batteries)
-                    state == null -> Text(
-                        stringResource(R.string.sound_device_not_connected_hint),
-                        modifier = Modifier.padding(vertical = 14.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    else -> Spacer(Modifier.size(16.dp))
-                }
-                Button(
-                    onClick = onOpen,
-                    enabled = state != ActiveDeviceState.Connecting,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                ) {
-                    Text(
-                        stringResource(
-                            when (state) {
-                                ActiveDeviceState.Connected -> R.string.sound_open_device
-                                ActiveDeviceState.Connecting -> R.string.sound_device_connecting
-                                null -> R.string.sound_device_connect
-                            },
-                        ),
-                    )
-                }
-            }
-            DeviceMenu(device, onUnpair, Modifier.align(Alignment.TopEnd).padding(4.dp))
-        }
-    }
-}
-
-@Composable
-private fun DeviceBrand(brand: String?, isDemo: Boolean) {
-    val text = listOfNotNull(brand, if (isDemo) stringResource(R.string.demo) else null).joinToString(" · ")
-    if (text.isNotEmpty()) {
-        Text(
-            text.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.alpha(0.75f),
-        )
-    }
-}
-
-@Composable
-private fun DeviceStatusPill(state: ActiveDeviceState?) {
-    Row(
-        Modifier.background(
-            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
-            RoundedCornerShape(14.dp),
-        ).padding(horizontal = 11.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        when (state) {
-            ActiveDeviceState.Connected -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
-            ActiveDeviceState.Connecting -> CircularProgressIndicator(
-                modifier = Modifier.size(11.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            null -> Box(
-                Modifier.size(9.dp).border(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    CircleShape,
+        Button(
+            onClick = onOpen,
+            enabled = state != ActiveDeviceState.Connecting,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        ) {
+            Text(
+                stringResource(
+                    when (state) {
+                        ActiveDeviceState.Connected -> R.string.sound_open_device
+                        ActiveDeviceState.Connecting -> R.string.sound_device_connecting
+                        null -> R.string.sound_device_connect
+                    },
                 ),
             )
         }
-        Text(
-            stringResource(
-                when (state) {
-                    ActiveDeviceState.Connected -> R.string.connected
-                    ActiveDeviceState.Connecting -> R.string.sound_device_connecting
-                    null -> R.string.sound_device_not_connected
-                },
-            ),
-            style = MaterialTheme.typography.labelMedium,
-        )
     }
 }
 
-@Composable
-private fun BatteryTiles(batteries: List<DeviceBattery>) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        batteries.take(3).forEach { battery ->
-            Column(
-                Modifier.weight(1f)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.7f),
-                        RoundedCornerShape(14.dp),
-                    )
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(stringResource(battery.label), style = MaterialTheme.typography.labelSmall)
-                Text(battery.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                battery.progress?.let { progress ->
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        trackColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.15f),
-                        drawStopIndicator = {},
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** Other saved devices, compact; tapping one connects to it. */
 @Composable
 private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () -> Unit) {
     val (_, name) = splitBrand(translateDeviceModel(device.model))

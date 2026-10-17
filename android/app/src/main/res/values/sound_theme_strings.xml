@@ -46,6 +46,27 @@
     <string name="sound_device_connecting">Connecting…</string>
     <string name="sound_device_connect">Connect</string>
     <string name="sound_no_devices_title">Add your headphones</string>
+    <string name="sound_overview_preset_minimal">Minimal</string>
+    <string name="sound_overview_preset_standard">Standard</string>
+    <string name="sound_overview_preset_full">Full</string>
+    <string name="sound_scale_transparency">Transparency, strength %1$d</string>
+    <string name="sound_scale_noise_canceling">Noise canceling, strength %1$d</string>
+    <string name="sound_one_earbud_badge">1 earbud</string>
+    <string name="sound_quick_toggles">Quick toggles</string>
+    <string name="sound_quick_toggles_add">Add quick toggles</string>
+    <string name="sound_done">Done</string>
+    <string name="sound_overview_edit">Edit device screen</string>
+    <string name="sound_overview_edit_headline">Your device screen.</string>
+    <string name="sound_overview_edit_description">Turn on the blocks you use and drag them by the handle to change the order.</string>
+    <string name="sound_overview_presets">Ready-made sets</string>
+    <string name="sound_overview_blocks">Blocks</string>
+    <string name="sound_overview_move_up">Move up</string>
+    <string name="sound_overview_move_down">Move down</string>
+    <string name="sound_modes_view">Sound modes</string>
+    <string name="sound_modes_view_tiles">Tiles</string>
+    <string name="sound_modes_view_scale">Scale 1–11</string>
+    <string name="sound_one_earbud_badge_setting">One earbud badge</string>
+    <string name="sound_one_earbud_badge_setting_description">Show when only one earbud is connected</string>
     <string name="sound_ldac_tile">LDAC</string>
     <string name="sound_ldac_tile_unavailable">No device with LDAC</string>
 </resources>

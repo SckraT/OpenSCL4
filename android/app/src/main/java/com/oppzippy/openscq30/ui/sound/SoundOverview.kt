@@ -1,9 +1,16 @@
 package com.oppzippy.openscq30.ui.sound
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -12,29 +19,40 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
+import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
+import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
+import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
+import com.oppzippy.openscq30.ui.utils.slidesWithDeviceCard
 
 /** Values are read from the active device. Unsupported batteries/settings are omitted. */
 @Composable
@@ -47,6 +65,10 @@ fun SoundOverview(
     hasConnections: Boolean,
     hasCase: Boolean,
     hasEqualizerCategory: Boolean = false,
+    macAddress: String? = null,
+    quickPresets: List<String> = emptyList(),
+    activeQuickPreset: String? = null,
+    onActivateQuickPreset: (String) -> Unit = {},
     onSound: () -> Unit,
     onEqualizer: () -> Unit,
     onControls: () -> Unit,
@@ -55,197 +77,232 @@ fun SoundOverview(
     onSpatial: () -> Unit,
     onCase: () -> Unit,
     onAllSettings: () -> Unit,
+    onEditLayout: () -> Unit = {},
     setSettings: (List<Pair<String, Value>>) -> Unit,
+    preferences: DeviceUiPreferencesViewModel = hiltViewModel(),
 ) {
-    val largeText = LocalDensity.current.fontScale > 1.4f
     val values = settings.toMap()
-    val modelName = translateDeviceModel(deviceModel)
-    Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
-            Box(Modifier.fillMaxWidth().heightIn(min = 172.dp)) {
-                val art = deviceArt(deviceModel)
-                if (!largeText && art != null) {
-                    SoundDeviceArt(art, Modifier.align(Alignment.CenterEnd).padding(8.dp).size(184.dp))
-                } else if (!largeText) {
-                    Icon(
-                        painterResource(R.drawable.headphones_24px),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f),
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp).size(120.dp),
+    val oneEarbudOnly = isOnlyOneEarbudConnected(values)
+    val showOneEarbudBadge by preferences.oneEarbudBadgeFlow.collectAsState()
+    val soundModesView by preferences.soundModesViewFlow.collectAsState()
+    val storedLayout by remember(deviceModel) { preferences.overviewLayoutFlow(deviceModel) }.collectAsState()
+    val layout = OverviewLayout.parse(storedLayout)
+    val storedToggles by remember(deviceModel) { preferences.quickTogglesFlow(deviceModel) }.collectAsState()
+    val availableToggles = settings.filter { it.second is Setting.ToggleSetting }.map { it.first }
+    val quickToggles = quickToggleIds(storedToggles, availableToggles).mapNotNull { id ->
+        (values[id] as? Setting.ToggleSetting)?.let { id to it }
+    }
+    val batteries = withMissingEarbud(deviceBatteries(values), oneEarbudOnly)
+    val scrollState = rememberScrollState()
+    var cardBottom by remember { mutableIntStateOf(0) }
+    // the card has scrolled out of sight: a narrow bar keeps the name and batteries on screen
+    val collapsed by remember { derivedStateOf { cardBottom > 0 && scrollState.value > cardBottom } }
+    Box {
+        Column(
+            Modifier.verticalScroll(scrollState).padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            DeviceHeroCard(
+                model = deviceModel,
+                isDemo = false,
+                state = ActiveDeviceState.Connected,
+                batteries = batteries,
+                macAddress = macAddress,
+                oneEarbudBadge = oneEarbudOnly && showOneEarbudBadge,
+                modifier = Modifier.onGloballyPositioned { cardBottom = it.size.height },
+            ) {
+                if (availableToggles.isNotEmpty()) {
+                    QuickToggleRow(
+                        toggles = quickToggles,
+                        available = availableToggles,
+                        onToggle = { id, on -> setSettings(listOf(id to on.toValue())) },
+                        onChoose = { preferences.setQuickToggles(deviceModel, it.joinToString(",")) },
                     )
-                }
-                Column(
-                    Modifier.fillMaxWidth(if (largeText) 1f else 0.59f).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.sound_overview_your_device),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Text(
-                        modelName.removePrefix("Soundcore "),
-                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 30.sp, lineHeight = 34.sp),
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.09f),
-                    ) {
-                        Text(
-                            stringResource(R.string.connected),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        )
-                    }
                 }
             }
-        }
-        val batteries = listOf(
-            Triple("batteryLevelLeft", R.string.sound_overview_left, R.drawable.earbuds_2_24px),
-            Triple("batteryLevelRight", R.string.sound_overview_right, R.drawable.earbuds_2_24px),
-            Triple("caseBatteryLevel", R.string.sound_overview_case, R.drawable.earbud_case_24px),
-            Triple("batteryLevel", R.string.sound_overview_battery, R.drawable.headphones_24px),
-        ).mapNotNull { (id, label, icon) ->
-            (values[id] as? Setting.InformationSetting)?.let { Triple(it, label, icon) }
-        }
-        batteries.chunked(if (largeText) 1 else 3).forEach { batteryRow ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                batteryRow.forEach { (setting, label, icon) ->
-                    val name = stringResource(label)
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        modifier = Modifier.weight(1f).clearAndSetSemantics {
-                            contentDescription = "$name: ${setting.translatedValue}"
-                        },
-                    ) {
-                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(15.dp))
-                                Text(name, style = MaterialTheme.typography.labelSmall)
-                            }
-                            Text(
-                                setting.translatedValue,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            batteryProgress(setting.value)?.let { progress ->
-                                LinearProgressIndicator(
-                                    progress = { progress },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    drawStopIndicator = {},
-                                )
+            Column(Modifier.slidesWithDeviceCard(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val blocks = layout.visibleBlocks.filter { block ->
+                    when (block) {
+                        OverviewBlock.SoundMode -> hasSound
+                        OverviewBlock.Equalizer -> hasEqualizerBlock(values, hasEqualizerCategory, oneEarbudOnly)
+                        OverviewBlock.QuickPresets -> quickPresets.isNotEmpty()
+                        OverviewBlock.Controls -> hasControls
+                        OverviewBlock.Comfort -> hasComfort
+                        OverviewBlock.Spatial -> values.containsKey("spatialAudio")
+                        OverviewBlock.Connections -> hasConnections
+                        OverviewBlock.Case -> hasCase
+                    }
+                }
+                var index = 0
+                while (index < blocks.size) {
+                    val block = blocks[index]
+                    val next = blocks.getOrNull(index + 1)
+                    // controls and comfort side by side when they follow each other
+                    val pair = next != null && setOf(block, next) == setOf(OverviewBlock.Controls, OverviewBlock.Comfort)
+                    when {
+                        pair -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOfNotNull(block, next).forEach { shortcut ->
+                                OverviewShortcut(shortcut, onControls, onComfort, Modifier.weight(1f))
                             }
                         }
+                        block == OverviewBlock.SoundMode -> {
+                            SoundSectionHeading(stringResource(R.string.sound_overview_sound_mode), onClick = onSound)
+                            val ambient = values["ambientSoundMode"] as? Setting.SelectSetting
+                            if (soundModesView == SoundModesView.Scale && supportsSoundModeScale(deviceModel, values)) {
+                                SoundModeScale(values, setSettings)
+                            } else if (ambient != null) {
+                                SoundModeTiles(ambient, compact = true) {
+                                    setSettings(listOf("ambientSoundMode" to it.toValue()))
+                                }
+                            }
+                        }
+                        block == OverviewBlock.Equalizer -> OverviewEqualizer(values, oneEarbudOnly, onEqualizer)
+                        block == OverviewBlock.QuickPresets -> {
+                            SoundSectionHeading(stringResource(R.string.quick_presets))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                quickPresets.forEach { name ->
+                                    FilterChip(
+                                        selected = name == activeQuickPreset,
+                                        onClick = { onActivateQuickPreset(name) },
+                                        label = { Text(name) },
+                                    )
+                                }
+                            }
+                        }
+                        block == OverviewBlock.Controls || block == OverviewBlock.Comfort ->
+                            OverviewShortcut(block, onControls, onComfort, Modifier.fillMaxWidth())
+                        block == OverviewBlock.Spatial -> SoundDashboardLink(
+                            stringResource(R.string.sound_overview_spatial),
+                            stringResource(
+                                if ((values["spatialAudio"] as? Setting.ToggleSetting)?.value == true) {
+                                    R.string.sound_overview_on
+                                } else {
+                                    R.string.sound_overview_off
+                                },
+                            ),
+                            R.drawable.speaker_24px,
+                            onSpatial,
+                        )
+                        block == OverviewBlock.Connections -> SoundDashboardLink(
+                            stringResource(R.string.sound_overview_connections),
+                            null,
+                            R.drawable.devices_other_24px,
+                            onConnections,
+                        )
+                        block == OverviewBlock.Case -> SoundDashboardLink(
+                            stringResource(R.string.sound_overview_case),
+                            null,
+                            R.drawable.earbud_case_24px,
+                            onCase,
+                        )
                     }
+                    index += if (pair) 2 else 1
+                }
+                SoundDashboardLink(
+                    stringResource(R.string.sound_overview_all_settings),
+                    stringResource(R.string.sound_overview_all_settings_hint),
+                    R.drawable.settings_24px,
+                    onAllSettings,
+                )
+                TextButton(onClick = onEditLayout, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Icon(painterResource(R.drawable.edit_24px), null, Modifier.size(18.dp))
+                    Text(stringResource(R.string.sound_overview_edit), Modifier.padding(start = 8.dp))
                 }
             }
         }
-        val oneEarbudOnly = isOnlyOneEarbudConnected(values)
-        if (oneEarbudOnly) {
-            SoundOneEarbudNotice()
+        AnimatedVisibility(
+            visible = collapsed,
+            modifier = Modifier.align(Alignment.TopCenter),
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut() + slideOutVertically { -it },
+        ) {
+            CompactDeviceBar(deviceModel, batteries)
         }
-        val ambient = values["ambientSoundMode"] as? Setting.SelectSetting
-        if (hasSound) {
-            SoundSectionHeading(stringResource(R.string.sound_overview_sound_mode), onClick = onSound)
-            if (ambient != null) {
-                SoundModeTiles(ambient, compact = true) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
+    }
+}
+
+private fun hasEqualizerBlock(values: Map<String, Setting>, hasEqualizerCategory: Boolean, oneEarbudOnly: Boolean) =
+    values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile") ||
+        (hasEqualizerCategory && oneEarbudOnly)
+
+@Composable
+private fun OverviewEqualizer(values: Map<String, Setting>, oneEarbudOnly: Boolean, onEqualizer: () -> Unit) {
+    SoundSectionHeading(stringResource(R.string.sound_overview_your_sound))
+    if (values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile")) {
+        val profileName = (values["customEqualizerProfile"] as? Setting.ModifiableSelectSetting)?.value
+            ?: (values["presetEqualizerProfile"] as? Setting.PresetEqualizerProfileSelect)?.let {
+                it.value?.let { value -> it.select.localizedOptions.getOrNull(it.select.options.indexOf(value)) }
             }
-        }
-        if (values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile")) {
-            SoundSectionHeading(stringResource(R.string.sound_overview_your_sound))
-            val profileName = (values["customEqualizerProfile"] as? Setting.ModifiableSelectSetting)?.value
-                ?: (values["presetEqualizerProfile"] as? Setting.PresetEqualizerProfileSelect)?.let {
-                    it.value?.let { value -> it.select.localizedOptions.getOrNull(it.select.options.indexOf(value)) }
-                }
-                ?: (values["presetEqualizerProfile"] as? Setting.OptionalSelectSetting)?.let {
-                    it.value?.let { value -> it.setting.localizedOptions.getOrNull(it.setting.options.indexOf(value)) }
-                }
-            SoundDashboardLink(
-                stringResource(R.string.equalizer),
-                profileName ?: stringResource(R.string.custom),
-                R.drawable.equalizer_24px,
-                onEqualizer,
-            )
-        } else if (hasEqualizerCategory && oneEarbudOnly) {
-            // The equalizer can't be read or changed until both earbuds are connected. Keep it in place with the
-            // reason instead of letting it disappear.
-            SoundSectionHeading(stringResource(R.string.sound_overview_your_sound))
-            SoundDashboardLink(
-                stringResource(R.string.equalizer),
-                stringResource(R.string.sound_overview_needs_both_earbuds),
-                R.drawable.equalizer_24px,
-                onClick = {},
-                enabled = false,
-            )
-        }
-        if (hasControls || hasComfort) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (hasControls) {
-                    SoundShortcut(
-                        stringResource(R.string.sound_overview_controls),
-                        R.drawable.sound_hand,
-                        onControls,
-                        Modifier.weight(1f),
-                    )
-                }
-                if (hasComfort) {
-                    SoundShortcut(
-                        stringResource(R.string.sound_overview_comfort),
-                        R.drawable.sound_heart,
-                        onComfort,
-                        Modifier.weight(1f),
-                        warm = true,
-                    )
-                }
+            ?: (values["presetEqualizerProfile"] as? Setting.OptionalSelectSetting)?.let {
+                it.value?.let { value -> it.setting.localizedOptions.getOrNull(it.setting.options.indexOf(value)) }
             }
-        }
-        if (values.containsKey("spatialAudio")) {
-            SoundDashboardLink(
-                stringResource(R.string.sound_overview_spatial),
-                stringResource(
-                    if ((values["spatialAudio"] as? Setting.ToggleSetting)?.value ==
-                        true
-                    ) {
-                        R.string.sound_overview_on
-                    } else {
-                        R.string.sound_overview_off
-                    },
-                ),
-                R.drawable.speaker_24px,
-                onSpatial,
-            )
-        }
-        if (hasConnections) {
-            SoundDashboardLink(
-                stringResource(R.string.sound_overview_connections),
-                null,
-                R.drawable.devices_other_24px,
-                onConnections,
-            )
-        }
-        if (hasCase) {
-            SoundDashboardLink(
-                stringResource(R.string.sound_overview_case),
-                null,
-                R.drawable.earbud_case_24px,
-                onCase,
-            )
-        }
         SoundDashboardLink(
-            stringResource(R.string.sound_overview_all_settings),
-            stringResource(R.string.sound_overview_all_settings_hint),
-            R.drawable.settings_24px,
-            onAllSettings,
+            stringResource(R.string.equalizer),
+            profileName ?: stringResource(R.string.custom),
+            R.drawable.equalizer_24px,
+            onEqualizer,
         )
+    } else if (oneEarbudOnly) {
+        // The equalizer can not be read or changed until both earbuds are connected. Keep it in place with the reason
+        // instead of letting it disappear.
+        SoundDashboardLink(
+            stringResource(R.string.equalizer),
+            stringResource(R.string.sound_overview_needs_both_earbuds),
+            R.drawable.equalizer_24px,
+            onClick = {},
+            enabled = false,
+        )
+    }
+}
+
+@Composable
+private fun OverviewShortcut(block: OverviewBlock, onControls: () -> Unit, onComfort: () -> Unit, modifier: Modifier) {
+    if (block == OverviewBlock.Controls) {
+        SoundShortcut(stringResource(R.string.sound_overview_controls), R.drawable.sound_hand, onControls, modifier)
+    } else {
+        SoundShortcut(
+            stringResource(R.string.sound_overview_comfort),
+            R.drawable.sound_heart,
+            onComfort,
+            modifier,
+            warm = true,
+        )
+    }
+}
+
+/** The device name and batteries in one line, shown while the card is scrolled out of sight. */
+@Composable
+private fun CompactDeviceBar(deviceModel: String, batteries: List<DeviceBattery>) {
+    // the strip around the bar hides the content scrolling beneath it
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            DeviceArtOrIcon(deviceModel, Modifier.size(28.dp))
+            Text(
+                translateDeviceModel(deviceModel).removePrefix("Soundcore "),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
+            Text(
+                batteries.take(3).joinToString(" · ") { it.value },
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
     }
 }
 

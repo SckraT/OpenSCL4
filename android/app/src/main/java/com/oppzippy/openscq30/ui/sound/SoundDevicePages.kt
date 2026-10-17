@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,20 +39,34 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
+import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
 
 @Composable
-fun SoundModesPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
+fun SoundModesPage(
+    deviceModel: String,
+    settings: List<Pair<String, Setting>>,
+    setSettings: (List<Pair<String, Value>>) -> Unit,
+    preferences: DeviceUiPreferencesViewModel = hiltViewModel(),
+) {
     val ambient = settings.firstOrNull { it.first == "ambientSoundMode" }?.second as? Setting.SelectSetting
+    val soundModesView by preferences.soundModesViewFlow.collectAsState()
+    val values = settings.toMap()
+    // on the scale, the strengths are part of it, so their own sliders are left out
+    val useScale = soundModesView == SoundModesView.Scale && supportsSoundModeScale(deviceModel, values)
     SoundDevicePage(
         headline = R.string.sound_device_modes_headline,
         description = R.string.sound_device_modes_description,
     ) {
-        if (ambient != null) {
+        if (useScale) {
+            SoundModeScale(values, setSettings)
+        } else if (ambient != null) {
             SoundModeTiles(ambient) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
         }
         settings.filter { (id, _) ->
@@ -61,10 +76,14 @@ fun SoundModesPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pai
                 when (id) {
                     "ambientSoundMode" -> false
 
-                    "manualNoiseCanceling", "noiseCancelingMode", "customNoiseCanceling", "adaptiveNoiseCanceling" ->
+                    "manualNoiseCanceling" -> !useScale && ambient.value == "NoiseCanceling"
+
+                    "noiseCancelingMode", "customNoiseCanceling", "adaptiveNoiseCanceling" ->
                         ambient.value == "NoiseCanceling"
 
-                    "manualTransparency", "transparencyMode" -> ambient.value == "Transparency"
+                    "manualTransparency" -> !useScale && ambient.value == "Transparency"
+
+                    "transparencyMode" -> ambient.value == "Transparency"
 
                     "airplaneMode" -> ambient.value == "AirplaneMode"
 

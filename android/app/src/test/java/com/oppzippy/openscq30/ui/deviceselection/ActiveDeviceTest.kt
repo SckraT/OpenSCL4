@@ -41,6 +41,26 @@ class ActiveDeviceTest {
     }
 
     @Test
+    fun theMissingEarbudIsShownAsADash() {
+        val right = DeviceBattery(R.string.sound_overview_right, "66%", 0.66f)
+        val case = DeviceBattery(R.string.sound_overview_case, "80%", 0.8f)
+        assertEquals(
+            listOf(DeviceBattery(R.string.sound_overview_left, "—", null), right, case),
+            withMissingEarbud(listOf(right, case), oneEarbudOnly = true),
+        )
+    }
+
+    @Test
+    fun batteriesStayAsTheyAreWithBothEarbudsOrNone() {
+        val left = DeviceBattery(R.string.sound_overview_left, "77%", 0.77f)
+        val right = DeviceBattery(R.string.sound_overview_right, "66%", 0.66f)
+        val headphones = DeviceBattery(R.string.sound_overview_battery, "50%", 0.5f)
+        assertEquals(listOf(right), withMissingEarbud(listOf(right), oneEarbudOnly = false))
+        assertEquals(listOf(left, right), withMissingEarbud(listOf(left, right), oneEarbudOnly = true))
+        assertEquals(listOf(headphones), withMissingEarbud(listOf(headphones), oneEarbudOnly = true))
+    }
+
+    @Test
     fun batteriesAreReadInOverviewOrder() {
         val settings = mapOf(
             "caseBatteryLevel" to Setting.InformationSetting("8/10", "80%"),

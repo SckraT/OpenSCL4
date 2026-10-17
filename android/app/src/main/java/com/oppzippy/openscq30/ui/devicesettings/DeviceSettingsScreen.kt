@@ -77,6 +77,8 @@ import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
 import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
+import com.oppzippy.openscq30.ui.sound.OverviewBlock
+import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
@@ -86,6 +88,7 @@ import kotlinx.coroutines.flow.flowOf
 private const val HOME = "overview"
 private const val PRESETS = "presets"
 private const val APP_SETTINGS = "appSettings"
+private const val OVERVIEW_LAYOUT = "overviewLayout"
 
 @Composable
 fun DeviceSettingsScreen(
@@ -176,6 +179,7 @@ fun DeviceSettingsScreen(
         HOME -> stringResource(R.string.app_name)
         PRESETS -> stringResource(R.string.quick_presets)
         APP_SETTINGS -> stringResource(R.string.settings)
+        OVERVIEW_LAYOUT -> stringResource(R.string.sound_overview_edit)
         "sound" -> stringResource(R.string.sound_overview_sound_mode)
         "equalizer" -> stringResource(R.string.equalizer)
         "controls" -> stringResource(R.string.sound_overview_controls)
@@ -228,6 +232,12 @@ fun DeviceSettingsScreen(
                                 false
                             navController.navigate("allSettings")
                         })
+                        if (route == HOME) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.sound_overview_edit)) }, onClick = {
+                                showMenu = false
+                                navController.navigate(OVERVIEW_LAYOUT)
+                            })
+                        }
                         DropdownMenuItem(text = {
                             Text(stringResource(R.string.sound_overview_disconnect))
                         }, onClick = {
@@ -313,6 +323,14 @@ fun DeviceSettingsScreen(
                         hasConnections = connectionSettings.isNotEmpty(),
                         hasCase = caseSettings.isNotEmpty(),
                         hasEqualizerCategory = "equalizer" in categories,
+                        macAddress = connection.macAddress,
+                        quickPresets = presets.map { it.name },
+                        activeQuickPreset = lastAppliedPreset,
+                        onActivateQuickPreset = {
+                            activateQuickPreset(it)
+                            lastAppliedPreset = it
+                        },
+                        onEditLayout = { navController.navigate(OVERVIEW_LAYOUT) },
                         onSound = {
                             navController.navigate("sound")
                         }, onEqualizer = { navController.navigate("equalizer") },
@@ -329,7 +347,25 @@ fun DeviceSettingsScreen(
                     )
                 }
             }
-            composable("sound") { SoundModesPage(modeSettings, setSettingValues) }
+            composable("sound") {
+                SoundModesPage(connection.deviceManager.device.model(), modeSettings, setSettingValues)
+            }
+            composable(OVERVIEW_LAYOUT) {
+                val available = buildSet {
+                    if (modeSettings.isNotEmpty()) add(OverviewBlock.SoundMode)
+                    if ("equalizer" in categories || settings.any { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                        add(OverviewBlock.Equalizer)
+                    }
+                    // presets can be added later, so the block can be turned on before there are any
+                    add(OverviewBlock.QuickPresets)
+                    if (controlSettings.isNotEmpty()) add(OverviewBlock.Controls)
+                    if (comfortSettings.isNotEmpty()) add(OverviewBlock.Comfort)
+                    if (settings.any { it.first == "spatialAudio" }) add(OverviewBlock.Spatial)
+                    if (connectionSettings.isNotEmpty()) add(OverviewBlock.Connections)
+                    if (caseSettings.isNotEmpty()) add(OverviewBlock.Case)
+                }
+                OverviewLayoutEditor(connection.deviceManager.device.model(), available)
+            }
             composable("equalizer") {
                 // the earbuds can disconnect from each other while this page is open
                 if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
