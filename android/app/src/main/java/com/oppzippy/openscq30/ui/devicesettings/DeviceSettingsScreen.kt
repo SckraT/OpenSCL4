@@ -76,6 +76,7 @@ import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
 import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
 import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
+import com.oppzippy.openscq30.ui.sound.coveredByPage
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
@@ -159,6 +160,20 @@ fun DeviceSettingsScreen(
     var lastAppliedPreset by rememberSaveable(connection.deviceManager) { mutableStateOf<String?>(null) }
 
     fun openCategory(id: String) = navController.navigate("category/${Uri.encode(id)}")
+
+    // A category with a page of its own opens that page, the same one the device screen opens, as long as the page
+    // shows all of the category's settings.
+    fun dedicatedRoute(id: String): String? {
+        val (route, pageSettingIds) = when (id) {
+            "soundModes" -> "sound" to modeSettings.map { it.first }.toSet()
+            "equalizer" -> "equalizer" to BOTH_EARBUDS_SETTING_IDS
+            "buttonConfiguration" -> "controls" to controlSettings.map { it.first }.toSet()
+            "case" -> "case" to caseSettings.map { it.first }.toSet()
+            "dualConnections" -> "connections" to connectionSettings.map { it.first }.toSet()
+            else -> return null
+        }
+        return route.takeIf { coveredByPage(byCategory[id].orEmpty().map { it.first }, pageSettingIds) }
+    }
     if (confirmDisconnect) {
         AlertDialog(
             onDismissRequest = { confirmDisconnect = false },
@@ -447,7 +462,8 @@ fun DeviceSettingsScreen(
                             if (unavailable) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
                             Screen.SettingsCategory(id).screenInfo().icon,
                             onClick = {
-                                openCategory(id)
+                                val route = dedicatedRoute(id)
+                                if (route != null) navController.navigate(route) else openCategory(id)
                             },
                             enabled = !unavailable,
                         )
