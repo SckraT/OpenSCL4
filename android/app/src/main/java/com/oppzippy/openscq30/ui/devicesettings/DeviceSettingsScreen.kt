@@ -78,6 +78,7 @@ import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
 import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
+import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
@@ -281,7 +282,15 @@ fun DeviceSettingsScreen(
             }
         },
     ) { padding ->
-        NavHost(navController, startDestination = HOME, modifier = Modifier.padding(padding)) {
+        NavHost(
+            navController,
+            startDestination = HOME,
+            modifier = Modifier.padding(padding),
+            enterTransition = NavTransitions.enter,
+            exitTransition = NavTransitions.exit,
+            popEnterTransition = NavTransitions.popEnter,
+            popExitTransition = NavTransitions.popExit,
+        ) {
             composable(HOME) {
                 if (loadedSettings == null) {
                     Column(

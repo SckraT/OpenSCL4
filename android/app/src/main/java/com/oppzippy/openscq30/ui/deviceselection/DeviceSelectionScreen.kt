@@ -27,6 +27,7 @@ import com.oppzippy.openscq30.ui.deviceselection.screens.DeviceListingScreen
 import com.oppzippy.openscq30.ui.deviceselection.screens.SelectDeviceForPairingScreen
 import com.oppzippy.openscq30.ui.deviceselection.screens.SelectModelForPairingScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
+import com.oppzippy.openscq30.ui.utils.NavTransitions
 import com.oppzippy.openscq30.ui.utils.PermissionCheck
 import kotlinx.serialization.Serializable
 
@@ -53,7 +54,10 @@ fun DeviceSelectionScreen(
         NavHost(
             navController = navController,
             startDestination = Screen.Connect,
-
+            enterTransition = NavTransitions.enter,
+            exitTransition = NavTransitions.exit,
+            popEnterTransition = NavTransitions.popEnter,
+            popExitTransition = NavTransitions.popExit,
         ) {
             composable<Screen.Connect> {
                 val activity = LocalActivity.current!!
