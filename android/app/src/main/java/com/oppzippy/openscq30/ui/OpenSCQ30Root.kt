@@ -198,7 +198,7 @@ private fun DeviceScreen(
                 onFeaturedSettingSlotChange = { index, name -> settingsManager.setFeaturedSettingSlot(index, name) },
                 onQuickPresetLoadCurrentSettings = { settingsManager.createQuickPreset(it) },
                 legacyEqualizerProfilesFlow = settingsManager.legacyEqualizerProfilesFlow,
-                onMigrateLegacyEqualizerProfile = { settingsManager.migrateLegacyEqualizerProfile(it) },
+                onMigrateLegacyEqualizerProfiles = { settingsManager.migrateLegacyEqualizerProfiles(it) },
             )
         }
     } else {

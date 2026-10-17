@@ -1,5 +1,7 @@
 package com.oppzippy.openscq30
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
@@ -11,9 +13,11 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -25,12 +29,14 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.core.content.getSystemService
 import com.oppzippy.openscq30.actions.addAndConnectToDemoDevice
 import com.oppzippy.openscq30.extensions.assertRangeValueApproxEquals
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import dagger.hilt.android.testing.HiltAndroidTest
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @HiltAndroidTest
@@ -64,6 +70,11 @@ class SettingTest : OpenSCQ30RootTestBase() {
         composeRule.onNodeWithText(getString(R.string.equalizer)).performScrollTo().performClick()
     }
 
+    private fun openProfileTransfer() {
+        composeRule.onNodeWithText(getString(R.string.sound_profile_transfer_title)).performScrollTo().performClick()
+        waitForNode(hasText(getString(R.string.sound_profile_paste)))
+    }
+
     private fun openAllSettingsCategory(id: String) {
         composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
         waitForNode(hasText(translateCategoryId(id)) and hasClickAction())
@@ -81,9 +92,10 @@ class SettingTest : OpenSCQ30RootTestBase() {
     }
 
     private fun deleteEqualizerProfile(name: String) {
-        composeRule.onNodeWithContentDescription(getString(R.string.sound_profile_delete_named, name))
+        composeRule.onNodeWithContentDescription(getString(R.string.sound_profile_more_named, name))
             .performScrollTo().performClick()
         composeRule.onNodeWithText(getString(R.string.delete)).performClick()
+        composeRule.onNode(hasText(getString(R.string.delete)) and hasAnyAncestor(isDialog())).performClick()
         composeRule.waitUntil(uiTimeoutMillis()) {
             composeRule.onAllNodes(hasText(name)).fetchSemanticsNodes().isEmpty()
         }
@@ -169,10 +181,17 @@ class SettingTest : OpenSCQ30RootTestBase() {
         connectDemo("SoundcoreA3951")
         openEqualizer()
         saveEqualizerProfile("Test Profile")
-        composeRule.onNodeWithText(getString(R.string.sound_profile_import_export)).performScrollTo().performClick()
+        openProfileTransfer()
         composeRule.onNode(hasText("Test Profile") and isToggleable()).performScrollTo().performClick()
         waitForToggle("Test Profile", true)
         composeRule.onNode(hasText("Test Profile") and isToggleable()).assertIsOn()
+        composeRule.onNodeWithText(getString(R.string.sound_profile_copy)).performScrollTo().performClick()
+        // read on the test thread: waitUntil checks its condition outside of the UI thread
+        fun copied() =
+            composeRule.activity.getSystemService<ClipboardManager>()?.primaryClip?.getItemAt(0)?.text?.toString()
+                .orEmpty()
+        composeRule.waitUntil(uiTimeoutMillis()) { copied().contains(""""name":"Test Profile"""") }
+        assertTrue(copied(), copied().startsWith("[") && copied().endsWith("]"))
     }
 
     @Test
@@ -205,16 +224,34 @@ class SettingTest : OpenSCQ30RootTestBase() {
     fun testImportString() {
         connectDemo("SoundcoreA3951")
         openEqualizer()
-        composeRule.onNodeWithText(getString(R.string.sound_profile_import_export)).performScrollTo().performClick()
-        composeRule.onNodeWithText(
-            translateSettingId("importCustomEqualizerProfiles"),
-        ).performScrollTo().performTextInput(
-            """[{"name": "test profile", "volumeAdjustments": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}]""",
-        )
-        composeRule.onNodeWithText(getString(R.string.import_)).performScrollTo().performClick()
-        composeRule.onNodeWithText(getString(R.string.confirm)).performClick()
-        waitForNode(hasText("test profile"))
-        composeRule.onNodeWithText("test profile").performScrollTo().assertExists()
+        openProfileTransfer()
+        val json = """[{"name": "test profile", "volumeAdjustments": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}]"""
+        composeRule.runOnIdle {
+            composeRule.activity.getSystemService<ClipboardManager>()
+                ?.setPrimaryClip(ClipData.newPlainText("profiles", json))
+        }
+        composeRule.onNodeWithText(getString(R.string.sound_profile_paste)).performScrollTo().performClick()
+        // a look at the file comes first, so nothing is imported or replaced by surprise
+        waitForNode(hasText(getString(R.string.sound_profile_import_preview_title)))
+        composeRule.onNodeWithText(getString(R.string.sound_profile_import_new)).assertExists()
+        val importButton = composeRule.activity.resources.getQuantityString(R.plurals.sound_profile_import_button, 1, 1)
+        composeRule.onNodeWithText(importButton).performClick()
+        val imported = composeRule.activity.resources.getQuantityString(R.plurals.sound_profile_imported, 1, 1)
+        waitForNode(hasText(imported))
+        waitForNode(hasContentDescription(getString(R.string.sound_profile_more_named, "test profile")))
+    }
+
+    @Test
+    fun testPastingSomethingElseExplainsWhatIsWrong() {
+        connectDemo("SoundcoreA3951")
+        openEqualizer()
+        openProfileTransfer()
+        composeRule.runOnIdle {
+            composeRule.activity.getSystemService<ClipboardManager>()
+                ?.setPrimaryClip(ClipData.newPlainText("text", "not profiles"))
+        }
+        composeRule.onNodeWithText(getString(R.string.sound_profile_paste)).performScrollTo().performClick()
+        waitForNode(hasText(getString(R.string.sound_profile_not_profiles)))
     }
 
     @Test
