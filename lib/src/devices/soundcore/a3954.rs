@@ -75,7 +75,8 @@ soundcore_device!(
         builder.low_battery_prompt();
         builder.a3954_spatial_audio();
         builder.a3954_easy_chat();
-        builder.sound_leak_compensation();
+        // No sound leak compensation: the A3954 answers the A3947's command with a different packet and leaves the
+        // setting unchanged, so the setting could only ever fail.
         builder.wearing_detection();
 
         builder.a3954_air_pressure();
@@ -264,7 +265,6 @@ mod tests {
             (SettingId::EasyChat, false.into()),
             (SettingId::EasyChatWaitTime, "5s".into()),
             (SettingId::WearingDetection, false.into()),
-            (SettingId::SoundLeakCompensation, false.into()),
             (SettingId::LimitHighVolume, true.into()),
             (SettingId::LimitHighVolumeDbLimit, 95.into()),
             (SettingId::LimitHighVolumeRefreshRate, "RealTime".into()),
@@ -283,6 +283,13 @@ mod tests {
             (SettingId::SerialNumber, "3954DE77518A9DF4".into()),
             (SettingId::CaseSerialNumber, "3954F49D8A532BBA".into()),
         ]);
+        assert!(
+            device
+                .inner()
+                .setting(&SettingId::SoundLeakCompensation)
+                .is_none(),
+            "the A3954 doesn't take the sound leak compensation command"
+        );
     }
 
     #[tokio::test(start_paused = true)]
