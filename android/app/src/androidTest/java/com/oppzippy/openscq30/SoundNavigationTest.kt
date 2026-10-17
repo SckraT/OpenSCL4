@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -34,6 +35,7 @@ import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.OpenSCQ30RootViewModel
+import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -48,6 +50,10 @@ import org.junit.Test
 class SoundNavigationTest : OpenSCQ30RootTestBase() {
     private lateinit var rootViewModel: OpenSCQ30RootViewModel
     private val modelName get() = translateDeviceModel("SoundcoreA3954")
+
+    // My devices shows the name without the brand
+    private val cardName get() = splitBrand(modelName).second
+    private val savedCard get() = hasClickAction() and hasText(cardName)
     private val presetName = "Sound UI navigation test"
 
     @Before
@@ -78,12 +84,12 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
         assertSame(originalConnection, connectedDevice())
 
         pressBack()
-        waitForNode(hasText(getString(R.string.sound_your_devices)))
+        waitForNode(hasText(getString(R.string.sound_my_devices)))
         assertTrue("Back must keep the foreground connection service running", DeviceService.isRunning.value)
         assertSame("Returning to the device list must retain the connection", originalConnection, connectedDevice())
 
-        awaitListItem(composeRule, hasText(modelName))
-        composeRule.onNodeWithText(modelName).performClick()
+        awaitListItem(composeRule, savedCard)
+        composeRule.onNode(savedCard).performClick()
         waitForNavigation(R.string.sound_overview_device)
         assertSame("Opening the connected device must not reconnect it", originalConnection, connectedDevice())
     }
@@ -100,9 +106,9 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
         composeRule.waitUntil(uiTimeoutMillis()) {
             rootViewModel.connectionStatusFlow.value == ConnectionStatus.Disconnected && !DeviceService.isRunning.value
         }
-        waitForNode(hasText(getString(R.string.sound_your_devices)))
-        awaitListItem(composeRule, hasText(modelName))
-        composeRule.onNodeWithText(modelName).assertExists("Disconnect must keep the saved device")
+        waitForNode(hasText(getString(R.string.sound_my_devices)))
+        awaitListItem(composeRule, savedCard)
+        composeRule.onNode(savedCard).assertExists("Disconnect must keep the saved device")
     }
 
     @Test
@@ -144,7 +150,8 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
                 ?.any { it.settingId == "wearingDetection" && it.isEnabled } == true
         }
         pressBack()
-        presetButton(R.string.sound_preset_applied).assertIsNotEnabled()
+        // the device has the new preset values, but only a preset applied from the list counts as applied
+        presetButton(R.string.sound_preset_apply).assertIsEnabled()
 
         selectNavigation(R.string.sound_overview_device)
         openComfort()
@@ -170,8 +177,8 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
         }
         try {
             pressBack()
-            waitForNode(hasText(getString(R.string.sound_your_devices)))
-            awaitListItem(composeRule, hasText(modelName))
+            waitForNode(hasText(getString(R.string.sound_my_devices)))
+            awaitListItem(composeRule, savedCard)
             composeRule.onNodeWithContentDescription(getString(R.string.sound_device_actions, modelName))
                 .performScrollTo().performClick()
             composeRule.onNodeWithText(getString(R.string.unpair_device)).performClick()
@@ -184,9 +191,9 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
                 },
             )
             composeRule.waitUntil(uiTimeoutMillis()) {
-                composeRule.onAllNodes(hasText(modelName)).fetchSemanticsNodes().isEmpty()
+                composeRule.onAllNodes(hasText(cardName)).fetchSemanticsNodes().isEmpty()
             }
-            composeRule.onNodeWithText(modelName).assertDoesNotExist()
+            composeRule.onNodeWithText(cardName).assertDoesNotExist()
         } finally {
             // Restore the existing fixture for other tests and manual demo validation.
             runBlocking { composeRule.activity.session.pair(savedDevice) }
@@ -194,7 +201,7 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
     }
 
     private fun connectLiberty4Pro(): DeviceConnectionManager {
-        waitForNode(hasText(getString(R.string.sound_your_devices)))
+        waitForNode(hasText(getString(R.string.sound_my_devices)))
         addAndConnectToDemoDevice(composeRule, modelName)
         composeRule.waitUntil(uiTimeoutMillis()) {
             rootViewModel.connectionStatusFlow.value is ConnectionStatus.Connected &&
