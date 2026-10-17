@@ -1,28 +1,36 @@
 use std::collections::HashMap;
 
 use crate::{
+    api::settings::CategoryId,
     devices::soundcore::{
         a3954::{packets::inbound::A3954StateUpdatePacket, state::A3954State},
         common::{
             self,
             macros::soundcore_device,
             modules::{
+                ModuleCollection,
                 button_configuration::{
                     ButtonAction, ButtonConfigurationSettings, ButtonDisableMode, ButtonSettings,
                     COMMON_ACTIONS,
                 },
                 case_battery_level::CaseBatteryLevelConfiguration,
+                flag::FlagConfiguration,
             },
             packet::{
+                self,
                 inbound::TryToPacket,
                 outbound::{RequestState, ToPacket},
             },
-            structures::button_configuration::{
-                ActionKind, Button, ButtonParseSettings, ButtonPressKind, EnabledFlagKind,
+            structures::{
+                SoundLeakCompensation,
+                button_configuration::{
+                    ActionKind, Button, ButtonParseSettings, ButtonPressKind, EnabledFlagKind,
+                },
             },
         },
     },
     i18n::fl,
+    settings::SettingId,
 };
 
 mod modules;
@@ -75,8 +83,8 @@ soundcore_device!(
         builder.low_battery_prompt();
         builder.a3954_spatial_audio();
         builder.a3954_easy_chat();
-        // No sound leak compensation: the A3954 answers the A3947's command with a different packet and leaves the
-        // setting unchanged, so the setting could only ever fail.
+        let packet_io = builder.packet_io_controller().clone();
+        add_sound_leak_compensation(builder.module_collection(), packet_io);
         builder.wearing_detection();
 
         builder.a3954_air_pressure();
@@ -193,6 +201,24 @@ pub const SLIDE_DOWN_ACTIONS: &[ButtonAction] = &[ButtonAction {
     localized_name: || fl!("volume-down"),
 }];
 
+/// Adaptive sound leak compensation. The A3954 takes its own command for it, as the Soundcore app sends it; the
+/// A3947's command is answered with a different packet and changes nothing.
+fn add_sound_leak_compensation(
+    module_collection: &mut ModuleCollection<A3954State>,
+    packet_io: std::sync::Arc<common::packet::PacketIOController>,
+) {
+    module_collection.add_flag::<SoundLeakCompensation>(
+        packet_io,
+        FlagConfiguration {
+            category_id: CategoryId::Miscellaneous,
+            setting_id: SettingId::SoundLeakCompensation,
+            set_command: packet::Command([0x10, 0x9A]),
+            update_command: None,
+            is_inverted: false,
+        },
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use std::{collections::HashMap, sync::Arc};
@@ -283,13 +309,45 @@ mod tests {
             (SettingId::SerialNumber, "3954DE77518A9DF4".into()),
             (SettingId::CaseSerialNumber, "3954F49D8A532BBA".into()),
         ]);
-        assert!(
-            device
-                .inner()
-                .setting(&SettingId::SoundLeakCompensation)
-                .is_none(),
-            "the A3954 doesn't take the sound leak compensation command"
-        );
+        device.assert_setting_values([(SettingId::SoundLeakCompensation, false.into())]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn set_sound_leak_compensation() {
+        let mut device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(
+                    packet::Command([1, 1]),
+                    vec![
+                        0, 1, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53,
+                        52, 68, 69, 55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9,
+                        0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120,
+                        120, 120, 120, 120, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1,
+                        145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139, 141, 122,
+                        111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133,
+                        114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+                        0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1,
+                        255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0,
+                        110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+                    ],
+                ),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        // the command the Soundcore app sends, rather than the A3947's 10 86
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::SoundLeakCompensation, true.into())],
+                vec![packet::Outbound::new(
+                    packet::Command([0x10, 0x9A]),
+                    vec![1],
+                )],
+            )
+            .await;
     }
 
     #[tokio::test(start_paused = true)]
@@ -447,14 +505,15 @@ mod tests {
     async fn equalizer_becomes_available_when_the_other_earbud_connects() {
         // connected with only one earbud: host device 1, tws not connected
         let mut state = vec![
-            1, 0, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53, 52, 68, 69, 55, 55,
-            53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9, 0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA,
-            254, 254, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 255, 255, 255, 255, 255, 255,
-            255, 255, 255, 255, 0, 1, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139,
-            141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133, 114, 60,
-            60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10, 0x66, 0x66, 0x32, 0x33, 0xFF,
-            0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1, 255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0,
-            1, 95, 0, 0, 1, 0, 0, 0, 0, 110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+            1, 0, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53, 52, 68, 69,
+            55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9, 0xF4, 0x9D, 0x8A, 0x53,
+            0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 0, 1, 145, 147, 139, 141, 122, 111, 105, 100, 60,
+            60, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130,
+            122, 133, 133, 114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+            0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1, 255, 0, 0, 0,
+            0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0, 110, 1, 0, 1, 0, 0, 255,
+            0, 0, 17, 17,
         ];
         let device = TestSoundcoreDevice::new(
             super::device_registry,
@@ -467,7 +526,10 @@ mod tests {
         )
         .await;
         assert!(
-            device.inner().setting(&SettingId::VolumeAdjustments).is_none(),
+            device
+                .inner()
+                .setting(&SettingId::VolumeAdjustments)
+                .is_none(),
             "the equalizer is hidden while only one earbud is connected"
         );
         let mut changes = device.inner().watch_for_changes();
@@ -478,9 +540,15 @@ mod tests {
             .receive(packet::Inbound::new(packet::Command([1, 2]), vec![1, 1]))
             .await;
 
-        assert!(changes.has_changed().unwrap(), "listeners must be told to re-read settings");
         assert!(
-            device.inner().setting(&SettingId::VolumeAdjustments).is_some(),
+            changes.has_changed().unwrap(),
+            "listeners must be told to re-read settings"
+        );
+        assert!(
+            device
+                .inner()
+                .setting(&SettingId::VolumeAdjustments)
+                .is_some(),
             "the equalizer should be available once both earbuds are connected"
         );
     }

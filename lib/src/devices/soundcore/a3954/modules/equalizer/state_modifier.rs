@@ -7,11 +7,7 @@ use crate::{
     api::device,
     devices::soundcore::{
         a3954,
-        common::{
-            self,
-            packet::PacketIOController,
-            state_modifier::StateModifier,
-        },
+        common::{self, packet::PacketIOController, state_modifier::StateModifier},
     },
 };
 
