@@ -1,23 +1,38 @@
 package com.oppzippy.openscq30.ui.deviceselection.screens
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -28,22 +43,36 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
-import com.oppzippy.openscq30.ui.deviceselection.components.ConnectToDeviceCard
+import com.oppzippy.openscq30.ui.deviceselection.ActiveDevice
+import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
+import com.oppzippy.openscq30.ui.deviceselection.featuredDevice
+import com.oppzippy.openscq30.ui.deviceselection.splitBrand
+import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
+import com.oppzippy.openscq30.ui.sound.DeviceHeroCard
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
-import com.oppzippy.openscq30.ui.utils.Loading
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceListingScreen(
     devices: List<PairedDevice>?,
+    activeDevice: ActiveDevice? = null,
+    lastDeviceMacAddress: String? = null,
     onRefreshClick: () -> Unit = {},
     onInfoClick: () -> Unit = {},
     onDeviceClick: (PairedDevice) -> Unit = {},
@@ -51,173 +80,267 @@ fun DeviceListingScreen(
     onUnpair: (PairedDevice) -> Unit = {},
     onAddDeviceClick: () -> Unit = {},
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(text = stringResource(id = R.string.app_name))
-                },
-                actions = {
-                    IconButton(onClick = onInfoClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.info_24px),
-                            contentDescription = stringResource(id = R.string.info),
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.settings_24px),
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddDeviceClick) {
-                Icon(
-                    painter = painterResource(R.drawable.add_24px),
-                    contentDescription = stringResource(id = R.string.add),
-                )
-            }
-        },
-        content = { innerPadding ->
-            val pullToRefreshState = rememberPullToRefreshState()
-            val scope = rememberCoroutineScope()
-            PullToRefreshBox(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .padding(vertical = 8.dp, horizontal = 16.dp)
-                    .fillMaxSize(),
-                isRefreshing = false,
-                onRefresh = {
-                    onRefreshClick()
-                    scope.launch {
-                        pullToRefreshState.animateToHidden()
-                    }
-                },
-                state = pullToRefreshState,
-            ) {
-                // child needs to be scrollable so that pull to refresh works
-                if (devices == null) {
-                    Loading()
-                } else if (devices.isEmpty()) {
-                    CenteredScrollableBox {
-                        Text(stringResource(R.string.no_devices_found))
-                    }
-                } else {
-                    DeviceList(
-                        devices = devices,
-                        modifier = Modifier.fillMaxSize(),
-                        onDeviceClick = onDeviceClick,
-                        onUnpair = onUnpair,
-                    )
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun CenteredScrollableBox(content: @Composable () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun DeviceList(
-    devices: List<PairedDevice>,
-    modifier: Modifier = Modifier,
-    onDeviceClick: (device: PairedDevice) -> Unit = {},
-    onUnpair: (device: PairedDevice) -> Unit = {},
-) {
-    var deviceToUnpair: PairedDevice? by remember { mutableStateOf(null) }
-
+    var deviceToUnpair by remember { mutableStateOf<PairedDevice?>(null) }
     deviceToUnpair?.let { device ->
         AlertDialog(
             onDismissRequest = { deviceToUnpair = null },
-            title = { Text(stringResource(id = R.string.unpair_device)) },
-            text = {
-                Text(
-                    stringResource(
-                        id = R.string.unpairing_from_device_name,
-                        translateDeviceModel(device.model),
-                    ),
-                )
-            },
+            title = { Text(stringResource(R.string.unpair_device)) },
+            text = { Text(stringResource(R.string.unpairing_from_device_name, translateDeviceModel(device.model))) },
             dismissButton = {
-                TextButton(onClick = { deviceToUnpair = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
+                TextButton(onClick = { deviceToUnpair = null }) { Text(stringResource(R.string.cancel)) }
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onUnpair(device)
-                        deviceToUnpair = null
-                    },
-                ) {
-                    Text(stringResource(R.string.unpair))
-                }
+                TextButton(onClick = {
+                    onUnpair(device)
+                    deviceToUnpair = null
+                }) { Text(stringResource(R.string.unpair)) }
             },
         )
     }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(stringResource(R.string.sound_my_devices), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                actions = {
+                    IconButton(onClick = onInfoClick) {
+                        Icon(painterResource(R.drawable.info_24px), contentDescription = stringResource(R.string.info))
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            painterResource(R.drawable.settings_24px),
+                            contentDescription = stringResource(R.string.settings),
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        val refreshState = rememberPullToRefreshState()
+        val scope = rememberCoroutineScope()
+        PullToRefreshBox(
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            isRefreshing = false,
+            onRefresh = {
+                onRefreshClick()
+                scope.launch { refreshState.animateToHidden() }
+            },
+            state = refreshState,
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val featured = devices?.let { featuredDevice(it, activeDevice?.macAddress, lastDeviceMacAddress) }
+                if (devices == null) {
+                    item {
+                        Column(
+                            Modifier.fillMaxWidth().padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            CircularProgressIndicator()
+                            Text(stringResource(R.string.loading))
+                        }
+                    }
+                } else if (featured == null) {
+                    item { NoDevicesCard(onAddDeviceClick) }
+                } else {
+                    val featuredState = activeDevice
+                        ?.takeIf { it.macAddress.equals(featured.macAddress, ignoreCase = true) }
+                    item(key = "featured") {
+                        FeaturedDeviceCard(
+                            device = featured,
+                            state = featuredState?.state,
+                            batteries = featuredState?.batteries.orEmpty(),
+                            oneEarbudOnly = featuredState?.oneEarbudOnly == true,
+                            onOpen = { onDeviceClick(featured) },
+                            onUnpair = { deviceToUnpair = featured },
+                        )
+                    }
+                    val others = devices.filter { it != featured }
+                    if (others.isNotEmpty()) {
+                        item {
+                            Text(
+                                stringResource(R.string.sound_other_devices),
+                                modifier = Modifier.padding(start = 8.dp, top = 8.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        items(others, key = { "${it.model}:${it.macAddress}:${it.isDemo}" }) { device ->
+                            DeviceRow(
+                                device = device,
+                                onClick = { onDeviceClick(device) },
+                                onUnpair = { deviceToUnpair = device },
+                            )
+                        }
+                    }
+                    item {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                            onClick = onAddDeviceClick,
+                        ) {
+                            Icon(painterResource(R.drawable.add_24px), contentDescription = null)
+                            Spacer(Modifier.size(8.dp))
+                            Text(stringResource(R.string.sound_add_device))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
-    LazyColumn(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        userScrollEnabled = true,
+/** The device the app is connected to, or otherwise the one used last, with its state and what to do next. */
+@Composable
+private fun FeaturedDeviceCard(
+    device: PairedDevice,
+    state: ActiveDeviceState?,
+    batteries: List<DeviceBattery>,
+    oneEarbudOnly: Boolean,
+    onOpen: () -> Unit,
+    onUnpair: () -> Unit,
+) {
+    // Tapping anywhere on the card does what its button does, as on the rows below it.
+    DeviceHeroCard(
+        model = device.model,
+        isDemo = device.isDemo,
+        state = state,
+        batteries = if (state == ActiveDeviceState.Connected) batteries else emptyList(),
+        macAddress = device.macAddress,
+        oneEarbudBadge = state == ActiveDeviceState.Connected && oneEarbudOnly,
+        hint = if (state == null) stringResource(R.string.sound_device_not_connected_hint) else null,
+        onClick = onOpen,
+        topEnd = { DeviceMenu(device, onUnpair) },
     ) {
-        items(devices) { device ->
-            ConnectToDeviceCard(
-                modifier = Modifier.combinedClickable(
-                    onClick = { onDeviceClick(device) },
-                    onLongClick = { deviceToUnpair = device },
+        Button(
+            onClick = onOpen,
+            enabled = state != ActiveDeviceState.Connecting,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        ) {
+            Text(
+                stringResource(
+                    when (state) {
+                        ActiveDeviceState.Connected -> R.string.sound_open_device
+                        ActiveDeviceState.Connecting -> R.string.sound_device_connecting
+                        null -> R.string.sound_device_connect
+                    },
                 ),
-                model = device.model,
-                name = translateDeviceModel(device.model),
-                macAddress = device.macAddress,
-                isDemo = device.isDemo,
             )
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun PreviewDeviceList() {
-    OpenSCQ30Theme {
-        val devices = ArrayList<PairedDevice>()
-        for (i in 1..3) {
-            devices.add(PairedDevice("Device #$i", "00:00:$i", isDemo = i % 2 == 0))
+private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () -> Unit) {
+    val (_, name) = splitBrand(translateDeviceModel(device.model))
+    val unpairLabel = stringResource(R.string.unpair_device)
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onUnpair)
+            .semantics { customActions = listOf(CustomAccessibilityAction(unpairLabel) { onUnpair(); true }) },
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+    ) {
+        Row(
+            Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                DeviceArtOrIcon(device.model, Modifier.size(44.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(if (device.isDemo) R.string.demo else R.string.sound_device_not_connected),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            DeviceMenu(device, onUnpair)
         }
-        DeviceList(devices)
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun PreviewEmptyListingScreen() {
-    OpenSCQ30Theme {
-        DeviceListingScreen(listOf())
+private fun DeviceMenu(device: PairedDevice, onUnpair: () -> Unit, modifier: Modifier = Modifier) {
+    var showMenu by remember { mutableStateOf(false) }
+    val menuDescription = stringResource(R.string.sound_device_actions, translateDeviceModel(device.model))
+    val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    Box(modifier) {
+        IconButton(onClick = { showMenu = true }) {
+            Canvas(Modifier.size(24.dp).semantics { contentDescription = menuDescription }) {
+                listOf(5f, 12f, 19f).forEach { y ->
+                    drawCircle(iconColor, radius = 1.7.dp.toPx(), center = Offset(size.width / 2, size.height * y / 24))
+                }
+            }
+        }
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.unpair_device)) },
+                onClick = {
+                    showMenu = false
+                    onUnpair()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoDevicesCard(onAddDeviceClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(painterResource(R.drawable.headphones_24px), contentDescription = null, modifier = Modifier.size(72.dp))
+            Text(stringResource(R.string.sound_no_devices_title), style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(R.string.sound_pairing_system_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Button(onClick = onAddDeviceClick, modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 52.dp)) {
+                Icon(painterResource(R.drawable.add_24px), contentDescription = null)
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.sound_add_device))
+            }
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun PreviewDeviceListingScreen() {
-    OpenSCQ30Theme {
-        val devices = ArrayList<PairedDevice>()
-        for (i in 1..10) {
-            devices.add(PairedDevice("Device #$i", "00:00:$i", i % 2 == 0))
-        }
-        DeviceListingScreen(devices)
+    OpenSCQ30Theme(dynamicColor = false) {
+        DeviceListingScreen(
+            listOf(
+                PairedDevice("AC:12:2F:C8:6E:08", "SoundcoreA3028", false),
+                PairedDevice("AC:12:2F:C8:6E:09", "SoundcoreA3027", false),
+            ),
+            activeDevice = ActiveDevice("AC:12:2F:C8:6E:08", ActiveDeviceState.Connected),
+        )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewEmptyListingScreen() {
+    OpenSCQ30Theme(dynamicColor = false) { DeviceListingScreen(emptyList()) }
 }

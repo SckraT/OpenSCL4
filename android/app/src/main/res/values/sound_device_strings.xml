@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_device_modes_headline">Hear what matters.</string>
+    <string name="sound_device_modes_description">Choose how much of the world to let into your sound.</string>
+    <string name="sound_device_controls_headline">A touch.\nAnd you’re in control.</string>
+    <string name="sound_device_left_earbud">Left earbud</string>
+    <string name="sound_device_right_earbud">Right earbud</string>
+    <string name="sound_device_comfort_headline">Comfortable listening.\nEvery day.</string>
+    <string name="sound_device_comfort_description">Settings that adapt your earbuds to your habits.</string>
+    <string name="sound_device_wearing_description">Pause automatically when you remove an earbud</string>
+    <string name="sound_device_volume_description">Limit the volume of your earbuds</string>
+    <string name="sound_device_chat_description">Lower the music while you talk</string>
+    <string name="sound_device_volume_note">The earbud volume limit does not replace guidance on safe listening duration.</string>
+    <string name="sound_device_connections_headline">Stay connected.\nTo two at once.</string>
+    <string name="sound_device_connections_generic_headline">Your connection.\nYour sound.</string>
+    <string name="sound_device_connections_intro">Switch between your phone and computer.</string>
+    <string name="sound_device_connections_description">Connect to up to two devices at once</string>
+    <string name="sound_device_connections_note">This list shows devices paired with your earbuds, not nearby Bluetooth devices. Disconnecting this phone will end control of the earbuds.</string>
+    <string name="sound_device_no_connections">No paired devices reported by your earbuds.</string>
+    <string name="sound_device_not_connected">Not connected</string>
+    <string name="sound_device_forget_device">Forget device</string>
+    <string name="sound_device_case_headline">A little case.\nMore possibilities.</string>
+    <string name="sound_device_case_feature_description">Show this function on the case screen</string>
+    <string name="sound_device_case_note">Choose the features available on your case screen. The case language is independent of the app language.</string>
+    <string name="sound_device_spatial_headline">Inside the sound.</string>
+    <string name="sound_device_spatial_description">A wider soundstage for your favourite content.</string>
+    <string name="sound_device_spatial_note">On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here.</string>
+    <string name="sound_import_failed">Import failed: %1$s</string>
+</resources>

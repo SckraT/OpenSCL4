@@ -9,7 +9,9 @@ import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import com.oppzippy.openscq30.features.autoconnect.AutoConnectService
+import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
+import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.ui.theme.ThemeType
 import com.oppzippy.openscq30.ui.utils.ToastHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,6 +31,9 @@ class SettingsViewModel @Inject constructor(
     val autoConnect = preferences.autoConnectFlow
     val theme = preferences.themeFlow
     val dynamicColorEnabled = preferences.dynamicColorFlow
+    val earbudsColor = preferences.earbudsColorFlow
+    val soundModesView = preferences.soundModesViewFlow
+    val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
 
     fun setAutoConnect(value: Boolean) {
         preferences.autoConnect = value
@@ -46,6 +51,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setDynamicColor(enabled: Boolean) {
         preferences.dynamicColor = enabled
+    }
+
+    fun setEarbudsColor(color: EarbudsColor?) {
+        preferences.earbudsColor = color
+    }
+
+    fun setSoundModesView(view: SoundModesView) {
+        preferences.soundModesView = view
+    }
+
+    fun setShowOneEarbudBadge(show: Boolean) {
+        preferences.showOneEarbudBadge = show
     }
 
     fun copyLogs() {

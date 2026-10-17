@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_preset_heading">Один пресет.\nВаши настройки.</string>
+    <string name="sound_preset_intro">Сохраните любимые сочетания и возвращайтесь к ним одним касанием.</string>
+    <string name="sound_preset_create">Создать пресет</string>
+    <string name="sound_preset_create_message">Сохраните текущие настройки наушников. Затем нажмите «Изменить» и выберите, какие из них будет применять пресет.</string>
+    <string name="sound_preset_empty_title">Ваш звук — в одном пресете</string>
+    <string name="sound_preset_empty_message">Сохраните текущие настройки и выберите те, которые хотите применять вместе.</string>
+    <string name="sound_preset_choose_fields">Нажмите «Изменить» и выберите настройки для применения.</string>
+    <string name="sound_preset_apply">Применить</string>
+    <string name="sound_preset_applied">Применён</string>
+    <string name="sound_preset_edit">Изменить</string>
+    <string name="sound_preset_matches">Совпадает с текущими настройками</string>
+    <string name="sound_preset_more">Действия с пресетом «%1$s»</string>
+    <string name="sound_preset_field_summary">%1$s · %2$s</string>
+    <string name="sound_preset_more_fields">Ещё: %1$d</string>
+    <string name="sound_preset_delete_title">Удалить пресет?</string>
+    <string name="sound_preset_delete_message">Удалить «%1$s»? Текущие настройки наушников сохранятся.</string>
+    <string name="sound_preset_replace_title">Заменить сохранённые значения?</string>
+    <string name="sound_preset_replace_message">Пресет «%1$s» уже существует. Заменить его значения текущими настройками наушников? Выбор включённых настроек сохранится.</string>
+    <string name="sound_preset_replace">Заменить</string>
+    <string name="sound_preset_editor_intro">Пресет применяет только отмеченные настройки. Изменения выбора сохраняются сразу.</string>
+    <string name="sound_preset_editor_empty">В пресете пока нет настроек. Загрузите текущие настройки наушников, чтобы начать.</string>
+    <string name="sound_preset_load_title">Загрузить текущие настройки</string>
+    <string name="sound_preset_load_message">Заменить сохранённые значения пресета текущими настройками наушников? Выбор включённых настроек сохранится. Настройки самих наушников не изменятся.</string>
+    <string name="sound_preset_load">Загрузить</string>
+</resources>

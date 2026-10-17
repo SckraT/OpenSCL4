@@ -922,6 +922,15 @@ pub mod test_utils {
             &self.device
         }
 
+        /// Sends a packet to the device as if the earbuds sent it, and waits for it to be handled.
+        pub async fn receive(&self, packet: packet::Inbound) {
+            self.inbound_sender
+                .send(packet.bytes(self.config.checksum_kind))
+                .await
+                .unwrap();
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
         #[track_caller]
         pub fn assert_setting_values(
             &self,

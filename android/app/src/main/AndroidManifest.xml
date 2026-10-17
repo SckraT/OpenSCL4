@@ -65,6 +65,20 @@
             android:enabled="true"
             android:exported="false" />
 
+        <service
+            android:name=".features.quicksettings.LdacTileService"
+            android:exported="true"
+            android:icon="@drawable/bluetooth_24px"
+            android:label="@string/sound_ldac_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
         <receiver
             android:name=".features.autoconnect.AutoStartReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED"

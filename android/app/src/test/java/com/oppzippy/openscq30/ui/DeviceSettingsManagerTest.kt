@@ -6,6 +6,7 @@ import com.oppzippy.openscq30.android.IntentFactory
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.wrapper.ConnectionDescriptor
+import com.oppzippy.openscq30.test.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -19,6 +20,9 @@ import org.junit.Test
 class DeviceSettingsManagerTest {
     @get:Rule
     val mockkRule = MockKRule(this)
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     @RelaxedMockK
     lateinit var application: OpenSCQ30Application
@@ -51,6 +55,8 @@ class DeviceSettingsManagerTest {
 
     @Test
     fun stopsServiceWhenDeselectingDevice() {
+        val disconnectIntent = mockk<Intent>(relaxed = true)
+        every { intentFactory(DeviceService.ACTION_DISCONNECT) } returns disconnectIntent
         every { intentFactory(application, DeviceService::class.java) } returns mockk()
 
         val viewModel = OpenSCQ30RootViewModel(
@@ -63,6 +69,8 @@ class DeviceSettingsManagerTest {
             version2BreakingChangesMessage = mockk(),
         )
         viewModel.stopDeviceService()
+        verify(exactly = 1) { disconnectIntent.setPackage(application.packageName) }
+        verify(exactly = 1) { application.sendBroadcast(disconnectIntent) }
         verify(exactly = 1) { application.stopService(any()) }
     }
 }

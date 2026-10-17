@@ -18,12 +18,15 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.quicksettings.LdacTileService
 import com.oppzippy.openscq30.features.soundcoredevice.connectionBackends
 import com.oppzippy.openscq30.features.statusnotification.storage.FeaturedSettingSlotDao
 import com.oppzippy.openscq30.features.statusnotification.storage.QuickPresetSlotDao
+import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
+import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,9 +40,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -75,6 +78,10 @@ class DeviceService : LifecycleService() {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
+
+        // the connected device's LDAC setting, or null without a device that has one, for the Quick Settings tile
+        private val _ldacState = MutableStateFlow<Boolean?>(null)
+        val ldacState = _ldacState.asStateFlow()
     }
 
     @Inject
@@ -89,15 +96,36 @@ class DeviceService : LifecycleService() {
     @Inject
     lateinit var featuredSettingSlotDao: FeaturedSettingSlotDao
 
-    val connectionStatusFlow: MutableStateFlow<ConnectionStatus> =
-        MutableStateFlow(ConnectionStatus.AwaitingConnection)
+    private val connectionController = DeviceConnectionController(
+        scope = lifecycleScope,
+        connectDevice = { macAddress ->
+            val device = session.connectWithBackends(
+                connectionBackends(applicationContext, lifecycleScope),
+                macAddress,
+            )
+            try {
+                DeviceConnectionManager(device)
+            } catch (ex: Exception) {
+                device.close()
+                throw ex
+            }
+        },
+        onConnectionFailure = { ex ->
+            Log.w(TAG, "error connecting to device", ex)
+            Toast.makeText(applicationContext, R.string.error_connecting, Toast.LENGTH_SHORT).show()
+        },
+    )
+    val connectionStatusFlow: MutableStateFlow<ConnectionStatus> = connectionController.connectionStatusFlow
 
     private var quickPresetNames = connectionStatusFlow.flatMapLatest { connectionStatus ->
         if (connectionStatus is ConnectionStatus.Connected) {
             val device = connectionStatus.deviceManager.device
-            quickPresetSlotDao.allNames(device.model())
+            quickPresetSlotDao.allNames(device.model()).map { slotNames ->
+                // A slot can outlive the preset it points to, so don't offer buttons for presets that were deleted
+                existingQuickPresetNames(device)?.let { retainExistingQuickPresets(slotNames, it) } ?: slotNames
+            }
         } else {
-            emptyFlow()
+            flowOf(emptyList())
         }
     }.stateIn(lifecycleScope, SharingStarted.Lazily, emptyList())
     private var featuredSettingIds = connectionStatusFlow.flatMapLatest { connectionStatus ->
@@ -105,7 +133,7 @@ class DeviceService : LifecycleService() {
             val device = connectionStatus.deviceManager.device
             featuredSettingSlotDao.allSettingIds(device.model())
         } else {
-            emptyFlow()
+            flowOf(emptyList())
         }
     }.stateIn(lifecycleScope, SharingStarted.Lazily, emptyList())
 
@@ -114,6 +142,7 @@ class DeviceService : LifecycleService() {
             when (intent?.action) {
                 ACTION_DISCONNECT -> {
                     Log.i(TAG, "got disconnect request, initiating stop service")
+                    connectionController.close()
                     stopSelf()
                 }
 
@@ -123,16 +152,30 @@ class DeviceService : LifecycleService() {
                         Log.e(TAG, "got ACTION_QUICK_PRESET, but INTENT_EXTRA_PRESET_SLOT_INDEX is not specified")
                         return
                     }
-                    val presetName = quickPresetNames.value.getOrNull(presetIndex) ?: return
+                    val presetName = quickPresetNames.value.getOrNull(presetIndex)
+                    if (presetName == null) {
+                        Log.w(TAG, "got ACTION_QUICK_PRESET for slot $presetIndex, but it has no quick preset")
+                        showQuickPresetError()
+                        return
+                    }
                     lifecycleScope.launch {
                         connectionStatusFlow.value.let {
                             if (it is ConnectionStatus.Connected) {
                                 val device = it.deviceManager.device
                                 session.quickPresetHandler().use { quickPresetHandler ->
                                     try {
-                                        quickPresetHandler.activate(device, presetName)
+                                        val presetExists =
+                                            quickPresetHandler.quickPresets(device).any { it.name == presetName }
+                                        if (presetExists) {
+                                            quickPresetHandler.activate(device, presetName)
+                                        } else {
+                                            Log.w(TAG, "quick preset $presetName no longer exists, removing its slot")
+                                            quickPresetSlotDao.deleteByName(device.model(), presetName)
+                                            showQuickPresetError()
+                                        }
                                     } catch (ex: OpenScq30Exception) {
                                         Log.e(TAG, "error activating quick preset $presetName", ex)
+                                        showQuickPresetError()
                                     }
                                 }
                             }
@@ -190,7 +233,7 @@ class DeviceService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        _isRunning.value = true
+        createNotificationChannel()
 
         lifecycleScope.launch { quickPresetNames.collectLatest { sendNotification() } }
         lifecycleScope.launch { featuredSettingIds.collectLatest { sendNotification() } }
@@ -202,34 +245,6 @@ class DeviceService : LifecycleService() {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
-        createNotificationChannel()
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-
-        val notification = buildNotification()
-        startForeground(NOTIFICATION_ID, notification)
-
-        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
-            lifecycleScope.launch {
-                try {
-                    val device = session.connectWithBackends(
-                        connectionBackends(applicationContext, lifecycleScope),
-                        macAddress,
-                    )
-                    connectionStatusFlow.value = ConnectionStatus.Connected(DeviceConnectionManager(device))
-                } catch (ex: OpenScq30Exception) {
-                    Log.w(TAG, "error connecting to device", ex)
-                    Toast.makeText(applicationContext, R.string.error_connecting, Toast.LENGTH_SHORT).show()
-                    connectionStatusFlow.value = ConnectionStatus.Disconnected
-                }
-            }
-            connectionStatusFlow.compareAndSet(
-                ConnectionStatus.AwaitingConnection,
-                ConnectionStatus.Connecting(macAddress),
-            )
-        }
         // when we are connected to a device that becomes disconnected, update our connection status to disconnected
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest { connectionStatus ->
@@ -239,15 +254,19 @@ class DeviceService : LifecycleService() {
                             com.oppzippy.openscq30.lib.bindings.ConnectionStatus.Disconnected
                         ) {
                             Log.d(TAG, "device disconnected")
-                            connectionStatusFlow.value = ConnectionStatus.Disconnected
+                            if (connectionStatusFlow.value === connectionStatus) connectionController.close()
                         }
                     }
                 }
             }
         }
         lifecycleScope.launch {
-            connectionStatusFlow.first { it == ConnectionStatus.Disconnected }
-            stopSelf()
+            connectionStatusFlow.collectLatest {
+                if (it == ConnectionStatus.Disconnected) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            }
         }
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest {
@@ -270,6 +289,40 @@ class DeviceService : LifecycleService() {
             }
         }
 
+        lifecycleScope.launch {
+            connectionStatusFlow.collectLatest { connectionStatus ->
+                if (connectionStatus is ConnectionStatus.Connected) {
+                    val device = connectionStatus.deviceManager.device
+                    connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
+                        _ldacState.value = try {
+                            (device.setting("ldac") as? Setting.ToggleSetting)?.value
+                        } catch (ex: IllegalStateException) {
+                            Log.w(TAG, "device was closed, LDAC unknown", ex)
+                            null
+                        }
+                        LdacTileService.requestUpdate(applicationContext)
+                    }
+                } else {
+                    _ldacState.value = null
+                    LdacTileService.requestUpdate(applicationContext)
+                }
+            }
+        }
+
+        _isRunning.value = true
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+
+        val notification = buildNotification()
+        startForeground(NOTIFICATION_ID, notification)
+
+        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
+            connectionController.connect(macAddress)
+            sendNotification()
+        }
+
         return START_REDELIVER_INTENT
     }
 
@@ -278,16 +331,30 @@ class DeviceService : LifecycleService() {
         Log.i(TAG, "stopping service")
         unregisterReceiver(broadcastReceiver)
         cancelNotification()
-        connectionStatusFlow.value.let {
-            if (it is ConnectionStatus.Connected) {
-                connectionStatusFlow.value = ConnectionStatus.Disconnected
-                it.deviceManager.close()
-            }
-        }
+        connectionController.close()
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)
         }
+        _ldacState.value = null
+        LdacTileService.requestUpdate(applicationContext)
         _isRunning.value = false
+    }
+
+    /** Returns the names of the quick presets that exist for [device], or null if they could not be fetched. */
+    private suspend fun existingQuickPresetNames(device: OpenScq30Device): Set<String>? = try {
+        session.quickPresetHandler().use { quickPresetHandler ->
+            quickPresetHandler.quickPresets(device).map { it.name }.toSet()
+        }
+    } catch (ex: OpenScq30Exception) {
+        Log.w(TAG, "error fetching quick presets, not checking whether slots refer to existing presets", ex)
+        null
+    } catch (ex: IllegalStateException) {
+        Log.w(TAG, "device was closed, can't fetch quick presets", ex)
+        null
+    }
+
+    private fun showQuickPresetError() {
+        Toast.makeText(applicationContext, R.string.error_activating_quick_preset, Toast.LENGTH_SHORT).show()
     }
 
     private fun createNotificationChannel() {
@@ -304,6 +371,8 @@ class DeviceService : LifecycleService() {
     }
 
     private fun sendNotification() {
+        // Slot collectors may still emit while a stopped service has bound clients.
+        if (connectionStatusFlow.value == ConnectionStatus.Disconnected) return
         val notificationManager =
             getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, buildNotification())

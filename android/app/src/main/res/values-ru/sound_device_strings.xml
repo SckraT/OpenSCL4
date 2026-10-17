@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_device_modes_headline">Слушайте то,\nчто важно.</string>
+    <string name="sound_device_modes_description">Выберите, сколько окружающего мира оставить в звуке.</string>
+    <string name="sound_device_controls_headline">Касание.\nИ всё под контролем.</string>
+    <string name="sound_device_left_earbud">Левый наушник</string>
+    <string name="sound_device_right_earbud">Правый наушник</string>
+    <string name="sound_device_comfort_headline">Удобно слушать.\nКаждый день.</string>
+    <string name="sound_device_comfort_description">Настройки, которые подстраивают наушники под ваши привычки.</string>
+    <string name="sound_device_wearing_description">Автопауза, когда вы вынимаете наушник</string>
+    <string name="sound_device_volume_description">Ограничивает громкость наушников</string>
+    <string name="sound_device_chat_description">Приглушает музыку во время разговора</string>
+    <string name="sound_device_volume_note">Ограничение наушников не заменяет рекомендации по безопасной длительности прослушивания.</string>
+    <string name="sound_device_connections_headline">На связи.\nС двумя сразу.</string>
+    <string name="sound_device_connections_generic_headline">Ваше подключение.\nВаш звук.</string>
+    <string name="sound_device_connections_intro">Переключайтесь между телефоном и компьютером.</string>
+    <string name="sound_device_connections_description">Одновременно — до двух устройств</string>
+    <string name="sound_device_connections_note">Список показывает сопряжённые с наушниками устройства, а не Bluetooth-устройства поблизости. Отключение этого телефона завершит управление наушниками.</string>
+    <string name="sound_device_no_connections">Наушники не сообщили о сопряжённых устройствах.</string>
+    <string name="sound_device_not_connected">Не подключено</string>
+    <string name="sound_device_forget_device">Забыть устройство</string>
+    <string name="sound_device_case_headline">Маленький кейс.\nБольше возможностей.</string>
+    <string name="sound_device_case_feature_description">Показывать функцию на экране кейса</string>
+    <string name="sound_device_case_note">Здесь выбираются функции экрана кейса. Язык кейса не зависит от языка приложения.</string>
+    <string name="sound_device_spatial_headline">Внутри звука.</string>
+    <string name="sound_device_spatial_description">Более широкая звуковая сцена для любимого контента.</string>
+    <string name="sound_device_spatial_note">На Liberty 4 Pro настройка эквалайзера отключит пространственный звук. Выбранный режим можно включить снова здесь.</string>
+    <string name="sound_import_failed">Не удалось импортировать: %1$s</string>
+</resources>

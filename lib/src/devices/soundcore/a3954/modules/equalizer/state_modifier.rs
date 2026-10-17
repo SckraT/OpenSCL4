@@ -7,11 +7,7 @@ use crate::{
     api::device,
     devices::soundcore::{
         a3954,
-        common::{
-            self,
-            packet::{PacketIOController, outbound::ToPacket},
-            state_modifier::StateModifier,
-        },
+        common::{self, packet::PacketIOController, state_modifier::StateModifier},
     },
 };
 
@@ -174,17 +170,13 @@ where
                     ))
                     .await?;
             }
+            // The A3954's own equalizer packet: the common one encodes the effective equalizer differently, which
+            // made a custom profile sound much quieter after spatial audio was turned off.
             self.packet_io
-                .send_with_response(
-                    &common::packet::outbound::SetEqualizerAndCustomHearId {
-                        equalizer_configuration: target_state.get(),
-                        gender: common::structures::Gender::default(),
-                        age_range: common::structures::AgeRange::default(),
-                        custom_hear_id: target_state.get(),
-                        force_supports_hear_id: true,
-                    }
-                    .to_packet(),
-                )
+                .send_with_response(&a3954::packets::outbound::set_equalizer_configuration(
+                    target_state.get(),
+                    target_state.get(),
+                ))
                 .await?;
         }
         state_sender.send_modify(|state| *state.get_mut() = *target);

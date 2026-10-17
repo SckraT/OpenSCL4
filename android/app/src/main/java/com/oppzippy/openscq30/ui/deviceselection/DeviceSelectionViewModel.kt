@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.oppzippy.openscq30.MainActivity
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.soundcoredevice.connectionBackends
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
@@ -32,6 +33,7 @@ class DeviceSelectionViewModel @Inject constructor(
     private val application: Application,
     private val session: OpenScq30Session,
     private val toastHandler: ToastHandler,
+    private val preferences: Preferences,
 ) : AndroidViewModel(application) {
     companion object {
         const val TAG = "DeviceSelectionViewModel"
@@ -39,6 +41,13 @@ class DeviceSelectionViewModel @Inject constructor(
 
     private val _pairedDevices = MutableStateFlow<List<PairedDevice>?>(null)
     val pairedDevices = _pairedDevices.asStateFlow()
+
+    /** The device the user opened most recently, featured at the top of the list while nothing is connected. */
+    val lastDeviceMacAddress = preferences.lastDeviceMacAddressFlow
+
+    fun rememberLastDevice(macAddress: String) {
+        preferences.lastDeviceMacAddress = macAddress
+    }
 
     init {
         viewModelScope.launch { refreshPairedDevices() }
@@ -131,12 +140,13 @@ class DeviceSelectionViewModel @Inject constructor(
         )
     }
 
-    fun unpair(activity: Activity, pairedDevice: PairedDevice) {
+    fun unpair(activity: Activity, pairedDevice: PairedDevice, onUnpaired: () -> Unit = {}) {
         viewModelScope.launch {
             // Unpair before removing the association, since if something goes wrong, it's less broken to still be
             // associated but not be paired with openscq30_lib rather than the other way around. The other way around would
             // show the user a device available to connect to that we can't actually connect to.
             session.unpair(pairedDevice.macAddress)
+            onUnpaired()
             refreshPairedDevices()
             if (!pairedDevice.isDemo) {
                 val deviceManager = activity.getSystemService(CompanionDeviceManager::class.java)

@@ -1,9 +1,17 @@
 package com.oppzippy.openscq30
 
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
@@ -13,6 +21,7 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import com.oppzippy.openscq30.actions.addAndConnectToDemoDevice
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
+import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import dagger.hilt.android.testing.HiltAndroidTest
 import java.util.regex.Pattern
 import org.junit.After
@@ -36,6 +45,14 @@ class NotificationTest : OpenSCQ30RootTestBase() {
             return uiDevice.findObject(notificationTitle).parent.parent.parent!!
         }
 
+    private fun connectDemo() {
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        composeRule.waitUntil(uiTimeoutMillis(10_000)) {
+            composeRule.onAllNodesWithContentDescription(getString(R.string.sound_overview_device_actions))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     private fun expandNotification() {
         notification.findObject(By.desc("Expand"))?.click()
         val disconnect = By.desc(getString(R.string.disconnect))
@@ -54,7 +71,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun opensAppWhenNotificationIsClicked() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        connectDemo()
         composeRule.waitForIdle()
 
         uiDevice.pressHome()
@@ -67,7 +84,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun disconnectsAndClosesNotificationWhenDisconnectIsClicked() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        connectDemo()
         composeRule.waitForIdle()
 
         uiDevice.openNotification()
@@ -81,31 +98,33 @@ class NotificationTest : OpenSCQ30RootTestBase() {
         assertFalse(uiDevice.hasObject(notificationTitle))
         uiDevice.pressBack()
 
-        composeRule.onNodeWithContentDescription(getString(R.string.info)).assertExists()
+        composeRule.onNodeWithText(getString(R.string.sound_overview_disconnected)).assertExists()
+        composeRule.onNodeWithText(getString(R.string.sound_overview_retry)).assertExists()
     }
 
     @Test
     fun quickPresetButtonsWork() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
-        // Create the quick preset
-        composeRule.onNodeWithText(getString(R.string.quick_presets)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.create)).performClick()
+        connectDemo()
+        composeRule.onNodeWithText("Noise Canceling").performScrollTo().performClick().assertIsSelected()
+        // Capture the current ambient sound mode and enable it in the preset editor.
+        composeRule.onNode(hasText(getString(R.string.quick_presets)) and hasClickAction()).performClick()
+        composeRule.onNodeWithText(getString(R.string.sound_preset_create)).performClick()
         composeRule.onNodeWithText(getString(R.string.name)).performTextInput("My Preset 1")
         composeRule.onNodeWithText(getString(R.string.create)).performClick()
-        composeRule.onNodeWithText(getString(R.string.edit)).performClick()
-        composeRule.onNodeWithText("Ambient Sound Mode").performClick()
+        composeRule.onNodeWithText(getString(R.string.sound_preset_edit)).performClick()
+        composeRule.onNodeWithText(translateSettingId("ambientSoundMode"))
+            .performScrollTo().assertIsOff().performClick().assertIsOn()
         composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-        composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-        // Add it to slot 1
-        composeRule.onNodeWithText(getString(R.string.status_notification)).performClick()
-        composeRule.onNodeWithTag(getString(R.string.quick_preset_slot_x, 1) + " select").performClick()
+        // Assign that preset to the real notification's first quick-preset slot.
+        composeRule.onNode(hasText(getString(R.string.settings)) and hasClickAction()).performClick()
+        composeRule.onNodeWithText(getString(R.string.sound_notification_controls)).performScrollTo().performClick()
+        composeRule.onNodeWithTag(getString(R.string.quick_preset_slot_x, 1) + " select")
+            .performScrollTo().performClick()
         composeRule.onNodeWithText("My Preset 1").performClick()
         composeRule.onNodeWithContentDescription(getString(R.string.back)).performClick()
-        // Change the ambient sound mode away from the quick preset
-        composeRule.onNodeWithText("Sound Modes").performClick()
-        composeRule.onNodeWithText("Noise Canceling").performClick()
-        composeRule.onNodeWithText("Normal").performClick()
-        composeRule.onNodeWithText("Noise Canceling").assertDoesNotExist()
+        composeRule.onNode(hasText(getString(R.string.sound_overview_device)) and hasClickAction()).performClick()
+        composeRule.onNodeWithText("Normal").performScrollTo().performClick().assertIsSelected()
+        composeRule.onNodeWithText("Noise Canceling").assertIsNotSelected()
         composeRule.waitForIdle()
 
         // Activate the quick preset via the notification
@@ -115,7 +134,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
         notification.findObject(By.text(Pattern.compile("My Preset 1", Pattern.CASE_INSENSITIVE))).click()
         uiDevice.pressBack()
 
-        composeRule.onNodeWithText("Noise Canceling")
-            .assertExists("ambient sound mode should change when activating quick preset")
+        composeRule.onNodeWithText("Noise Canceling").assertIsSelected()
+        composeRule.onNodeWithText("Normal").assertIsNotSelected()
     }
 }

@@ -1,28 +1,36 @@
 use std::collections::HashMap;
 
 use crate::{
+    api::settings::CategoryId,
     devices::soundcore::{
         a3954::{packets::inbound::A3954StateUpdatePacket, state::A3954State},
         common::{
             self,
             macros::soundcore_device,
             modules::{
+                ModuleCollection,
                 button_configuration::{
                     ButtonAction, ButtonConfigurationSettings, ButtonDisableMode, ButtonSettings,
                     COMMON_ACTIONS,
                 },
                 case_battery_level::CaseBatteryLevelConfiguration,
+                flag::FlagConfiguration,
             },
             packet::{
+                self,
                 inbound::TryToPacket,
                 outbound::{RequestState, ToPacket},
             },
-            structures::button_configuration::{
-                ActionKind, Button, ButtonParseSettings, ButtonPressKind, EnabledFlagKind,
+            structures::{
+                SoundLeakCompensation,
+                button_configuration::{
+                    ActionKind, Button, ButtonParseSettings, ButtonPressKind, EnabledFlagKind,
+                },
             },
         },
     },
     i18n::fl,
+    settings::SettingId,
 };
 
 mod modules;
@@ -75,7 +83,8 @@ soundcore_device!(
         builder.low_battery_prompt();
         builder.a3954_spatial_audio();
         builder.a3954_easy_chat();
-        builder.sound_leak_compensation();
+        let packet_io = builder.packet_io_controller().clone();
+        add_sound_leak_compensation(builder.module_collection(), packet_io);
         builder.wearing_detection();
 
         builder.a3954_air_pressure();
@@ -192,17 +201,37 @@ pub const SLIDE_DOWN_ACTIONS: &[ButtonAction] = &[ButtonAction {
     localized_name: || fl!("volume-down"),
 }];
 
+/// Adaptive sound leak compensation. The A3954 takes its own command for it, as the Soundcore app sends it; the
+/// A3947's command is answered with a different packet and changes nothing.
+fn add_sound_leak_compensation(
+    module_collection: &mut ModuleCollection<A3954State>,
+    packet_io: std::sync::Arc<common::packet::PacketIOController>,
+) {
+    module_collection.add_flag::<SoundLeakCompensation>(
+        packet_io,
+        FlagConfiguration {
+            category_id: CategoryId::Miscellaneous,
+            setting_id: SettingId::SoundLeakCompensation,
+            set_command: packet::Command([0x10, 0x9A]),
+            update_command: None,
+            is_inverted: false,
+        },
+    );
+}
+
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Arc};
 
     use crate::{
         DeviceModel,
+        api::device::OpenSCQ30Device,
         devices::soundcore::common::{
             device::{SoundcoreDeviceConfig, test_utils::TestSoundcoreDevice},
             packet,
         },
-        settings::{SettingId, Value},
+        settings::{Setting, SettingId, Value},
+        storage::OpenSCQ30Database,
     };
 
     #[tokio::test(start_paused = true)]
@@ -262,7 +291,6 @@ mod tests {
             (SettingId::EasyChat, false.into()),
             (SettingId::EasyChatWaitTime, "5s".into()),
             (SettingId::WearingDetection, false.into()),
-            (SettingId::SoundLeakCompensation, false.into()),
             (SettingId::LimitHighVolume, true.into()),
             (SettingId::LimitHighVolumeDbLimit, 95.into()),
             (SettingId::LimitHighVolumeRefreshRate, "RealTime".into()),
@@ -281,6 +309,45 @@ mod tests {
             (SettingId::SerialNumber, "3954DE77518A9DF4".into()),
             (SettingId::CaseSerialNumber, "3954F49D8A532BBA".into()),
         ]);
+        device.assert_setting_values([(SettingId::SoundLeakCompensation, false.into())]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn set_sound_leak_compensation() {
+        let mut device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(
+                    packet::Command([1, 1]),
+                    vec![
+                        0, 1, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53,
+                        52, 68, 69, 55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9,
+                        0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120,
+                        120, 120, 120, 120, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1,
+                        145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139, 141, 122,
+                        111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133,
+                        114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+                        0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1,
+                        255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0,
+                        110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+                    ],
+                ),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        // the command the Soundcore app sends, rather than the A3947's 10 86
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::SoundLeakCompensation, true.into())],
+                vec![packet::Outbound::new(
+                    packet::Command([0x10, 0x9A]),
+                    vec![1],
+                )],
+            )
+            .await;
     }
 
     #[tokio::test(start_paused = true)]
@@ -335,6 +402,65 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn disabling_spatial_audio_resends_the_custom_equalizer_unchanged() {
+        let mut device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(
+                    packet::Command([1, 1]),
+                    vec![
+                        0, 1, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53,
+                        52, 68, 69, 55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9,
+                        0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120,
+                        120, 120, 120, 120, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1,
+                        145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139, 141, 122,
+                        111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133,
+                        114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+                        0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1,
+                        255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0,
+                        110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+                    ],
+                ),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        let custom_eq = vec![(
+            SettingId::VolumeAdjustments,
+            Value::I16Vec(vec![60, 0, 0, 0, 0, 0, 0, -60]),
+        )];
+        // the packet that applies the custom equalizer (see set_eq_packet)
+        let set_custom_eq = packet::Outbound::new(
+            packet::Command([3, 135]),
+            vec![
+                254, 254, 0, 0, 180, 120, 120, 120, 120, 120, 120, 60, 120, 120, 180, 120, 120,
+                120, 120, 120, 120, 60, 120, 120, 0, 0, 0, 145, 147, 139, 141, 122, 111, 105, 100,
+                60, 60, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147,
+                139, 130, 122, 133, 133, 114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60,
+                60, 180, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 60, 0, 120, 0, 120, 0,
+                180, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 120, 0, 60, 0, 120, 0, 120, 0, 0,
+                0,
+            ],
+        );
+        device
+            .assert_set_settings_response(custom_eq, vec![set_custom_eq.clone()])
+            .await;
+        device
+            .set_settings(vec![(SettingId::SpatialAudio, true.into())])
+            .await;
+
+        // Turning spatial audio off sends the equalizer again, and it has to be exactly the custom one.
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::SpatialAudio, false.into())],
+                vec![set_custom_eq],
+            )
+            .await;
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn changing_eq_disables_spatial_audio() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
@@ -373,5 +499,110 @@ mod tests {
             )])
             .await;
         device.assert_setting_values(vec![(SettingId::SpatialAudio, false.into())]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn equalizer_becomes_available_when_the_other_earbud_connects() {
+        // connected with only one earbud: host device 1, tws not connected
+        let mut state = vec![
+            1, 0, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53, 52, 68, 69,
+            55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9, 0xF4, 0x9D, 0x8A, 0x53,
+            0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 0, 1, 145, 147, 139, 141, 122, 111, 105, 100, 60,
+            60, 145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130,
+            122, 133, 133, 114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+            0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1, 255, 0, 0, 0,
+            0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0, 110, 1, 0, 1, 0, 0, 255,
+            0, 0, 17, 17,
+        ];
+        let device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(packet::Command([1, 1]), state),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        assert!(
+            matches!(
+                device.inner().setting(&SettingId::VolumeAdjustments),
+                Some(Setting::Information { .. })
+            ),
+            "only a notice is shown while one earbud is connected"
+        );
+        let mut changes = device.inner().watch_for_changes();
+        changes.mark_unchanged();
+
+        // the other earbud connects
+        device
+            .receive(packet::Inbound::new(packet::Command([1, 2]), vec![1, 1]))
+            .await;
+
+        assert!(
+            changes.has_changed().unwrap(),
+            "listeners must be told to re-read settings"
+        );
+        assert!(
+            matches!(
+                device.inner().setting(&SettingId::VolumeAdjustments),
+                Some(Setting::Equalizer { .. })
+            ),
+            "the equalizer should be available once both earbuds are connected"
+        );
+    }
+
+    async fn connect_demo_device() -> Arc<dyn OpenSCQ30Device + Send + Sync> {
+        let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
+        let model = DeviceModel::SoundcoreA3954;
+        model
+            .demo_device_registry(database)
+            .await
+            .unwrap()
+            .connect(model.demo_mac_address())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn returning_to_anc_restores_previous_strength() {
+        let device = connect_demo_device().await;
+        device
+            .set_setting_values(vec![
+                (SettingId::AmbientSoundMode, "NoiseCanceling".into()),
+                (SettingId::ManualNoiseCanceling, 5.into()),
+            ])
+            .await
+            .unwrap();
+
+        for mode in ["Transparency", "NoiseCanceling"] {
+            device
+                .set_setting_values(vec![(SettingId::AmbientSoundMode, mode.into())])
+                .await
+                .unwrap();
+        }
+
+        assert_eq!(
+            device
+                .setting(&SettingId::ManualNoiseCanceling)
+                .map(Value::from),
+            Some(5.into())
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn importing_short_profile_fails_instead_of_breaking_later_reads() {
+        let device = connect_demo_device().await;
+        let result = device
+            .set_setting_values(vec![(
+                SettingId::ImportCustomEqualizerProfiles,
+                r#"[{"name":"Short profile","volumeAdjustments":[0,1,2]}]"#.into(),
+            )])
+            .await;
+
+        assert!(result.is_err(), "{result:?}");
+        // this used to panic
+        assert!(device.setting(&SettingId::CustomEqualizerProfile).is_some());
     }
 }

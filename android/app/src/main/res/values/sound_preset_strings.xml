@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_preset_heading">One preset.\nYour settings.</string>
+    <string name="sound_preset_intro">Save your favourite combinations and return to them with a tap.</string>
+    <string name="sound_preset_create">Create preset</string>
+    <string name="sound_preset_create_message">Capture the current device settings. Then use Edit to choose which settings this preset will apply.</string>
+    <string name="sound_preset_empty_title">Your sound, ready to save</string>
+    <string name="sound_preset_empty_message">Start with your current settings and choose the ones you want to recall together.</string>
+    <string name="sound_preset_choose_fields">Use Edit to choose which settings to apply.</string>
+    <string name="sound_preset_apply">Apply</string>
+    <string name="sound_preset_applied">Applied</string>
+    <string name="sound_preset_edit">Edit</string>
+    <string name="sound_preset_matches">Matches current settings</string>
+    <string name="sound_preset_more">More actions for %1$s</string>
+    <string name="sound_preset_field_summary">%1$s · %2$s</string>
+    <string name="sound_preset_more_fields">+%1$d more</string>
+    <string name="sound_preset_delete_title">Delete preset?</string>
+    <string name="sound_preset_delete_message">Delete “%1$s”? Your current device settings will be kept.</string>
+    <string name="sound_preset_replace_title">Replace saved values?</string>
+    <string name="sound_preset_replace_message">“%1$s” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept.</string>
+    <string name="sound_preset_replace">Replace</string>
+    <string name="sound_preset_editor_intro">Only selected settings are applied with this preset. Changes to this selection are saved immediately.</string>
+    <string name="sound_preset_editor_empty">No saved settings yet. Load the current device settings to get started.</string>
+    <string name="sound_preset_load_title">Load current settings</string>
+    <string name="sound_preset_load_message">Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device.</string>
+    <string name="sound_preset_load">Load</string>
+</resources>

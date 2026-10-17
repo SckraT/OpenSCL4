@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sound_profile_eq_heading">Звук по-своему.</string>
+    <string name="sound_profile_eq_description">Подберите профиль или настройте каждую частоту.</string>
+    <string name="sound_profile_band_count">Полосы эквалайзера: %1$d</string>
+    <string name="sound_profile_db">дБ</string>
+    <string name="sound_profile_low_frequencies">Низкие частоты</string>
+    <string name="sound_profile_high_frequencies">Высокие частоты</string>
+    <string name="sound_profile_scroll_bands">Прокрутите полосы, чтобы увидеть остальные частоты</string>
+    <string name="sound_profile_read_only">Эта модель поддерживает только встроенные профили эквалайзера.</string>
+    <string name="sound_profile_enter_values">Ввести значения</string>
+    <string name="sound_profile_reset">Сбросить</string>
+    <string name="sound_profile_spatial_warning">Изменение эквалайзера отключает пространственный звук.</string>
+    <string name="sound_profile_save">Сохранить профиль</string>
+    <string name="sound_profile_eq_unavailable">Значения эквалайзера для этого устройства недоступны.</string>
+    <string name="sound_profile_saved_profiles">Мои профили</string>
+    <string name="sound_profile_delete_named">Удалить профиль «%1$s»</string>
+    <string name="sound_profile_import_export">Импорт / экспорт JSON</string>
+    <string name="sound_profile_delete_title">Удалить профиль эквалайзера?</string>
+    <string name="sound_profile_band_accessibility">%1$s, %2$s дБ</string>
+    <string name="sound_profile_chart_description">Кривая эквалайзера. Проведите по графику, чтобы изменить частоту, или используйте ползунки ниже.</string>
+    <string name="sound_profile_precise_title">Точная настройка</string>
+    <string name="sound_profile_numeric_range">Значения в децибелах. Диапазон от %1$s до %2$s.</string>
+    <string name="sound_profile_invalid_value">Введите допустимое значение</string>
+    <string name="sound_profile_change_sign">Изменить знак для %1$s</string>
+    <string name="sound_profile_apply">Применить</string>
+    <string name="sound_profile_save_description">Сохраните текущие значения эквалайзера устройства для повторного использования.</string>
+    <string name="sound_profile_overwrite_warning">Профиль «%1$s» уже существует. Заменить сохранённые значения?</string>
+    <string name="sound_profile_replace">Заменить профиль</string>
+    <string name="sound_profile_save_short">Сохранить</string>
+</resources>

@@ -1,265 +1,520 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.oppzippy.openscq30.ui.devicesettings
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
+import androidx.navigation.navArgument
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
-import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
-import com.oppzippy.openscq30.ui.devicesettings.screens.CategorySelectionScreen
-import com.oppzippy.openscq30.ui.devicesettings.screens.Disconnected
-import com.oppzippy.openscq30.ui.devicesettings.screens.EditQuickPresetPage
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
-import com.oppzippy.openscq30.ui.devicesettings.screens.QuickPresetsScreen
-import com.oppzippy.openscq30.ui.devicesettings.screens.SettingCategoryScreen
 import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
-import com.oppzippy.openscq30.ui.utils.Loading
+import com.oppzippy.openscq30.ui.settings.SettingsPage
+import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
+import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
+import com.oppzippy.openscq30.ui.sound.SoundCapabilities
+import com.oppzippy.openscq30.ui.sound.SoundCasePage
+import com.oppzippy.openscq30.ui.sound.SoundComfortPage
+import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
+import com.oppzippy.openscq30.ui.sound.SoundConnectionsPage
+import com.oppzippy.openscq30.ui.sound.SoundControlsPage
+import com.oppzippy.openscq30.ui.sound.SoundDashboardLink
+import com.oppzippy.openscq30.ui.sound.SoundEqualizerPage
+import com.oppzippy.openscq30.ui.sound.SoundModesPage
+import com.oppzippy.openscq30.ui.sound.SoundOverview
+import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
+import com.oppzippy.openscq30.ui.sound.SoundOneEarbudNotice
+import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
+import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
+import com.oppzippy.openscq30.ui.sound.SoundSpatialPage
+import com.oppzippy.openscq30.ui.sound.categoryNeedsBothEarbuds
+import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
+import com.oppzippy.openscq30.ui.sound.OverviewBlock
+import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
+import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
+import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+
+private const val HOME = "overview"
+private const val PRESETS = "presets"
+private const val APP_SETTINGS = "appSettings"
+private const val OVERVIEW_LAYOUT = "overviewLayout"
 
 @Composable
 fun DeviceSettingsScreen(
     onBack: () -> Unit = {},
     connectionStatus: ConnectionStatus,
-    setSettingValues: (settingValues: List<Pair<String, Value>>) -> Unit,
+    setSettingValues: (List<Pair<String, Value>>) -> Unit,
+    setSettingValueForResult: suspend (String, Value) -> Result<Unit>,
     allSettingsFlow: Flow<List<Pair<String, Setting>>>,
     categoryIdsFlow: Flow<List<String>>,
-    getSettingsInCategoryFlow: (categoryId: String) -> Flow<List<Pair<String, Setting>>>,
+    getSettingsInCategoryFlow: (String) -> Flow<List<Pair<String, Setting>>>,
     quickPresetSlotsFlow: Flow<List<String?>>,
     onQuickPresetSlotChange: (Int, String?) -> Unit,
     quickPresetsFlow: Flow<List<QuickPreset>>,
-    activateQuickPreset: (name: String) -> Unit,
-    createQuickPreset: (name: String) -> Unit,
-    deleteQuickPreset: (name: String) -> Unit,
-    toggleQuickPresetSetting: (name: String, settingId: String, enabled: Boolean) -> Unit,
+    activateQuickPreset: (String) -> Unit,
+    createQuickPreset: (String) -> Unit,
+    deleteQuickPreset: (String) -> Unit,
+    toggleQuickPresetSetting: (String, String, Boolean) -> Unit,
     featuredSettingSlotsFlow: Flow<List<String?>>,
     onFeaturedSettingSlotChange: (Int, String?) -> Unit,
     onQuickPresetLoadCurrentSettings: (String) -> Unit,
     legacyEqualizerProfilesFlow: Flow<List<LegacyEqualizerProfile>>,
     onMigrateLegacyEqualizerProfile: (LegacyEqualizerProfile) -> Unit,
+    onDisconnect: () -> Unit = {},
 ) {
-    when (connectionStatus) {
-        is ConnectionStatus.Connected -> {
-            DeviceSettingsNavigationScreen(
-                connectionStatus = connectionStatus,
-                onBack = onBack,
-                setSettingValues = setSettingValues,
-                allSettingsFlow = allSettingsFlow,
-                categoryIdsFlow = categoryIdsFlow,
-                getSettingsInCategoryFlow = getSettingsInCategoryFlow,
-                quickPresetSlotsFlow = quickPresetSlotsFlow,
-                onQuickPresetSlotChange = onQuickPresetSlotChange,
-                quickPresetsFlow = quickPresetsFlow,
-                activateQuickPreset = activateQuickPreset,
-                createQuickPreset = createQuickPreset,
-                deleteQuickPreset = deleteQuickPreset,
-                toggleQuickPresetSetting = toggleQuickPresetSetting,
-                featuredSettingSlotsFlow = featuredSettingSlotsFlow,
-                onFeaturedSettingSlotChange = onFeaturedSettingSlotChange,
-                onQuickPresetLoadCurrentSettings = onQuickPresetLoadCurrentSettings,
-                legacyEqualizerProfilesFlow = legacyEqualizerProfilesFlow,
-                onMigrateLegacyEqualizerProfile = onMigrateLegacyEqualizerProfile,
-            )
+    val fontScale = LocalDensity.current.fontScale
+    val connection = connectionStatus as? ConnectionStatus.Connected
+    if (connection == null) {
+        SoundConnectionStateScreen(connectionStatus, onBack = onBack)
+        return
+    }
+    val loadedSettings by remember(connection.deviceManager) { allSettingsFlow }.collectAsState(initial = null)
+    val settings = loadedSettings.orEmpty()
+    val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
+    val categories by remember(connection.deviceManager) { categoryIdsFlow }.collectAsState(emptyList())
+    val byCategory by remember(categories, connection.deviceManager) {
+        if (categories.isEmpty()) {
+            flowOf(emptyMap<String, List<Pair<String, Setting>>>())
+        } else {
+            combine(categories.map { getSettingsInCategoryFlow(it) }) { lists ->
+                categories.zip(lists.toList()).toMap()
+            }
         }
-
-        ConnectionStatus.AwaitingConnection -> Loading()
-
-        is ConnectionStatus.Connecting -> Loading()
-
-        ConnectionStatus.Disconnected -> Disconnected()
+    }.collectAsState(emptyMap())
+    val presets by remember(connection.deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
+    val modeSettings = settings.filter {
+        it.first in SoundCapabilities.modes ||
+            byCategory["soundModes"].orEmpty().any { s -> s.first == it.first }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DeviceSettingsNavigationScreen(
-    connectionStatus: ConnectionStatus.Connected,
-    onBack: () -> Unit = {},
-    setSettingValues: (settingValues: List<Pair<String, Value>>) -> Unit,
-    categoryIdsFlow: Flow<List<String>>,
-    allSettingsFlow: Flow<List<Pair<String, Setting>>>,
-    getSettingsInCategoryFlow: (categoryId: String) -> Flow<List<Pair<String, Setting>>>,
-    quickPresetSlotsFlow: Flow<List<String?>>,
-    onQuickPresetSlotChange: (Int, String?) -> Unit,
-    quickPresetsFlow: Flow<List<QuickPreset>>,
-    activateQuickPreset: (name: String) -> Unit,
-    createQuickPreset: (name: String) -> Unit,
-    deleteQuickPreset: (name: String) -> Unit,
-    toggleQuickPresetSetting: (name: String, settingId: String, enabled: Boolean) -> Unit,
-    featuredSettingSlotsFlow: Flow<List<String?>>,
-    onFeaturedSettingSlotChange: (Int, String?) -> Unit,
-    onQuickPresetLoadCurrentSettings: (String) -> Unit,
-    legacyEqualizerProfilesFlow: Flow<List<LegacyEqualizerProfile>>,
-    onMigrateLegacyEqualizerProfile: (LegacyEqualizerProfile) -> Unit,
-) {
-    val categoryIds by categoryIdsFlow.collectAsState(emptyList())
-
-    val listedScreens: MutableList<ScreenInfo> =
-        categoryIds.map { Screen.SettingsCategory(it).screenInfo() }.toMutableList()
-    listedScreens.add(Screen.QuickPresets.screenInfo)
-    listedScreens.add(Screen.StatusNotification.screenInfo)
-    listedScreens.add(Screen.MigrateLegacyEqualizerProfiles.screenInfo)
-
-    // compose navigation does not allow us to use polymorphism with routes, so instead a mapping of
-    // class path to route name is kept
-    val routeNames = listedScreens.associate {
-        Pair(it.baseRoute::class.qualifiedName!!, it.name.translated())
+    val controlSettings = settings.filter {
+        SoundCapabilities.isControl(it.first) ||
+            byCategory["buttonConfiguration"].orEmpty().any { s -> s.first == it.first }
     }
-
+    val comfortSettings = settings.filter { it.first in SoundCapabilities.comfort }
+    val connectionSettings = settings.filter { it.first in SoundCapabilities.connections }
+    val caseSettings = settings.filter {
+        it.first in SoundCapabilities.case ||
+            byCategory["case"].orEmpty().any { s -> s.first == it.first }
+    }
+    val spatialSettings = settings.filter { it.first in SoundCapabilities.spatial }
     val navController = rememberNavController()
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route ?: HOME
+    val rootRoute = route in setOf(HOME, PRESETS, APP_SETTINGS)
+    var showMenu by remember { mutableStateOf(false) }
+    var confirmDisconnect by remember { mutableStateOf(false) }
+    // Which presets match the device is derived from its settings, but several can match at once, so the one the user
+    // applied last is remembered separately. Survives rotation, and starts over for a new connection.
+    var lastAppliedPreset by rememberSaveable(connection.deviceManager) { mutableStateOf<String?>(null) }
+
+    fun openCategory(id: String) = navController.navigate("category/${Uri.encode(id)}")
+    if (confirmDisconnect) {
+        AlertDialog(
+            onDismissRequest = { confirmDisconnect = false },
+            title = { Text(stringResource(R.string.sound_overview_disconnect_confirm)) },
+            text = { Text(stringResource(R.string.sound_overview_disconnect_hint)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDisconnect = false
+                    onDisconnect()
+                }) { Text(stringResource(R.string.disconnect)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDisconnect = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+    val title = when (route) {
+        HOME -> stringResource(R.string.app_name)
+        PRESETS -> stringResource(R.string.quick_presets)
+        APP_SETTINGS -> stringResource(R.string.settings)
+        OVERVIEW_LAYOUT -> stringResource(R.string.sound_overview_edit)
+        "sound" -> stringResource(R.string.sound_overview_sound_mode)
+        "equalizer" -> stringResource(R.string.equalizer)
+        "controls" -> stringResource(R.string.sound_overview_controls)
+        "comfort" -> stringResource(R.string.sound_overview_comfort)
+        "connections" -> stringResource(R.string.sound_overview_connections)
+        "case" -> stringResource(R.string.sound_overview_case)
+        "spatial" -> stringResource(R.string.sound_overview_spatial)
+        "notifications" -> stringResource(R.string.sound_overview_notifications)
+        "legacy" -> stringResource(R.string.sound_overview_legacy)
+        "preset/{name}" -> entry?.arguments?.getString("name") ?: stringResource(R.string.edit)
+        "category/{id}" -> entry?.arguments?.getString("id")?.let { translateCategoryId(it) }.orEmpty()
+        else -> stringResource(R.string.sound_overview_all_settings)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    val backStackEntry = navController.currentBackStackEntryAsState().value
-                    if (backStackEntry != null) {
-                        val routeName =
-                            backStackEntry.destination.route?.let { routeNames[it] }
-                        val settingsCategory = try {
-                            translateCategoryId(backStackEntry.toRoute<Screen.SettingsCategory>().categoryId)
-                        } catch (_: Exception) {
-                            null
+                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    if (!rootRoute) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(painterResource(R.drawable.arrow_back_24px), stringResource(R.string.back))
                         }
-                        val editQuickPreset = try {
-                            backStackEntry.toRoute<Screen.EditQuickPreset>().name
-                        } catch (_: Exception) {
-                            null
-                        }
-                        val modelName = translateDeviceModel(connectionStatus.deviceManager.device.model())
-
-                        Text(routeName ?: settingsCategory ?: editQuickPreset ?: modelName)
                     }
                 },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            val isAtTopOfStack = !navController.popBackStack()
-                            if (isAtTopOfStack) {
-                                onBack()
-                            }
-                        },
-                    ) {
+                actions = {
+                    if (route == HOME) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                painterResource(R.drawable.earbuds_2_24px),
+                                stringResource(R.string.sound_overview_devices),
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showMenu = true }) {
                         Icon(
-                            painter = painterResource(R.drawable.arrow_back_24px),
-                            contentDescription = stringResource(R.string.back),
+                            painterResource(R.drawable.sound_more),
+                            stringResource(R.string.sound_overview_device_actions),
                         )
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.sound_overview_devices)) }, onClick = {
+                            showMenu =
+                                false
+                            onBack()
+                        })
+                        DropdownMenuItem(text = {
+                            Text(stringResource(R.string.sound_overview_all_settings))
+                        }, onClick = {
+                            showMenu =
+                                false
+                            navController.navigate("allSettings")
+                        })
+                        if (route == HOME) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.sound_overview_edit)) }, onClick = {
+                                showMenu = false
+                                navController.navigate(OVERVIEW_LAYOUT)
+                            })
+                        }
+                        DropdownMenuItem(text = {
+                            Text(stringResource(R.string.sound_overview_disconnect))
+                        }, onClick = {
+                            showMenu =
+                                false
+                            confirmDisconnect = true
+                        })
                     }
                 },
             )
         },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.ScreenSelection,
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(horizontal = 8.dp),
-            enterTransition = {
-                slideInHorizontally { width -> width / 2 } + fadeIn()
-            },
-            exitTransition = {
-                slideOutHorizontally { width -> -width / 2 } + fadeOut()
-            },
-            popEnterTransition = {
-                slideInHorizontally { width -> -width / 2 } + fadeIn()
-            },
-            popExitTransition = {
-                slideOutHorizontally { width -> width / 2 } + fadeOut()
-            },
-        ) {
-            composable<Screen.ScreenSelection> {
-                CategorySelectionScreen(
-                    screens = listedScreens,
-                    onNavigation = { screen ->
-                        navController.navigate(screen) {
-                            popUpTo(Screen.ScreenSelection)
-                            launchSingleTop = true
+        bottomBar = {
+            if (rootRoute) {
+                BoxWithConstraints {
+                    val labelWidth = (maxWidth / 3).coerceAtLeast(48.dp)
+                    NavigationBar {
+                        listOf(
+                            Triple(HOME, R.string.sound_overview_device, R.drawable.earbuds_2_24px),
+                            Triple(PRESETS, R.string.quick_presets, R.drawable.bolt_24px),
+                            Triple(APP_SETTINGS, R.string.settings, R.drawable.settings_24px),
+                        ).forEach { (destination, label, icon) ->
+                            NavigationBarItem(
+                                modifier = Modifier.heightIn(min = (80 + 48 * (fontScale - 1).coerceAtLeast(0f)).dp),
+                                selected = route == destination,
+                                onClick = {
+                                    navController.navigate(destination) {
+                                        popUpTo(HOME) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(painterResource(icon), null) },
+                                label = {
+                                    Text(
+                                        stringResource(label),
+                                        modifier = Modifier.requiredWidth(labelWidth),
+                                        style = if (fontScale > 1.4f) {
+                                            MaterialTheme.typography.labelSmall
+                                        } else {
+                                            MaterialTheme.typography.labelMedium
+                                        },
+                                        minLines = if (fontScale > 1.4f) 2 else 1,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                },
+                            )
                         }
-                    },
-                )
+                    }
+                }
             }
-            composable<Screen.SettingsCategory> { backStackEntry ->
-                val route = backStackEntry.toRoute<Screen.SettingsCategory>()
-                val settings by getSettingsInCategoryFlow(route.categoryId).collectAsState(emptyList())
-                SettingCategoryScreen(
-                    deviceModel = connectionStatus.deviceManager.device.model(),
-                    categoryId = route.categoryId,
-                    settings = settings,
-                    setSettings = setSettingValues,
-                )
-            }
-
-            composable<Screen.QuickPresets> {
-                val quickPresets by quickPresetsFlow.collectAsState(emptyList())
-                QuickPresetsScreen(
-                    quickPresets = quickPresets,
-                    onActivate = activateQuickPreset,
-                    onCreate = createQuickPreset,
-                    onEdit = { navController.navigate(Screen.EditQuickPreset(it)) },
-                    onDelete = deleteQuickPreset,
-                )
-            }
-
-            composable<Screen.EditQuickPreset> { backStackEntry ->
-                val route = backStackEntry.toRoute<Screen.EditQuickPreset>()
-                val quickPresets by quickPresetsFlow.collectAsState(emptyList())
-                val quickPreset = quickPresets.find { it.name == route.name }
-                val settings by allSettingsFlow.collectAsState(emptyList())
-                if (quickPreset != null) {
-                    EditQuickPresetPage(
-                        settings = settings.toMap(),
-                        quickPreset = quickPreset,
-                        onToggleSetting = toggleQuickPresetSetting,
-                        onLoadCurrentSettings = { onQuickPresetLoadCurrentSettings(quickPreset.name) },
+        },
+    ) { padding ->
+        NavHost(
+            navController,
+            startDestination = HOME,
+            modifier = Modifier.padding(padding),
+            enterTransition = NavTransitions.enter,
+            exitTransition = NavTransitions.exit,
+            popEnterTransition = NavTransitions.popEnter,
+            popExitTransition = NavTransitions.popExit,
+            predictivePopEnterTransition = NavTransitions.predictivePopEnter,
+            predictivePopExitTransition = NavTransitions.predictivePopExit,
+        ) {
+            composable(HOME) {
+                if (loadedSettings == null) {
+                    Column(
+                        Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                    ) {
+                        CircularProgressIndicator()
+                        Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    SoundOverview(
+                        deviceModel = connection.deviceManager.device.model(),
+                        settings = settings,
+                        hasSound = modeSettings.isNotEmpty(),
+                        hasControls = controlSettings.isNotEmpty(),
+                        hasComfort = comfortSettings.isNotEmpty(),
+                        hasConnections = connectionSettings.isNotEmpty(),
+                        hasCase = caseSettings.isNotEmpty(),
+                        hasEqualizerCategory = "equalizer" in categories,
+                        macAddress = connection.macAddress,
+                        quickPresets = presets.map { it.name },
+                        activeQuickPreset = lastAppliedPreset,
+                        onActivateQuickPreset = {
+                            activateQuickPreset(it)
+                            lastAppliedPreset = it
+                        },
+                        onEditLayout = { navController.navigate(OVERVIEW_LAYOUT) },
+                        onSound = {
+                            navController.navigate("sound")
+                        }, onEqualizer = { navController.navigate("equalizer") },
+                        onControls = {
+                            navController.navigate("controls")
+                        }, onComfort = { navController.navigate("comfort") },
+                        onConnections = {
+                            navController.navigate("connections")
+                        }, onSpatial = { navController.navigate("spatial") },
+                        onCase = {
+                            navController.navigate("case")
+                        }, onAllSettings = { navController.navigate("allSettings") },
+                        setSettings = setSettingValues,
                     )
                 }
             }
-
-            composable<Screen.StatusNotification> {
-                val settings by allSettingsFlow.collectAsState(emptyList())
-                val featuredSettingSlots by featuredSettingSlotsFlow.collectAsState(emptyList())
-                val quickPresets by quickPresetsFlow.collectAsState(emptyList())
-                val quickPresetSlots by quickPresetSlotsFlow.collectAsState(emptyList())
+            composable("sound") {
+                SoundModesPage(connection.deviceManager.device.model(), modeSettings, setSettingValues)
+            }
+            composable(OVERVIEW_LAYOUT) {
+                val available = buildSet {
+                    if (modeSettings.isNotEmpty()) add(OverviewBlock.SoundMode)
+                    if ("equalizer" in categories || settings.any { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                        add(OverviewBlock.Equalizer)
+                    }
+                    // presets can be added later, so the block can be turned on before there are any
+                    add(OverviewBlock.QuickPresets)
+                    if (controlSettings.isNotEmpty()) add(OverviewBlock.Controls)
+                    if (comfortSettings.isNotEmpty()) add(OverviewBlock.Comfort)
+                    if (settings.any { it.first == "spatialAudio" }) add(OverviewBlock.Spatial)
+                    if (connectionSettings.isNotEmpty()) add(OverviewBlock.Connections)
+                    if (caseSettings.isNotEmpty()) add(OverviewBlock.Case)
+                }
+                OverviewLayoutEditor(connection.deviceManager.device.model(), available)
+            }
+            composable("equalizer") {
+                // the earbuds can disconnect from each other while this page is open
+                if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                    SoundOneEarbudNotice(Modifier.padding(20.dp))
+                } else {
+                    SoundEqualizerPage(settings, setSettingValues, onImportExport = {
+                        openCategory("equalizerImportExport")
+                    })
+                }
+            }
+            composable("controls") { SoundControlsPage(controlSettings, setSettingValues) }
+            composable("comfort") { SoundComfortPage(comfortSettings, setSettingValues) }
+            composable("connections") { SoundConnectionsPage(connectionSettings, setSettingValues) }
+            composable("case") { SoundCasePage(caseSettings, setSettingValues) }
+            composable("spatial") { SoundSpatialPage(spatialSettings, setSettingValues) }
+            composable(PRESETS) {
+                SoundPresetsPage(
+                    presets,
+                    settings,
+                    lastAppliedPreset,
+                    onActivate = {
+                        lastAppliedPreset = it
+                        activateQuickPreset(it)
+                    },
+                    createQuickPreset,
+                    onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
+                    onDelete = deleteQuickPreset,
+                    notice = if (oneEarbudOnly && presetsUseBothEarbudSettings(presets)) {
+                        { SoundOneEarbudNotice(message = stringResource(R.string.sound_overview_one_earbud_presets)) }
+                    } else {
+                        null
+                    },
+                )
+            }
+            composable(
+                "preset/{name}",
+                arguments = listOf(
+                    navArgument("name") {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { current ->
+                val preset = presets.find { it.name == current.arguments?.getString("name") }
+                if (preset != null) {
+                    SoundPresetEditorPage(
+                        preset,
+                        settings.toMap(),
+                        toggleQuickPresetSetting,
+                        onLoadCurrentSettings = { onQuickPresetLoadCurrentSettings(preset.name) },
+                    )
+                } else {
+                    Text(stringResource(R.string.sound_overview_preset_missing), Modifier.padding(20.dp))
+                }
+            }
+            composable(APP_SETTINGS) {
+                SettingsPage(
+                    onBackClick = { navController.popBackStack() },
+                    embedded = true,
+                    onNotificationSettings = { navController.navigate("notifications") },
+                )
+            }
+            composable("allSettings") {
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.sound_overview_all_settings),
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    if (oneEarbudOnly) SoundOneEarbudNotice()
+                    categories.forEach { id ->
+                        val unavailable = oneEarbudOnly && categoryNeedsBothEarbuds(id) &&
+                            byCategory[id].isNullOrEmpty()
+                        SoundDashboardLink(
+                            translateCategoryId(
+                                id,
+                            ),
+                            if (unavailable) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
+                            Screen.SettingsCategory(id).screenInfo().icon,
+                            onClick = {
+                                openCategory(id)
+                            },
+                            enabled = !unavailable,
+                        )
+                    }
+                    SoundDashboardLink(
+                        stringResource(
+                            R.string.sound_overview_notifications,
+                        ),
+                        null,
+                        R.drawable.notifications_24px,
+                        onClick = {
+                            navController.navigate("notifications")
+                        },
+                    )
+                    SoundDashboardLink(
+                        stringResource(
+                            R.string.sound_overview_legacy,
+                        ),
+                        null,
+                        R.drawable.update_24px,
+                        onClick = {
+                            navController.navigate("legacy")
+                        },
+                    )
+                }
+            }
+            composable(
+                "category/{id}",
+                arguments = listOf(
+                    navArgument("id") {
+                        type = NavType.StringType
+                    },
+                ),
+            ) { current ->
+                val id = current.arguments?.getString("id").orEmpty()
+                val categorySettings = byCategory[id].orEmpty()
+                if (categorySettings.isEmpty() && oneEarbudOnly && categoryNeedsBothEarbuds(id)) {
+                    SoundOneEarbudNotice(Modifier.padding(20.dp))
+                } else if (categorySettings.isEmpty()) {
+                    Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
+                } else {
+                    CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
+                        SoundSettingsListPage(categorySettings, setSettingValues)
+                    }
+                }
+            }
+            composable("notifications") {
+                val featuredSlots by remember(connection.deviceManager) {
+                    featuredSettingSlotsFlow
+                }.collectAsState(emptyList())
+                val presetSlots by remember(connection.deviceManager) {
+                    quickPresetSlotsFlow
+                }.collectAsState(emptyList())
                 StatusNotificationScreen(
                     settingIds = settings.map { it.first },
-                    featuredSettingSlots = featuredSettingSlots,
+                    featuredSettingSlots = featuredSlots,
                     onFeaturedSettingSlotChange = onFeaturedSettingSlotChange,
-                    quickPresets = quickPresets.map { it.name },
-                    quickPresetSlots = quickPresetSlots,
+                    quickPresets = presets.map { it.name },
+                    quickPresetSlots = presetSlots,
                     onQuickPresetSlotChange = onQuickPresetSlotChange,
                 )
             }
-
-            composable<Screen.MigrateLegacyEqualizerProfiles> {
-                val legacyEqualizerProfiles by legacyEqualizerProfilesFlow.collectAsState(emptyList())
-                MigrateLegacyEqualizerProfilesScreen(
-                    legacyEqualizerProfiles = legacyEqualizerProfiles,
-                    onMigrateLegacyEqualizerProfile = onMigrateLegacyEqualizerProfile,
-                )
+            composable("legacy") {
+                val legacy by remember(connection.deviceManager) {
+                    legacyEqualizerProfilesFlow
+                }.collectAsState(emptyList())
+                MigrateLegacyEqualizerProfilesScreen(legacy, onMigrateLegacyEqualizerProfile)
             }
         }
     }

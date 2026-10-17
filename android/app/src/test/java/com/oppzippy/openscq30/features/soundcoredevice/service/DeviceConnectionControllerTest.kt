@@ -1,0 +1,216 @@
+package com.oppzippy.openscq30.features.soundcoredevice.service
+
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class DeviceConnectionControllerTest {
+    @Test
+    fun repeatedSelectionWhileConnectingStartsOnlyOneConnection() = runTest {
+        var attempts = 0
+        val controller = DeviceConnectionController(this, {
+            attempts += 1
+            awaitCancellation()
+        }, { throw AssertionError(it) })
+
+        controller.connect("AA:BB:CC:DD:EE:FF")
+        runCurrent()
+        controller.connect("aa:bb:cc:dd:ee:ff")
+        runCurrent()
+
+        assertEquals(1, attempts)
+        controller.close()
+    }
+
+    @Test
+    fun repeatedSelectionOfConnectedDeviceKeepsNativeManager() = runTest {
+        val manager = mockk<DeviceConnectionManager>(relaxed = true)
+        var attempts = 0
+        val controller = DeviceConnectionController(this, {
+            attempts += 1
+            manager
+        }, { throw AssertionError(it) })
+
+        controller.connect("AA:BB:CC:DD:EE:FF")
+        runCurrent()
+        controller.connect("aa:bb:cc:dd:ee:ff")
+        runCurrent()
+
+        assertEquals(1, attempts)
+        assertSame(manager, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        verify(exactly = 0) { manager.close() }
+        controller.close()
+    }
+
+    @Test
+    fun switchingConnectedDevicesClosesPreviousManager() = runTest {
+        val first = mockk<DeviceConnectionManager>(relaxed = true)
+        val second = mockk<DeviceConnectionManager>(relaxed = true)
+        val controller = DeviceConnectionController(this, { address ->
+            if (address == "first") first else second
+        }, { throw AssertionError(it) })
+
+        controller.connect("first")
+        runCurrent()
+        controller.connect("second")
+        runCurrent()
+
+        verify(exactly = 1) { first.close() }
+        verify(exactly = 0) { second.close() }
+        assertSame(second, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+        controller.close()
+        verify(exactly = 1) { second.close() }
+    }
+
+    @Test
+    fun switchingCancelsPendingConnectionAndDisposesLateNativeResult() = runTest {
+        val lateResult = mockk<DeviceConnectionManager>(relaxed = true)
+        val second = mockk<DeviceConnectionManager>(relaxed = true)
+        val releaseFirst = CompletableDeferred<Unit>()
+        var secondStarted = false
+        val controller = DeviceConnectionController(this, { address ->
+            if (address == "first") {
+                // Model a native call that returns its result despite coroutine cancellation.
+                withContext(NonCancellable) { releaseFirst.await() }
+                lateResult
+            } else {
+                secondStarted = true
+                second
+            }
+        }, { throw AssertionError(it) })
+
+        controller.connect("first")
+        runCurrent()
+        controller.connect("second")
+        runCurrent()
+        assertTrue(!secondStarted)
+        releaseFirst.complete(Unit)
+        runCurrent()
+
+        assertTrue(secondStarted)
+        verify(exactly = 1) { lateResult.close() }
+        assertSame(second, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+    }
+
+    @Test
+    fun failedConnectionCanBeRetriedAtSameAddress() = runTest {
+        val failure = IllegalStateException("connection failed")
+        val manager = mockk<DeviceConnectionManager>(relaxed = true)
+        val failures = mutableListOf<Exception>()
+        var attempts = 0
+        val controller = DeviceConnectionController(this, {
+            attempts += 1
+            if (attempts == 1) throw failure
+            manager
+        }, { failures.add(it) })
+
+        controller.connect("same")
+        runCurrent()
+        assertSame(ConnectionStatus.Disconnected, controller.connectionStatusFlow.value)
+        assertEquals(listOf(failure), failures)
+
+        controller.connect("same")
+        runCurrent()
+        assertEquals(2, attempts)
+        assertSame(manager, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+    }
+
+    @Test
+    fun rapidSwitchingWaitsForOldNativeCallAndSkipsSupersededRequest() = runTest {
+        val lateResult = mockk<DeviceConnectionManager>(relaxed = true)
+        val latest = mockk<DeviceConnectionManager>(relaxed = true)
+        val releaseFirst = CompletableDeferred<Unit>()
+        val attempts = mutableListOf<String>()
+        val controller = DeviceConnectionController(this, { address ->
+            attempts.add(address)
+            if (address == "first") {
+                withContext(NonCancellable) { releaseFirst.await() }
+                lateResult
+            } else {
+                latest
+            }
+        }, { throw AssertionError(it) })
+
+        controller.connect("first")
+        runCurrent()
+        controller.connect("second")
+        runCurrent()
+        controller.connect("third")
+        runCurrent()
+        assertEquals(listOf("first"), attempts)
+
+        releaseFirst.complete(Unit)
+        runCurrent()
+        assertEquals(listOf("first", "third"), attempts)
+        verify(exactly = 1) { lateResult.close() }
+        assertSame(latest, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+    }
+
+    @Test
+    fun explicitDisconnectCancelsPendingConnection() = runTest {
+        var cancelled = false
+        val failures = mutableListOf<Exception>()
+        val controller = DeviceConnectionController(this, {
+            try {
+                awaitCancellation()
+            } finally {
+                cancelled = true
+            }
+        }, { failures.add(it) })
+
+        controller.connect("device")
+        runCurrent()
+        controller.close()
+        runCurrent()
+
+        assertTrue(cancelled)
+        assertTrue(failures.isEmpty())
+        assertSame(ConnectionStatus.Disconnected, controller.connectionStatusFlow.value)
+    }
+
+    @Test
+    fun retryAfterExplicitDisconnectWaitsForNativeCleanup() = runTest {
+        val lateResult = mockk<DeviceConnectionManager>(relaxed = true)
+        val latest = mockk<DeviceConnectionManager>(relaxed = true)
+        val releaseFirst = CompletableDeferred<Unit>()
+        val attempts = mutableListOf<String>()
+        val controller = DeviceConnectionController(this, { address ->
+            attempts.add(address)
+            if (address == "first") {
+                withContext(NonCancellable) { releaseFirst.await() }
+                lateResult
+            } else {
+                latest
+            }
+        }, { throw AssertionError(it) })
+
+        controller.connect("first")
+        runCurrent()
+        controller.close()
+        controller.connect("retry")
+        runCurrent()
+        assertEquals(listOf("first"), attempts)
+
+        releaseFirst.complete(Unit)
+        runCurrent()
+        assertEquals(listOf("first", "retry"), attempts)
+        verify(exactly = 1) { lateResult.close() }
+        assertSame(latest, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+    }
+}

@@ -5,35 +5,31 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
-import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class DeviceServiceConnection : ServiceConnection {
+class DeviceServiceConnection(private val onBindingLost: () -> Unit = {}) :
+    ServiceConnection,
+    AutoCloseable {
     val connectionStatusFlow = MutableStateFlow<ConnectionStatus>(ConnectionStatus.Disconnected)
     private var serviceConnectionScope: CoroutineScope? = null
-    private var service: WeakReference<DeviceService>? = null
 
     override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-        val myServiceBinder = binder as DeviceService.MyBinder
+        val myServiceBinder = binder as? DeviceService.MyBinder ?: run {
+            onNullBinding(name)
+            return
+        }
         val service = myServiceBinder.getService()
-        this.service = WeakReference(service)
 
         serviceConnectionScope?.cancel()
         serviceConnectionScope = CoroutineScope(Job() + Dispatchers.Main)
 
         serviceConnectionScope?.launch {
-            service.connectionStatusFlow.first { it is ConnectionStatus.Disconnected }
-            connectionStatusFlow.value = ConnectionStatus.Disconnected
-        }
-        serviceConnectionScope?.launch {
-            service.connectionStatusFlow.collectLatest { connectionStatus ->
+            service.connectionStatusFlow.collect { connectionStatus ->
                 this@DeviceServiceConnection.connectionStatusFlow.value = connectionStatus
             }
         }
@@ -48,9 +44,13 @@ class DeviceServiceConnection : ServiceConnection {
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
+        close()
+        onBindingLost()
+    }
+
+    override fun close() {
         serviceConnectionScope?.cancel()
         serviceConnectionScope = null
-        this.service = null
         connectionStatusFlow.value = ConnectionStatus.Disconnected
     }
 }
