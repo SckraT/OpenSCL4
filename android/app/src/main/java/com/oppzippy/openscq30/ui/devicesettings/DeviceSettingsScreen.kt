@@ -290,6 +290,8 @@ fun DeviceSettingsScreen(
             exitTransition = NavTransitions.exit,
             popEnterTransition = NavTransitions.popEnter,
             popExitTransition = NavTransitions.popExit,
+            predictivePopEnterTransition = NavTransitions.predictivePopEnter,
+            predictivePopExitTransition = NavTransitions.predictivePopExit,
         ) {
             composable(HOME) {
                 if (loadedSettings == null) {

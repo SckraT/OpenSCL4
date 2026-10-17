@@ -32,4 +32,12 @@ object NavTransitions {
     val popExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
         slideOutHorizontally(slideSpec) { it / 4 } + fadeOut(fadeSpec)
     }
+
+    // A back swipe has transitions of its own (by default the old page shrinks slowly); use the same back motion.
+    val predictivePopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition = {
+        popEnter(this)
+    }
+    val predictivePopExit: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition = {
+        popExit(this)
+    }
 }
