@@ -5,13 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -27,7 +25,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -159,57 +156,8 @@ fun SoundOverview(
         val ambient = values["ambientSoundMode"] as? Setting.SelectSetting
         if (hasSound) {
             SoundSectionHeading(stringResource(R.string.sound_overview_sound_mode), onClick = onSound)
-            ambient?.setting?.options?.chunked(if (largeText) 1 else 2)?.forEach { options ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    options.forEach { option ->
-                        val selected = ambient.value == option
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(if (selected) 24.dp else 16.dp),
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer
-                            },
-                            contentColor = if (selected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        ) {
-                            Box(
-                                Modifier.fillMaxWidth().heightIn(min = 64.dp)
-                                    .selectable(selected, role = Role.RadioButton) {
-                                        setSettings(listOf("ambientSoundMode" to option.toValue()))
-                                    }.padding(12.dp),
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Icon(painterResource(soundModeIcon(option)), null, Modifier.size(20.dp))
-                                    Text(
-                                        ambient.setting.localizedOptions.getOrElse(
-                                            ambient.setting.options.indexOf(option),
-                                        ) {
-                                            option
-                                        },
-                                        style = MaterialTheme.typography.labelMedium,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                                if (selected) {
-                                    Icon(
-                                        painterResource(R.drawable.check_24px),
-                                        null,
-                                        Modifier.align(Alignment.TopEnd).size(10.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    if (options.size == 1 && !largeText) Spacer(Modifier.weight(1f))
-                }
+            if (ambient != null) {
+                SoundModeTiles(ambient, compact = true) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
             }
         }
         if (values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile")) {

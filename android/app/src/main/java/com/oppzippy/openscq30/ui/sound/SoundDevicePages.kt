@@ -46,62 +46,13 @@ import com.oppzippy.openscq30.lib.wrapper.toValue
 
 @Composable
 fun SoundModesPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
-    val largeText = LocalDensity.current.fontScale > 1.4f
     val ambient = settings.firstOrNull { it.first == "ambientSoundMode" }?.second as? Setting.SelectSetting
     SoundDevicePage(
         headline = R.string.sound_device_modes_headline,
         description = R.string.sound_device_modes_description,
     ) {
         if (ambient != null) {
-            Column(Modifier.fillMaxWidth().selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ambient.setting.options.chunked(if (largeText) 1 else 2).forEach { options ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        options.forEach { option ->
-                            val selected = ambient.value == option
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(28.dp),
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainer
-                                },
-                                contentColor = if (selected) {
-                                    MaterialTheme.colorScheme.onPrimary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            ) {
-                                Column(
-                                    Modifier.fillMaxWidth().heightIn(min = 112.dp)
-                                        .selectable(selected, role = Role.RadioButton) {
-                                            setSettings(listOf("ambientSoundMode" to option.toValue()))
-                                        }.padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                                ) {
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Icon(
-                                            painterResource(soundModeIcon(option)),
-                                            contentDescription = null,
-                                        )
-                                        if (selected) {
-                                            Icon(
-                                                painterResource(R.drawable.check_24px),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        ambient.setting.localizedOption(option) ?: option,
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
-                                }
-                            }
-                        }
-                        if (options.size == 1 && !largeText) Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
+            SoundModeTiles(ambient) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
         }
         settings.filter { (id, _) ->
             if (ambient == null) {
@@ -121,6 +72,57 @@ fun SoundModesPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pai
                 }
             }
         }.forEach { (id, setting) -> SoundSettingEditor(id, setting, setSettings) }
+    }
+}
+
+/**
+ * The ambient sound modes as tiles, two per row, the same on the device overview and on the sound modes page.
+ * Compact tiles are lower, for the overview.
+ */
+@Composable
+internal fun SoundModeTiles(ambient: Setting.SelectSetting, compact: Boolean = false, onSelect: (String) -> Unit) {
+    val largeText = LocalDensity.current.fontScale > 1.4f
+    Column(Modifier.fillMaxWidth().selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ambient.setting.options.chunked(if (largeText) 1 else 2).forEach { options ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { option ->
+                    val selected = ambient.value == option
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(28.dp),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        },
+                        contentColor = if (selected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().heightIn(min = if (compact) 88.dp else 112.dp)
+                                .selectable(selected, role = Role.RadioButton) { onSelect(option) }
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 18.dp),
+                        ) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Icon(painterResource(soundModeIcon(option)), contentDescription = null)
+                                if (selected) {
+                                    Icon(painterResource(R.drawable.check_24px), contentDescription = null)
+                                }
+                            }
+                            Text(
+                                ambient.setting.localizedOption(option) ?: option,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
+                }
+                if (options.size == 1 && !largeText) Spacer(Modifier.weight(1f))
+            }
+        }
     }
 }
 
