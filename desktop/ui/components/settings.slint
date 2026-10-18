@@ -53,7 +53,8 @@ export global SettingText {
     }
 }
 
-// A slider that sends its value once it is let go, so dragging does not flood the device.
+// A slider that sends its value once it is let go, so dragging does not flood the device. Until the device answers
+// it shows what it sent rather than jumping back; if the device keeps its old value, the slider shows that again.
 export component RangeSlider inherits Rectangle {
     in property <int> minimum: 0;
     in property <int> maximum: 10;
@@ -62,9 +63,13 @@ export component RangeSlider inherits Rectangle {
     in property <bool> enabled: true;
     in property <string> label;
     callback committed(int);
-    out property <int> shown: dragging ? drag-value : value;
+    out property <int> shown: dragging ? drag-value : sending ? sent-value : value;
     private property <bool> dragging;
     private property <int> drag-value;
+    // sent and not answered yet
+    private property <bool> sending;
+    private property <int> sent-value;
+    changed value => { root.sending = false; }
     private property <float> fraction: (shown - minimum) / max(1, maximum - minimum);
     height: 24px;
     min-width: 120px;
@@ -75,9 +80,27 @@ export component RangeSlider inherits Rectangle {
     accessible-value-minimum: minimum;
     accessible-value-maximum: maximum;
     accessible-value-step: step;
-    accessible-action-increment => { committed(min(maximum, value + step)); }
-    accessible-action-decrement => { committed(max(minimum, value - step)); }
+    accessible-action-increment => { send(min(maximum, shown + step)); }
+    accessible-action-decrement => { send(max(minimum, shown - step)); }
     forward-focus: keys;
+
+    function send(new-value: int) {
+        if new-value == root.shown && !root.dragging { return; }
+        root.sent-value = new-value;
+        root.sending = new-value != root.value;
+        answer.restart();
+        root.committed(new-value);
+    }
+
+    // a device that does not take the value answers nothing; show its value again after a while
+    answer := Timer {
+        interval: 3s;
+        running: false;
+        triggered => {
+            self.stop();
+            root.sending = false;
+        }
+    }
 
     pure function value-at(x: length) -> int {
         return max(minimum, min(maximum, minimum + round((x - 7px) / max(1px, root.width - 15px) * (maximum - minimum) / step) * step));
@@ -120,11 +143,11 @@ export component RangeSlider inherits Rectangle {
         enabled: root.enabled;
         key-pressed(event) => {
             if event.text == Key.RightArrow || event.text == Key.UpArrow {
-                root.committed(min(root.maximum, root.value + root.step));
+                root.send(min(root.maximum, root.shown + root.step));
                 return accept;
             }
             if event.text == Key.LeftArrow || event.text == Key.DownArrow {
-                root.committed(max(root.minimum, root.value - root.step));
+                root.send(max(root.minimum, root.shown - root.step));
                 return accept;
             }
             reject
@@ -140,8 +163,11 @@ export component RangeSlider inherits Rectangle {
                 keys.focus();
             }
             if event.kind == PointerEventKind.up && root.dragging {
+                // what was dragged to stays shown while it is sent
+                if root.drag-value != root.value {
+                    root.send(root.drag-value);
+                }
                 root.dragging = false;
-                if root.drag-value != root.value { root.committed(root.drag-value); }
             }
         }
         moved => {
