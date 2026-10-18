@@ -122,7 +122,6 @@ slint = "1.18"
 slint-build = "1.18"
 rfd = { version = "0.16", default-features = false }
 arboard = "3"
-raw-window-handle = "0.6"
 roxmltree = "0.21"
 
 [patch.'https://github.com/wash2/accesskit']

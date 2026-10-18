@@ -13,6 +13,7 @@ use slint::{ComponentHandle, ModelRc, VecModel};
 
 mod equalizer;
 mod presets;
+mod settings;
 
 use crate::{
     Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
@@ -131,12 +132,36 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
 
 /// Called once the window is shown, when Windows can be told about the title bar.
 pub fn shown() {
-    with_app(|app| app.apply_theme());
+    // winit makes its window once the event loop runs; only then can it be told the title bar's theme and be
+    // listened to
+    let _ = slint::invoke_from_event_loop(|| {
+        with_app(|app| {
+            app.apply_theme();
+            // "As in Windows" follows Windows when it changes
+            if let Some(window) = app.window() {
+                use slint::winit_030::{
+                    EventResult, WinitWindowAccessor, winit::event::WindowEvent,
+                };
+                window.window().on_winit_window_event(|_, event| {
+                    if matches!(event, WindowEvent::ThemeChanged(_)) {
+                        with_app(|app| {
+                            if app.config.settings.theme == AppTheme::System {
+                                app.apply_theme();
+                                app.render();
+                            }
+                        });
+                    }
+                    EventResult::Propagate
+                });
+            }
+        });
+    });
 }
 
 fn install_actions(window: &AppWindow) {
     equalizer::install_actions(window);
     presets::install_actions(window);
+    settings::install_actions(window);
     let actions = window.global::<Actions>();
     actions.on_navigate(|page| with_app(|app| app.navigate(page)));
     actions.on_connect(|mac| {
@@ -587,7 +612,14 @@ impl App {
                 Accent::Sage => PaletteChoice::Sage,
                 Accent::Rose => PaletteChoice::Rose,
             });
-            window_chrome::set_dark_title_bar(window.window(), self.dark);
+            window_chrome::set_title_bar(
+                window.window(),
+                match self.config.settings.theme {
+                    AppTheme::System => None,
+                    AppTheme::Light => Some(false),
+                    AppTheme::Dark => Some(true),
+                },
+            );
         }
     }
 
@@ -601,6 +633,7 @@ impl App {
     fn render(&self) {
         let Some(window) = self.window() else { return };
         let state = window.global::<AppState>();
+        self.render_settings(&state);
         let color = self.art_color();
         let current = self
             .current

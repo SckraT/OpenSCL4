@@ -295,6 +295,14 @@ export global AppState {
     in-out property <bool> loading-preset;
     in-out property <string> deleting-preset;
 
+    // the app's settings, each as the index of its choice
+    in property <int> app-theme;
+    in property <int> app-palette;
+    in property <int> app-device-color;
+    in property <int> app-mode-view;
+    in property <int> app-language;
+    in property <string> app-version;
+
     // what the asides of the section pages show
     in property <bool> has-ldac;
     in property <bool> has-spatial;
@@ -367,4 +375,13 @@ export global Actions {
     callback preset-toggle(string, string, bool);
     callback preset-load(string);
     callback preset-delete(string);
+    // the app's settings: as in Windows, light, dark; purple, sage, rose; as the theme, silver, black;
+    // tiles, the scale; as in Windows, Russian, English
+    callback set-app-theme(int);
+    callback set-palette(int);
+    callback set-device-color(int);
+    callback set-mode-view(int);
+    callback set-badge(bool);
+    callback set-language(int);
+    callback copy-logs();
 }

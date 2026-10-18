@@ -35,6 +35,8 @@ pub enum Command {
     CancelConnect,
     Disconnect,
     SetSettings(Vec<(SettingId, Value)>),
+    /// Read the settings again, for their names and values in another language.
+    Reread,
     SavePreset(String),
     TogglePresetField {
         name: String,
@@ -257,6 +259,7 @@ impl Actor {
                     (self.emit)(Event::Disconnected(mac_address));
                 }
             }
+            Command::Reread => self.emit_snapshot(false),
             Command::SetSettings(values) => {
                 let Some(device) = self.current() else { return };
                 match device.set_setting_values(values).await {

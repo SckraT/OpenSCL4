@@ -1,0 +1,235 @@
+// The app's own settings: how it looks and speaks, the home screen, and help with problems.
+import { Theme, PaletteChoice } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, Page, Connection } from "../types.slint";
+import { Icon, Button, ButtonKind, Toggle, Panel, PanelHeading, Divider } from "../components/basics.slint";
+import { Segmented } from "../components/settings.slint";
+import { PageHeading } from "../shell.slint";
+import { Showcase } from "sections.slint";
+
+// a setting's name and what it does, with its control on the right
+component SettingLine inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> text;
+    spacing: 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        spacing: 2px;
+        Text {
+            text: root.title;
+            color: Theme.text;
+            font-weight: 500;
+            wrap: word-wrap;
+        }
+        if root.text != "": Text {
+            text: root.text;
+            color: Theme.muted;
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        @children
+    }
+}
+
+// the accent color of one of the palettes, as the theme has it
+component Swatch inherits Rectangle {
+    in property <color> tint;
+    in property <bool> selected;
+    in property <string> label;
+    callback clicked();
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    border-width: selected ? 2px : 0px;
+    border-color: Theme.primary;
+    accessible-role: button;
+    accessible-label: label;
+    accessible-checked: selected;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 22px;
+        height: 22px;
+        border-radius: 11px;
+        background: root.tint;
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component AppearancePanel inherits Panel {
+    PanelHeading {
+        text: @tr("Appearance");
+        icon: Icons.palette;
+    }
+    SettingLine {
+        title: @tr("Theme");
+        Segmented {
+            label: @tr("Theme");
+            options: [@tr("As in Windows"), @tr("Light"), @tr("Dark")];
+            index: AppState.app-theme;
+            chosen(i) => { Actions.set-app-theme(i); }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("Palette");
+        text: @tr("Colors of buttons and highlights");
+        HorizontalLayout {
+            spacing: 8px;
+            Swatch {
+                label: @tr("Purple");
+                tint: Theme.dark ? #d4baff : #6740b4;
+                selected: AppState.app-palette == 0;
+                clicked => { Actions.set-palette(0); }
+            }
+            Swatch {
+                label: @tr("Sage");
+                tint: Theme.dark ? #bbcdaa : #526347;
+                selected: AppState.app-palette == 1;
+                clicked => { Actions.set-palette(1); }
+            }
+            Swatch {
+                label: @tr("Rose");
+                tint: Theme.dark ? #e5bad7 : #77546e;
+                selected: AppState.app-palette == 2;
+                clicked => { Actions.set-palette(2); }
+            }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("Device color in pictures");
+        Segmented {
+            label: @tr("Device color in pictures");
+            options: [@tr("As the theme"), @tr("Silver"), @tr("Black")];
+            index: AppState.app-device-color;
+            chosen(i) => { Actions.set-device-color(i); }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("Sound modes");
+        text: @tr("The view for devices with the scale, such as Liberty 4 Pro");
+        Segmented {
+            label: @tr("Sound modes");
+            options: [@tr("Tiles"), @tr("Scale 1–11")];
+            index: AppState.app-mode-view;
+            chosen(i) => { Actions.set-mode-view(i); }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("One earbud badge");
+        text: @tr("Show when only one earbud is connected");
+        Toggle {
+            label: @tr("One earbud badge");
+            checked: AppState.show-one-earbud-badge;
+            toggled(on) => { Actions.set-badge(on); }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("App language");
+        Segmented {
+            label: @tr("App language");
+            // the languages by their own names, so that anyone finds theirs
+            options: [@tr("As in Windows"), "Русский", "English"];
+            index: AppState.app-language;
+            chosen(i) => { Actions.set-language(i); }
+        }
+    }
+}
+
+component AsidePanel inherits Panel {
+    in property <string> title;
+    in property <image> icon;
+    in property <string> text;
+    PanelHeading {
+        text: root.title;
+        icon: root.icon;
+    }
+    Text {
+        text: root.text;
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        padding-top: 14px;
+        alignment: start;
+        @children
+    }
+}
+
+component AsideColumn inherits VerticalLayout {
+    spacing: 16px;
+    alignment: start;
+    Showcase {
+        title: @tr("Your color.\nYour mood.");
+        text: @tr("A familiar character. A new space.");
+    }
+    AsidePanel {
+        title: @tr("Home screen");
+        icon: Icons.home;
+        text: @tr("Keep the blocks you need and put them in the order you like.");
+        Button {
+            text: @tr("Edit home screen");
+            kind: ButtonKind.soft;
+            has-icon: true;
+            icon: Icons.edit;
+            enabled: AppState.connection == Connection.connected;
+            clicked => { AppState.editing-layout = true; }
+        }
+    }
+    AsidePanel {
+        title: @tr("About");
+        icon: Icons.info;
+        text: @tr("OpenSCQ30 for Windows {} · free software under the GNU GPL 3.", AppState.app-version);
+        Button {
+            text: @tr("More");
+            has-icon: true;
+            icon: Icons.external;
+            clicked => { Actions.open-uri("https://github.com/Oppzippy/OpenSCQ30"); }
+        }
+    }
+    AsidePanel {
+        title: @tr("Diagnostics");
+        icon: Icons.shield;
+        text: @tr("Copy the latest log entries to find the cause of a problem.");
+        Button {
+            text: @tr("Copy logs");
+            has-icon: true;
+            icon: Icons.copy;
+            clicked => { Actions.copy-logs(); }
+        }
+    }
+}
+
+export component SettingsPage inherits VerticalLayout {
+    in property <bool> wide;
+    spacing: 0px;
+    PageHeading { page: Page.settings; }
+    // set widths, so that the wrapped texts know how tall they are
+    if root.wide: HorizontalLayout {
+        spacing: 20px;
+        VerticalLayout {
+            alignment: start;
+            width: parent.width - parent.spacing - aside.width;
+            AppearancePanel { }
+        }
+        aside := AsideColumn { width: max(280px, min(380px, parent.width * 0.34)); }
+    }
+    if !root.wide: VerticalLayout {
+        spacing: 16px;
+        AppearancePanel { width: parent.width; }
+        AsideColumn { width: parent.width; }
+    }
+}

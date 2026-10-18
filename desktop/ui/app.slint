@@ -5,12 +5,13 @@ import { Icons } from "icons.slint";
 import { AppState, Actions, Page, Connection, FailureKind, ToastKind, DeviceCard, ModelOption, PairedOption } from "types.slint";
 import { Strings } from "strings.slint";
 import { Button, ButtonKind, Banner } from "components/basics.slint";
-import { Sidebar, StatusBar, PageHeading } from "shell.slint";
+import { Sidebar, StatusBar } from "shell.slint";
 import { DevicesPage, ConnectionState } from "pages/devices.slint";
 import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
 import { SectionPage } from "pages/sections.slint";
 import { OverviewPage, LayoutDialog, QuickTogglesDialog } from "pages/overview.slint";
 import { EqualizerPage, SaveProfileDialog, DeleteProfileDialog, ImportDialog } from "pages/equalizer.slint";
+import { SettingsPage } from "pages/settings.slint";
 import { PresetsPage, CreatePresetDialog, PresetEditorDialog, LoadPresetDialog, DeletePresetDialog } from "pages/presets.slint";
 
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
@@ -90,8 +91,8 @@ export component AppWindow inherits Window {
                         page: AppState.page;
                         wide: root.width - sidebar.width > 860px;
                     }
-                    if AppState.page == Page.settings: PageHeading {
-                        page: Page.settings;
+                    if AppState.page == Page.settings: SettingsPage {
+                        wide: root.width - sidebar.width > 900px;
                     }
                 }
             }

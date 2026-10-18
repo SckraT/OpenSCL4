@@ -969,3 +969,100 @@ msgstr "Значения пресета заменены"
 
 msgid "Current settings loaded into the preset"
 msgstr "Текущие настройки загружены в пресет"
+
+# App settings
+msgid "Appearance"
+msgstr "Внешний вид"
+
+msgid "Theme"
+msgstr "Тема"
+
+msgid "As in Windows"
+msgstr "Как в Windows"
+
+msgid "Light"
+msgstr "Светлая"
+
+msgid "Dark"
+msgstr "Тёмная"
+
+msgid "Palette"
+msgstr "Палитра"
+
+msgid "Colors of buttons and highlights"
+msgstr "Цвета кнопок и выделения"
+
+msgid "Purple"
+msgstr "Фиолетовая"
+
+msgid "Sage"
+msgstr "Шалфей"
+
+msgid "Rose"
+msgstr "Розовая"
+
+msgid "Device color in pictures"
+msgstr "Цвет устройства на рисунках"
+
+msgid "As the theme"
+msgstr "Как тема"
+
+msgid "Silver"
+msgstr "Серебристый"
+
+msgid "Black"
+msgstr "Чёрный"
+
+msgid "Sound modes"
+msgstr "Режимы звука"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Вид для устройств со шкалой, например Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "Плитки"
+
+msgid "Scale 1–11"
+msgstr "Шкала 1–11"
+
+msgid "One earbud badge"
+msgstr "Значок одного наушника"
+
+msgid "Show when only one earbud is connected"
+msgstr "Показывать, когда подключён только один наушник"
+
+msgid "App language"
+msgstr "Язык приложения"
+
+msgid "Your color.\nYour mood."
+msgstr "Ваш цвет.\nВаше настроение."
+
+msgid "A familiar character. A new space."
+msgstr "Знакомый характер. Новое пространство."
+
+msgid "Home screen"
+msgstr "Главный экран"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "Оставьте нужные блоки и расставьте их в удобном порядке."
+
+msgid "Edit home screen"
+msgstr "Изменить главный экран"
+
+msgid "About"
+msgstr "О приложении"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 для Windows {} · свободная программа под GNU GPL 3."
+
+msgid "More"
+msgstr "Подробнее"
+
+msgid "Diagnostics"
+msgstr "Диагностика"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "Скопировать последние записи для поиска причины неполадок."
+
+msgid "Copy logs"
+msgstr "Скопировать логи"

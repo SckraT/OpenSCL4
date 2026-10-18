@@ -12,8 +12,7 @@ workspace = true
 
 [dependencies]
 openscq30-lib = { workspace = true }
-slint = { workspace = true, features = ["raw-window-handle-06"] }
-raw-window-handle = { workspace = true }
+slint = { workspace = true, features = ["unstable-winit-030"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anyhow = { workspace = true }
@@ -36,7 +35,7 @@ tempfile = { workspace = true }
 roxmltree = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_System_Registry"] }
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_Registry"] }
 
 [build-dependencies]
 slint-build = { workspace = true }
