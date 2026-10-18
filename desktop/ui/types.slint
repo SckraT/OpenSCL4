@@ -24,6 +24,9 @@ export enum Connection { no-device, off, connecting, connected, lost, bluetooth-
 
 export enum FailureKind { none, not-found, timed-out, other }
 
+// short messages at the bottom of the window
+export enum ToastKind { none, copied }
+
 export struct DeviceCard {
     mac: string,
     name: string,
@@ -38,6 +41,37 @@ export struct ModelOption {
     code: string,
     name: string,
     art: image,
+}
+
+// a setting as a row: what kind of control it gets, and its value in that kind's terms
+export enum RowKind { toggle, select, range, info, action, list, hue, time }
+
+export struct SettingRow {
+    id: string,
+    kind: RowKind,
+    label: string,
+    enabled: bool,
+    checked: bool,
+    // a select's options, or a list's items
+    options: [string],
+    index: int,
+    minimum: int,
+    maximum: int,
+    step: int,
+    value: int,
+    text: string,
+}
+
+export enum PanelKind { plain, volume, gestures, presses, cycle, reset, case-screen, case-status, info, dual-devices, power-off }
+
+export struct SettingsPanel {
+    kind: PanelKind,
+    rows: [SettingRow],
+}
+
+export struct ModeOption {
+    value: string,
+    label: string,
 }
 
 export struct PairedOption {
@@ -81,9 +115,31 @@ export global AppState {
     in property <string> add-error;
     in property <bool> add-bluetooth-off;
 
+    // the current page's settings
+    in property <[SettingsPanel]> panels;
+    in-out property <string> controls-side: "left";
+    in property <bool> has-sides;
+
+    // the sound mode: tiles, or the 1 to 11 scale
+    in property <[ModeOption]> modes;
+    in property <int> mode-index: -1;
+    in property <bool> mode-scale;
+    in property <int> scale-position;
+    in property <[SettingRow]> mode-rows;
+    in property <string> normal-label;
+    in property <string> transparency-label;
+    in property <string> noise-canceling-label;
+    in property <string> airplane-label;
+    in property <int> airplane-index: -1;
+
+    // what the asides of the section pages show
+    in property <bool> has-ldac;
+    in property <bool> has-spatial;
+    in property <string> case-battery;
+
     // a change the device did not take, shown above the page
     in property <string> error-label;
-    in property <string> toast;
+    in property <ToastKind> toast;
 
     // asking before forgetting
     in-out property <string> confirm-forget-mac;
@@ -105,4 +161,12 @@ export global Actions {
     callback retry();
     callback dismiss-error();
     callback open-uri(string);
+    callback set-toggle(string, bool);
+    callback set-option(string, int);
+    callback set-number(string, int);
+    callback press(string);
+    callback remove-item(string, int);
+    callback set-scale(int);
+    callback set-side(string);
+    callback copy(string);
 }

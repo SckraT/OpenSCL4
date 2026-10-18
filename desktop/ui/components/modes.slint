@@ -1,0 +1,210 @@
+// The sound mode as tiles or as one scale from 1 to 11, with the settings of the current mode under it.
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, ModeOption, RowKind, SettingRow } from "../types.slint";
+import { Icon, Chip, Panel, PanelHeading } from "basics.slint";
+import { RangeSlider, Segmented, SettingText } from "settings.slint";
+
+export global ModeText {
+    public pure function icon(value: string) -> image {
+        if value == "NoiseCanceling" { return Icons.noise; }
+        if value == "Transparency" { return Icons.ear; }
+        if value == "AirplaneMode" { return Icons.plane; }
+        return Icons.headphones;
+    }
+
+    public pure function position(position: int) -> string {
+        if position == 0 { return AppState.airplane-label; }
+        if position < 6 { return @tr("Transparency, strength {}", 6 - position); }
+        if position > 6 { return @tr("Noise canceling, strength {}", position - 6); }
+        return AppState.normal-label;
+    }
+}
+
+component ModeTile inherits Rectangle {
+    in property <ModeOption> mode;
+    in property <int> index;
+    in property <bool> selected;
+    in property <bool> compact;
+    border-radius: 17px;
+    background: selected ? Theme.primary : touch.has-hover ? Theme.high : Theme.container;
+    accessible-role: button;
+    accessible-label: mode.label;
+    accessible-checked: selected;
+    accessible-action-default => { Actions.set-option("ambientSoundMode", index); }
+    Icon {
+        x: 14px;
+        y: 14px;
+        source: ModeText.icon(root.mode.value);
+        tint: root.selected ? Theme.on-primary : Theme.text;
+        width: root.compact ? 20px : 26px;
+        height: self.width;
+    }
+    if root.selected: Icon {
+        x: parent.width - self.width - 12px;
+        y: 14px;
+        source: Icons.check;
+        tint: Theme.on-primary;
+        width: 14px;
+        height: 14px;
+    }
+    Text {
+        x: 14px;
+        y: parent.height - self.height - 13px;
+        width: parent.width - 28px;
+        text: root.mode.label;
+        color: root.selected ? Theme.on-primary : Theme.text;
+        font-size: root.compact ? 12px : 13px;
+        wrap: word-wrap;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { if !root.selected { Actions.set-option("ambientSoundMode", root.index); } }
+    }
+}
+
+export component ModeTiles inherits Rectangle {
+    in property <bool> compact;
+    private property <int> count: AppState.modes.length;
+    // four tiles go in two rows when they would not fit in one
+    private property <int> columns: count == 4 && self.width < 560px ? 2 : max(1, count);
+    private property <length> gap: 7px;
+    private property <length> tile-width: (self.width - (columns - 1) * gap) / columns;
+    private property <length> tile-height: compact ? 82px : 112px;
+    height: ceil(count / columns) * (tile-height + gap) - gap;
+    for mode[i] in AppState.modes: ModeTile {
+        mode: mode;
+        index: i;
+        selected: i == AppState.mode-index;
+        compact: root.compact;
+        x: mod(i, root.columns) * (root.tile-width + root.gap);
+        y: floor(i / root.columns) * (root.tile-height + root.gap);
+        width: root.tile-width;
+        height: root.tile-height;
+    }
+}
+
+export component ModeScale inherits VerticalLayout {
+    private property <bool> airplane: AppState.scale-position == 0;
+    spacing: 8px;
+    HorizontalLayout {
+        Text {
+            text: ModeText.position(root.airplane ? 0 : slider.shown);
+            color: Theme.text;
+            font-size: 14px;
+            font-weight: 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        if AppState.airplane-index >= 0: Chip {
+            text: AppState.airplane-label;
+            selected: root.airplane;
+            has-icon: true;
+            icon: Icons.plane;
+            clicked => { if !root.airplane { Actions.set-option("ambientSoundMode", AppState.airplane-index); } }
+        }
+    }
+    slider := RangeSlider {
+        minimum: 1;
+        maximum: 11;
+        value: root.airplane ? 6 : AppState.scale-position;
+        label: @tr("Sound mode from 1 to 11");
+        opacity: root.airplane ? 0.45 : 1;
+        committed(position) => { Actions.set-scale(position); }
+    }
+    HorizontalLayout {
+        padding-left: 4px;
+        padding-right: 4px;
+        for n in 11: Text {
+            text: n + 1;
+            color: n == 5 ? Theme.primary : Theme.muted;
+            font-size: 10px;
+            font-weight: n == 5 ? 700 : 400;
+            horizontal-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    HorizontalLayout {
+        Text {
+            text: AppState.transparency-label;
+            color: Theme.muted;
+            font-size: 11px;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: AppState.normal-label;
+            color: Theme.muted;
+            font-size: 11px;
+            horizontal-alignment: center;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: AppState.noise-canceling-label;
+            color: Theme.muted;
+            font-size: 11px;
+            horizontal-alignment: right;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+// a setting of the current mode: a choice between ways it works, or its strength
+component ModeRow inherits VerticalLayout {
+    in property <SettingRow> setting;
+    private property <string> label: SettingText.short-label(setting.id) != "" ? SettingText.short-label(setting.id) : setting.label;
+    padding-top: 14px;
+    spacing: 8px;
+    if root.setting.kind == RowKind.select: HorizontalLayout {
+        spacing: 12px;
+        Text {
+            text: root.label;
+            color: Theme.text;
+            font-size: Theme.font-small;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            wrap: word-wrap;
+        }
+        Segmented {
+            options: root.setting.options;
+            index: root.setting.index;
+            label: root.label;
+            chosen(i) => { Actions.set-option(root.setting.id, i); }
+        }
+    }
+    if root.setting.kind == RowKind.range: VerticalLayout {
+        spacing: 6px;
+        HorizontalLayout {
+            Text {
+                text: root.label;
+                color: Theme.text;
+                font-size: Theme.font-small;
+                horizontal-stretch: 1;
+            }
+            Text {
+                text: strength.shown + " / " + root.setting.maximum;
+                color: Theme.text;
+                font-size: Theme.font-small;
+                font-weight: 600;
+            }
+        }
+        strength := RangeSlider {
+            minimum: root.setting.minimum;
+            maximum: root.setting.maximum;
+            step: root.setting.step;
+            value: root.setting.value;
+            label: root.label;
+            committed(value) => { Actions.set-number(root.setting.id, value); }
+        }
+    }
+}
+
+export component ModesPanel inherits Panel {
+    in property <bool> compact;
+    PanelHeading {
+        text: AppState.mode-scale ? @tr("Mode and strength") : @tr("Sound mode");
+        icon: Icons.noise;
+    }
+    if AppState.mode-scale: ModeScale { }
+    if !AppState.mode-scale: ModeTiles { compact: root.compact; }
+    for row in AppState.mode-rows: ModeRow { setting: row; }
+}

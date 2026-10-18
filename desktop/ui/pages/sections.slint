@@ -1,0 +1,316 @@
+// The device's section pages: the heading, the settings in panels, and on the side what helps to read them.
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, Page } from "../types.slint";
+import { Icon, Button, ButtonKind, Panel, PanelHeading, Note } from "../components/basics.slint";
+import { SettingsPanelView, Segmented } from "../components/settings.slint";
+import { ModesPanel } from "../components/modes.slint";
+import { PageHeading } from "../shell.slint";
+
+component MainColumn inherits VerticalLayout {
+    in property <Page> page;
+    spacing: 16px;
+    alignment: start;
+    if root.page == Page.sound-modes: ModesPanel { }
+    if root.page == Page.controls && AppState.has-sides: HorizontalLayout {
+        alignment: start;
+        Segmented {
+            options: [@tr("Left earbud"), @tr("Right earbud")];
+            index: AppState.controls-side == "left" ? 0 : 1;
+            label: @tr("Earbud");
+            chosen(i) => { Actions.set-side(i == 0 ? "left" : "right"); }
+        }
+    }
+    for panel in AppState.panels: SettingsPanelView { data: panel; }
+}
+
+// a card with the device's picture and a few words, as on the controls and about pages
+component DeviceCard inherits Rectangle {
+    in property <string> eyebrow;
+    in property <string> title;
+    in property <string> text;
+    border-radius: Theme.radius-panel;
+    background: Theme.sage;
+    min-height: 150px;
+    HorizontalLayout {
+        padding: 18px;
+        padding-left: 22px;
+        spacing: 18px;
+        Image {
+            source: AppState.device-art;
+            width: 112px;
+            image-fit: contain;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 6px;
+            Text {
+                text: root.eyebrow;
+                color: Theme.on-sage;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 1.4px;
+            }
+            Text {
+                text: root.title;
+                color: Theme.on-sage;
+                font-size: 24px;
+                font-weight: 600;
+                wrap: word-wrap;
+            }
+            Text {
+                text: root.text;
+                color: Theme.on-sage;
+                opacity: 0.75;
+                font-size: Theme.font-caption;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+component Showcase inherits Rectangle {
+    in property <string> title;
+    in property <string> text;
+    border-radius: Theme.radius-panel;
+    background: Theme.sage;
+    min-height: 190px;
+    clip: true;
+    Rectangle {
+        x: parent.width - 118px;
+        y: parent.height - 95px;
+        width: 130px;
+        height: 130px;
+        border-radius: 65px;
+        border-width: 25px;
+        border-color: Theme.on-sage;
+        opacity: 0.3;
+    }
+    VerticalLayout {
+        padding: 25px;
+        spacing: 14px;
+        alignment: start;
+        Text {
+            text: root.title;
+            color: Theme.on-sage;
+            font-size: 28px;
+            font-weight: 600;
+            wrap: word-wrap;
+        }
+        Text {
+            text: root.text;
+            color: Theme.on-sage;
+            opacity: 0.75;
+            font-size: Theme.font-caption;
+            wrap: word-wrap;
+        }
+    }
+}
+
+component Tip inherits HorizontalLayout {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> text;
+    spacing: 11px;
+    Icon {
+        source: root.icon;
+        tint: Theme.primary;
+        width: 17px;
+        height: 17px;
+    }
+    VerticalLayout {
+        horizontal-stretch: 1;
+        Text {
+            text: root.title;
+            color: Theme.text;
+            font-size: Theme.font-caption;
+            font-weight: 600;
+        }
+        Text {
+            text: root.text;
+            color: Theme.muted;
+            font-size: Theme.font-caption;
+            wrap: word-wrap;
+        }
+    }
+}
+
+component WindowsLink inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> text;
+    in property <string> uri;
+    spacing: 12px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: center;
+        Text {
+            text: root.title;
+            color: Theme.text;
+            font-weight: 500;
+        }
+        Text {
+            text: root.text;
+            color: Theme.muted;
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+        }
+    }
+    Button {
+        text: @tr("Open");
+        kind: ButtonKind.ghost;
+        has-icon: true;
+        icon: Icons.external;
+        clicked => { Actions.open-uri(root.uri); }
+    }
+}
+
+component AsideColumn inherits VerticalLayout {
+    in property <Page> page;
+    spacing: 16px;
+    alignment: start;
+    if root.page == Page.sound-modes: Panel {
+        Text {
+            text: @tr("Your strength is remembered.");
+            color: Theme.text;
+            font-size: 20px;
+            font-weight: 600;
+            wrap: word-wrap;
+        }
+        Text {
+            text: @tr("Back in noise canceling or transparency, the last strength of that mode is used.");
+            color: Theme.muted;
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+        }
+        VerticalLayout {
+            padding-top: 16px;
+            spacing: 13px;
+            Tip {
+                icon: Icons.noise;
+                title: AppState.noise-canceling-label;
+                text: @tr("Lowers the noise around you.");
+            }
+            Tip {
+                icon: Icons.ear;
+                title: AppState.transparency-label;
+                text: @tr("Keeps the sounds around you audible.");
+            }
+            Tip {
+                icon: Icons.headphones;
+                title: AppState.normal-label;
+                text: @tr("No processing of ambient sound.");
+            }
+        }
+    }
+    if root.page == Page.effects && AppState.has-ldac: Note {
+        text: @tr("Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC.");
+    }
+    if root.page == Page.effects && AppState.has-spatial: Note {
+        text: @tr("On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here.");
+        warm: true;
+    }
+    if root.page == Page.controls: DeviceCard {
+        eyebrow: AppState.device-name;
+        title: !AppState.has-sides ? AppState.device-name : AppState.controls-side == "left" ? @tr("Left") : @tr("Right");
+        text: AppState.has-sides ? @tr("Actions for the chosen earbud.") : @tr("Actions of the buttons on the device.");
+    }
+    if root.page == Page.controls: Note {
+        text: @tr("The device carries out these actions itself. Windows media keys work as usual.");
+    }
+    if root.page == Page.comfort: Showcase {
+        title: @tr("Small details. More comfort.");
+        text: AppState.device-is-speaker ? @tr("Let your speaker adapt to you.") : @tr("Let your earbuds adapt to you.");
+    }
+    if root.page == Page.comfort: Note {
+        text: @tr("These settings are stored in the device and work with any sound source.");
+    }
+    if root.page == Page.power: Note {
+        text: @tr("Auto power off works while the device plays no sound.");
+    }
+    if root.page == Page.connections: Panel {
+        PanelHeading {
+            text: "Windows";
+            icon: Icons.monitor;
+        }
+        WindowsLink {
+            title: @tr("Bluetooth and devices");
+            text: @tr("Pairing and removing devices");
+            uri: "ms-settings:bluetooth";
+        }
+        WindowsLink {
+            title: @tr("Sound");
+            text: @tr("Output device and volume");
+            uri: "ms-settings:sound";
+        }
+    }
+    if root.page == Page.case: Rectangle {
+        height: 130px;
+        border-radius: 22px;
+        background: Theme.sage;
+        Rectangle {
+            width: 138px;
+            height: 77px;
+            border-radius: 23px;
+            background: #222b28;
+            border-width: 5px;
+            border-color: #b8c6b2;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 13px;
+                Icon {
+                    source: Icons.battery;
+                    tint: #e7eedd;
+                    width: 27px;
+                    height: 27px;
+                    y: (parent.height - self.height) / 2;
+                }
+                Text {
+                    text: AppState.case-battery;
+                    color: #e7eedd;
+                    font-size: 20px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    if root.page == Page.case: Note {
+        text: @tr("Choose the features available on your case screen. The case language is independent of the app language.");
+    }
+    if root.page == Page.about: DeviceCard {
+        eyebrow: "SOUNDCORE · " + AppState.device-code;
+        title: AppState.device-name;
+        text: @tr("The device reports these itself and keeps them up to date.");
+    }
+    if root.page == Page.about: Note {
+        text: @tr("The serial number and firmware version help when you contact support.");
+    }
+}
+
+export component SectionPage inherits VerticalLayout {
+    in property <Page> page;
+    in property <bool> wide;
+    spacing: 0px;
+    PageHeading { page: root.page; }
+    if root.wide: HorizontalLayout {
+        spacing: 20px;
+        alignment: stretch;
+        // the settings take most of the width, the side column at most a third
+        MainColumn {
+            page: root.page;
+            horizontal-stretch: 1;
+            min-width: 0px;
+            preferred-width: 0px;
+        }
+        AsideColumn {
+            page: root.page;
+            width: max(280px, min(420px, parent.width * 0.36));
+        }
+    }
+    if !root.wide: VerticalLayout {
+        spacing: 16px;
+        MainColumn { page: root.page; }
+        AsideColumn { page: root.page; }
+    }
+}

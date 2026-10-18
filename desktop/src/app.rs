@@ -13,15 +13,17 @@ use slint::{ComponentHandle, ModelRc, VecModel};
 
 use crate::{
     Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
-    PaletteChoice, Theme,
-    config::{Accent, AppTheme, Config},
+    PaletteChoice, Theme, ToastKind,
+    config::{Accent, AppTheme, Config, SoundModeView},
     controller::{Command, Controller, DeviceSnapshot, Event, Failure},
     model::{
         battery::is_only_one_earbud_connected,
         device_art::{EarbudsColor, art_color},
         devices::featured_device,
         legacy::LegacyEqualizerProfile,
+        sound_mode::sound_mode_scale_settings,
     },
+    rows::{self, Edit},
     view, window_chrome,
 };
 
@@ -151,6 +153,32 @@ fn install_actions(window: &AppWindow) {
             app.render();
         });
     });
+    actions.on_set_toggle(|id, on| with_app(|app| app.edit(&id, Edit::Toggle(on))));
+    actions.on_set_option(|id, index| with_app(|app| app.edit(&id, Edit::Option(index))));
+    actions.on_set_number(|id, value| {
+        with_app(|app| {
+            let edit = if id == "hue" {
+                Edit::Hue(value)
+            } else {
+                Edit::Number(value)
+            };
+            app.edit(&id, edit);
+        });
+    });
+    actions.on_press(|id| with_app(|app| app.edit(&id, Edit::Press)));
+    actions.on_remove_item(|id, index| with_app(|app| app.edit(&id, Edit::Remove(index))));
+    actions.on_set_scale(|position| {
+        with_app(|app| app.send(Command::SetSettings(sound_mode_scale_settings(position))));
+    });
+    actions.on_set_side(|side| {
+        with_app(|app| {
+            if let Some(window) = app.window() {
+                window.global::<AppState>().set_controls_side(side);
+            }
+            app.render();
+        });
+    });
+    actions.on_copy(|text| with_app(|app| app.copy(&text)));
     actions.on_open_uri(|uri| {
         if let Err(err) = open::that_detached(uri.as_str()) {
             tracing::warn!("could not open {uri}: {err}");
@@ -281,6 +309,48 @@ impl App {
             Event::LegacyProfiles(profiles) => self.legacy = profiles,
         }
         self.render();
+    }
+
+    /// A change to a row of a section page.
+    fn edit(&mut self, id: &str, edit: Edit) {
+        let Some(snapshot) = self.snapshot() else {
+            return;
+        };
+        // hue and time rows take numbers too; tell them apart by the setting
+        let edit = match (
+            edit,
+            snapshot
+                .settings
+                .get(&SettingId::from_str(id).unwrap_or(SettingId::Volume)),
+        ) {
+            (
+                Edit::Number(value),
+                Some(openscq30_lib::settings::Setting::HueColorPicker { .. }),
+            ) => Edit::Hue(value),
+            (Edit::Number(value), Some(openscq30_lib::settings::Setting::TimeOfDay { .. })) => {
+                Edit::Time(value)
+            }
+            (edit, _) => edit,
+        };
+        match rows::values(snapshot, id, edit) {
+            Some(values) => self.send(Command::SetSettings(values)),
+            None => tracing::warn!("no change for {id}"),
+        }
+    }
+
+    fn send(&mut self, command: Command) {
+        self.failed_command = None;
+        self.controller.send(command);
+        self.render();
+    }
+
+    fn copy(&self, text: &str) {
+        match arboard::Clipboard::new()
+            .and_then(|mut clipboard| clipboard.set_text(text.to_string()))
+        {
+            Ok(()) => self.toast(ToastKind::Copied),
+            Err(err) => tracing::warn!("could not copy: {err}"),
+        }
     }
 
     fn connect(&mut self, mac: MacAddr6, open: bool) {
@@ -485,6 +555,9 @@ impl App {
         }
         state.set_sound_pages(ModelRc::new(VecModel::from(sound)));
         state.set_device_pages(ModelRc::new(VecModel::from(device)));
+        if let Some(snapshot) = self.snapshot() {
+            self.render_section(&state, snapshot);
+        }
 
         state.set_error_label(
             self.failed_command
@@ -538,17 +611,63 @@ impl App {
         state.set_paired_options(ModelRc::new(VecModel::from(options)));
     }
 
-    /// Shows a short message at the bottom of the window.
-    #[allow(dead_code)]
-    pub fn toast(&self, text: String) {
+    /// The settings of the page that is open, and what its side column needs.
+    fn render_section(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
+        let page = state.get_page();
+        state.set_has_sides(snapshot.settings.contains_key(&SettingId::LeftSinglePress));
+        let side = state.get_controls_side().to_string();
+        state.set_panels(ModelRc::new(VecModel::from(rows::panels(
+            page, snapshot, &side,
+        ))));
+        state.set_has_ldac(snapshot.settings.contains_key(&SettingId::Ldac));
+        state.set_has_spatial(snapshot.settings.contains_key(&SettingId::SpatialAudio));
+        let information = |id: SettingId| match snapshot.settings.get(&id) {
+            Some(openscq30_lib::settings::Setting::Information {
+                translated_value, ..
+            }) => translated_value.clone(),
+            _ => String::new(),
+        };
+        state.set_case_battery(information(SettingId::CaseBatteryLevel).into());
+
+        let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
+        if let Some(mode) = rows::mode_view(snapshot, scale_preferred) {
+            let label = |value: &str| {
+                mode.options
+                    .iter()
+                    .find(|o| o.value == value)
+                    .map(|o| o.label.clone())
+                    .unwrap_or_default()
+            };
+            state.set_normal_label(label("Normal"));
+            state.set_transparency_label(label("Transparency"));
+            state.set_noise_canceling_label(label("NoiseCanceling"));
+            state.set_airplane_label(label("AirplaneMode"));
+            state.set_airplane_index(
+                mode.options
+                    .iter()
+                    .position(|o| o.value == "AirplaneMode")
+                    .map_or(-1, |i| i as i32),
+            );
+            state.set_mode_index(mode.index);
+            state.set_mode_scale(mode.scale);
+            state.set_scale_position(mode.position);
+            state.set_mode_rows(ModelRc::new(VecModel::from(mode.rows)));
+            state.set_modes(ModelRc::new(VecModel::from(mode.options)));
+        } else {
+            state.set_modes(ModelRc::default());
+        }
+    }
+
+    /// Shows a short message at the bottom of the window for a few seconds.
+    fn toast(&self, kind: ToastKind) {
         let Some(window) = self.window() else { return };
-        window.global::<AppState>().set_toast(text.clone().into());
+        window.global::<AppState>().set_toast(kind);
         let weak = self.window.clone();
         slint::Timer::single_shot(Duration::from_secs(3), move || {
             if let Some(window) = weak.upgrade() {
                 let state = window.global::<AppState>();
-                if state.get_toast() == text.as_str() {
-                    state.set_toast("".into());
+                if state.get_toast() == kind {
+                    state.set_toast(ToastKind::None);
                 }
             }
         });

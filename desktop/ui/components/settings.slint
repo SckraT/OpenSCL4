@@ -1,0 +1,425 @@
+// A setting as a row of a section page, in the control its kind needs.
+import { ComboBox, SpinBox } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, RowKind, SettingRow, SettingsPanel, PanelKind } from "../types.slint";
+import { Icon, IconButton, Button, ButtonKind, Toggle, Panel, PanelHeading, Note } from "basics.slint";
+
+// Names, descriptions and units the library has no words for, by setting id.
+export global SettingText {
+    // a shorter name where the page already says the rest, such as which earbud
+    public pure function short-label(id: string) -> string {
+        if id == "leftSinglePress" || id == "rightSinglePress" { return @tr("Single press"); }
+        if id == "leftDoublePress" || id == "rightDoublePress" { return @tr("Double press"); }
+        if id == "leftTriplePress" || id == "rightTriplePress" { return @tr("Triple press"); }
+        if id == "leftLongPress" || id == "rightLongPress" { return @tr("Long press"); }
+        if id == "leftSlideUp" || id == "rightSlideUp" { return @tr("Slide up"); }
+        if id == "leftSlideDown" || id == "rightSlideDown" { return @tr("Slide down"); }
+        if id == "noiseCancelingModeInCycle" { return @tr("Noise canceling"); }
+        if id == "transparencyModeInCycle" { return @tr("Transparency"); }
+        if id == "normalModeInCycle" { return @tr("Normal"); }
+        if id == "manualNoiseCanceling" { return @tr("Noise canceling strength"); }
+        if id == "manualTransparency" { return @tr("Transparency strength"); }
+        if id == "airplaneMode" { return @tr("Airplane mode updates"); }
+        return "";
+    }
+
+    public pure function description(id: string, speaker: bool) -> string {
+        if id == "windNoiseSuppression" { return @tr("Lowers wind noise in the microphones"); }
+        if id == "wearingDetection" { return @tr("Pause automatically when you remove an earbud"); }
+        if id == "easyChat" { return @tr("Lower the music while you talk"); }
+        if id == "easyChatWaitTime" { return @tr("When the music comes back after you stop talking"); }
+        if id == "soundLeakCompensation" { return @tr("Keeps the sound full when an earbud sits loosely"); }
+        if id == "limitHighVolume" { return speaker ? @tr("Limit the volume of your speaker") : @tr("Limit the volume of your earbuds"); }
+        if id == "volume" { return @tr("Volume of the speaker"); }
+        if id == "ldac" { return @tr("High-quality sound over Bluetooth"); }
+        if id == "spatialAudio" { return @tr("A wider sound stage for music and video"); }
+        if id == "dualConnections" { return @tr("Connect to up to two devices at once"); }
+        if id == "autoPowerOff" { return @tr("When the device is not in use"); }
+        if id == "lowBatteryPrompt" { return @tr("A voice prompt when the battery runs low"); }
+        if id == "voicePrompt" { return @tr("Voice messages about modes and connections"); }
+        if id == "powerOff" { return @tr("Turn the speaker off now"); }
+        if id == "atmospheric" || id == "remoteCamera" || id == "findDevice" || id == "caseSpatialAudio" {
+            return @tr("Show this function on the case screen");
+        }
+        if id == "caseLanguage" { return @tr("Independent of the app language"); }
+        if id == "resetButtonsToDefault" { return @tr("Bring back what the buttons did out of the box"); }
+        return "";
+    }
+
+    public pure function unit(id: string) -> string {
+        if id == "limitHighVolumeDbLimit" { return @tr("dB"); }
+        return "";
+    }
+}
+
+// A slider that sends its value once it is let go, so dragging does not flood the device.
+export component RangeSlider inherits Rectangle {
+    in property <int> minimum: 0;
+    in property <int> maximum: 10;
+    in property <int> step: 1;
+    in property <int> value;
+    in property <bool> enabled: true;
+    in property <string> label;
+    callback committed(int);
+    out property <int> shown: dragging ? drag-value : value;
+    private property <bool> dragging;
+    private property <int> drag-value;
+    private property <float> fraction: (shown - minimum) / max(1, maximum - minimum);
+    height: 24px;
+    min-width: 120px;
+    opacity: enabled ? 1 : 0.45;
+    accessible-role: slider;
+    accessible-label: label;
+    accessible-value: shown;
+    accessible-value-minimum: minimum;
+    accessible-value-maximum: maximum;
+    accessible-value-step: step;
+    accessible-action-increment => { committed(min(maximum, value + step)); }
+    accessible-action-decrement => { committed(max(minimum, value - step)); }
+    forward-focus: keys;
+
+    pure function value-at(x: length) -> int {
+        return max(minimum, min(maximum, minimum + round((x - 7px) / max(1px, root.width - 15px) * (maximum - minimum) / step) * step));
+    }
+
+    Rectangle {
+        y: (parent.height - 5px) / 2;
+        height: 5px;
+        border-radius: 3px;
+        background: Theme.container;
+    }
+    Rectangle {
+        x: 0px;
+        y: (parent.height - 5px) / 2;
+        height: 5px;
+        width: thumb.x + thumb.width / 2;
+        border-radius: 3px;
+        background: Theme.primary;
+    }
+    thumb := Rectangle {
+        width: 15px;
+        height: 22px;
+        y: 1px;
+        x: (root.width - self.width) * root.fraction;
+        border-radius: 7px;
+        border-width: 3px;
+        border-color: Theme.surface;
+        background: Theme.primary;
+    }
+    if keys.has-focus: Rectangle {
+        x: thumb.x - 3px;
+        y: thumb.y - 3px;
+        width: thumb.width + 6px;
+        height: thumb.height + 6px;
+        border-radius: 9px;
+        border-width: 2px;
+        border-color: Theme.primary;
+    }
+    keys := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == Key.RightArrow || event.text == Key.UpArrow {
+                root.committed(min(root.maximum, root.value + root.step));
+                return accept;
+            }
+            if event.text == Key.LeftArrow || event.text == Key.DownArrow {
+                root.committed(max(root.minimum, root.value - root.step));
+                return accept;
+            }
+            reject
+        }
+    }
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.dragging = true;
+                root.drag-value = root.value-at(self.mouse-x);
+                keys.focus();
+            }
+            if event.kind == PointerEventKind.up && root.dragging {
+                root.dragging = false;
+                if root.drag-value != root.value { root.committed(root.drag-value); }
+            }
+        }
+        moved => {
+            if self.pressed { root.drag-value = root.value-at(self.mouse-x); }
+        }
+    }
+}
+
+// Options side by side, one chosen.
+export component Segmented inherits Rectangle {
+    in property <[string]> options;
+    in property <int> index;
+    in property <bool> enabled: true;
+    in property <string> label;
+    callback chosen(int);
+    background: Theme.container;
+    border-radius: 13px;
+    min-height: 38px;
+    accessible-role: groupbox;
+    accessible-label: label;
+    opacity: enabled ? 1 : 0.45;
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+        for option[i] in root.options: Rectangle {
+            border-radius: 10px;
+            background: i == root.index ? Theme.surface : touch.has-hover ? Theme.hover : transparent;
+            drop-shadow-blur: i == root.index ? 4px : 0px;
+            drop-shadow-color: #30283b18;
+            accessible-role: button;
+            accessible-label: option;
+            accessible-checked: i == root.index;
+            accessible-action-default => { root.chosen(i); }
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                Text {
+                    text: option;
+                    color: i == root.index ? Theme.primary : Theme.text;
+                    font-size: Theme.font-small;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+            touch := TouchArea {
+                enabled: root.enabled;
+                mouse-cursor: pointer;
+                clicked => { if i != root.index { root.chosen(i); } }
+            }
+        }
+    }
+}
+
+export component SettingRowView inherits Rectangle {
+    in property <SettingRow> setting;
+    in property <bool> first;
+    // information with a copy button, as serial numbers are
+    in property <bool> copyable;
+    private property <string> label: SettingText.short-label(setting.id) != "" ? SettingText.short-label(setting.id) : setting.label;
+    private property <string> description: SettingText.description(setting.id, AppState.device-is-speaker);
+    min-height: setting.kind == RowKind.list ? 0px : 64px;
+    if !root.first: Rectangle {
+        y: 0px;
+        height: 1px;
+        background: Theme.container;
+    }
+    if root.setting.kind != RowKind.list: HorizontalLayout {
+        padding-top: root.first ? 2px : 15px;
+        padding-bottom: 13px;
+        spacing: 18px;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+            Text {
+                text: root.label;
+                color: Theme.text;
+                font-size: 14px;
+                font-weight: 500;
+                wrap: word-wrap;
+                opacity: root.setting.enabled ? 1 : 0.55;
+            }
+            if root.description != "": Text {
+                text: root.description;
+                color: Theme.muted;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+                opacity: root.setting.enabled ? 1 : 0.55;
+            }
+        }
+        if root.setting.kind == RowKind.toggle: Toggle {
+            checked: root.setting.checked;
+            enabled: root.setting.enabled;
+            label: root.label;
+            y: (parent.height - self.height) / 2;
+            toggled(on) => { Actions.set-toggle(root.setting.id, on); }
+        }
+        if root.setting.kind == RowKind.select: ComboBox {
+            width: 250px;
+            height: 40px;
+            model: root.setting.options;
+            current-index: root.setting.index;
+            enabled: root.setting.enabled;
+            y: (parent.height - self.height) / 2;
+            selected(value) => { Actions.set-option(root.setting.id, self.current-index); }
+        }
+        if root.setting.kind == RowKind.range || root.setting.kind == RowKind.hue: HorizontalLayout {
+            spacing: 12px;
+            width: 260px;
+            slider := RangeSlider {
+                minimum: root.setting.minimum;
+                maximum: root.setting.maximum;
+                step: root.setting.step;
+                value: root.setting.value;
+                enabled: root.setting.enabled;
+                label: root.label;
+                y: (parent.height - self.height) / 2;
+                committed(value) => { Actions.set-number(root.setting.id, value); }
+            }
+            Rectangle {
+                width: 64px;
+                height: 26px;
+                y: (parent.height - self.height) / 2;
+                border-radius: 8px;
+                background: Theme.container;
+                Text {
+                    text: slider.shown + (SettingText.unit(root.setting.id) != "" ? " " + SettingText.unit(root.setting.id) : "");
+                    color: Theme.text;
+                    font-size: Theme.font-small;
+                    font-weight: 600;
+                }
+            }
+        }
+        if root.setting.kind == RowKind.info: HorizontalLayout {
+            spacing: 4px;
+            Text {
+                text: root.setting.text;
+                color: Theme.text;
+                font-size: 13px;
+                vertical-alignment: center;
+            }
+            if root.copyable: IconButton {
+                icon: Icons.copy;
+                label: @tr("Copy");
+                tint: Theme.muted;
+                y: (parent.height - self.height) / 2;
+                clicked => { Actions.copy(root.setting.text); }
+            }
+        }
+        if root.setting.kind == RowKind.action: Button {
+            text: root.setting.id == "resetButtonsToDefault" ? @tr("Reset") : root.setting.id == "powerOff" ? @tr("Turn off") : root.label;
+            kind: ButtonKind.danger;
+            has-icon: true;
+            icon: root.setting.id == "powerOff" ? Icons.power : Icons.reset;
+            enabled: root.setting.enabled;
+            y: (parent.height - self.height) / 2;
+            clicked => { Actions.press(root.setting.id); }
+        }
+        if root.setting.kind == RowKind.time: HorizontalLayout {
+            spacing: 6px;
+            SpinBox {
+                width: 90px;
+                minimum: 0;
+                maximum: 23;
+                value: floor(root.setting.value / 60);
+                edited(hour) => { Actions.set-number(root.setting.id, hour * 60 + mod(root.setting.value, 60)); }
+            }
+            SpinBox {
+                width: 90px;
+                minimum: 0;
+                maximum: 59;
+                value: mod(root.setting.value, 60);
+                edited(minute) => { Actions.set-number(root.setting.id, floor(root.setting.value / 60) * 60 + minute); }
+            }
+        }
+    }
+    // the devices paired with the earbuds, each one can be forgotten
+    if root.setting.kind == RowKind.list: VerticalLayout {
+        spacing: 10px;
+        if root.setting.options.length == 0: Text {
+            text: @tr("No paired devices reported by your earbuds.");
+            color: Theme.muted;
+            font-size: Theme.font-small;
+        }
+        for item[i] in root.setting.options: Rectangle {
+            border-radius: 18px;
+            border-width: 1px;
+            border-color: Theme.line;
+            min-height: 66px;
+            HorizontalLayout {
+                padding: 14px;
+                spacing: 14px;
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 13px;
+                    background: Theme.container;
+                    Icon {
+                        source: Icons.devices;
+                        tint: Theme.primary;
+                    }
+                }
+                Text {
+                    text: item;
+                    color: Theme.text;
+                    font-size: 14px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Button {
+                    text: @tr("Forget");
+                    kind: ButtonKind.ghost;
+                    y: (parent.height - self.height) / 2;
+                    clicked => { Actions.remove-item(root.setting.id, i); }
+                }
+            }
+        }
+    }
+}
+
+export global PanelText {
+    public pure function title(kind: PanelKind) -> string {
+        if kind == PanelKind.volume { return @tr("Volume"); }
+        if kind == PanelKind.presses { return @tr("Presses"); }
+        if kind == PanelKind.cycle { return @tr("Switching modes"); }
+        if kind == PanelKind.case-screen { return @tr("Case screen"); }
+        if kind == PanelKind.case-status { return @tr("Status"); }
+        if kind == PanelKind.dual-devices { return @tr("Connected devices"); }
+        return "";
+    }
+
+    public pure function icon(kind: PanelKind) -> image {
+        if kind == PanelKind.volume { return Icons.shield; }
+        if kind == PanelKind.presses { return Icons.hand; }
+        if kind == PanelKind.cycle { return Icons.noise; }
+        if kind == PanelKind.case-screen { return Icons.case; }
+        if kind == PanelKind.case-status { return Icons.info; }
+        return Icons.devices;
+    }
+
+    public pure function intro(kind: PanelKind) -> string {
+        if kind == PanelKind.cycle { return @tr("The modes the ambient sound mode action switches between."); }
+        return "";
+    }
+
+    public pure function note(kind: PanelKind, speaker: bool) -> string {
+        if kind == PanelKind.volume {
+            return speaker ? @tr("The speaker’s volume limit does not replace guidance on safe listening duration.")
+                : @tr("The earbud volume limit does not replace guidance on safe listening duration.");
+        }
+        if kind == PanelKind.dual-devices {
+            return @tr("This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds.");
+        }
+        return "";
+    }
+}
+
+export component SettingsPanelView inherits Panel {
+    in property <SettingsPanel> data;
+    if PanelText.title(root.data.kind) != "": PanelHeading {
+        text: PanelText.title(root.data.kind);
+        icon: PanelText.icon(root.data.kind);
+    }
+    if PanelText.intro(root.data.kind) != "": Text {
+        text: PanelText.intro(root.data.kind);
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    for row[i] in root.data.rows: SettingRowView {
+        setting: row;
+        first: i == 0;
+        copyable: root.data.kind == PanelKind.info || root.data.kind == PanelKind.case-status;
+    }
+    if PanelText.note(root.data.kind, AppState.device-is-speaker) != "": VerticalLayout {
+        padding-top: 14px;
+        Note { text: PanelText.note(root.data.kind, AppState.device-is-speaker); }
+    }
+}

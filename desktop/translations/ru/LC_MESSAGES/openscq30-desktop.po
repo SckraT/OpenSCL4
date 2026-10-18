@@ -347,3 +347,232 @@ msgstr "Деморежим использует пример данных и н�
 
 msgid "Back"
 msgstr "Назад"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "Режим и сила"
+
+msgid "Sound mode from 1 to 11"
+msgstr "Режим звука от 1 до 11"
+
+msgid "Transparency, strength {}"
+msgstr "Прозрачность, сила {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "Шумоподавление, сила {}"
+
+msgid "Your strength is remembered."
+msgstr "Выбранная сила сохраняется."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "При возвращении к шумоподавлению или прозрачности используется последнее значение для этого режима."
+
+msgid "Lowers the noise around you."
+msgstr "Уменьшает окружающий шум."
+
+msgid "Keeps the sounds around you audible."
+msgstr "Оставляет окружающие звуки слышимыми."
+
+msgid "No processing of ambient sound."
+msgstr "Без обработки окружающего звука."
+
+msgid "Single press"
+msgstr "Однократное нажатие"
+
+msgid "Double press"
+msgstr "Двойное нажатие"
+
+msgid "Triple press"
+msgstr "Тройное нажатие"
+
+msgid "Long press"
+msgstr "Долгое нажатие"
+
+msgid "Slide up"
+msgstr "Скольжение вверх"
+
+msgid "Slide down"
+msgstr "Скольжение вниз"
+
+msgid "Noise canceling"
+msgstr "Шумоподавление"
+
+msgid "Transparency"
+msgstr "Прозрачность"
+
+msgid "Normal"
+msgstr "Обычный"
+
+msgid "Noise canceling strength"
+msgstr "Сила шумоподавления"
+
+msgid "Transparency strength"
+msgstr "Сила прозрачности"
+
+msgid "Airplane mode updates"
+msgstr "Обновление режима полёта"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "Уменьшает шум ветра в микрофонах"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "Автопауза, когда вы вынимаете наушник"
+
+msgid "Lower the music while you talk"
+msgstr "Приглушает музыку во время разговора"
+
+msgid "When the music comes back after you stop talking"
+msgstr "Когда вернуть музыку после разговора"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "Сохраняет звучание, если наушник сидит неплотно"
+
+msgid "Limit the volume of your earbuds"
+msgstr "Ограничивает громкость наушников"
+
+msgid "Limit the volume of your speaker"
+msgstr "Ограничивает громкость колонки"
+
+msgid "Volume of the speaker"
+msgstr "Громкость колонки"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Передача звука в высоком качестве"
+
+msgid "A wider sound stage for music and video"
+msgstr "Объёмная звуковая сцена для музыки и видео"
+
+msgid "Connect to up to two devices at once"
+msgstr "Одновременно — до двух устройств"
+
+msgid "When the device is not in use"
+msgstr "Когда устройство не используется"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "Голосом, когда заряд заканчивается"
+
+msgid "Voice messages about modes and connections"
+msgstr "Голосовые сообщения о режимах и подключении"
+
+msgid "Turn the speaker off now"
+msgstr "Выключить колонку сейчас"
+
+msgid "Show this function on the case screen"
+msgstr "Показывать функцию на экране кейса"
+
+msgid "Independent of the app language"
+msgstr "Не зависит от языка приложения"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "Вернуть действия, заданные производителем"
+
+msgid "dB"
+msgstr "дБ"
+
+msgid "Copy"
+msgstr "Копировать"
+
+msgid "Copied"
+msgstr "Скопировано"
+
+msgid "Reset"
+msgstr "Сбросить"
+
+msgid "Turn off"
+msgstr "Выключить"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "Наушники не сообщили о сопряжённых устройствах."
+
+msgid "Volume"
+msgstr "Громкость"
+
+msgid "Presses"
+msgstr "Нажатия"
+
+msgid "Switching modes"
+msgstr "Смена режимов"
+
+msgid "Case screen"
+msgstr "Экран кейса"
+
+msgid "Status"
+msgstr "Состояние"
+
+msgid "Connected devices"
+msgstr "Подключённые устройства"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "Режимы, которые перебирает действие «Режим окружающего звука»."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "Ограничение наушников не заменяет рекомендации по безопасной длительности прослушивания."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "Ограничение колонки не заменяет рекомендации по безопасной длительности прослушивания."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "Список показывает сопряжённые с наушниками устройства, а не Bluetooth-устройства поблизости. Если забыть этот компьютер, управление наушниками завершится."
+
+msgid "Left earbud"
+msgstr "Левый наушник"
+
+msgid "Right earbud"
+msgstr "Правый наушник"
+
+msgid "Earbud"
+msgstr "Наушник"
+
+msgid "Left"
+msgstr "Левый"
+
+msgid "Right"
+msgstr "Правый"
+
+msgid "Actions for the chosen earbud."
+msgstr "Действия для выбранного наушника."
+
+msgid "Actions of the buttons on the device."
+msgstr "Действия кнопок на корпусе."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "Действия выполняет само устройство. Клавиши мультимедиа Windows работают как обычно."
+
+msgid "Small details. More comfort."
+msgstr "Маленькие детали. Больше удобства."
+
+msgid "Let your earbuds adapt to you."
+msgstr "Пусть наушники подстраиваются под вас."
+
+msgid "Let your speaker adapt to you."
+msgstr "Пусть колонка подстраивается под вас."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "Эти настройки хранятся в самом устройстве и работают с любым источником звука."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "Автовыключение срабатывает, когда устройство не воспроизводит звук."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth и устройства"
+
+msgid "Pairing and removing devices"
+msgstr "Сопряжение и удаление устройств"
+
+msgid "Output device and volume"
+msgstr "Устройство вывода и громкость"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows передаёт звук без LDAC. Настройка нужна для телефона и других источников с LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "На Liberty 4 Pro настройка эквалайзера отключит пространственный звук. Его можно включить снова здесь."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "Здесь выбираются функции экрана кейса. Язык кейса не зависит от языка приложения."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "Сведения приходят от устройства и обновляются сами."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "Серийный номер и версия прошивки пригодятся при обращении в поддержку."

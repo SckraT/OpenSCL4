@@ -27,6 +27,7 @@ openscq30-i18n = { workspace = true }
 i18n-embed = { workspace = true, features = ["desktop-requester"] }
 dirs = { workspace = true }
 open = { workspace = true }
+arboard = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

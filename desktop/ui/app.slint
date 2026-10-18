@@ -2,14 +2,16 @@ import "fonts/onest.ttf";
 import { ScrollView, Palette } from "std-widgets.slint";
 import { Theme, PaletteChoice } from "theme.slint";
 import { Icons } from "icons.slint";
-import { AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption } from "types.slint";
+import { AppState, Actions, Page, Connection, FailureKind, ToastKind, DeviceCard, ModelOption, PairedOption } from "types.slint";
 import { Strings } from "strings.slint";
 import { Button, ButtonKind, Banner } from "components/basics.slint";
 import { Sidebar, StatusBar, PageHeading } from "shell.slint";
 import { DevicesPage, ConnectionState } from "pages/devices.slint";
 import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
+import { SectionPage } from "pages/sections.slint";
 
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
+export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind } from "types.slint";
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
@@ -25,8 +27,13 @@ export component AppWindow inherits Window {
 
     private property <bool> compact: root.width <= 1030px;
     private property <bool> device-page: AppState.page != Page.devices && AppState.page != Page.settings;
+    // pages with their own layout rather than the settings in panels
+    private property <bool> own-page: AppState.page == Page.overview || AppState.page == Page.equalizer || AppState.page == Page.presets;
 
-    init => { Palette.color-scheme = Theme.dark ? ColorScheme.dark : ColorScheme.light; }
+    // the standard widgets (lists, number fields) follow the app's theme
+    private property <bool> dark: Theme.dark;
+    init => { Palette.color-scheme = root.dark ? ColorScheme.dark : ColorScheme.light; }
+    changed dark => { Palette.color-scheme = root.dark ? ColorScheme.dark : ColorScheme.light; }
 
     // placed by hand: the sidebar's width follows the window's, so it must not be part of the window's own layout
     sidebar := Sidebar {
@@ -67,8 +74,12 @@ export component AppWindow inherits Window {
                     }
                     if AppState.page == Page.devices: DevicesPage { }
                     if root.device-page && AppState.connection != Connection.connected: ConnectionState { }
-                    if root.device-page && AppState.connection == Connection.connected: PageHeading {
+                    if root.device-page && AppState.connection == Connection.connected && root.own-page: PageHeading {
                         page: AppState.page;
+                    }
+                    if root.device-page && AppState.connection == Connection.connected && !root.own-page: SectionPage {
+                        page: AppState.page;
+                        wide: root.width - sidebar.width > 860px;
                     }
                     if AppState.page == Page.settings: PageHeading {
                         page: Page.settings;
@@ -81,7 +92,7 @@ export component AppWindow inherits Window {
 
     if AppState.adding: AddDeviceDialog { }
     if AppState.confirm-forget-mac != "": ConfirmForgetDialog { }
-    if AppState.toast != "": Rectangle {
+    if AppState.toast != ToastKind.none: Rectangle {
         y: root.height - 80px;
         x: (root.width - self.width) / 2;
         width: toast-text.preferred-width + 36px;
@@ -89,7 +100,7 @@ export component AppWindow inherits Window {
         border-radius: 14px;
         background: Theme.text;
         toast-text := Text {
-            text: AppState.toast;
+            text: AppState.toast == ToastKind.copied ? @tr("Copied") : "";
             color: Theme.bg;
             font-size: Theme.font-small;
         }
