@@ -1,0 +1,25 @@
+import "fonts/onest.ttf";
+import { Theme } from "theme.slint";
+
+export { Theme }
+
+export component AppWindow inherits Window {
+    title: "OpenSCQ30";
+    preferred-width: 1280px;
+    preferred-height: 820px;
+    min-width: 800px;
+    min-height: 600px;
+    background: Theme.bg;
+    default-font-family: "Onest";
+
+    VerticalLayout {
+        padding: 28px;
+        alignment: start;
+        Text {
+            text: @tr("Overview");
+            color: Theme.primary;
+            font-size: Theme.font-section;
+            font-weight: 600;
+        }
+    }
+}

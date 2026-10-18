@@ -1,0 +1,20 @@
+[arg("level", pattern="trace|debug|info|warn|error|off")]
+run level='info':
+    RUST_LOG=none,openscq30_lib={{level}},openscq30_desktop={{level}} cargo run
+
+[arg("profile", pattern="dev|release|release-fast")]
+build profile='release':
+    cargo build --profile '{{profile}}'
+
+test:
+    cargo test
+
+test-cov:
+    cargo llvm-cov --no-report --no-cfg-coverage
+
+alias fmt := format
+format:
+    cargo fmt
+
+format-check:
+    cargo fmt --check

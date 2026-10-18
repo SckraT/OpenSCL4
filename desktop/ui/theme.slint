@@ -1,0 +1,52 @@
+// Colors of the Android app (android/app/src/main/java/com/oppzippy/openscq30/ui/theme/Color.kt), named as in the
+// approved mockup (design/windows-mockup.html). The palette picks which Android color family is the accent: the
+// primary purple, the secondary sage or the tertiary rose.
+
+export enum PaletteChoice { purple, sage, rose }
+
+export global Theme {
+    in-out property <bool> dark;
+    in-out property <PaletteChoice> palette: PaletteChoice.purple;
+
+    // accent, from the chosen family
+    out property <color> primary: palette == PaletteChoice.sage ? (dark ? #bbcdaa : #526347)
+        : palette == PaletteChoice.rose ? (dark ? #e5bad7 : #77546e) : (dark ? #d4baff : #6740b4);
+    out property <color> on-primary: palette == PaletteChoice.sage ? (dark ? #27381f : #ffffff)
+        : palette == PaletteChoice.rose ? (dark ? #44263e : #ffffff) : (dark ? #311356 : #ffffff);
+    out property <color> primary-container: palette == PaletteChoice.sage ? (dark ? #303b2c : #e7eedd)
+        : palette == PaletteChoice.rose ? (dark ? #5d3c55 : #ffd7ef) : (dark ? #403052 : #e9dffc);
+    out property <color> on-primary-container: palette == PaletteChoice.sage ? (dark ? #d8e8ca : #34462d)
+        : palette == PaletteChoice.rose ? (dark ? #ffd7ef : #2d1228) : (dark ? #ebddff : #402270);
+
+    // the sage and rose cards stay what they are whatever the accent
+    out property <color> sage: dark ? #303b2c : #e7eedd;
+    out property <color> on-sage: dark ? #d8e8ca : #34462d;
+    out property <color> pink: dark ? #5d3c55 : #ffd7ef;
+    out property <color> on-pink: dark ? #e5bad7 : #77546e;
+
+    out property <color> bg: dark ? #16141b : #f7f5f2;
+    out property <color> surface: dark ? #231f29 : #ffffff;
+    out property <color> low: dark ? #1e1a24 : #fdf9fc;
+    out property <color> container: dark ? #2d2834 : #f0ecf4;
+    out property <color> high: dark ? #38323f : #ece6f0;
+    out property <color> chrome: dark ? #1e1a24 : #efede9;
+    out property <color> text: dark ? #f1edf6 : #25222a;
+    out property <color> muted: dark ? #cac1d1 : #6b6470;
+    out property <color> line: dark ? #49414f : #dcd6e0;
+    out property <color> green: dark ? #8dd69b : #3f9a52;
+    out property <color> error: dark ? #ffb4ab : #ba1a1a;
+    out property <color> hover: primary.transparentize(dark ? 92% : 93.5%);
+    out property <color> scrim: dark ? #00000080 : #16121e65;
+
+    // shapes and type
+    out property <length> radius-panel: 24px;
+    out property <length> radius-card: 17px;
+    out property <length> radius-control: 12px;
+    out property <length> radius-chip: 10px;
+    out property <length> font-body: 13px;
+    out property <length> font-small: 12px;
+    out property <length> font-caption: 11px;
+    out property <length> font-title: 17px;
+    out property <length> font-section: 15px;
+    out property <length> font-slogan: 30px;
+}
