@@ -1,7 +1,9 @@
 fn main() {
+    // translations are plain msgids, without the component as their context
     let config = slint_build::CompilerConfiguration::new()
         .with_style("material".into())
-        .with_bundled_translations(concat!(env!("CARGO_MANIFEST_DIR"), "/translations"));
+        .with_bundled_translations(concat!(env!("CARGO_MANIFEST_DIR"), "/translations"))
+        .with_default_translation_context(slint_build::DefaultTranslationContext::None);
     slint_build::compile_with_config("ui/app.slint", config).expect("the UI should compile");
     println!("cargo:rerun-if-changed=translations");
 

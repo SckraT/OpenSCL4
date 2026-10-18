@@ -5552,10 +5552,15 @@ name = "openscq30-desktop"
 version = "2.13.0"
 dependencies = [
  "anyhow",
+ "dirs 7.0.0",
  "embed-resource",
+ "i18n-embed",
  "macaddr",
+ "open",
+ "openscq30-i18n",
  "openscq30-lib",
  "raw-window-handle",
+ "roxmltree 0.21.1",
  "serde",
  "serde_json",
  "slint",

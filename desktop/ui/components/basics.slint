@@ -1,0 +1,311 @@
+// Small building blocks in the mockup's style, on the Android color tokens.
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+
+export enum ButtonKind { normal, primary, soft, ghost, danger }
+
+// A tinted line icon.
+export component Icon inherits Image {
+    in property <color> tint: Theme.text;
+    width: 20px;
+    height: 20px;
+    colorize: tint;
+    image-fit: contain;
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    in property <ButtonKind> kind: ButtonKind.normal;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    private property <color> foreground: kind == ButtonKind.primary ? Theme.on-primary
+        : kind == ButtonKind.soft ? Theme.on-primary-container
+        : kind == ButtonKind.ghost ? Theme.primary
+        : kind == ButtonKind.danger ? Theme.error : Theme.text;
+    min-height: 37px;
+    border-radius: Theme.radius-control;
+    background: kind == ButtonKind.primary ? Theme.primary
+        : kind == ButtonKind.soft ? Theme.primary-container
+        : kind == ButtonKind.ghost ? transparent : Theme.surface;
+    border-width: kind == ButtonKind.normal || kind == ButtonKind.danger ? 1px : 0px;
+    border-color: Theme.line;
+    opacity: enabled ? 1 : 0.45;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { if enabled { clicked(); } }
+    forward-focus: focus;
+
+    focus := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == " " || event.text == "\n" { root.clicked(); return accept; }
+            reject
+        }
+    }
+    hover := Rectangle {
+        border-radius: root.border-radius;
+        background: touch.has-hover && root.enabled ? Theme.hover : transparent;
+    }
+    if focus.has-focus: Rectangle {
+        border-radius: root.border-radius + 3px;
+        border-width: 2px;
+        border-color: Theme.primary;
+        x: -3px;
+        y: -3px;
+        width: root.width + 6px;
+        height: root.height + 6px;
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 8px;
+        alignment: center;
+        if root.has-icon: Icon {
+            source: root.icon;
+            tint: root.foreground;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.text;
+            color: root.foreground;
+            font-size: Theme.font-body;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <color> tint: Theme.text;
+    callback clicked();
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: touch.has-hover ? Theme.hover : transparent;
+    accessible-role: button;
+    accessible-label: label;
+    accessible-action-default => { clicked(); }
+    Icon {
+        source: root.icon;
+        tint: root.tint;
+        width: 18px;
+        height: 18px;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TextLink inherits Rectangle {
+    in property <string> text;
+    in property <bool> chevron: true;
+    callback clicked();
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { clicked(); }
+    HorizontalLayout {
+        spacing: 4px;
+        Text {
+            text: root.text;
+            color: Theme.primary;
+            font-size: Theme.font-small;
+            vertical-alignment: center;
+        }
+        if root.chevron: Icon {
+            source: Icons.chevron;
+            tint: Theme.primary;
+            width: 14px;
+            height: 14px;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    // on a sage card, a selected chip is filled with the accent
+    in property <bool> on-card: false;
+    callback clicked();
+    private property <color> foreground: selected ? (on-card ? Theme.on-primary : Theme.on-primary-container)
+        : (on-card ? Theme.on-sage : Theme.text);
+    min-height: 31px;
+    border-radius: Theme.radius-chip;
+    background: selected ? (on-card ? Theme.primary : Theme.primary-container) : touch.has-hover ? Theme.hover : transparent;
+    border-width: selected ? 0px : 1px;
+    border-color: on-card ? Theme.on-sage.transparentize(80%) : Theme.line;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-checked: selected;
+    accessible-action-default => { clicked(); }
+    HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 11px;
+        spacing: 6px;
+        alignment: center;
+        if root.selected || root.has-icon: Icon {
+            source: root.selected ? Icons.check : root.icon;
+            tint: root.foreground;
+            width: 14px;
+            height: 14px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.text;
+            color: root.foreground;
+            font-size: Theme.font-small;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// The on/off switch of the mockup.
+export component Toggle inherits Rectangle {
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    in property <string> label;
+    callback toggled(bool);
+    width: 39px;
+    height: 23px;
+    border-radius: 12px;
+    background: checked ? Theme.primary : Theme.container;
+    border-width: 1px;
+    border-color: checked ? Theme.primary : Theme.muted;
+    opacity: enabled ? 1 : 0.45;
+    accessible-role: switch;
+    accessible-label: label;
+    accessible-checked: checked;
+    accessible-action-default => { if enabled { toggled(!checked); } }
+    Rectangle {
+        width: 13px;
+        height: 13px;
+        border-radius: 7px;
+        y: 4px;
+        x: root.checked ? 21px : 4px;
+        background: root.checked ? Theme.on-primary : Theme.muted;
+        animate x { duration: 150ms; }
+    }
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.toggled(!root.checked); }
+    }
+}
+
+export component Panel inherits Rectangle {
+    in property <length> inner-padding: 20px;
+    background: Theme.surface;
+    border-radius: Theme.radius-panel;
+    VerticalLayout {
+        padding: root.inner-padding;
+        spacing: 0px;
+        @children
+    }
+}
+
+export component PanelHeading inherits HorizontalLayout {
+    in property <string> text;
+    in property <image> icon;
+    spacing: 9px;
+    padding-bottom: 15px;
+    Icon {
+        source: root.icon;
+        tint: Theme.primary;
+        width: 19px;
+        height: 19px;
+        y: (parent.height - self.height) / 2;
+    }
+    Text {
+        text: root.text;
+        color: Theme.primary;
+        font-size: Theme.font-title;
+        font-weight: 600;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    @children
+}
+
+export component Note inherits Rectangle {
+    in property <string> text;
+    in property <bool> warm: false;
+    border-radius: 14px;
+    background: warm ? Theme.pink : Theme.container;
+    HorizontalLayout {
+        padding: 13px;
+        padding-left: 15px;
+        padding-right: 15px;
+        spacing: 9px;
+        Icon {
+            source: Icons.info;
+            tint: root.warm ? Theme.on-pink : Theme.muted;
+            width: 16px;
+            height: 16px;
+        }
+        Text {
+            text: root.text;
+            color: root.warm ? Theme.on-pink : Theme.muted;
+            font-size: Theme.font-caption;
+            wrap: word-wrap;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+// A message across the top of the page: neutral, or an error with its actions.
+export component Banner inherits Rectangle {
+    in property <string> text;
+    in property <image> icon: Icons.info;
+    in property <bool> error: false;
+    border-radius: 15px;
+    background: error ? Theme.pink : Theme.primary-container;
+    HorizontalLayout {
+        padding: 12px;
+        padding-left: 16px;
+        spacing: 10px;
+        Icon {
+            source: root.icon;
+            tint: root.error ? Theme.on-pink : Theme.on-primary-container;
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.text;
+            color: root.error ? Theme.on-pink : Theme.on-primary-container;
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        @children
+    }
+}
+
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.container;
+}

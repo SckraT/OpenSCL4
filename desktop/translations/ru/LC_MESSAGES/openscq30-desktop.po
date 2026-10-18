@@ -7,5 +7,343 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
+# Sidebar and page names
 msgid "Overview"
 msgstr "Обзор"
+
+msgid "Sound mode"
+msgstr "Режим звука"
+
+msgid "Equalizer"
+msgstr "Эквалайзер"
+
+msgid "Sound and effects"
+msgstr "Звук и эффекты"
+
+msgid "Quick presets"
+msgstr "Быстрые пресеты"
+
+msgid "Controls"
+msgstr "Управление"
+
+msgid "Comfort"
+msgstr "Комфорт"
+
+msgid "Power and prompts"
+msgstr "Питание и подсказки"
+
+msgid "Connections"
+msgstr "Подключения"
+
+msgid "Case"
+msgstr "Кейс"
+
+msgid "About the device"
+msgstr "Об устройстве"
+
+msgid "Sleep"
+msgstr "Сон"
+
+msgid "Lights"
+msgstr "Подсветка"
+
+msgid "Alarms"
+msgstr "Будильники"
+
+msgid "Other"
+msgstr "Прочее"
+
+msgid "My devices"
+msgstr "Мои устройства"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Sound"
+msgstr "Звук"
+
+msgid "Device"
+msgstr "Устройство"
+
+msgid "SOUND"
+msgstr "ЗВУК"
+
+msgid "DEVICE"
+msgstr "УСТРОЙСТВО"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "Слушайте то, что важно."
+
+msgid "Your sound, your way."
+msgstr "Звук по-своему."
+
+msgid "Inside the sound."
+msgstr "Внутри звука."
+
+msgid "One preset. Your settings."
+msgstr "Один пресет. Ваши настройки."
+
+msgid "A touch. And you’re in control."
+msgstr "Касание. И всё под контролем."
+
+msgid "Comfortable listening. Every day."
+msgstr "Удобно слушать. Каждый день."
+
+msgid "Always ready."
+msgstr "Всегда наготове."
+
+msgid "Stay connected. To two at once."
+msgstr "На связи. С двумя сразу."
+
+msgid "A little case. More possibilities."
+msgstr "Маленький кейс. Больше возможностей."
+
+msgid "All about your device."
+msgstr "Всё о вашем устройстве."
+
+msgid "Your devices."
+msgstr "Ваши устройства."
+
+msgid "Make it yours."
+msgstr "По вашему вкусу."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "Выберите, сколько окружающего мира оставить в звуке."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "Подберите профиль или настройте каждую частоту."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "Кодек, задержка и обработка звука."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "Сохраните любимые сочетания и возвращайтесь к ним одним щелчком."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "Действия для нажатий и смены режимов."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "Настройки, которые подстраивают наушники под ваши привычки."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "Настройки, которые подстраивают колонку под ваши привычки."
+
+msgid "When the device turns off and what it tells you."
+msgstr "Когда устройство выключается и что оно вам подсказывает."
+
+msgid "Switch between your phone and computer."
+msgstr "Переключайтесь между телефоном и компьютером."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "Функции экрана кейса и его состояние."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "Заряд, прошивка и серийные номера."
+
+msgid "All your familiar headphones in one place."
+msgstr "Все знакомые наушники в одном месте."
+
+msgid "An app that feels comfortable to use."
+msgstr "Приложение, которым удобно пользоваться."
+
+# Connection
+msgid "No devices"
+msgstr "Нет устройств"
+
+msgid "Add a device"
+msgstr "Добавьте устройство"
+
+msgid "Connected"
+msgstr "Подключено"
+
+msgid "Connecting…"
+msgstr "Подключение…"
+
+msgid "Not connected"
+msgstr "Не подключено"
+
+msgid "Connected to {}"
+msgstr "Подключено к {}"
+
+msgid "Connecting to {}"
+msgstr "Подключение к {}"
+
+msgid "Connection lost"
+msgstr "Связь потеряна"
+
+msgid "Bluetooth is off"
+msgstr "Bluetooth выключен"
+
+msgid "Disconnected"
+msgstr "Отключено"
+
+msgid "Connecting to your headphones"
+msgstr "Подключаем наушники"
+
+msgid "Connecting to your speaker"
+msgstr "Подключаем колонку"
+
+msgid "Could not connect"
+msgstr "Не удалось подключиться"
+
+msgid "{} is not connected"
+msgstr "{} не подключено"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "Откройте кейс или включите наушники. Управление станет доступно после подключения."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "Включите колонку. Управление станет доступно после подключения."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "Проверьте, что наушники рядом и подключены к компьютеру по Bluetooth."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "Проверьте, что колонка рядом и подключена к компьютеру по Bluetooth."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Включите Bluetooth в параметрах Windows, затем снова попробуйте подключиться."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "Подключите, чтобы видеть заряд и менять настройки."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "Устройство не найдено. Проверьте, что оно включено и находится рядом."
+
+msgid "The device did not answer in time. Try again."
+msgstr "Устройство не ответило вовремя. Попробуйте ещё раз."
+
+msgid "Cancel"
+msgstr "Отменить"
+
+msgid "Connect"
+msgstr "Подключить"
+
+msgid "Connect again"
+msgstr "Подключить снова"
+
+msgid "Bluetooth settings"
+msgstr "Параметры Bluetooth"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "Не удалось изменить «{}». На устройстве осталось прежнее значение."
+
+msgid "Retry"
+msgstr "Повторить"
+
+msgid "Close"
+msgstr "Закрыть"
+
+# My devices
+msgid "Open"
+msgstr "Открыть"
+
+msgid "Forget device"
+msgstr "Забыть устройство"
+
+msgid "Demo device · Not connected"
+msgstr "Демоустройство · Не подключено"
+
+msgid "Saved device · Not connected"
+msgstr "Сохранённое устройство · Не подключено"
+
+msgid "Add device"
+msgstr "Добавить устройство"
+
+msgid "A model, then its paired device"
+msgstr "Модель и сопряжённое устройство"
+
+msgid "Your sound starts here."
+msgstr "Ваш звук начинается здесь."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "Добавьте наушники, чтобы настроить звук и управление."
+
+msgid "Forget {}?"
+msgstr "Забыть {}?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "Устройство пропадёт из списка вместе с его профилями и пресетами в приложении. Сопряжение в Windows сохранится."
+
+msgid "Forget"
+msgstr "Забыть"
+
+# Adding a device
+msgid "Find your model."
+msgstr "Найдём вашу модель."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "Выберите точную модель, чтобы видеть доступные для неё настройки."
+
+msgid "Model name or code, such as A3954"
+msgstr "Название или код модели, например A3954"
+
+msgid "All"
+msgstr "Все"
+
+msgid "Earbuds"
+msgstr "Внутриканальные"
+
+msgid "Over-ear"
+msgstr "Полноразмерные"
+
+msgid "Open-ear"
+msgstr "Открытые"
+
+msgid "Speakers"
+msgstr "Колонки"
+
+msgid "No models found. Try another name or code."
+msgstr "Модели не найдены. Попробуйте другое название или код."
+
+msgid "Ready to connect your headphones?"
+msgstr "Подключим наушники?"
+
+msgid "Ready to connect your speaker?"
+msgstr "Подключим колонку?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Выберите устройство, сопряжённое с Windows. Если его нет в списке, сначала выполните сопряжение в параметрах Bluetooth."
+
+msgid "Another model"
+msgstr "Другая модель"
+
+msgid "Demo mode"
+msgstr "Деморежим"
+
+msgid "Explore the interface without real headphones"
+msgstr "Знакомство с интерфейсом без настоящих наушников"
+
+msgid "Paired devices"
+msgstr "Сопряжённые устройства"
+
+msgid "Refresh"
+msgstr "Обновить"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "Bluetooth выключен. Включите его в параметрах Windows."
+
+msgid "Looking for paired devices…"
+msgstr "Ищем сопряжённые устройства…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "Убедитесь, что наушники включены и сопряжены с Windows, затем обновите список."
+
+msgid "Simulated device data"
+msgstr "Пример данных"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Сопряжено в Windows · похоже на выбранную модель"
+
+msgid "Paired in Windows"
+msgstr "Сопряжено в Windows"
+
+msgid "Could not add the device."
+msgstr "Ошибка добавления устройства."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "Деморежим использует пример данных и не управляет настоящими наушниками."
+
+msgid "Back"
+msgstr "Назад"

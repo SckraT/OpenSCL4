@@ -1,0 +1,87 @@
+// Page names, slogans and descriptions, as in the Android app (android/app/src/main/res/values/sound_*_strings.xml).
+import { Page } from "types.slint";
+import { Icons } from "icons.slint";
+
+export global Strings {
+    public pure function title(page: Page) -> string {
+        if page == Page.overview { return @tr("Overview"); }
+        if page == Page.sound-modes { return @tr("Sound mode"); }
+        if page == Page.equalizer { return @tr("Equalizer"); }
+        if page == Page.effects { return @tr("Sound and effects"); }
+        if page == Page.presets { return @tr("Quick presets"); }
+        if page == Page.controls { return @tr("Controls"); }
+        if page == Page.comfort { return @tr("Comfort"); }
+        if page == Page.power { return @tr("Power and prompts"); }
+        if page == Page.connections { return @tr("Connections"); }
+        if page == Page.case { return @tr("Case"); }
+        if page == Page.about { return @tr("About the device"); }
+        if page == Page.sleep { return @tr("Sleep"); }
+        if page == Page.lights { return @tr("Lights"); }
+        if page == Page.alarms { return @tr("Alarms"); }
+        if page == Page.other { return @tr("Other"); }
+        if page == Page.devices { return @tr("My devices"); }
+        return @tr("Settings");
+    }
+
+    public pure function slogan(page: Page, speaker: bool) -> string {
+        if page == Page.sound-modes { return @tr("Hear what matters."); }
+        if page == Page.equalizer { return @tr("Your sound, your way."); }
+        if page == Page.effects { return @tr("Inside the sound."); }
+        if page == Page.presets { return @tr("One preset. Your settings."); }
+        if page == Page.controls { return @tr("A touch. And you’re in control."); }
+        if page == Page.comfort { return @tr("Comfortable listening. Every day."); }
+        if page == Page.power { return @tr("Always ready."); }
+        if page == Page.connections { return @tr("Stay connected. To two at once."); }
+        if page == Page.case { return @tr("A little case. More possibilities."); }
+        if page == Page.about { return @tr("All about your device."); }
+        if page == Page.devices { return @tr("Your devices."); }
+        if page == Page.settings { return @tr("Make it yours."); }
+        return "";
+    }
+
+    public pure function description(page: Page, speaker: bool) -> string {
+        if page == Page.sound-modes { return @tr("Choose how much of the world to let into your sound."); }
+        if page == Page.equalizer { return @tr("Pick a profile or tune every frequency."); }
+        if page == Page.effects { return @tr("Codec, latency and how the sound is processed."); }
+        if page == Page.presets { return @tr("Save your favourite combinations and return to them with a click."); }
+        if page == Page.controls { return @tr("What presses do, and which modes they switch between."); }
+        if page == Page.comfort {
+            return speaker ? @tr("Settings that adapt your speaker to your habits.") : @tr("Settings that adapt your earbuds to your habits.");
+        }
+        if page == Page.power { return @tr("When the device turns off and what it tells you."); }
+        if page == Page.connections { return @tr("Switch between your phone and computer."); }
+        if page == Page.case { return @tr("The case screen’s features and how the case is doing."); }
+        if page == Page.about { return @tr("Battery, firmware and serial numbers."); }
+        if page == Page.devices { return @tr("All your familiar headphones in one place."); }
+        if page == Page.settings { return @tr("An app that feels comfortable to use."); }
+        return "";
+    }
+
+    // where the page is in the sidebar, for the breadcrumbs
+    public pure function section(page: Page) -> string {
+        if page == Page.sound-modes || page == Page.equalizer || page == Page.effects || page == Page.presets {
+            return @tr("Sound");
+        }
+        if page == Page.overview || page == Page.devices || page == Page.settings { return ""; }
+        return @tr("Device");
+    }
+
+    public pure function icon(page: Page) -> image {
+        if page == Page.overview { return Icons.home; }
+        if page == Page.sound-modes { return Icons.noise; }
+        if page == Page.equalizer { return Icons.eq; }
+        if page == Page.effects { return Icons.speaker; }
+        if page == Page.presets { return Icons.bolt; }
+        if page == Page.controls { return Icons.hand; }
+        if page == Page.comfort { return Icons.heart; }
+        if page == Page.power { return Icons.power; }
+        if page == Page.connections { return Icons.devices; }
+        if page == Page.case { return Icons.case; }
+        if page == Page.about { return Icons.info; }
+        if page == Page.sleep { return Icons.moon; }
+        if page == Page.lights { return Icons.sun; }
+        if page == Page.alarms { return Icons.bolt; }
+        if page == Page.devices { return Icons.devices; }
+        return Icons.settings;
+    }
+}

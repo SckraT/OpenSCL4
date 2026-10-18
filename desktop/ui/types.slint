@@ -1,0 +1,108 @@
+// What the window shows and what it can ask for. Rust (src/lib.rs, src/view.rs) fills AppState and answers Actions.
+
+export enum Page {
+    overview,
+    sound-modes,
+    equalizer,
+    effects,
+    presets,
+    controls,
+    comfort,
+    power,
+    connections,
+    case,
+    about,
+    sleep,
+    lights,
+    alarms,
+    other,
+    devices,
+    settings,
+}
+
+export enum Connection { no-device, off, connecting, connected, lost, bluetooth-off, failed }
+
+export enum FailureKind { none, not-found, timed-out, other }
+
+export struct DeviceCard {
+    mac: string,
+    name: string,
+    code: string,
+    art: image,
+    current: bool,
+    demo: bool,
+}
+
+// 1 earbuds, 2 over-ear headphones, 3 open earbuds, 4 speakers
+export struct ModelOption {
+    code: string,
+    name: string,
+    art: image,
+}
+
+export struct PairedOption {
+    mac: string,
+    name: string,
+    suggested: bool,
+}
+
+export global AppState {
+    in-out property <Page> page: Page.devices;
+    // the pages of the connected device, under "Sound" and "Device" in the sidebar
+    in property <[Page]> sound-pages;
+    in property <[Page]> device-pages;
+
+    in property <Connection> connection: Connection.no-device;
+    in property <string> device-name;
+    in property <string> device-code;
+    in property <image> device-art;
+    in property <bool> device-is-speaker;
+    in property <bool> one-earbud;
+    in property <FailureKind> failure-kind;
+    // the library's own words, for failures the window has no name for
+    in property <string> failure-text;
+
+    in property <[DeviceCard]> devices;
+
+    // adding a device: a model, then the paired device that is it
+    in-out property <bool> adding;
+    in-out property <int> add-step;
+    in property <[ModelOption]> models;
+    in-out property <string> model-query;
+    in-out property <int> model-kind;
+    in property <string> add-model-name;
+    in property <string> add-model-code;
+    in property <image> add-model-art;
+    in property <bool> add-model-is-speaker;
+    in-out property <bool> add-demo;
+    in property <bool> add-loading;
+    in property <[PairedOption]> paired-options;
+    in property <FailureKind> add-failure-kind;
+    in property <string> add-error;
+    in property <bool> add-bluetooth-off;
+
+    // a change the device did not take, shown above the page
+    in property <string> error-label;
+    in property <string> toast;
+
+    // asking before forgetting
+    in-out property <string> confirm-forget-mac;
+    in-out property <string> confirm-forget-name;
+}
+
+export global Actions {
+    callback navigate(Page);
+    callback connect(string);
+    callback cancel-connect();
+    callback disconnect();
+    callback forget(string);
+    callback open-add-device();
+    callback filter-models(string, int);
+    callback choose-model(string);
+    callback set-demo(bool);
+    callback refresh-paired();
+    callback pair(string, string);
+    callback retry();
+    callback dismiss-error();
+    callback open-uri(string);
+}

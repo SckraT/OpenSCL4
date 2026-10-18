@@ -1,0 +1,356 @@
+// Adding a device: the exact model first, then which of Windows' paired devices it is, or a demo device.
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, ModelOption, PairedOption, FailureKind } from "../types.slint";
+import { FailureText } from "devices.slint";
+import { Icon, Button, ButtonKind, IconButton, Chip, Toggle, Banner } from "../components/basics.slint";
+import { LineEdit, ScrollView } from "std-widgets.slint";
+
+export component DialogFrame inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <length> dialog-width: 680px;
+    callback close();
+    background: Theme.scrim;
+    TouchArea { }
+    card := Rectangle {
+        width: min(root.dialog-width, root.width - 48px);
+        height: min(layout.preferred-height, root.height - 60px);
+        background: Theme.bg;
+        border-radius: 25px;
+        border-width: 1px;
+        border-color: Theme.line;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000033;
+        layout := VerticalLayout {
+            padding: 26px;
+            spacing: 10px;
+            HorizontalLayout {
+                Text {
+                    text: root.title;
+                    color: Theme.text;
+                    font-size: 24px;
+                    font-weight: 600;
+                    wrap: word-wrap;
+                    horizontal-stretch: 1;
+                }
+                IconButton {
+                    icon: Icons.close;
+                    label: @tr("Close");
+                    clicked => { root.close(); }
+                }
+            }
+            if root.description != "": Text {
+                text: root.description;
+                color: Theme.muted;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+            }
+            Rectangle { height: 8px; }
+            @children
+        }
+    }
+}
+
+component KindChips inherits HorizontalLayout {
+    spacing: 7px;
+    alignment: start;
+    for kind[index] in [@tr("All"), @tr("Earbuds"), @tr("Over-ear"), @tr("Open-ear"), @tr("Speakers")]: Chip {
+        text: kind;
+        selected: AppState.model-kind == index;
+        clicked => {
+            AppState.model-kind = index;
+            Actions.filter-models(AppState.model-query, index);
+        }
+    }
+}
+
+component ModelCard inherits Rectangle {
+    in property <ModelOption> model;
+    border-radius: 16px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: touch.has-hover ? Theme.primary : transparent;
+    accessible-role: button;
+    accessible-label: model.name;
+    accessible-action-default => { Actions.choose-model(model.code); }
+    VerticalLayout {
+        padding: 12px;
+        spacing: 4px;
+        Image {
+            source: root.model.art;
+            height: 62px;
+            image-fit: contain;
+        }
+        Text {
+            text: root.model.name;
+            color: Theme.text;
+            font-size: Theme.font-small;
+            font-weight: 600;
+            wrap: word-wrap;
+        }
+        Text {
+            text: root.model.code;
+            color: Theme.muted;
+            font-size: 10px;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Actions.choose-model(root.model.code); }
+    }
+}
+
+component PairedRow inherits Rectangle {
+    in property <PairedOption> option;
+    border-radius: 16px;
+    background: touch.has-hover ? Theme.hover : Theme.surface;
+    height: 62px;
+    accessible-role: button;
+    accessible-label: option.name;
+    accessible-action-default => { Actions.pair(option.mac, option.name); }
+    HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 13px;
+        spacing: 12px;
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 13px;
+            background: Theme.container;
+            Icon {
+                source: AppState.add-demo ? Icons.spark : Icons.bluetooth;
+                tint: Theme.primary;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 3px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.option.name;
+                color: Theme.text;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: AppState.add-demo ? @tr("Simulated device data")
+                    : root.option.suggested ? @tr("Paired in Windows · looks like the chosen model") : @tr("Paired in Windows");
+                color: Theme.muted;
+                font-size: Theme.font-caption;
+            }
+        }
+        Icon {
+            source: Icons.chevron;
+            tint: Theme.primary;
+            width: 17px;
+            height: 17px;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Actions.pair(root.option.mac, root.option.name); }
+    }
+}
+
+export component AddDeviceDialog inherits DialogFrame {
+    title: AppState.add-step == 0 ? @tr("Find your model.")
+        : AppState.add-model-is-speaker ? @tr("Ready to connect your speaker?") : @tr("Ready to connect your headphones?");
+    description: AppState.add-step == 0 ? @tr("Choose the exact model so you see the controls your device supports.")
+        : @tr("Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first.");
+    close => { AppState.adding = false; }
+
+    if AppState.add-step == 0: VerticalLayout {
+        spacing: 12px;
+        search := LineEdit {
+            placeholder-text: @tr("Model name or code, such as A3954");
+            text <=> AppState.model-query;
+            edited(text) => { Actions.filter-models(text, AppState.model-kind); }
+            init => { self.focus(); }
+        }
+        KindChips { }
+        model-scroll := ScrollView {
+            min-height: 200px;
+            preferred-height: 340px;
+            vertical-stretch: 1;
+            content-width: self.visible-width;
+            content-height: models.height;
+            models := Rectangle {
+                x: 0px;
+                y: 0px;
+                width: model-scroll.visible-width;
+                private property <length> gap: 8px;
+                private property <int> columns: max(1, floor((self.width + gap) / 150px));
+                private property <length> cell-width: (self.width - (columns - 1) * gap) / columns;
+                private property <length> cell-height: 128px;
+                height: ceil(AppState.models.length / columns) * (cell-height + gap);
+                for model[index] in AppState.models: ModelCard {
+                    model: model;
+                    x: mod(index, models.columns) * (models.cell-width + models.gap);
+                    y: floor(index / models.columns) * (models.cell-height + models.gap);
+                    width: models.cell-width;
+                    height: models.cell-height;
+                }
+            }
+        }
+        if AppState.models.length == 0: Text {
+            text: @tr("No models found. Try another name or code.");
+            color: Theme.muted;
+        }
+    }
+
+    if AppState.add-step == 1: VerticalLayout {
+        spacing: 12px;
+        Rectangle {
+            border-radius: 16px;
+            background: Theme.primary-container;
+            height: 74px;
+            HorizontalLayout {
+                padding: 11px;
+                spacing: 12px;
+                Image {
+                    source: AppState.add-model-art;
+                    width: 52px;
+                    image-fit: contain;
+                }
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: AppState.add-model-name;
+                        color: Theme.on-primary-container;
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: AppState.add-model-code;
+                        color: Theme.on-primary-container;
+                        font-size: Theme.font-caption;
+                    }
+                }
+                Button {
+                    text: @tr("Another model");
+                    kind: ButtonKind.ghost;
+                    clicked => { AppState.add-step = 0; }
+                }
+            }
+        }
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                Text {
+                    text: @tr("Demo mode");
+                    color: Theme.text;
+                    font-weight: 500;
+                }
+                Text {
+                    text: @tr("Explore the interface without real headphones");
+                    color: Theme.muted;
+                    font-size: Theme.font-caption;
+                }
+            }
+            Toggle {
+                checked: AppState.add-demo;
+                label: @tr("Demo mode");
+                toggled(on) => { Actions.set-demo(on); }
+            }
+        }
+        HorizontalLayout {
+            Text {
+                text: @tr("Paired devices");
+                color: Theme.text;
+                font-size: Theme.font-section;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            IconButton {
+                icon: Icons.refresh;
+                label: @tr("Refresh");
+                clicked => { Actions.refresh-paired(); }
+            }
+        }
+        if AppState.add-bluetooth-off: Banner {
+            error: true;
+            icon: Icons.bluetooth;
+            text: @tr("Bluetooth is off. Turn it on in Windows settings.");
+            Button {
+                text: @tr("Bluetooth settings");
+                kind: ButtonKind.soft;
+                clicked => { Actions.open-uri("ms-settings:bluetooth"); }
+            }
+        }
+        if AppState.add-loading: Text {
+            text: @tr("Looking for paired devices…");
+            color: Theme.muted;
+        }
+        if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0: Text {
+            text: @tr("Make sure your headphones are turned on and paired with Windows, then refresh.");
+            color: Theme.muted;
+            wrap: word-wrap;
+        }
+        ScrollView {
+            preferred-height: min(paired-list.preferred-height, 300px);
+            content-height: paired-list.preferred-height;
+            paired-list := VerticalLayout {
+                spacing: 8px;
+                for option in AppState.paired-options: PairedRow { option: option; }
+            }
+        }
+        if AppState.add-failure-kind != FailureKind.none: Text {
+            text: @tr("Could not add the device.") + " " + FailureText.describe(AppState.add-failure-kind, AppState.add-error);
+            color: Theme.error;
+            font-size: Theme.font-caption;
+            wrap: word-wrap;
+        }
+        if AppState.add-demo: Text {
+            text: @tr("Demo mode uses simulated device data and does not control real headphones.");
+            color: Theme.muted;
+            font-size: 10px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                text: @tr("Bluetooth settings");
+                kind: ButtonKind.ghost;
+                has-icon: true;
+                icon: Icons.external;
+                clicked => { Actions.open-uri("ms-settings:bluetooth"); }
+            }
+            Button {
+                text: @tr("Back");
+                clicked => { AppState.add-step = 0; }
+            }
+        }
+    }
+}
+
+export component ConfirmForgetDialog inherits DialogFrame {
+    title: @tr("Forget {}?", AppState.confirm-forget-name);
+    description: @tr("The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays.");
+    dialog-width: 520px;
+    close => { AppState.confirm-forget-mac = ""; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.confirm-forget-mac = ""; }
+        }
+        Button {
+            text: @tr("Forget");
+            kind: ButtonKind.danger;
+            has-icon: true;
+            icon: Icons.trash;
+            clicked => {
+                Actions.forget(AppState.confirm-forget-mac);
+                AppState.confirm-forget-mac = "";
+            }
+        }
+    }
+}

@@ -10,7 +10,7 @@ pub enum DeviceKind {
     Speaker,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DeviceArt {
     Headphones,
     MotionPlus,
@@ -24,7 +24,9 @@ pub enum DeviceArt {
     OpenStem,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "camelCase")]
 pub enum EarbudsColor {
     #[default]

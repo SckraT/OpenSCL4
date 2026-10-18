@@ -23,13 +23,18 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 macaddr = { workspace = true }
 strum = { workspace = true }
+openscq30-i18n = { workspace = true }
+i18n-embed = { workspace = true, features = ["desktop-requester"] }
+dirs = { workspace = true }
+open = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tempfile = { workspace = true }
+roxmltree = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_System_Registry"] }
 
 [build-dependencies]
 slint-build = { workspace = true }

@@ -1,0 +1,273 @@
+// The window around the pages: the sidebar, the page heading and the status bar.
+import { Theme } from "theme.slint";
+import { Icons } from "icons.slint";
+import { AppState, Actions, Page, Connection } from "types.slint";
+import { Strings } from "strings.slint";
+import { Icon, TextLink, Divider } from "components/basics.slint";
+
+component NavItem inherits Rectangle {
+    in property <Page> page;
+    in property <bool> compact;
+    private property <bool> active: AppState.page == page;
+    height: 34px;
+    border-radius: 12px;
+    background: active ? Theme.primary-container : touch.has-hover ? Theme.hover : transparent;
+    accessible-role: tab;
+    accessible-label: Strings.title(page);
+    accessible-item-selected: active;
+    accessible-action-default => { Actions.navigate(page); }
+    HorizontalLayout {
+        padding-left: root.compact ? 0px : 11px;
+        padding-right: root.compact ? 0px : 8px;
+        spacing: 10px;
+        alignment: root.compact ? center : start;
+        Icon {
+            source: Strings.icon(root.page);
+            tint: root.active ? Theme.on-primary-container : Theme.text;
+            width: 19px;
+            height: 19px;
+            y: (parent.height - self.height) / 2;
+        }
+        if !root.compact: Text {
+            text: Strings.title(root.page);
+            color: root.active ? Theme.on-primary-container : Theme.text;
+            font-size: Theme.font-body;
+            font-weight: root.active ? 600 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+    if root.active: Rectangle {
+        x: 0px;
+        y: 11px;
+        width: 3px;
+        height: root.height - 22px;
+        border-radius: 2px;
+        background: Theme.primary;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Actions.navigate(root.page); }
+    }
+}
+
+component GroupLabel inherits Text {
+    color: Theme.muted;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+}
+
+// The connected device, or the one to connect; opens My devices.
+component DeviceSwitch inherits Rectangle {
+    in property <bool> compact;
+    private property <bool> live: AppState.connection == Connection.connected;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: Theme.line;
+    background: touch.has-hover ? Theme.hover : Theme.bg;
+    height: 54px;
+    accessible-role: button;
+    accessible-label: AppState.device-name;
+    accessible-action-default => { Actions.navigate(Page.devices); }
+    HorizontalLayout {
+        padding: 9px;
+        spacing: 9px;
+        alignment: root.compact ? center : start;
+        Image {
+            source: AppState.device-art;
+            width: 34px;
+            height: 34px;
+            image-fit: contain;
+            opacity: AppState.connection == Connection.no-device ? 0.35 : 1;
+        }
+        if !root.compact: VerticalLayout {
+            alignment: center;
+            spacing: 3px;
+            horizontal-stretch: 1;
+            Text {
+                text: AppState.connection == Connection.no-device ? @tr("No devices") : AppState.device-name;
+                color: Theme.text;
+                font-size: Theme.font-small;
+                font-weight: 600;
+                overflow: elide;
+            }
+            HorizontalLayout {
+                spacing: 5px;
+                if root.live: Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: Theme.green;
+                    y: (parent.height - self.height) / 2;
+                }
+                Text {
+                    text: AppState.connection == Connection.no-device ? @tr("Add a device")
+                        : root.live ? @tr("Connected")
+                        : AppState.connection == Connection.connecting ? @tr("Connecting…") : @tr("Not connected");
+                    color: Theme.muted;
+                    font-size: 10px;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Actions.navigate(Page.devices); }
+    }
+}
+
+export component Sidebar inherits Rectangle {
+    in property <bool> compact;
+    background: Theme.chrome;
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: Theme.line.transparentize(60%);
+    }
+    VerticalLayout {
+        padding: root.compact ? 9px : 12px;
+        padding-top: 18px;
+        spacing: 3px;
+        DeviceSwitch { compact: root.compact; }
+        Rectangle { height: 8px; }
+        if AppState.connection == Connection.connected: NavItem {
+            page: Page.overview;
+            compact: root.compact;
+        }
+        if AppState.connection == Connection.connected && AppState.sound-pages.length > 0 && !root.compact: GroupLabel {
+            text: @tr("SOUND");
+            height: 28px;
+            vertical-alignment: bottom;
+        }
+        if AppState.connection == Connection.connected: VerticalLayout {
+            spacing: 3px;
+            for page in AppState.sound-pages: NavItem {
+                page: page;
+                compact: root.compact;
+            }
+        }
+        if AppState.connection == Connection.connected && AppState.device-pages.length > 0 && !root.compact: GroupLabel {
+            text: @tr("DEVICE");
+            height: 28px;
+            vertical-alignment: bottom;
+        }
+        if AppState.connection == Connection.connected: VerticalLayout {
+            spacing: 3px;
+            for page in AppState.device-pages: NavItem {
+                page: page;
+                compact: root.compact;
+            }
+        }
+        Rectangle { vertical-stretch: 1; }
+        Divider { background: Theme.line; }
+        Rectangle { height: 6px; }
+        NavItem {
+            page: Page.devices;
+            compact: root.compact;
+        }
+        NavItem {
+            page: Page.settings;
+            compact: root.compact;
+        }
+    }
+}
+
+// The section's name, its slogan large, and what it is for, with the page's own buttons on the right.
+export component PageHeading inherits HorizontalLayout {
+    in property <Page> page;
+    private property <string> slogan: Strings.slogan(page, AppState.device-is-speaker);
+    private property <string> description: Strings.description(page, AppState.device-is-speaker);
+    spacing: 18px;
+    padding-bottom: 20px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: start;
+        if Strings.section(root.page) != "" && AppState.connection == Connection.connected: HorizontalLayout {
+            spacing: 8px;
+            padding-bottom: 8px;
+            alignment: start;
+            TextLink {
+                text: AppState.device-name;
+                chevron: false;
+                clicked => { Actions.navigate(Page.overview); }
+            }
+            Icon {
+                source: Icons.chevron;
+                tint: Theme.muted;
+                width: 12px;
+                height: 12px;
+                y: (parent.height - self.height) / 2;
+            }
+            Text {
+                text: Strings.section(root.page);
+                color: Theme.muted;
+                font-size: Theme.font-small;
+                vertical-alignment: center;
+            }
+        }
+        Text {
+            text: Strings.title(root.page);
+            color: Theme.primary;
+            font-size: Theme.font-section;
+            font-weight: 600;
+            accessible-role: text;
+        }
+        if root.slogan != "": Text {
+            text: root.slogan;
+            color: Theme.text;
+            font-size: Theme.font-slogan;
+            font-weight: 650;
+            wrap: word-wrap;
+        }
+        if root.description != "": Text {
+            text: root.description;
+            color: Theme.muted;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+        }
+    }
+    // the page's buttons, at their own size, level with the bottom of the heading
+    VerticalLayout {
+        alignment: end;
+        HorizontalLayout {
+            spacing: 8px;
+            @children
+        }
+    }
+}
+
+export component StatusBar inherits Rectangle {
+    height: 29px;
+    background: Theme.chrome;
+    Rectangle {
+        y: 0px;
+        height: 1px;
+        background: Theme.line.transparentize(60%);
+    }
+    HorizontalLayout {
+        padding-left: 17px;
+        padding-right: 17px;
+        spacing: 7px;
+        Rectangle {
+            width: 6px;
+            height: 6px;
+            border-radius: 3px;
+            y: (parent.height - self.height) / 2;
+            background: AppState.connection == Connection.connected ? Theme.green : Theme.muted;
+        }
+        Text {
+            vertical-alignment: center;
+            color: Theme.muted;
+            font-size: 11px;
+            text: AppState.connection == Connection.connected ? @tr("Connected to {}", AppState.device-name)
+                : AppState.connection == Connection.connecting ? @tr("Connecting to {}", AppState.device-name)
+                : AppState.connection == Connection.lost ? @tr("Connection lost")
+                : AppState.connection == Connection.bluetooth-off ? @tr("Bluetooth is off")
+                : AppState.connection == Connection.no-device ? @tr("No devices") : @tr("Disconnected");
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}
