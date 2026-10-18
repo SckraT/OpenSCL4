@@ -765,9 +765,10 @@ impl App {
         let page = state.get_page();
         state.set_has_sides(snapshot.settings.contains_key(&SettingId::LeftSinglePress));
         let side = state.get_controls_side().to_string();
-        state.set_panels(ModelRc::new(VecModel::from(rows::panels(
-            page, snapshot, &side,
-        ))));
+        let panels = rows::panels(page, snapshot, &side);
+        if let Some(panels) = crate::models::updated_panels(&state.get_panels(), panels) {
+            state.set_panels(panels);
+        }
         state.set_has_ldac(snapshot.settings.contains_key(&SettingId::Ldac));
         state.set_has_spatial(snapshot.settings.contains_key(&SettingId::SpatialAudio));
         let information = |id: SettingId| match snapshot.settings.get(&id) {
@@ -847,7 +848,9 @@ impl App {
             state.set_mode_index(mode.index);
             state.set_mode_scale(mode.scale);
             state.set_scale_position(mode.position);
-            state.set_mode_rows(ModelRc::new(VecModel::from(mode.rows)));
+            if let Some(rows) = crate::models::updated(&state.get_mode_rows(), mode.rows) {
+                state.set_mode_rows(rows);
+            }
             state.set_modes(ModelRc::new(VecModel::from(mode.options)));
         } else {
             state.set_modes(ModelRc::default());

@@ -8,6 +8,7 @@ mod controller;
 mod equalizer;
 pub mod logs;
 pub mod model;
+mod models;
 mod overview;
 mod presets;
 mod rows;
