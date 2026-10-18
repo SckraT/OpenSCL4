@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -697,9 +697,12 @@ function devicePages(d = device()) {
   return pages;
 }
 const supports = page => ['devices', 'settings'].includes(page) || (!!app.device && devicePages().has(page));
+// "As in Windows" follows the system, or the theme a page that shows this mockup has set on the root element.
+let hostTheme = ['light', 'dark'].includes(document.documentElement.dataset.theme) ? document.documentElement.dataset.theme : null;
+let appliedTheme = null;
 function resolvedTheme() {
   if (app.theme !== 'system') return app.theme;
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return hostTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 }
 function art(kind = device().kind) {
   const color = app.artColor === 'theme' ? (resolvedTheme() === 'light' ? 'silver' : 'black') : app.artColor;
@@ -1087,7 +1090,9 @@ function connectionText() {
 }
 function render(preserveScroll = false) {
   const main = $('main'), scroll = main.scrollTop, theme = resolvedTheme();
+  appliedTheme = theme;
   document.documentElement.dataset.theme = theme;
+  document.documentElement.lang = 'ru';
   document.documentElement.style.colorScheme = theme;
   ['--primary', '--on-primary', '--primary-container', '--on-primary-container'].forEach((key, i) => document.documentElement.style.setProperty(key, PALETTE_COLORS[app.palette][theme][i]));
   $('app-window').classList.toggle('nav-expanded', app.navMode === 'open');
@@ -1644,6 +1649,12 @@ document.addEventListener('drop', e => {
   if (/^\d+$/.test(from)) moveLayoutBlock(Number(from), Number(row.dataset.layoutRow));
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (app.theme === 'system') render(true); });
+new MutationObserver(() => {
+  const theme = document.documentElement.dataset.theme;
+  if (theme === appliedTheme) return;
+  hostTheme = ['light', 'dark'].includes(theme) ? theme : null;
+  if (app.theme === 'system') render(true);
+}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 render();
 icons();
 </script>
