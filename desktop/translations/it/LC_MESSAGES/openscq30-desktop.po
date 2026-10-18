@@ -1063,3 +1063,27 @@ msgstr "Copia le ultime voci del registro per trovare la causa di un problema."
 
 msgid "Copy logs"
 msgstr "Copia registri"
+
+msgid "Close to notification area"
+msgstr "Chiudi nell’area di notifica"
+
+msgid "Keep running when the window is closed"
+msgstr "Continua a funzionare dopo la chiusura della finestra"
+
+msgid "No presets yet"
+msgstr "Nessuna preimpostazione ancora"
+
+msgid "Notification area icon"
+msgstr "Icona nell’area di notifica"
+
+msgid "Open OpenSCQ30"
+msgstr "Apri OpenSCQ30"
+
+msgid "Quit"
+msgstr "Esci"
+
+msgid "Quit OpenSCQ30"
+msgstr "Esci da OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows e accesso rapido"

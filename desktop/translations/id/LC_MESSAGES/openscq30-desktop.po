@@ -1060,3 +1060,27 @@ msgstr "Salin entri log terbaru untuk menemukan penyebab masalah."
 
 msgid "Copy logs"
 msgstr "Salin log"
+
+msgid "Close to notification area"
+msgstr "Tutup ke area notifikasi"
+
+msgid "Keep running when the window is closed"
+msgstr "Tetap berjalan saat jendela ditutup"
+
+msgid "No presets yet"
+msgstr "Belum ada preset"
+
+msgid "Notification area icon"
+msgstr "Ikon area notifikasi"
+
+msgid "Open OpenSCQ30"
+msgstr "Buka OpenSCQ30"
+
+msgid "Quit"
+msgstr "Keluar"
+
+msgid "Quit OpenSCQ30"
+msgstr "Keluar dari OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows dan akses cepat"

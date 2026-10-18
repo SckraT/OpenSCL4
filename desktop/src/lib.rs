@@ -12,6 +12,7 @@ mod models;
 mod overview;
 mod presets;
 mod rows;
+mod single_instance;
 mod view;
 mod window_chrome;
 
@@ -30,6 +31,9 @@ pub fn run() -> anyhow::Result<()> {
             .join("openscq30"),
     };
     let window = AppWindow::new()?;
+    if !single_instance::claim(&config_dir, app::show_from_elsewhere) {
+        return Ok(());
+    }
     // OPENSCQ30_SIZE=1280x820 opens the window at that size, for screenshots; debug builds only
     if cfg!(debug_assertions)
         && let Some((width, height)) = std::env::var("OPENSCQ30_SIZE").ok().and_then(|size| {
@@ -42,13 +46,17 @@ pub fn run() -> anyhow::Result<()> {
             .set_size(slint::LogicalSize::new(width, height));
     }
     app::start(&window, &config_dir)?;
-    window.show()?;
-    tracing::debug!(
-        "window {:?} at scale {}",
-        window.window().size(),
-        window.window().scale_factor()
-    );
-    app::shown();
-    slint::run_event_loop()?;
+    let result = (|| {
+        window.show()?;
+        tracing::debug!(
+            "window {:?} at scale {}",
+            window.window().size(),
+            window.window().scale_factor()
+        );
+        app::shown();
+        slint::run_event_loop()
+    })();
+    app::stop();
+    result?;
     Ok(())
 }

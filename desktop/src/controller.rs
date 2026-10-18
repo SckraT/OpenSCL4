@@ -116,11 +116,13 @@ enum Message {
     },
     DeviceChanged(u64),
     ConnectionLost(u64),
+    /// Let go of the device and stop, then say so.
+    Shutdown(tokio::sync::oneshot::Sender<()>),
 }
 
 pub struct Controller {
     messages: mpsc::UnboundedSender<Message>,
-    _runtime: tokio::runtime::Runtime,
+    runtime: tokio::runtime::Runtime,
 }
 
 impl Controller {
@@ -150,16 +152,31 @@ impl Controller {
             preset_list: Vec::new(),
         };
         runtime.spawn(actor.run(inbox));
-        Ok(Self {
-            messages,
-            _runtime: runtime,
-        })
+        Ok(Self { messages, runtime })
     }
 
     pub fn send(&self, command: Command) {
         if self.messages.send(Message::Command(command)).is_err() {
             tracing::error!("the controller has stopped");
         }
+    }
+
+    /// Disconnects and stops, waiting a little at most. Dropping the runtime instead would wait for every blocking
+    /// task, and the Windows Bluetooth backend can keep one blocked on a connected device for as long as it stays
+    /// connected, so the app would never end.
+    pub fn shutdown(self) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        let (done, stopped) = tokio::sync::oneshot::channel();
+        if self.messages.send(Message::Shutdown(done)).is_ok() {
+            let waited = self.runtime.block_on(async {
+                tokio::time::timeout(std::time::Duration::from_secs(1), stopped).await
+            });
+            if waited.is_err() {
+                tracing::warn!("the controller did not stop in time");
+            }
+        }
+        self.runtime
+            .shutdown_timeout(deadline.saturating_duration_since(std::time::Instant::now()));
     }
 }
 
@@ -184,6 +201,15 @@ impl Actor {
         while let Some(message) = inbox.recv().await {
             match message {
                 Message::Command(command) => self.handle(command).await,
+                Message::Shutdown(done) => {
+                    if let Some((_, task)) = self.connecting.take() {
+                        task.abort();
+                    }
+                    // the connection closes its socket when dropped, which ends the backend's reading thread
+                    drop(self.drop_device());
+                    let _ = done.send(());
+                    return;
+                }
                 Message::Connected { generation, device } if generation == self.generation => {
                     self.connected(device).await;
                 }
@@ -487,4 +513,39 @@ fn describe(err: &(dyn std::error::Error + 'static)) -> String {
         source = cause.source();
     }
     text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        sync::mpsc as sync_channel,
+        time::{Duration, Instant},
+    };
+
+    #[test]
+    fn shutdown_stops_even_when_a_blocking_task_is_stuck() {
+        let dir = tempfile::tempdir().unwrap();
+        let controller = Controller::start(
+            dir.path().join("database.sqlite"),
+            dir.path().to_path_buf(),
+            |_| {},
+        )
+        .unwrap();
+        let (started, running) = sync_channel::channel();
+        let (release, blocked) = sync_channel::channel();
+        controller.runtime.spawn_blocking(move || {
+            started.send(()).unwrap();
+            let _ = blocked.recv_timeout(Duration::from_secs(10));
+        });
+        running.recv_timeout(Duration::from_secs(5)).unwrap();
+        let start = Instant::now();
+        controller.shutdown();
+        let elapsed = start.elapsed();
+        let _ = release.send(());
+        assert!(
+            elapsed < Duration::from_millis(2500),
+            "shutdown took {elapsed:?}"
+        );
+    }
 }

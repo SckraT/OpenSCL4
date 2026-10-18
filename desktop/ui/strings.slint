@@ -8,6 +8,11 @@ export global Strings {
     out property <string> off: @tr("off");
     // the first of the languages to choose from
     out property <string> system-language: @tr("As in Windows");
+    // the batteries, as the tray menu names them
+    out property <string> left-battery: @tr("Left");
+    out property <string> right-battery: @tr("Right");
+    out property <string> case-battery: @tr("Case");
+    out property <string> device-battery: @tr("Battery");
 
     public pure function title(page: Page) -> string {
         if page == Page.overview { return @tr("Overview"); }

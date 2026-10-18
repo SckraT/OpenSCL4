@@ -1060,3 +1060,27 @@ msgstr "問題の原因を調べるため、最新のログをコピーします
 
 msgid "Copy logs"
 msgstr "ログをコピー"
+
+msgid "Close to notification area"
+msgstr "閉じると通知領域に格納"
+
+msgid "Keep running when the window is closed"
+msgstr "ウィンドウを閉じても実行を続ける"
+
+msgid "No presets yet"
+msgstr "プリセットはまだありません"
+
+msgid "Notification area icon"
+msgstr "通知領域のアイコン"
+
+msgid "Open OpenSCQ30"
+msgstr "OpenSCQ30を開く"
+
+msgid "Quit"
+msgstr "終了"
+
+msgid "Quit OpenSCQ30"
+msgstr "OpenSCQ30を終了"
+
+msgid "Windows and quick access"
+msgstr "Windowsとクイックアクセス"

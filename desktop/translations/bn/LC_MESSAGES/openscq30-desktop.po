@@ -1063,3 +1063,27 @@ msgstr "সমস্যার কারণ খুঁজতে সর্বশে
 
 msgid "Copy logs"
 msgstr "লগ কপি করুন"
+
+msgid "Close to notification area"
+msgstr "বন্ধ করলে বিজ্ঞপ্তি এলাকায় রাখুন"
+
+msgid "Keep running when the window is closed"
+msgstr "উইন্ডো বন্ধ করলেও চালু রাখুন"
+
+msgid "No presets yet"
+msgstr "এখনও কোনো প্রিসেট নেই"
+
+msgid "Notification area icon"
+msgstr "বিজ্ঞপ্তি এলাকার আইকন"
+
+msgid "Open OpenSCQ30"
+msgstr "OpenSCQ30 খুলুন"
+
+msgid "Quit"
+msgstr "প্রস্থান"
+
+msgid "Quit OpenSCQ30"
+msgstr "OpenSCQ30 থেকে প্রস্থান"
+
+msgid "Windows and quick access"
+msgstr "Windows ও দ্রুত প্রবেশ"

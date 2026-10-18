@@ -300,6 +300,12 @@ export global AppState {
     in property <int> app-device-color;
     in property <int> app-mode-view;
     in property <int> app-language;
+    in property <bool> app-tray;
+    in property <bool> app-close-to-tray;
+    in property <bool> tray-battery;
+    in property <bool> tray-modes;
+    in property <bool> tray-presets;
+    in property <bool> tray-ldac;
     // the system's language, then every language by its own name
     in property <[string]> language-names;
     in property <string> app-version;
@@ -385,4 +391,8 @@ export global Actions {
     callback set-badge(bool);
     callback set-language(int);
     callback copy-logs();
+    callback set-tray(bool);
+    callback set-close-to-tray(bool);
+    callback set-tray-item(int, bool);
+    callback quit-app();
 }

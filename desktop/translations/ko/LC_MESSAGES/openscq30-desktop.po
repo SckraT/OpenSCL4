@@ -1060,3 +1060,27 @@ msgstr "문제의 원인을 찾을 수 있도록 최근 로그를 복사합니�
 
 msgid "Copy logs"
 msgstr "로그 복사"
+
+msgid "Close to notification area"
+msgstr "닫을 때 알림 영역으로 최소화"
+
+msgid "Keep running when the window is closed"
+msgstr "창을 닫아도 계속 실행"
+
+msgid "No presets yet"
+msgstr "아직 프리셋이 없습니다"
+
+msgid "Notification area icon"
+msgstr "알림 영역 아이콘"
+
+msgid "Open OpenSCQ30"
+msgstr "OpenSCQ30 열기"
+
+msgid "Quit"
+msgstr "종료"
+
+msgid "Quit OpenSCQ30"
+msgstr "OpenSCQ30 종료"
+
+msgid "Windows and quick access"
+msgstr "Windows 및 빠른 접근"

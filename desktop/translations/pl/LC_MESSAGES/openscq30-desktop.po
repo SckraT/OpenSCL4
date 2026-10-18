@@ -1066,3 +1066,27 @@ msgstr "Skopiuj ostatnie wpisy dziennika, aby znaleźć przyczynę problemu."
 
 msgid "Copy logs"
 msgstr "Kopiuj dzienniki"
+
+msgid "Close to notification area"
+msgstr "Zamykaj do obszaru powiadomień"
+
+msgid "Keep running when the window is closed"
+msgstr "Kontynuuj działanie po zamknięciu okna"
+
+msgid "No presets yet"
+msgstr "Nie ma jeszcze ustawień wstępnych"
+
+msgid "Notification area icon"
+msgstr "Ikona w obszarze powiadomień"
+
+msgid "Open OpenSCQ30"
+msgstr "Otwórz OpenSCQ30"
+
+msgid "Quit"
+msgstr "Zakończ"
+
+msgid "Quit OpenSCQ30"
+msgstr "Zakończ OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows i szybki dostęp"

@@ -3,7 +3,7 @@ import { ComboBox } from "std-widgets.slint";
 import { Theme, PaletteChoice } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, Page, Connection } from "../types.slint";
-import { Icon, Button, ButtonKind, Toggle, Panel, PanelHeading, Divider } from "../components/basics.slint";
+import { Icon, Button, ButtonKind, Toggle, CheckRow, Panel, PanelHeading, Divider } from "../components/basics.slint";
 import { Segmented } from "../components/settings.slint";
 import { PageHeading } from "../shell.slint";
 import { Showcase } from "sections.slint";
@@ -150,6 +150,66 @@ component AppearancePanel inherits Panel {
     }
 }
 
+component TrayPanel inherits Panel {
+    PanelHeading {
+        text: @tr("Windows and quick access");
+        icon: Icons.tray;
+    }
+    SettingLine {
+        title: @tr("Notification area icon");
+        Toggle {
+            label: @tr("Notification area icon");
+            checked: AppState.app-tray;
+            toggled(on) => { Actions.set-tray(on); }
+        }
+    }
+    if AppState.app-tray: VerticalLayout {
+        padding-bottom: 12px;
+        CheckRow {
+            text: @tr("Battery");
+            checked: AppState.tray-battery;
+            toggled(on) => { Actions.set-tray-item(0, on); }
+        }
+        CheckRow {
+            text: @tr("Sound mode");
+            checked: AppState.tray-modes;
+            toggled(on) => { Actions.set-tray-item(1, on); }
+        }
+        CheckRow {
+            text: @tr("Quick presets");
+            checked: AppState.tray-presets;
+            toggled(on) => { Actions.set-tray-item(2, on); }
+        }
+        CheckRow {
+            text: "LDAC";
+            checked: AppState.tray-ldac;
+            toggled(on) => { Actions.set-tray-item(3, on); }
+        }
+    }
+    Divider { }
+    SettingLine {
+        title: @tr("Close to notification area");
+        text: @tr("Keep running when the window is closed");
+        Toggle {
+            label: @tr("Close to notification area");
+            enabled: AppState.app-tray;
+            checked: AppState.app-close-to-tray;
+            toggled(on) => { Actions.set-close-to-tray(on); }
+        }
+    }
+    Divider { }
+    HorizontalLayout {
+        padding-top: 16px;
+        alignment: start;
+        Button {
+            text: @tr("Quit OpenSCQ30");
+            has-icon: true;
+            icon: Icons.disconnect;
+            clicked => { Actions.quit-app(); }
+        }
+    }
+}
+
 component AsidePanel inherits Panel {
     in property <string> title;
     in property <image> icon;
@@ -224,14 +284,17 @@ export component SettingsPage inherits VerticalLayout {
         spacing: 20px;
         VerticalLayout {
             alignment: start;
+            spacing: 16px;
             width: parent.width - parent.spacing - aside.width;
             AppearancePanel { }
+            TrayPanel { }
         }
         aside := AsideColumn { width: max(280px, min(380px, parent.width * 0.34)); }
     }
     if !root.wide: VerticalLayout {
         spacing: 16px;
         AppearancePanel { width: parent.width; }
+        TrayPanel { width: parent.width; }
         AsideColumn { width: parent.width; }
     }
 }

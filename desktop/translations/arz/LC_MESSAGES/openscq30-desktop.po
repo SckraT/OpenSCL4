@@ -1075,3 +1075,27 @@ msgstr "انسخ آخر سجلات الأحداث علشان تلاقي سبب �
 
 msgid "Copy logs"
 msgstr "انسخ السجلات"
+
+msgid "Close to notification area"
+msgstr "اقفل في منطقة الإشعارات"
+
+msgid "Keep running when the window is closed"
+msgstr "كمّل التشغيل بعد قفل الشباك"
+
+msgid "No presets yet"
+msgstr "لسه مفيش إعدادات مسبقة"
+
+msgid "Notification area icon"
+msgstr "أيقونة في منطقة الإشعارات"
+
+msgid "Open OpenSCQ30"
+msgstr "افتح OpenSCQ30"
+
+msgid "Quit"
+msgstr "خروج"
+
+msgid "Quit OpenSCQ30"
+msgstr "خروج من OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows والوصول السريع"

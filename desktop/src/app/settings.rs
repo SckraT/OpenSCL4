@@ -17,6 +17,7 @@ fn change(edit: impl FnOnce(&mut Settings)) {
         edit(&mut app.config.settings);
         app.config.save();
         app.apply_theme();
+        app.sync_tray();
         app.render();
     });
 }
@@ -60,6 +61,18 @@ pub(super) fn install_actions(window: &AppWindow) {
         });
     });
     actions.on_set_badge(|on| change(|settings| settings.one_earbud_badge = on));
+    actions.on_set_tray(|on| change(|settings| settings.tray = on));
+    actions.on_set_close_to_tray(|on| change(|settings| settings.close_to_tray = on));
+    actions.on_set_tray_item(|index, on| {
+        change(|settings| match index {
+            0 => settings.tray_items.battery = on,
+            1 => settings.tray_items.modes = on,
+            2 => settings.tray_items.presets = on,
+            3 => settings.tray_items.ldac = on,
+            _ => {}
+        });
+    });
+    actions.on_quit_app(|| with_app(App::quit));
     actions.on_set_language(|index| {
         with_app(|app| {
             // the first choice is the system's language
@@ -123,6 +136,12 @@ impl App {
             .collect();
         state.set_language_names(slint::ModelRc::new(slint::VecModel::from(names)));
         state.set_show_one_earbud_badge(settings.one_earbud_badge);
+        state.set_app_tray(settings.tray);
+        state.set_app_close_to_tray(settings.close_to_tray);
+        state.set_tray_battery(settings.tray_items.battery);
+        state.set_tray_modes(settings.tray_items.modes);
+        state.set_tray_presets(settings.tray_items.presets);
+        state.set_tray_ldac(settings.tray_items.ldac);
         state.set_app_version(env!("CARGO_PKG_VERSION").into());
     }
 }

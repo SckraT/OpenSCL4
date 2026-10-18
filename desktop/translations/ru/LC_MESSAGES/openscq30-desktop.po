@@ -1066,3 +1066,27 @@ msgstr "Скопировать последние записи для поиск
 
 msgid "Copy logs"
 msgstr "Скопировать логи"
+
+msgid "Close to notification area"
+msgstr "Закрывать в область уведомлений"
+
+msgid "Keep running when the window is closed"
+msgstr "Продолжать работу после закрытия окна"
+
+msgid "No presets yet"
+msgstr "Пресетов пока нет"
+
+msgid "Notification area icon"
+msgstr "Значок в области уведомлений"
+
+msgid "Open OpenSCQ30"
+msgstr "Открыть OpenSCQ30"
+
+msgid "Quit"
+msgstr "Выйти"
+
+msgid "Quit OpenSCQ30"
+msgstr "Выйти из OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows и быстрый доступ"

@@ -14,6 +14,9 @@ use slint::{ComponentHandle, ModelRc, VecModel};
 mod equalizer;
 mod presets;
 mod settings;
+mod tray;
+
+pub use tray::show_from_elsewhere;
 
 use crate::{
     Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
@@ -74,6 +77,8 @@ pub struct App {
     equalizer: equalizer::EqualizerState,
     /// The preset whose settings are being chosen.
     editing_preset: Option<String>,
+    /// The icon in the notification area, while the settings have it.
+    tray: Option<crate::Tray>,
 }
 
 thread_local! {
@@ -120,15 +125,34 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         language: "en",
         equalizer: equalizer::EqualizerState::default(),
         editing_preset: None,
+        tray: None,
     };
     APP.with(|cell| *cell.borrow_mut() = Some(app));
     install_actions(window);
     with_app(|app| {
         app.apply_language();
         app.apply_theme();
+        app.sync_tray();
         app.render();
     });
+    // closing the window leaves the app in the notification area, unless the settings say to quit
+    window.window().on_close_requested(|| {
+        with_app(|app| {
+            if !app.closes_to_tray() {
+                app.quit();
+            }
+        });
+        slint::CloseRequestResponse::HideWindow
+    });
     Ok(())
+}
+
+/// Lets go of the device and stops the controller, once the event loop has ended.
+pub fn stop() {
+    let app = APP.with(|cell| cell.borrow_mut().take());
+    if let Some(app) = app {
+        app.controller.shutdown();
+    }
 }
 
 /// Called once the window is shown, when Windows can be told about the title bar.
@@ -758,6 +782,7 @@ impl App {
             .collect();
         options.sort_by_key(|o| !o.suggested);
         state.set_paired_options(ModelRc::new(VecModel::from(options)));
+        self.render_tray();
     }
 
     /// The settings of the page that is open, and what its side column needs.

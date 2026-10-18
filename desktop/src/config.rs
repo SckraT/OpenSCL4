@@ -38,6 +38,27 @@ pub enum SoundModeView {
     Scale,
 }
 
+/// What the tray icon's menu shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct TrayItems {
+    pub battery: bool,
+    pub modes: bool,
+    pub presets: bool,
+    pub ldac: bool,
+}
+
+impl Default for TrayItems {
+    fn default() -> Self {
+        Self {
+            battery: true,
+            modes: true,
+            presets: true,
+            ldac: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
@@ -57,6 +78,11 @@ pub struct Settings {
     pub last_device: Option<String>,
     /// The quick preset applied last on each device, by address, which is the one shown as applied.
     pub last_preset: HashMap<String, String>,
+    /// The icon in the notification area.
+    pub tray: bool,
+    pub tray_items: TrayItems,
+    /// Closing the window leaves the app in the notification area, while the icon is there.
+    pub close_to_tray: bool,
 }
 
 impl Default for Settings {
@@ -72,6 +98,9 @@ impl Default for Settings {
             quick_toggles: HashMap::new(),
             last_device: None,
             last_preset: HashMap::new(),
+            tray: true,
+            tray_items: TrayItems::default(),
+            close_to_tray: true,
         }
     }
 }
@@ -130,6 +159,9 @@ mod tests {
         let mut config = Config::load(path.clone());
         assert_eq!(Settings::default(), config.settings);
         config.settings.theme = AppTheme::Dark;
+        config.settings.tray = false;
+        config.settings.close_to_tray = false;
+        config.settings.tray_items.modes = false;
         config
             .settings
             .quick_toggles
@@ -141,5 +173,13 @@ mod tests {
         let loaded = Config::load(path);
         assert_eq!(AppTheme::Light, loaded.settings.theme);
         assert!(loaded.settings.one_earbud_badge);
+        assert!(loaded.settings.tray && loaded.settings.close_to_tray);
+        assert_eq!(TrayItems::default(), loaded.settings.tray_items);
+        assert!(loaded.settings.tray_items.ldac);
+        let partial: Settings = toml::from_str("[trayItems]\nldac = false\n").unwrap();
+        assert!(!partial.tray_items.ldac);
+        assert!(
+            partial.tray_items.battery && partial.tray_items.modes && partial.tray_items.presets
+        );
     }
 }

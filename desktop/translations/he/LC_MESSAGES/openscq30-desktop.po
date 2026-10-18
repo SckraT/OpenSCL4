@@ -1063,3 +1063,27 @@ msgstr "העתק את רשומות היומן האחרונות כדי למצוא
 
 msgid "Copy logs"
 msgstr "העתק יומנים"
+
+msgid "Close to notification area"
+msgstr "סגירה לאזור ההודעות"
+
+msgid "Keep running when the window is closed"
+msgstr "המשך לפעול לאחר סגירת החלון"
+
+msgid "No presets yet"
+msgstr "אין עדיין הגדרות קבועות מראש"
+
+msgid "Notification area icon"
+msgstr "סמל באזור ההודעות"
+
+msgid "Open OpenSCQ30"
+msgstr "פתיחת OpenSCQ30"
+
+msgid "Quit"
+msgstr "יציאה"
+
+msgid "Quit OpenSCQ30"
+msgstr "יציאה מ־OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows וגישה מהירה"

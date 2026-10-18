@@ -1063,3 +1063,27 @@ msgstr "Copia las últimas entradas del registro para encontrar la causa de un p
 
 msgid "Copy logs"
 msgstr "Copiar registros"
+
+msgid "Close to notification area"
+msgstr "Cerrar al área de notificación"
+
+msgid "Keep running when the window is closed"
+msgstr "Seguir ejecutándose al cerrar la ventana"
+
+msgid "No presets yet"
+msgstr "Aún no hay preajustes"
+
+msgid "Notification area icon"
+msgstr "Icono en el área de notificación"
+
+msgid "Open OpenSCQ30"
+msgstr "Abrir OpenSCQ30"
+
+msgid "Quit"
+msgstr "Salir"
+
+msgid "Quit OpenSCQ30"
+msgstr "Salir de OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows y acceso rápido"

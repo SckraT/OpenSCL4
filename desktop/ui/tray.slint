@@ -1,0 +1,89 @@
+// The icon in the notification area and its menu: the device, its battery, its sound mode, quick presets and LDAC,
+// opening the window and quitting. Rust (src/app/tray.rs) fills it; it has its own copy of every global, so it gets
+// all it shows through its own properties.
+import { ModeOption, PresetItem } from "types.slint";
+
+export component Tray inherits SystemTrayIcon {
+    in property <bool> has-device;
+    in property <string> device-name;
+    in property <bool> connected;
+    in property <bool> connecting;
+    // such as "Left 97% · Right 76% · Case 60%"
+    in property <string> battery;
+    in property <[ModeOption]> modes;
+    in property <int> mode-index: -1;
+    in property <[PresetItem]> presets;
+    in property <bool> has-ldac;
+    in property <bool> ldac;
+    // what the menu shows, as chosen in the settings
+    in property <bool> show-battery: true;
+    in property <bool> show-modes: true;
+    in property <bool> show-presets: true;
+    in property <bool> show-ldac: true;
+
+    callback open();
+    callback quit();
+    callback connect();
+    callback choose-mode(int);
+    callback apply-preset(string);
+    callback set-ldac(bool);
+
+    icon: @image-url("icons/app.svg");
+    title: "OpenSCQ30";
+    tooltip: !root.has-device ? "OpenSCQ30"
+        : root.connected && root.battery != "" ? "OpenSCQ30 · " + root.device-name + " · " + root.battery
+        : "OpenSCQ30 · " + root.device-name;
+    clicked => { root.open(); }
+
+    Menu {
+        if !root.has-device: MenuItem {
+            title: @tr("No devices");
+            enabled: false;
+        }
+        if root.has-device: MenuItem {
+            title: root.device-name + " · " + (root.connected ? @tr("Connected") : root.connecting ? @tr("Connecting…") : @tr("Not connected"));
+            enabled: false;
+        }
+        if root.connected && root.show-battery && root.battery != "": MenuItem {
+            title: root.battery;
+            enabled: false;
+        }
+        if root.has-device && !root.connected && !root.connecting: MenuItem {
+            title: @tr("Connect");
+            activated => { root.connect(); }
+        }
+        if root.connected && root.show-modes && root.modes.length > 0: MenuSeparator { }
+        if root.connected && root.show-modes && root.modes.length > 0: Menu {
+            title: @tr("Sound mode");
+            for mode[index] in root.modes: MenuItem {
+                title: (index == root.mode-index ? "✓ " : "") + mode.label;
+                activated => { root.choose-mode(index); }
+            }
+        }
+        if root.connected && root.show-presets: Menu {
+            title: @tr("Quick presets");
+            if root.presets.length == 0: MenuItem {
+                title: @tr("No presets yet");
+                enabled: false;
+            }
+            for preset in root.presets: MenuItem {
+                title: (preset.status == 2 ? "✓ " : "") + preset.name;
+                enabled: preset.enabled-count > 0;
+                activated => { root.apply-preset(preset.name); }
+            }
+        }
+        if root.connected && root.show-ldac && root.has-ldac: MenuItem {
+            title: (root.ldac ? "✓ " : "") + "LDAC";
+            activated => { root.set-ldac(!root.ldac); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: @tr("Open OpenSCQ30");
+            activated => { root.open(); }
+        }
+        MenuItem {
+            title: @tr("Quit");
+            activated => { root.quit(); }
+        }
+    }
+}

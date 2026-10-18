@@ -1063,3 +1063,27 @@ msgstr "Copier les dernières entrées du journal pour trouver la cause d’un p
 
 msgid "Copy logs"
 msgstr "Copier les journaux"
+
+msgid "Close to notification area"
+msgstr "Réduire dans la zone de notification à la fermeture"
+
+msgid "Keep running when the window is closed"
+msgstr "Continuer à fonctionner après la fermeture de la fenêtre"
+
+msgid "No presets yet"
+msgstr "Aucun préréglage pour le moment"
+
+msgid "Notification area icon"
+msgstr "Icône dans la zone de notification"
+
+msgid "Open OpenSCQ30"
+msgstr "Ouvrir OpenSCQ30"
+
+msgid "Quit"
+msgstr "Quitter"
+
+msgid "Quit OpenSCQ30"
+msgstr "Quitter OpenSCQ30"
+
+msgid "Windows and quick access"
+msgstr "Windows et accès rapide"

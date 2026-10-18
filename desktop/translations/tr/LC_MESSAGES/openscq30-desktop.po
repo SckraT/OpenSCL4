@@ -1063,3 +1063,27 @@ msgstr "Bir sorunun nedenini bulmak için son günlük kayıtlarını kopyalayı
 
 msgid "Copy logs"
 msgstr "Günlükleri kopyala"
+
+msgid "Close to notification area"
+msgstr "Bildirim alanına kapat"
+
+msgid "Keep running when the window is closed"
+msgstr "Pencere kapatıldığında çalışmaya devam et"
+
+msgid "No presets yet"
+msgstr "Henüz ön ayar yok"
+
+msgid "Notification area icon"
+msgstr "Bildirim alanı simgesi"
+
+msgid "Open OpenSCQ30"
+msgstr "OpenSCQ30’ı aç"
+
+msgid "Quit"
+msgstr "Çıkış"
+
+msgid "Quit OpenSCQ30"
+msgstr "OpenSCQ30’dan çık"
+
+msgid "Windows and quick access"
+msgstr "Windows ve hızlı erişim"

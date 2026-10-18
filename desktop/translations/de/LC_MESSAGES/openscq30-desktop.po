@@ -1063,3 +1063,27 @@ msgstr "Die neuesten Protokolleinträge kopieren, um die Ursache eines Problems 
 
 msgid "Copy logs"
 msgstr "Protokolle kopieren"
+
+msgid "Close to notification area"
+msgstr "In den Infobereich schließen"
+
+msgid "Keep running when the window is closed"
+msgstr "Nach dem Schließen des Fensters weiterlaufen"
+
+msgid "No presets yet"
+msgstr "Noch keine Voreinstellungen"
+
+msgid "Notification area icon"
+msgstr "Symbol im Infobereich"
+
+msgid "Open OpenSCQ30"
+msgstr "OpenSCQ30 öffnen"
+
+msgid "Quit"
+msgstr "Beenden"
+
+msgid "Quit OpenSCQ30"
+msgstr "OpenSCQ30 beenden"
+
+msgid "Windows and quick access"
+msgstr "Windows und Schnellzugriff"
