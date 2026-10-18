@@ -885,7 +885,6 @@ impl App {
             state.set_eq_band_count(value.len() as i32);
             state.set_eq_min(i32::from(setting.min));
             state.set_eq_max(i32::from(setting.max));
-            state.set_eq_digits(i32::from(setting.fraction_digits));
         }
     }
 

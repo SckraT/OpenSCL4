@@ -1,5 +1,6 @@
 mod android
 mod cli
+mod desktop
 mod gui
 mod i18n
 mod i18n-macros
@@ -109,9 +110,9 @@ create-build-output-dir:
     mkdir -p build-output
 
 [doc("Run all tests")]
-test: lib::test cli::test gui::test android::test
+test: lib::test cli::test gui::test desktop::test android::test
 
-test-cov: lib::test-cov cli::test-cov gui::test-cov android::test-cov
+test-cov: lib::test-cov cli::test-cov gui::test-cov desktop::test-cov android::test-cov
 
 llvm-cov-clean:
     cargo llvm-cov clean --workspace
@@ -151,7 +152,7 @@ uninstall path:
 alias fmt := format
 
 [parallel]
-format: android::format cli::format gui::format i18n::format i18n-macros::format lib::format lib-macros::format lib-has::format format-docs
+format: android::format cli::format desktop::format gui::format i18n::format i18n-macros::format lib::format lib-macros::format lib-has::format format-docs
 
 [private]
 [script("bash")]
@@ -164,7 +165,7 @@ format-docs:
     fi
 
 [parallel]
-format-check: android::format-check cli::format-check gui::format-check i18n::format-check i18n-macros::format-check lib::format-check lib-macros::format-check lib-has::format-check format-check-docs
+format-check: android::format-check cli::format-check desktop::format-check gui::format-check i18n::format-check i18n-macros::format-check lib::format-check lib-macros::format-check lib-has::format-check format-check-docs
 
 [private]
 [script("bash")]

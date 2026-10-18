@@ -52,11 +52,6 @@ export global BlockText {
         if label == 2 { return @tr("Case"); }
         return @tr("Battery");
     }
-
-    // a device value in decibels, with the language's decimal separator
-    public pure function decibels(units: int, digits: int) -> string {
-        return (units / pow(10, digits)).to-fixed(digits);
-    }
 }
 
 component BatteryTile inherits Rectangle {
@@ -268,7 +263,7 @@ component BlockPanel inherits Panel {
                 wrap: word-wrap;
             }
             Text {
-                text: @tr("{} bands · {}…{} dB", AppState.eq-band-count, BlockText.decibels(AppState.eq-min, AppState.eq-digits), BlockText.decibels(AppState.eq-max, AppState.eq-digits));
+                text: @tr("{} bands · {}…{} dB", AppState.eq-band-count, AppState.eq-min-text, AppState.eq-max-text);
                 color: Theme.muted;
                 font-size: Theme.font-caption;
                 wrap: word-wrap;
