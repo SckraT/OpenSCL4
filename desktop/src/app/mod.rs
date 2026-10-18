@@ -11,6 +11,8 @@ use openscq30_lib::{
 };
 use slint::{ComponentHandle, ModelRc, VecModel};
 
+mod equalizer;
+
 use crate::{
     Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
     PaletteChoice, Theme, ToastKind,
@@ -64,6 +66,9 @@ pub struct App {
     dark: bool,
     legacy: Vec<(String, LegacyEqualizerProfile)>,
     started: bool,
+    /// "ru" or "en", for numbers the window shows.
+    language: &'static str,
+    equalizer: equalizer::EqualizerState,
 }
 
 thread_local! {
@@ -107,6 +112,8 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         dark: false,
         legacy: Vec::new(),
         started: false,
+        language: "en",
+        equalizer: equalizer::EqualizerState::default(),
     };
     APP.with(|cell| *cell.borrow_mut() = Some(app));
     install_actions(window);
@@ -124,6 +131,7 @@ pub fn shown() {
 }
 
 fn install_actions(window: &AppWindow) {
+    equalizer::install_actions(window);
     let actions = window.global::<Actions>();
     actions.on_navigate(|page| with_app(|app| app.navigate(page)));
     actions.on_connect(|mac| {
@@ -301,6 +309,7 @@ impl App {
             }
             Event::Connected(snapshot) | Event::Changed(snapshot) => {
                 if self.current == Some(snapshot.mac_address) {
+                    self.equalizer_changed(&snapshot);
                     self.connection = Connection::Connected(snapshot);
                     if std::mem::take(&mut self.open_on_connect) {
                         self.set_page(dev::start_page().unwrap_or(Page::Overview));
@@ -309,11 +318,13 @@ impl App {
             }
             Event::Disconnected(mac) => {
                 if self.current == Some(mac) {
+                    self.equalizer_disconnected();
                     self.connection = Connection::Off;
                 }
             }
             Event::ConnectionLost(mac) => {
                 if self.current == Some(mac) {
+                    self.equalizer_disconnected();
                     self.connection = Connection::Lost;
                 }
             }
@@ -330,6 +341,7 @@ impl App {
                 Command::Pair(_) => self.add.error = Some(failure),
                 command => {
                     tracing::warn!("{command:?} failed: {failure:?}");
+                    self.equalizer_failed();
                     self.failed_command = Some(command);
                 }
             },
@@ -535,7 +547,7 @@ impl App {
         self.connect(mac, true);
     }
 
-    fn apply_language(&self) {
+    fn apply_language(&mut self) {
         let language = match self.config.settings.language.as_deref() {
             Some(language) => language.to_string(),
             None => DesktopLanguageRequester::requested_languages()
@@ -544,6 +556,7 @@ impl App {
                 .unwrap_or_default(),
         };
         let language = if language == "ru" { "ru" } else { "en" };
+        self.language = language;
         if let Err(err) = slint::select_bundled_translation(language) {
             tracing::warn!("could not select the {language} translation: {err:?}");
         }
@@ -756,6 +769,7 @@ impl App {
             last_preset,
         ))));
         self.render_equalizer_summary(state, snapshot);
+        self.render_equalizer(state, snapshot);
 
         let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
         if let Some(mode) = rows::mode_view(snapshot, scale_preferred) {
@@ -826,6 +840,13 @@ impl App {
             state.set_eq_max(i32::from(setting.max));
             state.set_eq_digits(i32::from(setting.fraction_digits));
         }
+    }
+
+    fn toast_count(&self, kind: ToastKind, count: i32) {
+        if let Some(window) = self.window() {
+            window.global::<AppState>().set_toast_count(count);
+        }
+        self.toast(kind);
     }
 
     /// Shows a short message at the bottom of the window for a few seconds.

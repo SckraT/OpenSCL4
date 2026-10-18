@@ -10,9 +10,10 @@ import { DevicesPage, ConnectionState } from "pages/devices.slint";
 import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
 import { SectionPage } from "pages/sections.slint";
 import { OverviewPage, LayoutDialog, QuickTogglesDialog } from "pages/overview.slint";
+import { EqualizerPage, SaveProfileDialog, DeleteProfileDialog, ImportDialog } from "pages/equalizer.slint";
 
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
-export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem } from "types.slint";
+export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem, EqBand, EqLine, EqProfile, ImportItem, TransferNote } from "types.slint";
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
@@ -78,7 +79,10 @@ export component AppWindow inherits Window {
                     if AppState.page == Page.overview && AppState.connection == Connection.connected: OverviewPage {
                         wide: root.width - sidebar.width > 900px;
                     }
-                    if root.device-page && AppState.page != Page.overview && AppState.connection == Connection.connected && root.own-page: PageHeading {
+                    if AppState.page == Page.equalizer && AppState.connection == Connection.connected: EqualizerPage {
+                        wide: root.width - sidebar.width > 900px;
+                    }
+                    if AppState.page == Page.presets && AppState.connection == Connection.connected: PageHeading {
                         page: AppState.page;
                     }
                     if root.device-page && AppState.connection == Connection.connected && !root.own-page: SectionPage {
@@ -98,6 +102,9 @@ export component AppWindow inherits Window {
     if AppState.confirm-forget-mac != "": ConfirmForgetDialog { }
     if AppState.editing-layout: LayoutDialog { }
     if AppState.choosing-toggles: QuickTogglesDialog { }
+    if AppState.eq-saving: SaveProfileDialog { }
+    if AppState.eq-deleting != "": DeleteProfileDialog { }
+    if AppState.importing: ImportDialog { }
     if AppState.toast != ToastKind.none: Rectangle {
         y: root.height - 80px;
         x: (root.width - self.width) / 2;
@@ -106,7 +113,12 @@ export component AppWindow inherits Window {
         border-radius: 14px;
         background: Theme.text;
         toast-text := Text {
-            text: AppState.toast == ToastKind.copied ? @tr("Copied") : "";
+            text: AppState.toast == ToastKind.copied ? @tr("Copied")
+                : AppState.toast == ToastKind.profile-saved ? @tr("Profile saved")
+                : AppState.toast == ToastKind.profile-deleted ? @tr("Profile deleted")
+                : AppState.toast == ToastKind.file-saved ? @tr("Saved to the file")
+                : AppState.toast == ToastKind.imported ? @tr("Imported {n} profile" | "Imported {n} profiles" % AppState.toast-count)
+                : AppState.toast == ToastKind.migrated ? @tr("Moved {n} profile" | "Moved {n} profiles" % AppState.toast-count) : "";
             color: Theme.bg;
             font-size: Theme.font-small;
         }

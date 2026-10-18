@@ -688,3 +688,196 @@ msgstr "Готово"
 
 msgid "Choose the switches on the device card. The settings themselves do not change."
 msgstr "Выберите кнопки на карточке устройства. Сами настройки не изменятся."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Гц"
+
+msgid "{} kHz"
+msgstr "{} кГц"
+
+msgid "{}, dB"
+msgstr "{}, дБ"
+
+msgid "Equalizer bands: {}"
+msgstr "Полосы эквалайзера: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "Кривая эквалайзера. Перетащите точку, чтобы изменить частоту, или используйте ползунки ниже."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "Эта модель поддерживает только встроенные профили эквалайзера."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "Значения в децибелах, от {} до {} дБ"
+
+msgid "Save profile"
+msgstr "Сохранить профиль"
+
+msgid "All profiles ({})"
+msgstr "Все профили ({})"
+
+msgid "Show fewer"
+msgstr "Свернуть"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "Значения эквалайзера для этого устройства недоступны."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "Изменение эквалайзера отключает пространственный звук."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "Перетаскивайте точки на графике, двигайте ползунки клавишами ↑ ↓ или вводите значения."
+
+msgid "My profiles"
+msgstr "Мои профили"
+
+msgid "Save the current sound to come back to it later."
+msgstr "Сохраните текущий звук, чтобы вернуться к нему позже."
+
+msgid "Applied"
+msgstr "Применено"
+
+msgid "Bands: {}"
+msgstr "Полос: {}"
+
+msgid "More for “{}”"
+msgstr "Ещё для «{}»"
+
+msgid "Export"
+msgstr "Экспорт"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "Сохранённые профили остаются на месте. Применить их можно, когда подключатся оба наушника."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "Устаревшие профили эквалайзера: {}. Перенесите их в свои профили, чтобы пользоваться ими с этим устройством."
+
+msgid "Show"
+msgstr "Показать"
+
+msgid "Hide"
+msgstr "Скрыть"
+
+msgid "Move all"
+msgstr "Перенести все"
+
+msgid "Move"
+msgstr "Перенести"
+
+msgid "Import and export"
+msgstr "Импорт и экспорт"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "Делитесь профилями, храните их в файле или переносите на другой компьютер."
+
+msgid "Import"
+msgstr "Импорт"
+
+msgid "Select all"
+msgstr "Выбрать все"
+
+msgid "Save a profile to export it."
+msgstr "Сохраните профиль, чтобы его экспортировать."
+
+msgid "Save to file"
+msgstr "Сохранить в файл"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "Файл или текст с профилями OpenSCQ30. Перед импортом покажем, что изменится."
+
+msgid "Open file"
+msgstr "Открыть файл"
+
+msgid "Paste"
+msgstr "Вставить"
+
+msgid "Saved to the file"
+msgstr "Сохранено в файл"
+
+msgid "Could not save the file"
+msgstr "Не удалось сохранить файл"
+
+msgid "This is not an equalizer profiles file"
+msgstr "Это не файл профилей эквалайзера"
+
+msgid "The clipboard is empty"
+msgstr "Буфер обмена пуст"
+
+msgid "The file is too large"
+msgstr "Файл слишком большой"
+
+msgid "Could not read the file"
+msgstr "Не удалось прочитать файл"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "Импортирован {n} профиль"
+msgstr[1] "Импортировано {n} профиля"
+msgstr[2] "Импортировано {n} профилей"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "Перенесён {n} профиль"
+msgstr[1] "Перенесено {n} профиля"
+msgstr[2] "Перенесено {n} профилей"
+
+msgid "Profile saved"
+msgstr "Профиль сохранён"
+
+msgid "Profile deleted"
+msgstr "Профиль удалён"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "Сохраните текущие значения эквалайзера устройства для повторного использования."
+
+msgid "Name"
+msgstr "Название"
+
+msgid "My sound"
+msgstr "Мой звук"
+
+msgid "Enter a profile name."
+msgstr "Введите название профиля."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "Профиль «{}» уже существует. Заменить сохранённые значения?"
+
+msgid "Replace profile"
+msgstr "Заменить профиль"
+
+msgid "Save"
+msgstr "Сохранить"
+
+msgid "Delete equalizer profile?"
+msgstr "Удалить профиль эквалайзера?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "Вы уверены, что хотите удалить «{}»?"
+
+msgid "Import profiles"
+msgstr "Импорт профилей"
+
+msgid "New"
+msgstr "Новый"
+
+msgid "Replaces the saved profile"
+msgstr "Заменит сохранённый профиль"
+
+msgid "{} bands, this device has {}"
+msgstr "Полос: {}, а у устройства {}"
+
+msgid "Values outside this device’s range"
+msgstr "Значения вне диапазона устройства"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "Профили, отмеченные красным, не подходят для этого устройства, поэтому файл нельзя импортировать."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "Импортировать {n} профиль"
+msgstr[1] "Импортировать {n} профиля"
+msgstr[2] "Импортировать {n} профилей"

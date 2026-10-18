@@ -1,0 +1,953 @@
+// The equalizer: the device's profiles, the bands on a chart with sliders and fields, the saved profiles, and moving
+// profiles in and out. Rust (src/equalizer.rs) works out the chart; the points, sliders and fields sit in the same
+// columns, one per band.
+import { LineEdit } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, Page, EqBand, EqProfile, ImportItem, TransferNote } from "../types.slint";
+import { Icon, IconButton, Button, ButtonKind, Chip, TextLink, Panel, PanelHeading, Note, Banner } from "../components/basics.slint";
+import { PageHeading } from "../shell.slint";
+import { DialogFrame } from "add_device.slint";
+
+export global EqText {
+    public pure function frequency(band: EqBand) -> string {
+        return band.khz ? @tr("{} kHz", band.frequency) : @tr("{} Hz", band.frequency);
+    }
+
+    public pure function note(note: TransferNote, count: int) -> string {
+        if note == TransferNote.file-saved { return @tr("Saved to the file"); }
+        if note == TransferNote.file-save-failed { return @tr("Could not save the file"); }
+        if note == TransferNote.not-profiles { return @tr("This is not an equalizer profiles file"); }
+        if note == TransferNote.clipboard-empty { return @tr("The clipboard is empty"); }
+        if note == TransferNote.too-large { return @tr("The file is too large"); }
+        if note == TransferNote.read-failed { return @tr("Could not read the file"); }
+        if note == TransferNote.imported { return @tr("Imported {n} profile" | "Imported {n} profiles" % count); }
+        return "";
+    }
+
+    public pure function import-status(item: ImportItem) -> string {
+        if item.status == 0 { return @tr("New"); }
+        if item.status == 1 { return @tr("Replaces the saved profile"); }
+        if item.status == 2 { return @tr("{} bands, this device has {}", item.bands, AppState.eq-bands.length); }
+        return @tr("Values outside this device’s range");
+    }
+}
+
+// the chart's points sit this far from its top and bottom, as in src/equalizer.rs
+global Chart {
+    out property <float> margin: 0.06;
+}
+
+component Tag inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Theme.on-primary-container;
+    in property <color> fill: Theme.primary-container;
+    border-radius: 8px;
+    background: fill;
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 9px;
+        padding-top: 3px;
+        padding-bottom: 3px;
+        Text {
+            text: root.text;
+            color: root.tint;
+            font-size: Theme.font-caption;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// A profile's curve, drawn small beside its name.
+component ProfileCurve inherits Rectangle {
+    in property <string> commands;
+    width: 72px;
+    height: 30px;
+    border-radius: 9px;
+    background: Theme.container;
+    clip: true;
+    Path {
+        x: 4px;
+        width: parent.width - 8px;
+        height: parent.height;
+        fit: fill;
+        viewbox-width: 600;
+        viewbox-height: 100;
+        commands: root.commands;
+        stroke: Theme.primary;
+        stroke-width: 1.6px;
+        fill: transparent;
+    }
+}
+
+component EqualizerChart inherits Rectangle {
+    in property <bool> editable;
+    private property <int> count: AppState.eq-bands.length;
+    private property <int> span: max(1, AppState.eq-max - AppState.eq-min);
+    private property <int> dragged: -1;
+    height: 190px;
+    accessible-role: image;
+    accessible-label: @tr("Equalizer curve. Drag to adjust a frequency, or use the sliders below.");
+
+    pure function y-of(value: int) -> length {
+        return root.height * (Chart.margin + (1 - (value - AppState.eq-min) / root.span) * (1 - 2 * Chart.margin));
+    }
+    pure function value-at(y: length) -> int {
+        return max(AppState.eq-min, min(AppState.eq-max,
+            round(AppState.eq-min + (1 - (y / root.height - Chart.margin) / (1 - 2 * Chart.margin)) * root.span)));
+    }
+    pure function band-at(x: length) -> int {
+        return max(0, min(root.count - 1, floor(x / root.width * root.count)));
+    }
+
+    for band[index] in AppState.eq-bands: Rectangle {
+        x: root.width * (index + 0.5) / root.count;
+        y: root.y-of(AppState.eq-max);
+        width: 1px;
+        height: root.y-of(AppState.eq-min) - self.y;
+        background: Theme.line.transparentize(65%);
+    }
+    for line in AppState.eq-lines: Rectangle {
+        y: root.y-of(line.value);
+        height: 1px;
+        background: line.value == 0 ? Theme.line : Theme.line.transparentize(50%);
+    }
+    for line in AppState.eq-lines: Text {
+        x: 2px;
+        y: root.y-of(line.value) - self.height - 1px;
+        text: line.label;
+        color: Theme.muted;
+        font-size: 9px;
+    }
+    Path {
+        width: parent.width;
+        height: parent.height;
+        fit: fill;
+        viewbox-width: 600;
+        viewbox-height: 200;
+        commands: AppState.eq-chart-area;
+        fill: @linear-gradient(180deg, Theme.primary.transparentize(80%) 0%, Theme.primary.transparentize(98%) 100%);
+        stroke: transparent;
+    }
+    Path {
+        width: parent.width;
+        height: parent.height;
+        fit: fill;
+        viewbox-width: 600;
+        viewbox-height: 200;
+        commands: AppState.eq-chart-line;
+        stroke: Theme.primary;
+        stroke-width: 2.6px;
+        fill: transparent;
+    }
+    for band[index] in AppState.eq-bands: Rectangle {
+        x: root.width * (index + 0.5) / root.count - self.width / 2;
+        y: root.y-of(band.value) - self.height / 2;
+        width: root.dragged == index ? 15px : 12px;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: Theme.surface;
+        border-width: 2.2px;
+        border-color: Theme.primary;
+    }
+    TouchArea {
+        enabled: root.editable;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.dragged = root.band-at(self.mouse-x);
+                Actions.eq-preview(root.dragged, root.value-at(self.mouse-y));
+            }
+            if event.kind == PointerEventKind.up && root.dragged >= 0 {
+                Actions.eq-commit(root.dragged, root.value-at(self.mouse-y));
+                root.dragged = -1;
+            }
+        }
+        moved => {
+            if self.pressed && root.dragged >= 0 {
+                Actions.eq-preview(root.dragged, root.value-at(self.mouse-y));
+            }
+        }
+    }
+}
+
+// A band's slider, upright. Dragging shows the curve as it goes and sends the value once let go.
+component BandSlider inherits Rectangle {
+    in property <int> index;
+    in property <EqBand> band;
+    private property <int> minimum: AppState.eq-min;
+    private property <int> maximum: AppState.eq-max;
+    private property <float> fraction: (band.value - minimum) / max(1, maximum - minimum);
+    width: 24px;
+    height: 120px;
+    accessible-role: slider;
+    accessible-label: EqText.frequency(band);
+    accessible-value: band.text;
+    accessible-value-minimum: minimum;
+    accessible-value-maximum: maximum;
+    accessible-value-step: 1;
+    accessible-action-increment => { Actions.eq-commit(index, min(maximum, band.value + 1)); }
+    accessible-action-decrement => { Actions.eq-commit(index, max(minimum, band.value - 1)); }
+    forward-focus: keys;
+
+    pure function value-at(y: length) -> int {
+        return max(minimum, min(maximum, round(maximum - (y - 7px) / max(1px, root.height - 15px) * (maximum - minimum))));
+    }
+
+    Rectangle {
+        x: (parent.width - 5px) / 2;
+        width: 5px;
+        border-radius: 3px;
+        background: Theme.container;
+    }
+    Rectangle {
+        x: (parent.width - 5px) / 2;
+        y: thumb.y + thumb.height / 2;
+        width: 5px;
+        height: parent.height - self.y;
+        border-radius: 3px;
+        background: Theme.primary;
+    }
+    thumb := Rectangle {
+        x: 1px;
+        y: (root.height - self.height) * (1 - root.fraction);
+        width: 22px;
+        height: 15px;
+        border-radius: 7px;
+        border-width: 3px;
+        border-color: Theme.surface;
+        background: Theme.primary;
+    }
+    if keys.has-focus: Rectangle {
+        x: thumb.x - 3px;
+        y: thumb.y - 3px;
+        width: thumb.width + 6px;
+        height: thumb.height + 6px;
+        border-radius: 9px;
+        border-width: 2px;
+        border-color: Theme.primary;
+    }
+    keys := FocusScope {
+        key-pressed(event) => {
+            if event.text == Key.UpArrow || event.text == Key.RightArrow {
+                Actions.eq-commit(root.index, min(root.maximum, root.band.value + 1));
+                return accept;
+            }
+            if event.text == Key.DownArrow || event.text == Key.LeftArrow {
+                Actions.eq-commit(root.index, max(root.minimum, root.band.value - 1));
+                return accept;
+            }
+            reject
+        }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                keys.focus();
+                Actions.eq-preview(root.index, root.value-at(self.mouse-y));
+            }
+            if event.kind == PointerEventKind.up && event.button == PointerEventButton.left {
+                Actions.eq-commit(root.index, root.value-at(self.mouse-y));
+            }
+        }
+        moved => {
+            if self.pressed {
+                Actions.eq-preview(root.index, root.value-at(self.mouse-y));
+            }
+        }
+    }
+}
+
+// A band's value to type, sent on Enter or when the field is left; a value the device can't take is put back.
+component BandField inherits Rectangle {
+    in property <int> index;
+    in property <EqBand> band;
+    private property <string> shown: band.text;
+    changed shown => { input.text = root.shown; }
+    height: 32px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.primary : Theme.line;
+    background: Theme.surface;
+
+    function commit() {
+        if input.text != root.shown {
+            Actions.eq-type(root.index, input.text);
+            input.text = root.shown;
+        }
+    }
+
+    input := TextInput {
+        x: 4px;
+        width: parent.width - 8px;
+        text: root.shown;
+        single-line: true;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        color: Theme.text;
+        font-size: Theme.font-small;
+        accessible-label: @tr("{}, dB", EqText.frequency(root.band));
+        accepted => { root.commit(); }
+        changed has-focus => {
+            if !self.has-focus { root.commit(); }
+        }
+    }
+}
+
+component BandsPanel inherits Panel {
+    PanelHeading {
+        text: @tr("Equalizer bands: {}", AppState.eq-bands.length);
+        icon: Icons.eq;
+        VerticalLayout {
+            alignment: center;
+            Tag { text: AppState.eq-name != "" ? AppState.eq-name : @tr("Your own settings"); }
+        }
+    }
+    EqualizerChart { editable: !AppState.eq-read-only; }
+    if AppState.eq-read-only: Text {
+        text: @tr("This device only supports the built-in equalizer profiles.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    if !AppState.eq-read-only: HorizontalLayout {
+        padding-top: 14px;
+        spacing: 0px;
+        for band[index] in AppState.eq-bands: VerticalLayout {
+            horizontal-stretch: 1;
+            preferred-width: 0px;
+            min-width: 0px;
+            padding-left: 4px;
+            padding-right: 4px;
+            spacing: 10px;
+            BandField {
+                index: index;
+                band: band;
+            }
+            HorizontalLayout {
+                alignment: center;
+                BandSlider {
+                    index: index;
+                    band: band;
+                }
+            }
+            Text {
+                text: EqText.frequency(band);
+                color: Theme.text;
+                font-size: Theme.font-caption;
+                horizontal-alignment: center;
+            }
+        }
+    }
+    if !AppState.eq-read-only: HorizontalLayout {
+        padding-top: 14px;
+        spacing: 12px;
+        Text {
+            text: @tr("Low frequencies");
+            color: Theme.muted;
+            font-size: Theme.font-caption;
+        }
+        Text {
+            text: @tr("Values in decibels, from {} to {} dB", AppState.eq-min-text, AppState.eq-max-text);
+            color: Theme.muted;
+            font-size: Theme.font-caption;
+            horizontal-alignment: center;
+            horizontal-stretch: 1;
+            wrap: word-wrap;
+        }
+        Text {
+            text: @tr("High frequencies");
+            color: Theme.muted;
+            font-size: Theme.font-caption;
+        }
+    }
+    if !AppState.eq-read-only: HorizontalLayout {
+        padding-top: 16px;
+        Button {
+            text: @tr("Reset");
+            kind: ButtonKind.ghost;
+            has-icon: true;
+            icon: Icons.reset;
+            clicked => { Actions.eq-reset(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        if AppState.has-saved-profiles: Button {
+            text: @tr("Save profile");
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: Icons.save;
+            clicked => {
+                AppState.eq-save-problem = 0;
+                AppState.eq-saving = true;
+            }
+        }
+    }
+}
+
+component MenuItem inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> danger;
+    callback clicked();
+    height: 36px;
+    border-radius: 9px;
+    background: touch.has-hover ? Theme.hover : transparent;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { clicked(); }
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 10px;
+        Icon {
+            source: root.icon;
+            tint: root.danger ? Theme.error : Theme.text;
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.text;
+            color: root.danger ? Theme.error : Theme.text;
+            font-size: Theme.font-body;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// A saved profile: clicking applies it, its menu exports or deletes it.
+component ProfileRow inherits Rectangle {
+    in property <EqProfile> profile;
+    in property <bool> enabled: true;
+    min-height: 54px;
+    border-radius: 14px;
+    background: touch.has-hover && enabled ? Theme.hover : transparent;
+    accessible-role: button;
+    accessible-label: profile.name;
+    accessible-action-default => { if enabled { Actions.eq-apply(profile.name); } }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { Actions.eq-apply(root.profile.name); }
+    }
+    HorizontalLayout {
+        padding: 6px;
+        padding-left: 8px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            ProfileCurve { commands: root.profile.curve; }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: root.profile.name;
+                    color: Theme.text;
+                    font-weight: 600;
+                    overflow: elide;
+                }
+                if root.profile.in-effect: Tag { text: @tr("Applied"); }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            Text {
+                text: @tr("Bands: {}", root.profile.bands);
+                color: Theme.muted;
+                font-size: Theme.font-caption;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: Icons.more;
+                label: @tr("More for “{}”", root.profile.name);
+                clicked => { menu.show(); }
+            }
+        }
+    }
+    menu := PopupWindow {
+        x: root.width - 196px;
+        y: root.height - 4px;
+        width: 190px;
+        Rectangle {
+            background: Theme.surface;
+            border-radius: 14px;
+            border-width: 1px;
+            border-color: Theme.line;
+            drop-shadow-blur: 18px;
+            drop-shadow-color: #00000030;
+            VerticalLayout {
+                padding: 6px;
+                MenuItem {
+                    text: @tr("Save to file");
+                    icon: Icons.download;
+                    clicked => {
+                        menu.close();
+                        Actions.eq-export-one(root.profile.name);
+                    }
+                }
+                MenuItem {
+                    text: @tr("Delete");
+                    icon: Icons.trash;
+                    danger: true;
+                    clicked => {
+                        menu.close();
+                        AppState.eq-deleting = root.profile.name;
+                    }
+                }
+            }
+        }
+    }
+}
+
+component SavedProfiles inherits Panel {
+    in property <bool> enabled: true;
+    PanelHeading {
+        text: @tr("My profiles");
+        icon: Icons.save;
+    }
+    if AppState.eq-profiles.length == 0: Text {
+        text: @tr("Save the current sound to come back to it later.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    for profile in AppState.eq-profiles: ProfileRow {
+        profile: profile;
+        enabled: root.enabled;
+    }
+}
+
+// Profiles of OpenSCQ30 1.x that this device's saved profiles don't have yet.
+component LegacyBanner inherits Rectangle {
+    border-radius: 15px;
+    background: Theme.primary-container;
+    VerticalLayout {
+        padding: 12px;
+        padding-left: 16px;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 10px;
+            Icon {
+                source: Icons.info;
+                tint: Theme.on-primary-container;
+                width: 18px;
+                height: 18px;
+                y: (parent.height - self.height) / 2;
+            }
+            Text {
+                text: @tr("Old equalizer profiles: {}. Move them to your saved profiles to use them with this device.", AppState.eq-legacy.length);
+                color: Theme.on-primary-container;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            Button {
+                text: AppState.eq-legacy-open ? @tr("Hide") : @tr("Show");
+                kind: ButtonKind.ghost;
+                clicked => { AppState.eq-legacy-open = !AppState.eq-legacy-open; }
+            }
+            Button {
+                text: @tr("Move all");
+                kind: ButtonKind.soft;
+                clicked => { Actions.eq-migrate(""); }
+            }
+        }
+        if AppState.eq-legacy-open: VerticalLayout {
+            spacing: 4px;
+            for profile in AppState.eq-legacy: HorizontalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    alignment: center;
+                    ProfileCurve { commands: profile.curve; }
+                }
+                Text {
+                    text: profile.name;
+                    color: Theme.on-primary-container;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
+                Button {
+                    text: @tr("Move");
+                    kind: ButtonKind.ghost;
+                    clicked => { Actions.eq-migrate(profile.name); }
+                }
+            }
+        }
+    }
+}
+
+component CheckRow inherits Rectangle {
+    in property <string> text;
+    in property <bool> checked;
+    callback toggled(bool);
+    min-height: 32px;
+    accessible-role: checkbox;
+    accessible-label: text;
+    accessible-checked: checked;
+    accessible-action-default => { toggled(!checked); }
+    HorizontalLayout {
+        spacing: 10px;
+        Rectangle {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 5px;
+            border-width: root.checked ? 0px : 1.5px;
+            border-color: Theme.muted;
+            background: root.checked ? Theme.primary : transparent;
+            if root.checked: Icon {
+                source: Icons.check;
+                tint: Theme.on-primary;
+                width: 14px;
+                height: 14px;
+            }
+        }
+        Text {
+            text: root.text;
+            color: Theme.text;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggled(!root.checked); }
+    }
+}
+
+component BlockTitle inherits Text {
+    color: Theme.text;
+    font-size: Theme.font-body;
+    font-weight: 600;
+}
+
+component ExportBlock inherits VerticalLayout {
+    spacing: 8px;
+    alignment: start;
+    BlockTitle { text: @tr("Export"); }
+    if AppState.eq-profiles.length == 0: Text {
+        text: @tr("Save a profile to export it.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    if AppState.eq-profiles.length > 0: VerticalLayout {
+        spacing: 2px;
+        CheckRow {
+            text: @tr("Select all");
+            checked: AppState.eq-export-count == AppState.eq-profiles.length;
+            toggled(checked) => { Actions.eq-export-choose("", checked); }
+        }
+        for profile in AppState.eq-profiles: CheckRow {
+            text: profile.name;
+            checked: profile.export;
+            toggled(checked) => { Actions.eq-export-choose(profile.name, checked); }
+        }
+    }
+    if AppState.eq-profiles.length > 0: HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        Button {
+            text: @tr("Save to file");
+            kind: ButtonKind.soft;
+            has-icon: true;
+            icon: Icons.download;
+            enabled: AppState.eq-export-count > 0;
+            clicked => { Actions.eq-export-file(); }
+        }
+        Button {
+            text: @tr("Copy");
+            has-icon: true;
+            icon: Icons.copy;
+            enabled: AppState.eq-export-count > 0;
+            clicked => { Actions.eq-export-copy(); }
+        }
+    }
+}
+
+component ImportBlock inherits VerticalLayout {
+    spacing: 8px;
+    alignment: start;
+    private property <bool> good: AppState.transfer-note == TransferNote.file-saved || AppState.transfer-note == TransferNote.imported;
+    BlockTitle { text: @tr("Import"); }
+    Text {
+        text: @tr("A file or text with OpenSCQ30 profiles. Before importing you'll see what changes.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        Button {
+            text: @tr("Open file");
+            kind: ButtonKind.soft;
+            has-icon: true;
+            icon: Icons.folder;
+            clicked => { Actions.eq-import-file(); }
+        }
+        Button {
+            text: @tr("Paste");
+            has-icon: true;
+            icon: Icons.clipboard;
+            clicked => { Actions.eq-import-paste(); }
+        }
+    }
+    if AppState.transfer-note != TransferNote.none: Text {
+        text: EqText.note(AppState.transfer-note, AppState.transfer-count);
+        color: root.good ? Theme.green : Theme.error;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+        accessible-role: text;
+    }
+}
+
+component TransferPanel inherits Panel {
+    in property <bool> wide;
+    PanelHeading {
+        text: @tr("Import and export");
+        icon: Icons.folder;
+    }
+    Text {
+        text: @tr("Share profiles, keep them in a file or move them to another computer.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    Rectangle { height: 16px; }
+    if root.wide: HorizontalLayout {
+        spacing: 28px;
+        // set widths, so that the wrapped texts know how tall they are
+        ExportBlock { width: (parent.width - parent.spacing) / 2; }
+        ImportBlock { width: (parent.width - parent.spacing) / 2; }
+    }
+    if !root.wide: VerticalLayout {
+        spacing: 20px;
+        ExportBlock { }
+        ImportBlock { }
+    }
+}
+
+component MainColumn inherits VerticalLayout {
+    spacing: 16px;
+    alignment: start;
+    if AppState.eq-presets.length > 0: VerticalLayout {
+        spacing: 10px;
+        FlexboxLayout {
+            spacing: 7px;
+            for preset in AppState.eq-presets: Chip {
+                text: preset.label;
+                selected: preset.value == AppState.eq-preset;
+                clicked => { Actions.eq-preset(preset.value); }
+            }
+        }
+        if AppState.eq-preset-count > AppState.eq-presets.length || AppState.eq-expanded: HorizontalLayout {
+            alignment: start;
+            TextLink {
+                text: AppState.eq-expanded ? @tr("Show fewer") : @tr("All profiles ({})", AppState.eq-preset-count);
+                clicked => { Actions.eq-expand(!AppState.eq-expanded); }
+            }
+        }
+    }
+    if AppState.eq-available: BandsPanel { }
+    if !AppState.eq-available && !AppState.one-earbud: Note {
+        text: @tr("Equalizer values are unavailable for this device.");
+    }
+    if AppState.eq-available && !AppState.eq-read-only && AppState.has-spatial: Note {
+        text: @tr("Changing the equalizer turns off spatial audio.");
+        warm: true;
+    }
+    if AppState.eq-available && !AppState.eq-read-only: HorizontalLayout {
+        spacing: 9px;
+        Icon {
+            source: Icons.keyboard;
+            tint: Theme.muted;
+            width: 16px;
+            height: 16px;
+        }
+        Text {
+            text: @tr("Drag the points on the chart, move the sliders with ↑ ↓ or type the values.");
+            color: Theme.muted;
+            font-size: Theme.font-caption;
+            wrap: word-wrap;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+component AsideColumn inherits VerticalLayout {
+    spacing: 16px;
+    alignment: start;
+    if AppState.has-saved-profiles: SavedProfiles { enabled: AppState.eq-available; }
+    if !AppState.eq-available && AppState.one-earbud: Note {
+        text: @tr("Saved profiles stay where they are. You can apply them when both earbuds are connected.");
+    }
+}
+
+export component EqualizerPage inherits VerticalLayout {
+    in property <bool> wide;
+    spacing: 0px;
+    PageHeading { page: Page.equalizer; }
+    VerticalLayout {
+        spacing: 20px;
+        if AppState.eq-legacy.length > 0: LegacyBanner { }
+        if !AppState.eq-available && AppState.one-earbud: Banner {
+            icon: Icons.ear;
+            text: @tr("Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected.");
+        }
+        // set widths: the chips wrap, and need to know their width to know their height
+        if root.wide: HorizontalLayout {
+            spacing: 20px;
+            MainColumn { width: parent.width - parent.spacing - aside.width; }
+            aside := AsideColumn { width: max(280px, min(380px, parent.width * 0.34)); }
+        }
+        if !root.wide: VerticalLayout {
+            spacing: 16px;
+            MainColumn { width: parent.width; }
+            AsideColumn { width: parent.width; }
+        }
+        // a set width, so that the wrapped texts in it know how tall they are
+        if AppState.has-saved-profiles: TransferPanel {
+            wide: root.wide;
+            width: parent.width;
+        }
+    }
+}
+
+export component SaveProfileDialog inherits DialogFrame {
+    title: @tr("Save profile");
+    description: @tr("Save the current device equalizer values as a reusable profile.");
+    dialog-width: 520px;
+    close => { AppState.eq-saving = false; }
+    Text {
+        text: @tr("Name");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+    }
+    name := LineEdit {
+        placeholder-text: @tr("My sound");
+        edited => { AppState.eq-save-problem = 0; }
+        accepted => { Actions.eq-save(self.text, AppState.eq-save-problem == 2); }
+        init => { self.focus(); }
+    }
+    if AppState.eq-save-problem == 1: Text {
+        text: @tr("Enter a profile name.");
+        color: Theme.error;
+        font-size: Theme.font-small;
+    }
+    if AppState.eq-save-problem == 2: Text {
+        text: @tr("A profile named “{}” already exists. Replace its saved values?", AppState.eq-save-existing);
+        color: Theme.error;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        padding-top: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.eq-saving = false; }
+        }
+        Button {
+            text: AppState.eq-save-problem == 2 ? @tr("Replace profile") : @tr("Save");
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: Icons.save;
+            clicked => { Actions.eq-save(name.text, AppState.eq-save-problem == 2); }
+        }
+    }
+}
+
+export component DeleteProfileDialog inherits DialogFrame {
+    title: @tr("Delete equalizer profile?");
+    description: @tr("Are you sure you want to delete “{}”?", AppState.eq-deleting);
+    dialog-width: 520px;
+    close => { AppState.eq-deleting = ""; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.eq-deleting = ""; }
+        }
+        Button {
+            text: @tr("Delete");
+            kind: ButtonKind.danger;
+            has-icon: true;
+            icon: Icons.trash;
+            clicked => {
+                Actions.eq-delete(AppState.eq-deleting);
+                AppState.eq-deleting = "";
+            }
+        }
+    }
+}
+
+export component ImportDialog inherits DialogFrame {
+    title: @tr("Import profiles");
+    dialog-width: 580px;
+    close => { AppState.importing = false; }
+    for item in AppState.import-items: HorizontalLayout {
+        spacing: 12px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        VerticalLayout {
+            alignment: center;
+            ProfileCurve { commands: item.curve; }
+        }
+        Text {
+            text: item.name;
+            color: item.status >= 2 ? Theme.error : Theme.text;
+            font-weight: 600;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+        VerticalLayout {
+            alignment: center;
+            Tag {
+                text: EqText.import-status(item);
+                fill: item.status >= 2 ? Theme.pink : item.status == 1 ? Theme.sage : Theme.container;
+                tint: item.status >= 2 ? Theme.on-pink : item.status == 1 ? Theme.on-sage : Theme.muted;
+            }
+        }
+    }
+    if AppState.import-blocked: Text {
+        text: @tr("Profiles marked in red can not be used with this device, so the file can not be imported.");
+        color: Theme.error;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        padding-top: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.importing = false; }
+        }
+        Button {
+            text: @tr("Import {n} profile" | "Import {n} profiles" % AppState.import-items.length);
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: Icons.upload;
+            enabled: !AppState.import-blocked;
+            clicked => { Actions.eq-import(); }
+        }
+    }
+}

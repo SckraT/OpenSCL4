@@ -5,6 +5,7 @@ mod app;
 mod art;
 mod config;
 mod controller;
+mod equalizer;
 pub mod model;
 mod overview;
 mod rows;

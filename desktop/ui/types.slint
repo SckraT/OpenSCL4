@@ -24,8 +24,11 @@ export enum Connection { no-device, off, connecting, connected, lost, bluetooth-
 
 export enum FailureKind { none, not-found, timed-out, other }
 
-// short messages at the bottom of the window
-export enum ToastKind { none, copied }
+// short messages at the bottom of the window; some say how many with AppState.toast-count
+export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated }
+
+// what the import and export panel last did
+export enum TransferNote { none, file-saved, file-save-failed, not-profiles, clipboard-empty, too-large, read-failed, imported }
 
 export struct DeviceCard {
     mac: string,
@@ -118,6 +121,38 @@ export struct PresetItem {
     enabled-count: int,
 }
 
+// an equalizer band: its frequency without the unit, and its value in device units and as the field shows it
+export struct EqBand {
+    frequency: string,
+    khz: bool,
+    value: int,
+    text: string,
+}
+
+// a guide across the equalizer chart
+export struct EqLine {
+    value: int,
+    label: string,
+}
+
+// a saved equalizer profile, or one of OpenSCQ30 1.x still to move
+export struct EqProfile {
+    name: string,
+    curve: string,
+    bands: int,
+    in-effect: bool,
+    // chosen for export
+    export: bool,
+}
+
+// a profile in a file to import: 0 new, 1 replaces a saved one, 2 has the wrong number of bands, 3 is out of range
+export struct ImportItem {
+    name: string,
+    curve: string,
+    status: int,
+    bands: int,
+}
+
 export struct PairedOption {
     mac: string,
     name: string,
@@ -194,6 +229,35 @@ export global AppState {
     in property <int> eq-max;
     in property <int> eq-digits;
 
+    // the equalizer page
+    in property <bool> eq-available;
+    in property <bool> eq-read-only;
+    in property <[ModeOption]> eq-presets;
+    in property <string> eq-preset;
+    in property <int> eq-preset-count;
+    in property <bool> eq-expanded;
+    in property <[EqBand]> eq-bands;
+    in property <[EqLine]> eq-lines;
+    in property <string> eq-chart-line;
+    in property <string> eq-chart-area;
+    in property <string> eq-min-text;
+    in property <string> eq-max-text;
+    in property <bool> has-saved-profiles;
+    in property <[EqProfile]> eq-profiles;
+    in property <int> eq-export-count;
+    in property <[EqProfile]> eq-legacy;
+    in-out property <bool> eq-legacy-open;
+    in property <TransferNote> transfer-note;
+    in property <int> transfer-count;
+    // saving a profile: 1 the name is empty, 2 a profile of the name exists and saving again replaces it
+    in-out property <bool> eq-saving;
+    in-out property <int> eq-save-problem;
+    in property <string> eq-save-existing;
+    in-out property <string> eq-deleting;
+    in-out property <bool> importing;
+    in property <[ImportItem]> import-items;
+    in property <bool> import-blocked;
+
     // what the asides of the section pages show
     in property <bool> has-ldac;
     in property <bool> has-spatial;
@@ -202,6 +266,7 @@ export global AppState {
     // a change the device did not take, shown above the page
     in property <string> error-label;
     in property <ToastKind> toast;
+    in property <int> toast-count;
 
     // asking before forgetting
     in-out property <string> confirm-forget-mac;
@@ -236,4 +301,25 @@ export global Actions {
     callback layout-move(int, int);
     callback layout-use(int);
     callback apply-preset(string);
+    callback eq-preset(string);
+    callback eq-expand(bool);
+    // a band while it is dragged, and once it is let go
+    callback eq-preview(int, int);
+    callback eq-commit(int, int);
+    callback eq-type(int, string);
+    callback eq-reset();
+    callback eq-apply(string);
+    // the name, and whether to replace the profile of that name
+    callback eq-save(string, bool);
+    callback eq-delete(string);
+    callback eq-export-one(string);
+    // a profile chosen for export or not, or all of them with ""
+    callback eq-export-choose(string, bool);
+    callback eq-export-file();
+    callback eq-export-copy();
+    callback eq-import-file();
+    callback eq-import-paste();
+    callback eq-import();
+    // one old profile to move, or all of them with ""
+    callback eq-migrate(string);
 }

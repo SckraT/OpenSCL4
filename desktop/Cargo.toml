@@ -28,6 +28,7 @@ i18n-embed = { workspace = true, features = ["desktop-requester"] }
 dirs = { workspace = true }
 open = { workspace = true }
 arboard = { workspace = true }
+rfd = { workspace = true, features = ["xdg-portal", "tokio"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

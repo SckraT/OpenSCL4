@@ -120,7 +120,7 @@ palette = "0.7"
 bitflags = "2"
 slint = "1.18"
 slint-build = "1.18"
-rfd = "0.17"
+rfd = { version = "0.16", default-features = false }
 arboard = "3"
 raw-window-handle = "0.6"
 roxmltree = "0.21"

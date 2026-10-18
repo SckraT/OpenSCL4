@@ -27,7 +27,8 @@ fn ui_strings(dir: &Path, found: &mut BTreeSet<String>) {
     }
 }
 
-/// msgid and msgstr pairs of a .po file whose entries are on one line each.
+/// msgid and msgstr pairs of a .po file whose entries are on one line each. For plurals, the msgid is the singular
+/// (the first string of the @tr) and the msgstr is the first form.
 fn po_entries(text: &str) -> Vec<(String, String)> {
     let quoted = |line: &str, key: &str| {
         line.strip_prefix(key).map(|s| {
@@ -42,7 +43,8 @@ fn po_entries(text: &str) -> Vec<(String, String)> {
     for line in text.lines() {
         if let Some(value) = quoted(line, "msgid ") {
             id = Some(value);
-        } else if let (Some(value), Some(msgid)) = (quoted(line, "msgstr "), id.take())
+        } else if let Some(value) = quoted(line, "msgstr ").or_else(|| quoted(line, "msgstr[0] "))
+            && let Some(msgid) = id.take()
             && !msgid.is_empty()
         {
             entries.push((msgid, value));
