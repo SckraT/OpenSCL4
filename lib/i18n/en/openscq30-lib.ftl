@@ -246,6 +246,7 @@ case-language = Case Language
 atmospheric = Atmospheric
 remote-camera = Remote Camera
 find-device = Find Device
+case-spatial-audio = Spatial Audio on Case
 spatial-audio = Spatial Audio
 spatial-audio-mode = Spatial Audio Mode
 spatial-audio-music-mode = Spatial Audio Music Mode

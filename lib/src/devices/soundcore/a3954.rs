@@ -230,7 +230,7 @@ mod tests {
             device::{SoundcoreDeviceConfig, test_utils::TestSoundcoreDevice},
             packet,
         },
-        settings::{Setting, SettingId, Value},
+        settings::{CategoryId, Setting, SettingId, Value},
         storage::OpenSCQ30Database,
     };
 
@@ -301,6 +301,7 @@ mod tests {
             (SettingId::Atmospheric, false.into()),
             (SettingId::FindDevice, false.into()),
             (SettingId::RemoteCamera, false.into()),
+            (SettingId::CaseSpatialAudio, false.into()),
             (SettingId::CaseLanguage, "English".into()),
             (SettingId::AutoPowerOff, "10m".into()),
             (SettingId::FirmwareVersionLeft, "03.29".into()),
@@ -348,6 +349,75 @@ mod tests {
                 )],
             )
             .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn case_spatial_audio_is_separate_from_the_earbuds_spatial_audio() {
+        let mut device = TestSoundcoreDevice::new(
+            super::device_registry,
+            DeviceModel::SoundcoreA3954,
+            HashMap::from([(
+                packet::Command([1, 1]),
+                packet::Inbound::new(
+                    packet::Command([1, 1]),
+                    vec![
+                        0, 1, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53,
+                        52, 68, 69, 55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9,
+                        0xF4, 0x9D, 0x8A, 0x53, 0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120,
+                        120, 120, 120, 120, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1,
+                        145, 147, 139, 141, 122, 111, 105, 100, 60, 60, 145, 147, 139, 141, 122,
+                        111, 105, 100, 60, 60, 0, 0, 0, 0, 1, 145, 147, 139, 130, 122, 133, 133,
+                        114, 60, 60, 145, 147, 139, 130, 122, 133, 133, 114, 60, 60, 0, 0, 10,
+                        0x66, 0x66, 0x32, 0x33, 0xFF, 0xFF, 0x44, 0x44, 0x33, 2, 6, 0, 0, 255, 1,
+                        255, 0, 0, 0, 0, 94, 1, 110, 1, 0, 0, 0, 1, 0, 1, 95, 0, 0, 1, 0, 0, 0, 0,
+                        110, 1, 0, 1, 0, 0, 255, 0, 0, 17, 17,
+                    ],
+                ),
+            )]),
+            SoundcoreDeviceConfig::default(),
+        )
+        .await;
+        // Both used to share SettingId::SpatialAudio, so the case's flag could be neither read nor changed, and the
+        // case category showed a toggle for the earbuds' spatial audio.
+        let case_settings = device.inner().settings_in_category(&CategoryId::Case);
+        assert!(
+            case_settings.contains(&SettingId::CaseSpatialAudio),
+            "{case_settings:?}"
+        );
+        assert!(
+            !case_settings.contains(&SettingId::SpatialAudio),
+            "{case_settings:?}"
+        );
+
+        // atmospheric, remote camera, find device, spatial audio
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::CaseSpatialAudio, true.into())],
+                vec![packet::Outbound::new(
+                    packet::Command([7, 135]),
+                    vec![0, 0, 0, 1],
+                )],
+            )
+            .await;
+        device.assert_setting_values([
+            (SettingId::CaseSpatialAudio, true.into()),
+            (SettingId::SpatialAudio, false.into()),
+        ]);
+
+        // enabled, music mode fixed, mode music
+        device
+            .assert_set_settings_response(
+                vec![(SettingId::SpatialAudio, true.into())],
+                vec![packet::Outbound::new(
+                    packet::Command([16, 129]),
+                    vec![1, 1, 0],
+                )],
+            )
+            .await;
+        device.assert_setting_values([
+            (SettingId::SpatialAudio, true.into()),
+            (SettingId::CaseSpatialAudio, true.into()),
+        ]);
     }
 
     #[tokio::test(start_paused = true)]

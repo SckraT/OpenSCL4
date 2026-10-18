@@ -22,7 +22,7 @@ enum_subset! {
         Atmospheric,
         RemoteCamera,
         FindDevice,
-        SpatialAudio,
+        CaseSpatialAudio,
     }
 }
 
