@@ -294,7 +294,7 @@ fun SoundCasePage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair
         settings.filterNot { it.first == "caseBatteryLevel" }.forEach { (id, setting) ->
             SoundSettingEditor(id, setting, setSettings)
         }
-        if (settings.any { it.first in setOf("findDevice", "remoteCamera", "atmospheric") }) {
+        if (settings.any { it.first in setOf("findDevice", "remoteCamera", "atmospheric", "caseSpatialAudio") }) {
             SoundDeviceNote(R.string.sound_device_case_note)
         }
     }

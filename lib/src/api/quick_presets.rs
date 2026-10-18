@@ -598,7 +598,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn saves_shared_settings_once_in_category_order_and_retains_enabled_fields() {
+    async fn saves_each_setting_once_in_category_order_and_retains_enabled_fields() {
         use crate::api::settings::Setting;
 
         let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
@@ -612,13 +612,14 @@ mod tests {
             .iter()
             .flat_map(|category_id| device.settings_in_category(category_id))
             .collect::<Vec<_>>();
-        assert!(
+        // The case's spatial audio flag used to share this id, which made a preset capture it twice.
+        assert_eq!(
             category_setting_ids
                 .iter()
                 .filter(|&&setting_id| setting_id == SettingId::SpatialAudio)
-                .count()
-                > 1,
-            "the real device exposes spatial audio in more than one category"
+                .count(),
+            1,
+            "only the earbuds' spatial audio uses this id"
         );
 
         handler.save(device.as_ref(), name.clone()).await.unwrap();

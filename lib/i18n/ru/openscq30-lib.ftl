@@ -249,6 +249,7 @@ case-language = Язык кейса
 atmospheric = Атмосферное давление
 remote-camera = Дистанционное управление камерой
 find-device = Поиск устройства
+case-spatial-audio = Пространственный звук на кейсе
 spatial-audio = Пространственный звук
 spatial-audio-mode = Режим пространственного звука
 spatial-audio-music-mode = Режим пространственного звука для музыки

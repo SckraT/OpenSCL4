@@ -36,7 +36,7 @@ where
             CaseFeaturesSetting::FindDevice => Some(Setting::Toggle {
                 value: features.is_find_device_enabled,
             }),
-            CaseFeaturesSetting::SpatialAudio => Some(Setting::Toggle {
+            CaseFeaturesSetting::CaseSpatialAudio => Some(Setting::Toggle {
                 value: features.is_spatial_audio_enabled,
             }),
         }
@@ -64,7 +64,7 @@ where
                 let features = state.get_mut();
                 features.is_find_device_enabled = value.try_as_bool()?;
             }
-            CaseFeaturesSetting::SpatialAudio => {
+            CaseFeaturesSetting::CaseSpatialAudio => {
                 let features = state.get_mut();
                 features.is_spatial_audio_enabled = value.try_as_bool()?;
             }

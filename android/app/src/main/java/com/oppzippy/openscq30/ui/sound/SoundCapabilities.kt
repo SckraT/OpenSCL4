@@ -11,6 +11,7 @@ internal object SoundCapabilities {
             "atmospheric",
             "remoteCamera",
             "findDevice",
+            "caseSpatialAudio",
             "airPressure",
         )
     val modes = setOf(
