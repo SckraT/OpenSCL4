@@ -16,6 +16,7 @@ use crate::{
     PaletteChoice, Theme, ToastKind,
     config::{Accent, AppTheme, Config, SoundModeView},
     controller::{Command, Controller, DeviceSnapshot, Event, Failure},
+    model::overview::{OverviewLayout, OverviewPreset},
     model::{
         battery::is_only_one_earbud_connected,
         device_art::{EarbudsColor, art_color},
@@ -23,6 +24,7 @@ use crate::{
         legacy::LegacyEqualizerProfile,
         sound_mode::sound_mode_scale_settings,
     },
+    overview,
     rows::{self, Edit},
     view, window_chrome,
 };
@@ -179,6 +181,38 @@ fn install_actions(window: &AppWindow) {
         });
     });
     actions.on_copy(|text| with_app(|app| app.copy(&text)));
+    actions.on_choose_toggle(|id, on| with_app(|app| app.choose_toggle(&id, on)));
+    actions.on_layout_visible(|index, visible| {
+        with_app(|app| {
+            app.change_layout(|layout, blocks| {
+                let block = blocks.get(usize::try_from(index).ok()?)?;
+                Some(layout.with_visibility(*block, visible))
+            });
+        });
+    });
+    actions.on_layout_move(|index, delta| {
+        with_app(|app| {
+            app.change_layout(|layout, blocks| {
+                // the dialog lists only the blocks the device has; move past the hidden ones too
+                let from = blocks.get(usize::try_from(index).ok()?)?;
+                let to = blocks.get(usize::try_from(index + delta).ok()?)?;
+                let position = |block| layout.blocks.iter().position(|(b, _)| b == block);
+                Some(layout.moved(position(from)?, position(to)?))
+            });
+        });
+    });
+    actions.on_layout_use(|preset| {
+        with_app(|app| {
+            app.change_layout(|_, _| {
+                Some(OverviewLayout::of(
+                    *OverviewPreset::ALL.get(usize::try_from(preset).ok()?)?,
+                ))
+            });
+        });
+    });
+    actions.on_apply_preset(|name| {
+        with_app(|app| app.send(Command::ActivatePreset(name.to_string())));
+    });
     actions.on_open_uri(|uri| {
         if let Err(err) = open::that_detached(uri.as_str()) {
             tracing::warn!("could not open {uri}: {err}");
@@ -341,6 +375,57 @@ impl App {
     fn send(&mut self, command: Command) {
         self.failed_command = None;
         self.controller.send(command);
+        self.render();
+    }
+
+    fn layout(&self) -> OverviewLayout {
+        OverviewLayout::parse(self.config.settings.overview_layout.as_deref())
+    }
+
+    /// Changes the overview's blocks; `change` gets the blocks in the order the dialog lists them.
+    fn change_layout(
+        &mut self,
+        change: impl FnOnce(
+            &OverviewLayout,
+            &[crate::model::overview::OverviewBlock],
+        ) -> Option<OverviewLayout>,
+    ) {
+        let Some(snapshot) = self.snapshot() else {
+            return;
+        };
+        let one_earbud = is_only_one_earbud_connected(&snapshot.settings);
+        let (sound, device) = view::pages(snapshot, one_earbud);
+        let layout = self.layout();
+        let listed: Vec<_> = layout
+            .blocks
+            .iter()
+            .map(|(block, _)| *block)
+            .filter(|block| overview::supported(*block, snapshot, &sound, &device))
+            .collect();
+        if let Some(changed) = change(&layout, &listed) {
+            self.config.settings.overview_layout = Some(changed.serialize());
+            self.config.save();
+        }
+        self.render();
+    }
+
+    fn choose_toggle(&mut self, id: &str, on: bool) {
+        let Some(snapshot) = self.snapshot() else {
+            return;
+        };
+        let model: &'static str = snapshot.model.into();
+        let chosen = self.config.settings.quick_toggles.get(model).cloned();
+        let available = overview::toggle_ids(snapshot);
+        let mut ids = crate::model::quick_toggles::quick_toggle_ids(chosen.as_deref(), &available);
+        ids.retain(|other| other != id);
+        if on {
+            ids.push(id.to_string());
+        }
+        self.config
+            .settings
+            .quick_toggles
+            .insert(model.to_string(), ids);
+        self.config.save();
         self.render();
     }
 
@@ -629,6 +714,49 @@ impl App {
         };
         state.set_case_battery(information(SettingId::CaseBatteryLevel).into());
 
+        // the overview
+        let one_earbud = is_only_one_earbud_connected(&snapshot.settings);
+        let (sound, device) = view::pages(snapshot, one_earbud);
+        let layout = self.layout();
+        state.set_batteries(ModelRc::new(VecModel::from(overview::batteries(
+            snapshot, one_earbud,
+        ))));
+        let model: &'static str = snapshot.model.into();
+        let (shown, all) = overview::quick_toggles(
+            snapshot,
+            self.config
+                .settings
+                .quick_toggles
+                .get(model)
+                .map(Vec::as_slice),
+        );
+        state.set_quick_toggles(ModelRc::new(VecModel::from(shown)));
+        state.set_all_toggles(ModelRc::new(VecModel::from(all)));
+        state.set_overview_rows(ModelRc::new(VecModel::from(overview::rows(
+            &layout, snapshot, &sound, &device,
+        ))));
+        state.set_layout_blocks(ModelRc::new(VecModel::from(overview::layout_blocks(
+            &layout, snapshot, &sound, &device,
+        ))));
+        state.set_layout_preset(
+            layout
+                .preset()
+                .and_then(|p| OverviewPreset::ALL.iter().position(|q| *q == p))
+                .map_or(-1, |i| i as i32),
+        );
+        state.set_show_one_earbud_badge(self.config.settings.one_earbud_badge);
+        let last_preset = self
+            .config
+            .settings
+            .last_preset
+            .get(&snapshot.mac_address.to_string())
+            .map(String::as_str);
+        state.set_presets(ModelRc::new(VecModel::from(overview::presets(
+            snapshot,
+            last_preset,
+        ))));
+        self.render_equalizer_summary(state, snapshot);
+
         let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
         if let Some(mode) = rows::mode_view(snapshot, scale_preferred) {
             let label = |value: &str| {
@@ -655,6 +783,48 @@ impl App {
             state.set_modes(ModelRc::new(VecModel::from(mode.options)));
         } else {
             state.set_modes(ModelRc::default());
+        }
+    }
+
+    /// The equalizer's current profile and curve, for the overview.
+    fn render_equalizer_summary(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
+        use openscq30_lib::settings::Setting;
+        let name = match (
+            snapshot.settings.get(&SettingId::PresetEqualizerProfile),
+            snapshot.settings.get(&SettingId::CustomEqualizerProfile),
+        ) {
+            (
+                Some(Setting::PresetEqualizerProfileSelect {
+                    select,
+                    value: Some(value),
+                    ..
+                }),
+                _,
+            ) => select
+                .options
+                .iter()
+                .position(|o| o == value)
+                .and_then(|i| select.localized_options.get(i).cloned())
+                .unwrap_or_default(),
+            (
+                _,
+                Some(Setting::ModifiableSelect {
+                    value: Some(value), ..
+                }),
+            ) => value.to_string(),
+            _ => String::new(),
+        };
+        state.set_eq_name(name.into());
+        if let Some(Setting::Equalizer { setting, value, .. }) =
+            snapshot.settings.get(&SettingId::VolumeAdjustments)
+        {
+            state.set_eq_curve(
+                overview::curve(value, setting.min, setting.max, 600.0, 100.0).into(),
+            );
+            state.set_eq_band_count(value.len() as i32);
+            state.set_eq_min(i32::from(setting.min));
+            state.set_eq_max(i32::from(setting.max));
+            state.set_eq_digits(i32::from(setting.fraction_digits));
         }
     }
 

@@ -6,6 +6,7 @@ mod art;
 mod config;
 mod controller;
 pub mod model;
+mod overview;
 mod rows;
 mod view;
 mod window_chrome;

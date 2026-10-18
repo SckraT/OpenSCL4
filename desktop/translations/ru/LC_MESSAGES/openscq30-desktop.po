@@ -576,3 +576,115 @@ msgstr "Сведения приходят от устройства и обно�
 
 msgid "The serial number and firmware version help when you contact support."
 msgstr "Серийный номер и версия прошивки пригодятся при обращении в поддержку."
+
+# Overview
+msgid "Presses and slides"
+msgstr "Нажатия и скольжения"
+
+msgid "Presses and switching modes"
+msgstr "Нажатия и смена режимов"
+
+msgid "on"
+msgstr "вкл."
+
+msgid "off"
+msgstr "выкл."
+
+msgid "On: {} of {}"
+msgstr "Включено: {} из {}"
+
+msgid "Volume: {}"
+msgstr "Громкость: {}"
+
+msgid "Auto power off: {}"
+msgstr "Автовыключение: {}"
+
+msgid "Two devices at once"
+msgstr "Два устройства сразу"
+
+msgid "One device at a time"
+msgstr "Одно устройство"
+
+msgid "Case battery {}"
+msgstr "Заряд кейса {}"
+
+msgid "Battery"
+msgstr "Заряд"
+
+msgid "1 earbud"
+msgstr "1 наушник"
+
+msgid "Add quick toggles"
+msgstr "Добавить переключатели"
+
+msgid "Quick toggles"
+msgstr "Быстрые переключатели"
+
+msgid "Your sound"
+msgstr "Ваше звучание"
+
+msgid "All presets"
+msgstr "Все пресеты"
+
+msgid "Customize"
+msgstr "Настроить"
+
+msgid "Available when both earbuds are connected"
+msgstr "Доступен, когда подключены оба наушника"
+
+msgid "Current profile"
+msgstr "Текущий профиль"
+
+msgid "Your own settings"
+msgstr "Свои настройки"
+
+msgid "{} bands · {}…{} dB"
+msgstr "Полос: {} · {}…{} дБ"
+
+msgid "Low frequencies"
+msgstr "Низкие частоты"
+
+msgid "High frequencies"
+msgstr "Высокие частоты"
+
+msgid "Save your favourite combinations of settings."
+msgstr "Сохраните любимые сочетания настроек."
+
+msgid "No settings chosen yet"
+msgstr "Настройки не выбраны"
+
+msgid "Edit device screen"
+msgstr "Изменить главный экран"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "Подключён только один наушник. Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника."
+
+msgid "Move up"
+msgstr "Переместить выше"
+
+msgid "Move down"
+msgstr "Переместить ниже"
+
+msgid "Your device screen."
+msgstr "Ваш главный экран."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "Включите нужные блоки и перемещайте их вверх и вниз, чтобы изменить порядок."
+
+msgid "Ready-made sets"
+msgstr "Готовые наборы"
+
+msgid "Minimal"
+msgstr "Минимальный"
+
+msgid "Standard"
+msgstr "Обычный"
+
+msgid "Full"
+msgstr "Полный"
+
+msgid "Done"
+msgstr "Готово"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "Выберите кнопки на карточке устройства. Сами настройки не изменятся."

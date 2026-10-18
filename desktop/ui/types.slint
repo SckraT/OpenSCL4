@@ -74,6 +74,50 @@ export struct ModeOption {
     label: string,
 }
 
+export enum BlockKind { sound-mode, equalizer, quick-presets, controls, comfort, spatial, power, connections, case }
+
+// 0 left, 1 right, 2 case, 3 the whole device
+export struct Battery {
+    label: int,
+    value: string,
+    progress: float,
+    known: bool,
+}
+
+export struct QuickToggle {
+    id: string,
+    label: string,
+    on: bool,
+}
+
+// a block of the overview, and what its shortcut says: numbers and names the window puts into words
+export struct OverviewBlockData {
+    kind: BlockKind,
+    page: Page,
+    number: int,
+    total: int,
+    text: string,
+    on: bool,
+}
+
+export struct OverviewRow {
+    shortcuts: bool,
+    blocks: [OverviewBlockData],
+}
+
+export struct LayoutBlock {
+    kind: BlockKind,
+    visible: bool,
+}
+
+// 0 not applied, 1 the device has its values, 2 applied last and still in effect
+export struct PresetItem {
+    name: string,
+    detail: string,
+    status: int,
+    enabled-count: int,
+}
+
 export struct PairedOption {
     mac: string,
     name: string,
@@ -132,6 +176,24 @@ export global AppState {
     in property <string> airplane-label;
     in property <int> airplane-index: -1;
 
+    // the overview
+    in property <[Battery]> batteries;
+    in property <[QuickToggle]> quick-toggles;
+    in property <[QuickToggle]> all-toggles;
+    in property <[OverviewRow]> overview-rows;
+    in property <[LayoutBlock]> layout-blocks;
+    in property <int> layout-preset: -1;
+    in-out property <bool> editing-layout;
+    in-out property <bool> choosing-toggles;
+    in property <bool> show-one-earbud-badge: true;
+    in property <[PresetItem]> presets;
+    in property <string> eq-name;
+    in property <string> eq-curve;
+    in property <int> eq-band-count;
+    in property <int> eq-min;
+    in property <int> eq-max;
+    in property <int> eq-digits;
+
     // what the asides of the section pages show
     in property <bool> has-ldac;
     in property <bool> has-spatial;
@@ -169,4 +231,9 @@ export global Actions {
     callback set-scale(int);
     callback set-side(string);
     callback copy(string);
+    callback choose-toggle(string, bool);
+    callback layout-visible(int, bool);
+    callback layout-move(int, int);
+    callback layout-use(int);
+    callback apply-preset(string);
 }

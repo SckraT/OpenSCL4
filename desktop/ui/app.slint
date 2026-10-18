@@ -9,9 +9,10 @@ import { Sidebar, StatusBar, PageHeading } from "shell.slint";
 import { DevicesPage, ConnectionState } from "pages/devices.slint";
 import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
 import { SectionPage } from "pages/sections.slint";
+import { OverviewPage, LayoutDialog, QuickTogglesDialog } from "pages/overview.slint";
 
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
-export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind } from "types.slint";
+export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem } from "types.slint";
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
@@ -74,7 +75,10 @@ export component AppWindow inherits Window {
                     }
                     if AppState.page == Page.devices: DevicesPage { }
                     if root.device-page && AppState.connection != Connection.connected: ConnectionState { }
-                    if root.device-page && AppState.connection == Connection.connected && root.own-page: PageHeading {
+                    if AppState.page == Page.overview && AppState.connection == Connection.connected: OverviewPage {
+                        wide: root.width - sidebar.width > 900px;
+                    }
+                    if root.device-page && AppState.page != Page.overview && AppState.connection == Connection.connected && root.own-page: PageHeading {
                         page: AppState.page;
                     }
                     if root.device-page && AppState.connection == Connection.connected && !root.own-page: SectionPage {
@@ -92,6 +96,8 @@ export component AppWindow inherits Window {
 
     if AppState.adding: AddDeviceDialog { }
     if AppState.confirm-forget-mac != "": ConfirmForgetDialog { }
+    if AppState.editing-layout: LayoutDialog { }
+    if AppState.choosing-toggles: QuickTogglesDialog { }
     if AppState.toast != ToastKind.none: Rectangle {
         y: root.height - 80px;
         x: (root.width - self.width) / 2;

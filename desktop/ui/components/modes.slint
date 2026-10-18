@@ -149,7 +149,7 @@ export component ModeScale inherits VerticalLayout {
 }
 
 // a setting of the current mode: a choice between ways it works, or its strength
-component ModeRow inherits VerticalLayout {
+export component ModeRow inherits VerticalLayout {
     in property <SettingRow> setting;
     private property <string> label: SettingText.short-label(setting.id) != "" ? SettingText.short-label(setting.id) : setting.label;
     padding-top: 14px;
