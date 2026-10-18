@@ -8,6 +8,7 @@ mod controller;
 mod equalizer;
 pub mod model;
 mod overview;
+mod presets;
 mod rows;
 mod view;
 mod window_chrome;

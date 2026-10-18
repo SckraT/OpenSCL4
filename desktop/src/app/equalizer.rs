@@ -214,7 +214,7 @@ pub(super) struct EqualizerState {
     selection_sent: Option<Value>,
     import_text: Option<String>,
     /// A message for once the device has done what was asked.
-    pending_toast: Option<(ToastKind, i32)>,
+    pub(super) pending_toast: Option<(ToastKind, i32)>,
     note: Option<(TransferNote, i32)>,
 }
 

@@ -11,9 +11,10 @@ import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
 import { SectionPage } from "pages/sections.slint";
 import { OverviewPage, LayoutDialog, QuickTogglesDialog } from "pages/overview.slint";
 import { EqualizerPage, SaveProfileDialog, DeleteProfileDialog, ImportDialog } from "pages/equalizer.slint";
+import { PresetsPage, CreatePresetDialog, PresetEditorDialog, LoadPresetDialog, DeletePresetDialog } from "pages/presets.slint";
 
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
-export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem, EqBand, EqLine, EqProfile, ImportItem, TransferNote } from "types.slint";
+export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem, EqBand, EqLine, EqProfile, ImportItem, TransferNote, PresetCard, PresetFieldRow, PresetGroup } from "types.slint";
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
@@ -82,8 +83,8 @@ export component AppWindow inherits Window {
                     if AppState.page == Page.equalizer && AppState.connection == Connection.connected: EqualizerPage {
                         wide: root.width - sidebar.width > 900px;
                     }
-                    if AppState.page == Page.presets && AppState.connection == Connection.connected: PageHeading {
-                        page: AppState.page;
+                    if AppState.page == Page.presets && AppState.connection == Connection.connected: PresetsPage {
+                        wide: root.width - sidebar.width > 900px;
                     }
                     if root.device-page && AppState.connection == Connection.connected && !root.own-page: SectionPage {
                         page: AppState.page;
@@ -105,6 +106,10 @@ export component AppWindow inherits Window {
     if AppState.eq-saving: SaveProfileDialog { }
     if AppState.eq-deleting != "": DeleteProfileDialog { }
     if AppState.importing: ImportDialog { }
+    if AppState.creating-preset: CreatePresetDialog { }
+    if AppState.editing-preset != "": PresetEditorDialog { }
+    if AppState.loading-preset: LoadPresetDialog { }
+    if AppState.deleting-preset != "": DeletePresetDialog { }
     if AppState.toast != ToastKind.none: Rectangle {
         y: root.height - 80px;
         x: (root.width - self.width) / 2;
@@ -118,7 +123,12 @@ export component AppWindow inherits Window {
                 : AppState.toast == ToastKind.profile-deleted ? @tr("Profile deleted")
                 : AppState.toast == ToastKind.file-saved ? @tr("Saved to the file")
                 : AppState.toast == ToastKind.imported ? @tr("Imported {n} profile" | "Imported {n} profiles" % AppState.toast-count)
-                : AppState.toast == ToastKind.migrated ? @tr("Moved {n} profile" | "Moved {n} profiles" % AppState.toast-count) : "";
+                : AppState.toast == ToastKind.migrated ? @tr("Moved {n} profile" | "Moved {n} profiles" % AppState.toast-count)
+                : AppState.toast == ToastKind.preset-applied ? @tr("Preset “{}” applied", AppState.toast-name)
+                : AppState.toast == ToastKind.preset-applied-later ? @tr("Preset “{}” applied. Its equalizer is applied once both earbuds are connected.", AppState.toast-name)
+                : AppState.toast == ToastKind.preset-deleted ? @tr("Preset deleted")
+                : AppState.toast == ToastKind.preset-replaced ? @tr("Preset values replaced")
+                : AppState.toast == ToastKind.preset-loaded ? @tr("Current settings loaded into the preset") : "";
             color: Theme.bg;
             font-size: Theme.font-small;
         }

@@ -12,6 +12,7 @@ use openscq30_lib::{
 use slint::{ComponentHandle, ModelRc, VecModel};
 
 mod equalizer;
+mod presets;
 
 use crate::{
     Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
@@ -69,6 +70,8 @@ pub struct App {
     /// "ru" or "en", for numbers the window shows.
     language: &'static str,
     equalizer: equalizer::EqualizerState,
+    /// The preset whose settings are being chosen.
+    editing_preset: Option<String>,
 }
 
 thread_local! {
@@ -114,6 +117,7 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         started: false,
         language: "en",
         equalizer: equalizer::EqualizerState::default(),
+        editing_preset: None,
     };
     APP.with(|cell| *cell.borrow_mut() = Some(app));
     install_actions(window);
@@ -132,6 +136,7 @@ pub fn shown() {
 
 fn install_actions(window: &AppWindow) {
     equalizer::install_actions(window);
+    presets::install_actions(window);
     let actions = window.global::<Actions>();
     actions.on_navigate(|page| with_app(|app| app.navigate(page)));
     actions.on_connect(|mac| {
@@ -319,12 +324,14 @@ impl App {
             Event::Disconnected(mac) => {
                 if self.current == Some(mac) {
                     self.equalizer_disconnected();
+                    self.editing_preset = None;
                     self.connection = Connection::Off;
                 }
             }
             Event::ConnectionLost(mac) => {
                 if self.current == Some(mac) {
                     self.equalizer_disconnected();
+                    self.editing_preset = None;
                     self.connection = Connection::Lost;
                 }
             }
@@ -349,8 +356,9 @@ impl App {
                 self.config
                     .settings
                     .last_preset
-                    .insert(mac_address.to_string(), name);
+                    .insert(mac_address.to_string(), name.clone());
                 self.config.save();
+                self.preset_applied(&name);
             }
             Event::LegacyProfiles(profiles) => self.legacy = profiles,
         }
@@ -656,6 +664,9 @@ impl App {
         if let Some(snapshot) = self.snapshot() {
             self.render_section(&state, snapshot);
         }
+        if self.snapshot().is_none() {
+            state.set_editing_preset("".into());
+        }
 
         state.set_error_label(
             self.failed_command
@@ -764,12 +775,15 @@ impl App {
             .last_preset
             .get(&snapshot.mac_address.to_string())
             .map(String::as_str);
+        let (on, off) = self.on_off();
         state.set_presets(ModelRc::new(VecModel::from(overview::presets(
             snapshot,
             last_preset,
+            crate::presets::OnOff { on: &on, off: &off },
         ))));
         self.render_equalizer_summary(state, snapshot);
         self.render_equalizer(state, snapshot);
+        self.render_presets(state, snapshot);
 
         let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
         if let Some(mode) = rows::mode_view(snapshot, scale_preferred) {

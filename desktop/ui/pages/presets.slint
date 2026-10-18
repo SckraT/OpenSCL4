@@ -1,0 +1,422 @@
+// Quick presets: a card for each, creating one from the current settings, and choosing which of its settings it
+// applies. Rust (src/presets.rs) puts the cards and the editor's rows together.
+import { LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { AppState, Actions, Page, PresetCard, PresetFieldRow } from "../types.slint";
+import { Strings } from "../strings.slint";
+import { Icon, IconButton, Button, ButtonKind, Note, ProfileCurve, MenuItem } from "../components/basics.slint";
+import { PageHeading } from "../shell.slint";
+import { DialogFrame } from "add_device.slint";
+
+component FieldTag inherits Rectangle {
+    in property <string> text;
+    in property <color> ink;
+    border-radius: 10px;
+    background: Theme.bg.transparentize(40%);
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        Text {
+            text: root.text;
+            color: root.ink;
+            font-size: Theme.font-caption;
+        }
+    }
+}
+
+component PresetCardView inherits Rectangle {
+    in property <PresetCard> card;
+    private property <bool> applied: card.status == 2;
+    private property <color> ink: applied ? Theme.on-sage : Theme.text;
+    border-radius: Theme.radius-panel;
+    background: applied ? Theme.sage : Theme.surface;
+    VerticalLayout {
+        padding: 20px;
+        padding-top: 16px;
+        spacing: 14px;
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                text: root.card.name;
+                color: root.ink;
+                font-size: 20px;
+                font-weight: 600;
+                overflow: elide;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            IconButton {
+                icon: Icons.more;
+                tint: root.ink;
+                label: @tr("More actions for {}", root.card.name);
+                clicked => { menu.show(); }
+            }
+        }
+        if root.card.curve != "": ProfileCurve {
+            commands: root.card.curve;
+            width: parent.width - 40px;
+            height: 44px;
+        }
+        if root.card.enabled-count == 0: Text {
+            text: @tr("Use Edit to choose which settings to apply.");
+            color: root.ink;
+            opacity: 0.75;
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+        }
+        if root.card.enabled-count > 0: FlexboxLayout {
+            spacing: 6px;
+            for field in root.card.fields: FieldTag {
+                text: field;
+                ink: root.ink;
+            }
+            if root.card.more > 0: FieldTag {
+                text: @tr("+{} more", root.card.more);
+                ink: root.ink;
+            }
+        }
+        if root.card.status != 0: HorizontalLayout {
+            spacing: 6px;
+            // only the check mark says the preset was applied, since other presets can match the device too
+            if root.applied: Icon {
+                source: Icons.check;
+                tint: root.ink;
+                width: 14px;
+                height: 14px;
+                y: (parent.height - self.height) / 2;
+            }
+            Text {
+                text: @tr("Matches current settings");
+                color: root.ink;
+                font-size: Theme.font-caption;
+                vertical-alignment: center;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            Button {
+                text: root.applied ? @tr("Applied") : @tr("Apply");
+                kind: root.applied ? ButtonKind.soft : ButtonKind.primary;
+                has-icon: true;
+                icon: root.applied ? Icons.check : Icons.bolt;
+                enabled: root.card.enabled-count > 0 && !root.applied;
+                clicked => { Actions.apply-preset(root.card.name); }
+            }
+            Button {
+                text: @tr("Edit");
+                kind: ButtonKind.ghost;
+                has-icon: true;
+                icon: Icons.edit;
+                clicked => { Actions.preset-edit(root.card.name); }
+            }
+        }
+    }
+    menu := PopupWindow {
+        x: root.width - 200px;
+        y: 52px;
+        width: 180px;
+        Rectangle {
+            background: Theme.surface;
+            border-radius: 14px;
+            border-width: 1px;
+            border-color: Theme.line;
+            drop-shadow-blur: 18px;
+            drop-shadow-color: #00000030;
+            VerticalLayout {
+                padding: 6px;
+                MenuItem {
+                    text: @tr("Delete");
+                    icon: Icons.trash;
+                    danger: true;
+                    clicked => {
+                        menu.close();
+                        AppState.deleting-preset = root.card.name;
+                    }
+                }
+            }
+        }
+    }
+}
+
+component EmptyPresets inherits Rectangle {
+    min-height: 320px;
+    VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            Icon {
+                source: Icons.bolt;
+                tint: Theme.primary;
+                width: 40px;
+                height: 40px;
+            }
+        }
+        Text {
+            text: @tr("Your sound, in one preset");
+            color: Theme.text;
+            font-size: 22px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: @tr("Save your current settings and choose the ones you want to apply together.");
+            color: Theme.muted;
+            font-size: Theme.font-small;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: center;
+            padding-top: 6px;
+            Button {
+                text: @tr("Create preset");
+                kind: ButtonKind.primary;
+                has-icon: true;
+                icon: Icons.plus;
+                clicked => {
+                    AppState.preset-create-problem = 0;
+                    AppState.creating-preset = true;
+                }
+            }
+        }
+    }
+}
+
+export component PresetsPage inherits VerticalLayout {
+    in property <bool> wide;
+    spacing: 0px;
+    PageHeading {
+        page: Page.presets;
+        if AppState.preset-cards.length > 0: Button {
+            text: @tr("Create preset");
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: Icons.plus;
+            clicked => {
+                AppState.preset-create-problem = 0;
+                AppState.creating-preset = true;
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 16px;
+        if AppState.presets-need-both-earbuds: Note {
+            text: @tr("The equalizer from presets is applied once both earbuds are connected.");
+            warm: true;
+        }
+        if AppState.preset-cards.length == 0: EmptyPresets { }
+        // set widths: the cards wrap, and need to know their width to know their height
+        if AppState.preset-cards.length > 0: cards := FlexboxLayout {
+            spacing: 16px;
+            for card in AppState.preset-cards: PresetCardView {
+                card: card;
+                width: root.wide ? (cards.width - 16px) / 2 : cards.width;
+            }
+        }
+    }
+}
+
+export component CreatePresetDialog inherits DialogFrame {
+    title: @tr("Create preset");
+    description: @tr("We'll save the current settings. Then choose which of them to apply.");
+    dialog-width: 520px;
+    close => { AppState.creating-preset = false; }
+    Text {
+        text: @tr("Name");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+    }
+    name := LineEdit {
+        placeholder-text: @tr("For example, for work");
+        edited => { AppState.preset-create-problem = 0; }
+        accepted => { Actions.preset-create(self.text, AppState.preset-create-problem == 2); }
+        init => { self.focus(); }
+    }
+    if AppState.preset-create-problem == 1: Text {
+        text: @tr("Enter a preset name.");
+        color: Theme.error;
+        font-size: Theme.font-small;
+    }
+    if AppState.preset-create-problem == 2: Text {
+        text: @tr("“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept.", AppState.preset-existing);
+        color: Theme.error;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        padding-top: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.creating-preset = false; }
+        }
+        Button {
+            text: AppState.preset-create-problem == 2 ? @tr("Replace") : @tr("Create");
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: AppState.preset-create-problem == 2 ? Icons.refresh : Icons.plus;
+            clicked => { Actions.preset-create(name.text, AppState.preset-create-problem == 2); }
+        }
+    }
+}
+
+component FieldRowView inherits Rectangle {
+    in property <PresetFieldRow> field;
+    min-height: 52px;
+    border-radius: 14px;
+    background: touch.has-hover ? Theme.hover : transparent;
+    accessible-role: checkbox;
+    accessible-label: field.label;
+    accessible-checked: field.enabled;
+    accessible-action-default => { Actions.preset-toggle(AppState.editing-preset, field.id, !field.enabled); }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Actions.preset-toggle(AppState.editing-preset, root.field.id, !root.field.enabled); }
+    }
+    HorizontalLayout {
+        padding: 8px;
+        padding-left: 10px;
+        spacing: 12px;
+        Rectangle {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 5px;
+            border-width: root.field.enabled ? 0px : 1.5px;
+            border-color: Theme.muted;
+            background: root.field.enabled ? Theme.primary : transparent;
+            if root.field.enabled: Icon {
+                source: Icons.check;
+                tint: Theme.on-primary;
+                width: 14px;
+                height: 14px;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            Text {
+                text: root.field.label;
+                color: Theme.text;
+                font-weight: 500;
+                wrap: word-wrap;
+            }
+            Text {
+                text: root.field.curve != "" ? @tr("Custom curve") : root.field.value;
+                color: Theme.muted;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+            }
+        }
+        if root.field.curve != "": VerticalLayout {
+            alignment: center;
+            ProfileCurve { commands: root.field.curve; }
+        }
+    }
+}
+
+export component PresetEditorDialog inherits DialogFrame {
+    title: AppState.editing-preset;
+    description: @tr("Only selected settings are applied with this preset. Changes to this selection are saved immediately.");
+    dialog-width: 600px;
+    close => { Actions.preset-edit(""); }
+    if AppState.preset-groups.length == 0: Text {
+        text: @tr("No saved settings yet. Load the current device settings to get started.");
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+    }
+    if AppState.preset-groups.length > 0: scroll := ScrollView {
+        height: min(list.preferred-height, 420px);
+        list := VerticalLayout {
+            width: scroll.visible-width;
+            spacing: 4px;
+            for group in AppState.preset-groups: VerticalLayout {
+                spacing: 2px;
+                padding-bottom: 8px;
+                Text {
+                    text: Strings.title(group.page);
+                    color: Theme.primary;
+                    font-size: Theme.font-small;
+                    font-weight: 600;
+                }
+                for field in group.fields: FieldRowView { field: field; }
+            }
+        }
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        padding-top: 8px;
+        Button {
+            text: @tr("Load current settings");
+            has-icon: true;
+            icon: Icons.download;
+            clicked => { AppState.loading-preset = true; }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        Button {
+            text: @tr("Done");
+            kind: ButtonKind.primary;
+            clicked => { Actions.preset-edit(""); }
+        }
+    }
+}
+
+export component LoadPresetDialog inherits DialogFrame {
+    title: @tr("Load current settings");
+    description: @tr("Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device.");
+    dialog-width: 520px;
+    close => { AppState.loading-preset = false; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.loading-preset = false; }
+        }
+        Button {
+            text: @tr("Load");
+            kind: ButtonKind.primary;
+            has-icon: true;
+            icon: Icons.download;
+            clicked => {
+                Actions.preset-load(AppState.editing-preset);
+                AppState.loading-preset = false;
+            }
+        }
+    }
+}
+
+export component DeletePresetDialog inherits DialogFrame {
+    title: @tr("Delete preset?");
+    description: @tr("Delete “{}”? Your current device settings will be kept.", AppState.deleting-preset);
+    dialog-width: 520px;
+    close => { AppState.deleting-preset = ""; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        Button {
+            text: @tr("Cancel");
+            clicked => { AppState.deleting-preset = ""; }
+        }
+        Button {
+            text: @tr("Delete");
+            kind: ButtonKind.danger;
+            has-icon: true;
+            icon: Icons.trash;
+            clicked => {
+                Actions.preset-delete(AppState.deleting-preset);
+                AppState.deleting-preset = "";
+            }
+        }
+    }
+}

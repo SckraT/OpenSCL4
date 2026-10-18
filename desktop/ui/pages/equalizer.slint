@@ -5,7 +5,7 @@ import { LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, Page, EqBand, EqProfile, ImportItem, TransferNote } from "../types.slint";
-import { Icon, IconButton, Button, ButtonKind, Chip, TextLink, Panel, PanelHeading, Note, Banner } from "../components/basics.slint";
+import { Icon, IconButton, Button, ButtonKind, Chip, TextLink, Panel, PanelHeading, Note, Banner, Tag, ProfileCurve, MenuItem, CheckRow } from "../components/basics.slint";
 import { PageHeading } from "../shell.slint";
 import { DialogFrame } from "add_device.slint";
 
@@ -36,49 +36,6 @@ export global EqText {
 // the chart's points sit this far from its top and bottom, as in src/equalizer.rs
 global Chart {
     out property <float> margin: 0.06;
-}
-
-component Tag inherits Rectangle {
-    in property <string> text;
-    in property <color> tint: Theme.on-primary-container;
-    in property <color> fill: Theme.primary-container;
-    border-radius: 8px;
-    background: fill;
-    HorizontalLayout {
-        padding-left: 9px;
-        padding-right: 9px;
-        padding-top: 3px;
-        padding-bottom: 3px;
-        Text {
-            text: root.text;
-            color: root.tint;
-            font-size: Theme.font-caption;
-            font-weight: 500;
-            vertical-alignment: center;
-        }
-    }
-}
-
-// A profile's curve, drawn small beside its name.
-component ProfileCurve inherits Rectangle {
-    in property <string> commands;
-    width: 72px;
-    height: 30px;
-    border-radius: 9px;
-    background: Theme.container;
-    clip: true;
-    Path {
-        x: 4px;
-        width: parent.width - 8px;
-        height: parent.height;
-        fit: fill;
-        viewbox-width: 600;
-        viewbox-height: 100;
-        commands: root.commands;
-        stroke: Theme.primary;
-        stroke-width: 1.6px;
-        fill: transparent;
-    }
 }
 
 component EqualizerChart inherits Rectangle {
@@ -386,42 +343,6 @@ component BandsPanel inherits Panel {
     }
 }
 
-component MenuItem inherits Rectangle {
-    in property <string> text;
-    in property <image> icon;
-    in property <bool> danger;
-    callback clicked();
-    height: 36px;
-    border-radius: 9px;
-    background: touch.has-hover ? Theme.hover : transparent;
-    accessible-role: button;
-    accessible-label: text;
-    accessible-action-default => { clicked(); }
-    HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 12px;
-        spacing: 10px;
-        Icon {
-            source: root.icon;
-            tint: root.danger ? Theme.error : Theme.text;
-            width: 16px;
-            height: 16px;
-            y: (parent.height - self.height) / 2;
-        }
-        Text {
-            text: root.text;
-            color: root.danger ? Theme.error : Theme.text;
-            font-size: Theme.font-body;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
-        }
-    }
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}
-
 // A saved profile: clicking applies it, its menu exports or deletes it.
 component ProfileRow inherits Rectangle {
     in property <EqProfile> profile;
@@ -586,46 +507,6 @@ component LegacyBanner inherits Rectangle {
                 }
             }
         }
-    }
-}
-
-component CheckRow inherits Rectangle {
-    in property <string> text;
-    in property <bool> checked;
-    callback toggled(bool);
-    min-height: 32px;
-    accessible-role: checkbox;
-    accessible-label: text;
-    accessible-checked: checked;
-    accessible-action-default => { toggled(!checked); }
-    HorizontalLayout {
-        spacing: 10px;
-        Rectangle {
-            width: 18px;
-            height: 18px;
-            y: (parent.height - self.height) / 2;
-            border-radius: 5px;
-            border-width: root.checked ? 0px : 1.5px;
-            border-color: Theme.muted;
-            background: root.checked ? Theme.primary : transparent;
-            if root.checked: Icon {
-                source: Icons.check;
-                tint: Theme.on-primary;
-                width: 14px;
-                height: 14px;
-            }
-        }
-        Text {
-            text: root.text;
-            color: Theme.text;
-            vertical-alignment: center;
-            overflow: elide;
-            horizontal-stretch: 1;
-        }
-    }
-    TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.toggled(!root.checked); }
     }
 }
 

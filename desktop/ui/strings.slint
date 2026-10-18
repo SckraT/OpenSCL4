@@ -3,6 +3,10 @@ import { Page } from "types.slint";
 import { Icons } from "icons.slint";
 
 export global Strings {
+    // a setting that is on or off, as presets name it; Rust reads these
+    out property <string> on: @tr("on");
+    out property <string> off: @tr("off");
+
     public pure function title(page: Page) -> string {
         if page == Page.overview { return @tr("Overview"); }
         if page == Page.sound-modes { return @tr("Sound mode"); }

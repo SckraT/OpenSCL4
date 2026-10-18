@@ -25,7 +25,7 @@ export enum Connection { no-device, off, connecting, connected, lost, bluetooth-
 export enum FailureKind { none, not-found, timed-out, other }
 
 // short messages at the bottom of the window; some say how many with AppState.toast-count
-export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated }
+export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated, preset-applied, preset-applied-later, preset-deleted, preset-replaced, preset-loaded }
 
 // what the import and export panel last did
 export enum TransferNote { none, file-saved, file-save-failed, not-profiles, clipboard-empty, too-large, read-failed, imported }
@@ -153,6 +153,31 @@ export struct ImportItem {
     bands: int,
 }
 
+// a quick preset's card: 0 not applied, 1 the device has its values, 2 applied last and still in effect
+export struct PresetCard {
+    name: string,
+    status: int,
+    // the first few of its settings with their values, and how many more there are
+    fields: [string],
+    more: int,
+    enabled-count: int,
+    curve: string,
+}
+
+// a setting a preset can apply, and whether it does
+export struct PresetFieldRow {
+    id: string,
+    label: string,
+    value: string,
+    enabled: bool,
+    curve: string,
+}
+
+export struct PresetGroup {
+    page: Page,
+    fields: [PresetFieldRow],
+}
+
 export struct PairedOption {
     mac: string,
     name: string,
@@ -258,6 +283,18 @@ export global AppState {
     in property <[ImportItem]> import-items;
     in property <bool> import-blocked;
 
+    // the quick presets page
+    in property <[PresetCard]> preset-cards;
+    in property <bool> presets-need-both-earbuds;
+    // creating one: 1 the name is empty, 2 a preset of the name exists and creating again replaces its values
+    in-out property <bool> creating-preset;
+    in-out property <int> preset-create-problem;
+    in property <string> preset-existing;
+    in property <string> editing-preset;
+    in property <[PresetGroup]> preset-groups;
+    in-out property <bool> loading-preset;
+    in-out property <string> deleting-preset;
+
     // what the asides of the section pages show
     in property <bool> has-ldac;
     in property <bool> has-spatial;
@@ -267,6 +304,7 @@ export global AppState {
     in property <string> error-label;
     in property <ToastKind> toast;
     in property <int> toast-count;
+    in property <string> toast-name;
 
     // asking before forgetting
     in-out property <string> confirm-forget-mac;
@@ -322,4 +360,11 @@ export global Actions {
     callback eq-import();
     // one old profile to move, or all of them with ""
     callback eq-migrate(string);
+    // the name, and whether to replace the values of the preset of that name
+    callback preset-create(string, bool);
+    // the preset to edit, or "" to close the editor
+    callback preset-edit(string);
+    callback preset-toggle(string, string, bool);
+    callback preset-load(string);
+    callback preset-delete(string);
 }

@@ -253,7 +253,11 @@ pub fn layout_blocks(
         .collect()
 }
 
-pub fn presets(snapshot: &DeviceSnapshot, last_applied: Option<&str>) -> Vec<PresetItem> {
+pub fn presets(
+    snapshot: &DeviceSnapshot,
+    last_applied: Option<&str>,
+    words: crate::presets::OnOff,
+) -> Vec<PresetItem> {
     snapshot
         .presets
         .iter()
@@ -265,10 +269,8 @@ pub fn presets(snapshot: &DeviceSnapshot, last_applied: Option<&str>) -> Vec<Pre
             let detail: Vec<String> = enabled
                 .iter()
                 .take(2)
-                .map(|field| {
-                    let setting = snapshot.settings.get(&field.setting_id);
-                    openscq30_lib::settings::localize_value(setting, &field.value)
-                })
+                .map(|field| crate::presets::value_text(snapshot, field, words))
+                .filter(|value| !value.is_empty())
                 .collect();
             PresetItem {
                 name: preset.name.clone().into(),

@@ -881,3 +881,91 @@ msgid_plural "Import {n} profiles"
 msgstr[0] "Импортировать {n} профиль"
 msgstr[1] "Импортировать {n} профиля"
 msgstr[2] "Импортировать {n} профилей"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "Действия с пресетом «{}»"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "Нажмите «Изменить» и выберите настройки для применения."
+
+msgid "+{} more"
+msgstr "Ещё: {}"
+
+msgid "Apply"
+msgstr "Применить"
+
+msgid "Edit"
+msgstr "Изменить"
+
+msgid "Matches current settings"
+msgstr "Совпадает с текущими настройками"
+
+msgid "Your sound, in one preset"
+msgstr "Ваш звук — в одном пресете"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "Сохраните текущие настройки и выберите те, которые хотите применять вместе."
+
+msgid "Create preset"
+msgstr "Создать пресет"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "Эквалайзер из пресетов применится, когда подключатся оба наушника."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "Сохраним текущие настройки. Затем отметьте, какие из них применять."
+
+msgid "For example, for work"
+msgstr "Например, для работы"
+
+msgid "Enter a preset name."
+msgstr "Введите название пресета."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "Пресет «{}» уже существует. Заменить его значения текущими настройками? Выбор включённых настроек сохранится."
+
+msgid "Replace"
+msgstr "Заменить"
+
+msgid "Create"
+msgstr "Создать"
+
+msgid "Custom curve"
+msgstr "Своя кривая"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "Пресет применяет только отмеченные настройки. Изменения выбора сохраняются сразу."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "Сохранённых настроек пока нет. Загрузите текущие настройки устройства, чтобы начать."
+
+msgid "Load current settings"
+msgstr "Загрузить текущие настройки"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "Заменить сохранённые значения пресета текущими настройками устройства? Выбор включённых настроек сохранится. Настройки самого устройства не изменятся."
+
+msgid "Load"
+msgstr "Загрузить"
+
+msgid "Delete preset?"
+msgstr "Удалить пресет?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "Удалить «{}»? Текущие настройки устройства сохранятся."
+
+msgid "Preset “{}” applied"
+msgstr "Пресет «{}» применён"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "Пресет «{}» применён. Эквалайзер применится, когда подключатся оба наушника."
+
+msgid "Preset deleted"
+msgstr "Пресет удалён"
+
+msgid "Preset values replaced"
+msgstr "Значения пресета заменены"
+
+msgid "Current settings loaded into the preset"
+msgstr "Текущие настройки загружены в пресет"

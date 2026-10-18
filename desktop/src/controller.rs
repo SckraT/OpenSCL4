@@ -23,9 +23,7 @@ use crate::model::{
 type Device = Arc<dyn OpenSCQ30Device + Send + Sync>;
 
 #[derive(Clone, Debug)]
-#[expect(dead_code, reason = "the pages for presets and profiles send the rest")]
 pub enum Command {
-    RefreshPairedDevices,
     /// What can be paired as the model: Windows' paired devices, or a demo device.
     ListDevices {
         model: DeviceModel,
@@ -50,7 +48,10 @@ pub enum Command {
 
 /// What the device has, as read after connecting and after every change.
 #[derive(Clone, Debug)]
-#[expect(dead_code, reason = "the presets page reads the rest")]
+#[expect(
+    dead_code,
+    reason = "the status bar is to say when the data is a demo device's"
+)]
 pub struct DeviceSnapshot {
     pub mac_address: MacAddr6,
     pub model: DeviceModel,
@@ -211,7 +212,6 @@ impl Actor {
 
     async fn handle(&mut self, command: Command) {
         match command.clone() {
-            Command::RefreshPairedDevices => self.refresh_paired().await,
             Command::ListDevices { model, demo } => {
                 let result = if demo {
                     self.session.list_demo_devices(model).await
