@@ -94,9 +94,10 @@ component DeviceHero inherits Rectangle {
     in property <bool> wide;
     border-radius: Theme.radius-panel;
     background: Theme.sage;
-    min-height: 136px;
     private property <length> battery-width: 92px;
-    VerticalLayout {
+    // as tall as what it holds, quick toggles included
+    height: max(136px, content.preferred-height);
+    content := VerticalLayout {
         padding: 18px;
         padding-left: 22px;
         padding-right: 22px;
