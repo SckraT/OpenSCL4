@@ -246,7 +246,8 @@ private fun SoundSettingLabel(settingId: String, name: String, modifier: Modifie
         "limitHighVolume" -> R.string.sound_device_volume_description
         "easyChat" -> R.string.sound_device_chat_description
         "dualConnections" -> R.string.sound_device_connections_description
-        "findDevice", "remoteCamera", "atmospheric" -> R.string.sound_device_case_feature_description
+        "findDevice", "remoteCamera", "atmospheric", "caseSpatialAudio" ->
+            R.string.sound_device_case_feature_description
         else -> null
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
