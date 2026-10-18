@@ -1,4 +1,5 @@
 // The app's own settings: how it looks and speaks, the home screen, and help with problems.
+import { ComboBox } from "std-widgets.slint";
 import { Theme, PaletteChoice } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, Page, Connection } from "../types.slint";
@@ -138,12 +139,13 @@ component AppearancePanel inherits Panel {
     Divider { }
     SettingLine {
         title: @tr("App language");
-        Segmented {
-            label: @tr("App language");
-            // the languages by their own names, so that anyone finds theirs
-            options: [@tr("As in Windows"), "Русский", "English"];
-            index: AppState.app-language;
-            chosen(i) => { Actions.set-language(i); }
+        // the languages by their own names, so that anyone finds theirs
+        ComboBox {
+            accessible-label: @tr("App language");
+            width: 240px;
+            model: AppState.language-names;
+            current-index: AppState.app-language;
+            selected => { Actions.set-language(self.current-index); }
         }
     }
 }

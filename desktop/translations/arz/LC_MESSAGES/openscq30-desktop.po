@@ -1,0 +1,1077 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: arz\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "نظرة عامة"
+
+msgid "Sound mode"
+msgstr "وضع الصوت"
+
+msgid "Equalizer"
+msgstr "معادل الصوت"
+
+msgid "Sound and effects"
+msgstr "الصوت والمؤثرات"
+
+msgid "Quick presets"
+msgstr "الإعدادات السريعة"
+
+msgid "Controls"
+msgstr "التحكم"
+
+msgid "Comfort"
+msgstr "الراحة"
+
+msgid "Power and prompts"
+msgstr "الطاقة والتنبيهات"
+
+msgid "Connections"
+msgstr "الاتصالات"
+
+msgid "Case"
+msgstr "العلبة"
+
+msgid "About the device"
+msgstr "عن الجهاز"
+
+msgid "Sleep"
+msgstr "النوم"
+
+msgid "Lights"
+msgstr "الإضاءة"
+
+msgid "Alarms"
+msgstr "المنبهات"
+
+msgid "Other"
+msgstr "حاجات تانية"
+
+msgid "My devices"
+msgstr "أجهزتي"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Sound"
+msgstr "الصوت"
+
+msgid "Device"
+msgstr "الجهاز"
+
+msgid "SOUND"
+msgstr "الصوت"
+
+msgid "DEVICE"
+msgstr "الجهاز"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "اسمع اللي يهمك."
+
+msgid "Your sound, your way."
+msgstr "صوتك، على طريقتك."
+
+msgid "Inside the sound."
+msgstr "جوه الصوت."
+
+msgid "One preset. Your settings."
+msgstr "إعداد واحد. إعداداتك."
+
+msgid "A touch. And you’re in control."
+msgstr "لمسة واحدة. والتحكم في إيدك."
+
+msgid "Comfortable listening. Every day."
+msgstr "سماع مريح. كل يوم."
+
+msgid "Always ready."
+msgstr "جاهز دايمًا."
+
+msgid "Stay connected. To two at once."
+msgstr "خليك متصل. باتنين في نفس الوقت."
+
+msgid "A little case. More possibilities."
+msgstr "علبة صغيرة. إمكانيات أكتر."
+
+msgid "All about your device."
+msgstr "كل حاجة عن جهازك."
+
+msgid "Your devices."
+msgstr "أجهزتك."
+
+msgid "Make it yours."
+msgstr "على ذوقك."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "اختار قد إيه من الدنيا يدخل في صوتك."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "اختار بروفايل أو اظبط كل تردد."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "الكوديك والتأخير وطريقة معالجة الصوت."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "احفظ التركيبات اللي بتحبها وارجعلها بضغطة."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "اللمسات بتعمل إيه وبتبدّل بين أنهي أوضاع."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "إعدادات بتظبط سماعاتك على عاداتك."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "إعدادات بتظبط السماعة الخارجية على عاداتك."
+
+msgid "When the device turns off and what it tells you."
+msgstr "الجهاز بيقفل إمتى وبيقولك إيه."
+
+msgid "Switch between your phone and computer."
+msgstr "بدّل بين الموبايل والكمبيوتر."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "وظايف شاشة العلبة وحالتها."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "البطارية والسوفت وير والأرقام التسلسلية."
+
+msgid "All your familiar headphones in one place."
+msgstr "كل سماعاتك اللي تعرفها في مكان واحد."
+
+msgid "An app that feels comfortable to use."
+msgstr "تطبيق مريح في الاستخدام."
+
+# Connection
+msgid "No devices"
+msgstr "مفيش أجهزة"
+
+msgid "Add a device"
+msgstr "ضيف جهاز"
+
+msgid "Connected"
+msgstr "متصل"
+
+msgid "Connecting…"
+msgstr "بيتصل…"
+
+msgid "Not connected"
+msgstr "مش متصل"
+
+msgid "Connected to {}"
+msgstr "متصل بـ {}"
+
+msgid "Connecting to {}"
+msgstr "بيتصل بـ {}"
+
+msgid "Connection lost"
+msgstr "الاتصال اتقطع"
+
+msgid "Bluetooth is off"
+msgstr "البلوتوث مقفول"
+
+msgid "Disconnected"
+msgstr "اتفصل"
+
+msgid "Connecting to your headphones"
+msgstr "بيتصل بسماعاتك"
+
+msgid "Connecting to your speaker"
+msgstr "بيتصل بالسماعة الخارجية"
+
+msgid "Could not connect"
+msgstr "مقدرناش نتصل"
+
+msgid "{} is not connected"
+msgstr "{} مش متصل"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "افتح العلبة أو شغّل السماعات. التحكم هيظهر بعد الاتصال."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "شغّل السماعة الخارجية. التحكم هيظهر بعد الاتصال."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "اتأكد إن السماعات قريبة ومتصلة بالكمبيوتر ده بالبلوتوث."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "اتأكد إن السماعة الخارجية قريبة ومتصلة بالكمبيوتر ده بالبلوتوث."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "شغّل البلوتوث من إعدادات Windows وجرّب تتصل تاني."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "اتصل علشان تشوف البطارية وتغيّر الإعدادات."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "الجهاز مش لاقيينه. اتأكد إنه شغال وقريب."
+
+msgid "The device did not answer in time. Try again."
+msgstr "الجهاز مردّش في الوقت. جرّب تاني."
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Connect"
+msgstr "اتصل"
+
+msgid "Connect again"
+msgstr "اتصل تاني"
+
+msgid "Bluetooth settings"
+msgstr "إعدادات البلوتوث"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "مقدرناش نغيّر „{}“. الجهاز فضل على القيمة القديمة."
+
+msgid "Retry"
+msgstr "جرّب تاني"
+
+msgid "Close"
+msgstr "اقفل"
+
+# My devices
+msgid "Open"
+msgstr "افتح"
+
+msgid "Forget device"
+msgstr "انسى الجهاز"
+
+msgid "Demo device · Not connected"
+msgstr "جهاز تجريبي · مش متصل"
+
+msgid "Saved device · Not connected"
+msgstr "جهاز محفوظ · مش متصل"
+
+msgid "Add device"
+msgstr "ضيف جهاز"
+
+msgid "A model, then its paired device"
+msgstr "موديل، وبعدين الجهاز المقترن بيه"
+
+msgid "Your sound starts here."
+msgstr "صوتك بيبدأ من هنا."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "ضيف سماعاتك علشان تظبط الصوت والتحكم."
+
+msgid "Forget {}?"
+msgstr "تنسى {}؟"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "الجهاز هيتشال من القايمة دي هو وبروفايلاته وإعداداته في التطبيق. اقترانه بـ Windows هيفضل."
+
+msgid "Forget"
+msgstr "انسى"
+
+# Adding a device
+msgid "Find your model."
+msgstr "لاقي الموديل بتاعك."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "اختار الموديل بالظبط علشان تشوف الإعدادات اللي جهازك بيدعمها."
+
+msgid "Model name or code, such as A3954"
+msgstr "اسم الموديل أو الكود، زي A3954"
+
+msgid "All"
+msgstr "الكل"
+
+msgid "Earbuds"
+msgstr "سماعات أذن"
+
+msgid "Over-ear"
+msgstr "سماعات فوق الأذن"
+
+msgid "Open-ear"
+msgstr "سماعات مفتوحة"
+
+msgid "Speakers"
+msgstr "سماعات خارجية"
+
+msgid "No models found. Try another name or code."
+msgstr "مفيش موديلات. جرّب اسم أو كود تاني."
+
+msgid "Ready to connect your headphones?"
+msgstr "جاهز توصّل سماعاتك؟"
+
+msgid "Ready to connect your speaker?"
+msgstr "جاهز توصّل السماعة الخارجية؟"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "اختار الجهاز المقترن بـ Windows. لو مش في القايمة، اقرنه الأول من إعدادات البلوتوث."
+
+msgid "Another model"
+msgstr "موديل تاني"
+
+msgid "Demo mode"
+msgstr "الوضع التجريبي"
+
+msgid "Explore the interface without real headphones"
+msgstr "اتفرج على الواجهة من غير سماعات حقيقية"
+
+msgid "Paired devices"
+msgstr "الأجهزة المقترنة"
+
+msgid "Refresh"
+msgstr "تحديث"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "البلوتوث مقفول. شغّله من إعدادات Windows."
+
+msgid "Looking for paired devices…"
+msgstr "بندوّر على الأجهزة المقترنة…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "اتأكد إن السماعات شغالة ومقترنة بـ Windows، وبعدين حدّث."
+
+msgid "Simulated device data"
+msgstr "بيانات جهاز تجريبية"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "مقترن في Windows · شكله الموديل اللي اخترته"
+
+msgid "Paired in Windows"
+msgstr "مقترن في Windows"
+
+msgid "Could not add the device."
+msgstr "مقدرناش نضيف الجهاز."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "الوضع التجريبي بيستخدم بيانات تجريبية ومبيتحكمش في سماعات حقيقية."
+
+msgid "Back"
+msgstr "رجوع"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "الوضع والقوة"
+
+msgid "Sound mode from 1 to 11"
+msgstr "وضع الصوت من 1 لـ 11"
+
+msgid "Transparency, strength {}"
+msgstr "الشفافية، القوة {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "إلغاء الضوضاء، القوة {}"
+
+msgid "Your strength is remembered."
+msgstr "القوة اللي اخترتها بتتحفظ."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "لما ترجع لإلغاء الضوضاء أو الشفافية، بتتستخدم آخر قوة للوضع ده."
+
+msgid "Lowers the noise around you."
+msgstr "بيقلل الدوشة اللي حواليك."
+
+msgid "Keeps the sounds around you audible."
+msgstr "بيخلّي الأصوات اللي حواليك مسموعة."
+
+msgid "No processing of ambient sound."
+msgstr "من غير معالجة لصوت المكان."
+
+msgid "Single press"
+msgstr "لمسة واحدة"
+
+msgid "Double press"
+msgstr "لمستين"
+
+msgid "Triple press"
+msgstr "تلات لمسات"
+
+msgid "Long press"
+msgstr "ضغطة طويلة"
+
+msgid "Slide up"
+msgstr "اسحب لفوق"
+
+msgid "Slide down"
+msgstr "اسحب لتحت"
+
+msgid "Noise canceling"
+msgstr "إلغاء الضوضاء"
+
+msgid "Transparency"
+msgstr "الشفافية"
+
+msgid "Normal"
+msgstr "عادي"
+
+msgid "Noise canceling strength"
+msgstr "قوة إلغاء الضوضاء"
+
+msgid "Transparency strength"
+msgstr "قوة الشفافية"
+
+msgid "Airplane mode updates"
+msgstr "تحديثات وضع الطيران"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "بيقلل صوت الهوا في المايكات"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "إيقاف مؤقت لما تشيل سماعة"
+
+msgid "Lower the music while you talk"
+msgstr "وطّي المزيكا وانت بتتكلم"
+
+msgid "When the music comes back after you stop talking"
+msgstr "المزيكا ترجع إمتى بعد ما تبطّل كلام"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "بيحافظ على الصوت مليان لما السماعة تكون مش مظبوطة"
+
+msgid "Limit the volume of your earbuds"
+msgstr "حدّد أعلى صوت لسماعاتك"
+
+msgid "Limit the volume of your speaker"
+msgstr "حدّد أعلى صوت للسماعة الخارجية"
+
+msgid "Volume of the speaker"
+msgstr "صوت السماعة الخارجية"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "صوت عالي الجودة بالبلوتوث"
+
+msgid "A wider sound stage for music and video"
+msgstr "مساحة صوت أوسع للمزيكا والفيديو"
+
+msgid "Connect to up to two devices at once"
+msgstr "اتصل بجهازين في نفس الوقت"
+
+msgid "When the device is not in use"
+msgstr "لما الجهاز ميكونش مستخدم"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "تنبيه صوتي لما البطارية تقرّب تخلص"
+
+msgid "Voice messages about modes and connections"
+msgstr "رسايل صوتية عن الأوضاع والاتصالات"
+
+msgid "Turn the speaker off now"
+msgstr "اقفل السماعة الخارجية دلوقتي"
+
+msgid "Show this function on the case screen"
+msgstr "اعرض الوظيفة دي على شاشة العلبة"
+
+msgid "Independent of the app language"
+msgstr "مش مرتبطة بلغة التطبيق"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "رجّع وظايف الزراير زي ما كانت من المصنع"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "انسخ"
+
+msgid "Copied"
+msgstr "اتنسخ"
+
+msgid "Reset"
+msgstr "إعادة ضبط"
+
+msgid "Turn off"
+msgstr "اقفل"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "سماعاتك مش بتبلّغ عن أجهزة مقترنة."
+
+msgid "Volume"
+msgstr "الصوت"
+
+msgid "Presses"
+msgstr "اللمسات"
+
+msgid "Switching modes"
+msgstr "تبديل الأوضاع"
+
+msgid "Case screen"
+msgstr "شاشة العلبة"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Connected devices"
+msgstr "الأجهزة المتصلة"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "الأوضاع اللي بيبدّل بينها إجراء وضع الصوت المحيط."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "حد الصوت في السماعات مش بديل عن نصايح مدة السماع الآمنة."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "حد الصوت في السماعة الخارجية مش بديل عن نصايح مدة السماع الآمنة."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "القايمة دي فيها الأجهزة المقترنة بسماعاتك، مش أجهزة البلوتوث اللي حواليك. لو نسيت الكمبيوتر ده، التحكم في السماعات هيقف."
+
+msgid "Left earbud"
+msgstr "السماعة الشمال"
+
+msgid "Right earbud"
+msgstr "السماعة اليمين"
+
+msgid "Earbud"
+msgstr "السماعة"
+
+msgid "Left"
+msgstr "شمال"
+
+msgid "Right"
+msgstr "يمين"
+
+msgid "Actions for the chosen earbud."
+msgstr "إجراءات السماعة اللي اخترتها."
+
+msgid "Actions of the buttons on the device."
+msgstr "إجراءات زراير الجهاز."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "الجهاز بيعمل الإجراءات دي بنفسه. زراير الميديا في Windows شغالة عادي."
+
+msgid "Small details. More comfort."
+msgstr "تفاصيل صغيرة. راحة أكتر."
+
+msgid "Let your earbuds adapt to you."
+msgstr "خلّي سماعاتك تتأقلم عليك."
+
+msgid "Let your speaker adapt to you."
+msgstr "خلّي السماعة الخارجية تتأقلم عليك."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "الإعدادات دي بتتحفظ في الجهاز وبتشتغل مع أي مصدر صوت."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "القفل التلقائي بيشتغل لما الجهاز ميكونش بيشغّل صوت."
+
+msgid "Bluetooth and devices"
+msgstr "البلوتوث والأجهزة"
+
+msgid "Pairing and removing devices"
+msgstr "اقتران الأجهزة وشيلها"
+
+msgid "Output device and volume"
+msgstr "جهاز الإخراج والصوت"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows بيشغّل الصوت من غير LDAC. الإعداد ده للموبايل والمصادر التانية اللي فيها LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "في Liberty 4 Pro، تغيير معادل الصوت بيقفل الصوت المجسم. تقدر تشغّله تاني من هنا."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "اختار الوظايف اللي تظهر على شاشة العلبة. لغة العلبة مش مرتبطة بلغة التطبيق."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "الجهاز بيبلّغ عن البيانات دي بنفسه وبيحدّثها."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "الرقم التسلسلي ونسخة السوفت وير بيساعدوا لما تكلّم الدعم."
+
+# Overview
+msgid "Presses and slides"
+msgstr "اللمسات والسحب"
+
+msgid "Presses and switching modes"
+msgstr "اللمسات وتبديل الأوضاع"
+
+msgid "on"
+msgstr "شغال"
+
+msgid "off"
+msgstr "مقفول"
+
+msgid "On: {} of {}"
+msgstr "شغال: {} من {}"
+
+msgid "Volume: {}"
+msgstr "الصوت: {}"
+
+msgid "Auto power off: {}"
+msgstr "القفل التلقائي: {}"
+
+msgid "Two devices at once"
+msgstr "جهازين في نفس الوقت"
+
+msgid "One device at a time"
+msgstr "جهاز واحد في المرة"
+
+msgid "Case battery {}"
+msgstr "بطارية العلبة {}"
+
+msgid "Battery"
+msgstr "البطارية"
+
+msgid "1 earbud"
+msgstr "سماعة واحدة"
+
+msgid "Add quick toggles"
+msgstr "ضيف مفاتيح سريعة"
+
+msgid "Quick toggles"
+msgstr "مفاتيح سريعة"
+
+msgid "Your sound"
+msgstr "صوتك"
+
+msgid "All presets"
+msgstr "كل الإعدادات السريعة"
+
+msgid "Customize"
+msgstr "خصّص"
+
+msgid "Available when both earbuds are connected"
+msgstr "متاح لما السماعتين يكونوا متصلين"
+
+msgid "Current profile"
+msgstr "البروفايل الحالي"
+
+msgid "Your own settings"
+msgstr "إعداداتك الخاصة"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} نطاقات · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "الترددات الواطية"
+
+msgid "High frequencies"
+msgstr "الترددات العالية"
+
+msgid "Save your favourite combinations of settings."
+msgstr "احفظ تركيبات الإعدادات اللي بتحبها."
+
+msgid "No settings chosen yet"
+msgstr "لسه مفيش إعدادات متختارة"
+
+msgid "Edit device screen"
+msgstr "عدّل شاشة الجهاز"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "سماعة واحدة بس متصلة. معادل الصوت وإعدادات تانية هتبقى متاحة لما السماعتين يتصلوا."
+
+msgid "Move up"
+msgstr "لفوق"
+
+msgid "Move down"
+msgstr "لتحت"
+
+msgid "Your device screen."
+msgstr "شاشة جهازك."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "شغّل البلوكات اللي بتستخدمها وحرّكها لفوق أو لتحت علشان تغيّر الترتيب."
+
+msgid "Ready-made sets"
+msgstr "مجموعات جاهزة"
+
+msgid "Minimal"
+msgstr "بسيط"
+
+msgid "Standard"
+msgstr "عادي"
+
+msgid "Full"
+msgstr "كامل"
+
+msgid "Done"
+msgstr "تم"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "اختار المفاتيح اللي على كارت الجهاز. الإعدادات نفسها مش هتتغيّر."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}، dB"
+
+msgid "Equalizer bands: {}"
+msgstr "نطاقات معادل الصوت: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "منحنى معادل الصوت. اسحب علشان تظبط تردد، أو استخدم المؤشرات اللي تحت."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "الجهاز ده بيدعم بروفايلات معادل الصوت المدمجة بس."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "القيم بالديسيبل، من {} لـ {} dB"
+
+msgid "Save profile"
+msgstr "احفظ البروفايل"
+
+msgid "All profiles ({})"
+msgstr "كل البروفايلات ({})"
+
+msgid "Show fewer"
+msgstr "اعرض أقل"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "قيم معادل الصوت مش متاحة للجهاز ده."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "تغيير معادل الصوت بيقفل الصوت المجسم."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "اسحب النقط على الرسم، حرّك المؤشرات بـ ↑ ↓ أو اكتب القيم."
+
+msgid "My profiles"
+msgstr "بروفايلاتي"
+
+msgid "Save the current sound to come back to it later."
+msgstr "احفظ الصوت الحالي علشان ترجعله بعدين."
+
+msgid "Applied"
+msgstr "متطبّق"
+
+msgid "Bands: {}"
+msgstr "النطاقات: {}"
+
+msgid "More for “{}”"
+msgstr "المزيد لـ „{}“"
+
+msgid "Export"
+msgstr "تصدير"
+
+msgid "Delete"
+msgstr "امسح"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "البروفايلات المحفوظة فاضلة مكانها. تقدر تطبّقها لما السماعتين يتصلوا."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "بروفايلات معادل صوت قديمة: {}. انقلها لبروفايلاتك علشان تستخدمها مع الجهاز ده."
+
+msgid "Show"
+msgstr "اعرض"
+
+msgid "Hide"
+msgstr "خبّي"
+
+msgid "Move all"
+msgstr "انقل الكل"
+
+msgid "Move"
+msgstr "انقل"
+
+msgid "Import and export"
+msgstr "الاستيراد والتصدير"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "شارك البروفايلات، احفظها في ملف أو انقلها لكمبيوتر تاني."
+
+msgid "Import"
+msgstr "استيراد"
+
+msgid "Select all"
+msgstr "اختار الكل"
+
+msgid "Save a profile to export it."
+msgstr "احفظ بروفايل علشان تصدّره."
+
+msgid "Save to file"
+msgstr "احفظ في ملف"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "ملف أو نص فيه بروفايلات OpenSCQ30. قبل الاستيراد هتشوف إيه اللي هيتغيّر."
+
+msgid "Open file"
+msgstr "افتح ملف"
+
+msgid "Paste"
+msgstr "الصق"
+
+msgid "Saved to the file"
+msgstr "اتحفظ في الملف"
+
+msgid "Could not save the file"
+msgstr "مقدرناش نحفظ الملف"
+
+msgid "This is not an equalizer profiles file"
+msgstr "ده مش ملف بروفايلات معادل صوت"
+
+msgid "The clipboard is empty"
+msgstr "الحافظة فاضية"
+
+msgid "The file is too large"
+msgstr "الملف كبير قوي"
+
+msgid "Could not read the file"
+msgstr "مقدرناش نقرا الملف"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "اتستورد {n} بروفايل"
+msgstr[1] "اتستورد {n} بروفايل"
+msgstr[2] "اتستوردوا {n} بروفايل"
+msgstr[3] "اتستوردوا {n} بروفايلات"
+msgstr[4] "اتستورد {n} بروفايل"
+msgstr[5] "اتستورد {n} بروفايل"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "اتنقل {n} بروفايل"
+msgstr[1] "اتنقل {n} بروفايل"
+msgstr[2] "اتنقلوا {n} بروفايل"
+msgstr[3] "اتنقلوا {n} بروفايلات"
+msgstr[4] "اتنقل {n} بروفايل"
+msgstr[5] "اتنقل {n} بروفايل"
+
+msgid "Profile saved"
+msgstr "البروفايل اتحفظ"
+
+msgid "Profile deleted"
+msgstr "البروفايل اتمسح"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "احفظ قيم معادل الصوت الحالية في الجهاز كبروفايل تستخدمه تاني."
+
+msgid "Name"
+msgstr "الاسم"
+
+msgid "My sound"
+msgstr "صوتي"
+
+msgid "Enter a profile name."
+msgstr "اكتب اسم للبروفايل."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "فيه بروفايل اسمه „{}“ بالفعل. تستبدل القيم المحفوظة بتاعته؟"
+
+msgid "Replace profile"
+msgstr "استبدل البروفايل"
+
+msgid "Save"
+msgstr "احفظ"
+
+msgid "Delete equalizer profile?"
+msgstr "تمسح بروفايل معادل الصوت؟"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "متأكد إنك عايز تمسح „{}“؟"
+
+msgid "Import profiles"
+msgstr "استيراد بروفايلات"
+
+msgid "New"
+msgstr "جديد"
+
+msgid "Replaces the saved profile"
+msgstr "هيستبدل البروفايل المحفوظ"
+
+msgid "{} bands, this device has {}"
+msgstr "{} نطاقات، والجهاز ده فيه {}"
+
+msgid "Values outside this device’s range"
+msgstr "قيم برّه نطاق الجهاز ده"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "البروفايلات اللي متعلّم عليها بالأحمر مش مناسبة للجهاز ده، علشان كده الملف مينفعش يتستورد."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "استورد {n} بروفايل"
+msgstr[1] "استورد {n} بروفايل"
+msgstr[2] "استورد {n} بروفايل"
+msgstr[3] "استورد {n} بروفايلات"
+msgstr[4] "استورد {n} بروفايل"
+msgstr[5] "استورد {n} بروفايل"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "إجراءات تانية لـ {}"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "استخدم التعديل علشان تختار الإعدادات اللي تتطبّق."
+
+msgid "+{} more"
+msgstr "+{} كمان"
+
+msgid "Apply"
+msgstr "طبّق"
+
+msgid "Edit"
+msgstr "تعديل"
+
+msgid "Matches current settings"
+msgstr "زي الإعدادات الحالية"
+
+msgid "Your sound, in one preset"
+msgstr "صوتك في إعداد سريع واحد"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "احفظ إعداداتك الحالية واختار اللي عايز تطبّقه مع بعض."
+
+msgid "Create preset"
+msgstr "اعمل إعداد سريع"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "معادل الصوت من الإعدادات السريعة هيتطبّق لما السماعتين يتصلوا."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "هنحفظ الإعدادات الحالية. بعدين اختار أنهي منها يتطبّق."
+
+msgid "For example, for work"
+msgstr "مثلًا، للشغل"
+
+msgid "Enter a preset name."
+msgstr "اكتب اسم للإعداد السريع."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "„{}“ موجود بالفعل. تستبدل القيم المحفوظة بإعدادات الجهاز الحالية؟ اختيارك للإعدادات المضمّنة هيفضل زي ما هو."
+
+msgid "Replace"
+msgstr "استبدل"
+
+msgid "Create"
+msgstr "اعمل"
+
+msgid "Custom curve"
+msgstr "منحنى خاص"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "الإعداد السريع ده بيطبّق الإعدادات اللي اخترتها بس. التغييرات في الاختيار بتتحفظ على طول."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "لسه مفيش إعدادات محفوظة. حمّل إعدادات الجهاز الحالية علشان تبدأ."
+
+msgid "Load current settings"
+msgstr "حمّل الإعدادات الحالية"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "تستبدل القيم المحفوظة في الإعداد السريع ده بإعدادات الجهاز الحالية؟ اختيارك للإعدادات المضمّنة هيفضل زي ما هو. الجهاز نفسه مش هيتغيّر."
+
+msgid "Load"
+msgstr "حمّل"
+
+msgid "Delete preset?"
+msgstr "تمسح الإعداد السريع؟"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "تمسح „{}“؟ إعدادات الجهاز الحالية هتفضل."
+
+msgid "Preset “{}” applied"
+msgstr "الإعداد السريع „{}“ اتطبّق"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "الإعداد السريع „{}“ اتطبّق. معادل الصوت بتاعه هيتطبّق لما السماعتين يتصلوا."
+
+msgid "Preset deleted"
+msgstr "الإعداد السريع اتمسح"
+
+msgid "Preset values replaced"
+msgstr "قيم الإعداد السريع اتستبدلت"
+
+msgid "Current settings loaded into the preset"
+msgstr "الإعدادات الحالية اتحمّلت في الإعداد السريع"
+
+# App settings
+msgid "Appearance"
+msgstr "الشكل"
+
+msgid "Theme"
+msgstr "المظهر"
+
+msgid "As in Windows"
+msgstr "زي Windows"
+
+msgid "Light"
+msgstr "فاتح"
+
+msgid "Dark"
+msgstr "غامق"
+
+msgid "Palette"
+msgstr "الألوان"
+
+msgid "Colors of buttons and highlights"
+msgstr "ألوان الزراير والتمييز"
+
+msgid "Purple"
+msgstr "بنفسجي"
+
+msgid "Sage"
+msgstr "مريمية"
+
+msgid "Rose"
+msgstr "وردي"
+
+msgid "Device color in pictures"
+msgstr "لون الجهاز في الصور"
+
+msgid "As the theme"
+msgstr "زي المظهر"
+
+msgid "Silver"
+msgstr "فضي"
+
+msgid "Black"
+msgstr "أسود"
+
+msgid "Sound modes"
+msgstr "أوضاع الصوت"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "العرض للأجهزة اللي فيها مقياس، زي Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "مربعات"
+
+msgid "Scale 1–11"
+msgstr "مقياس 1–11"
+
+msgid "One earbud badge"
+msgstr "علامة السماعة الواحدة"
+
+msgid "Show when only one earbud is connected"
+msgstr "اعرضها لما سماعة واحدة بس تكون متصلة"
+
+msgid "App language"
+msgstr "لغة التطبيق"
+
+msgid "Your color.\nYour mood."
+msgstr "لونك.\nمزاجك."
+
+msgid "A familiar character. A new space."
+msgstr "شخصية مألوفة. مساحة جديدة."
+
+msgid "Home screen"
+msgstr "الشاشة الرئيسية"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "خلّي البلوكات اللي محتاجها ورتّبها زي ما تحب."
+
+msgid "Edit home screen"
+msgstr "عدّل الشاشة الرئيسية"
+
+msgid "About"
+msgstr "عن التطبيق"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 لـ Windows {} · برنامج حر تحت GNU GPL 3."
+
+msgid "More"
+msgstr "المزيد"
+
+msgid "Diagnostics"
+msgstr "التشخيص"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "انسخ آخر سجلات الأحداث علشان تلاقي سبب المشكلة."
+
+msgid "Copy logs"
+msgstr "انسخ السجلات"

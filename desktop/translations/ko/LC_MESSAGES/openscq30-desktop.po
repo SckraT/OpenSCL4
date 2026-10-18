@@ -1,0 +1,1062 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "개요"
+
+msgid "Sound mode"
+msgstr "사운드 모드"
+
+msgid "Equalizer"
+msgstr "이퀄라이저"
+
+msgid "Sound and effects"
+msgstr "사운드 및 효과"
+
+msgid "Quick presets"
+msgstr "빠른 프리셋"
+
+msgid "Controls"
+msgstr "조작"
+
+msgid "Comfort"
+msgstr "편안함"
+
+msgid "Power and prompts"
+msgstr "전원 및 안내"
+
+msgid "Connections"
+msgstr "연결"
+
+msgid "Case"
+msgstr "케이스"
+
+msgid "About the device"
+msgstr "기기 정보"
+
+msgid "Sleep"
+msgstr "수면"
+
+msgid "Lights"
+msgstr "조명"
+
+msgid "Alarms"
+msgstr "알람"
+
+msgid "Other"
+msgstr "기타"
+
+msgid "My devices"
+msgstr "내 기기"
+
+msgid "Settings"
+msgstr "설정"
+
+msgid "Sound"
+msgstr "사운드"
+
+msgid "Device"
+msgstr "기기"
+
+msgid "SOUND"
+msgstr "사운드"
+
+msgid "DEVICE"
+msgstr "기기"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "중요한 소리를 들으세요."
+
+msgid "Your sound, your way."
+msgstr "나만의 방식으로 즐기는 사운드."
+
+msgid "Inside the sound."
+msgstr "사운드 속으로."
+
+msgid "One preset. Your settings."
+msgstr "하나의 프리셋. 나의 설정."
+
+msgid "A touch. And you’re in control."
+msgstr "한 번의 터치로 자유롭게."
+
+msgid "Comfortable listening. Every day."
+msgstr "편안한 감상. 매일."
+
+msgid "Always ready."
+msgstr "언제나 준비 완료."
+
+msgid "Stay connected. To two at once."
+msgstr "두 기기에 동시에 연결하세요."
+
+msgid "A little case. More possibilities."
+msgstr "작은 케이스. 더 많은 가능성."
+
+msgid "All about your device."
+msgstr "기기의 모든 것."
+
+msgid "Your devices."
+msgstr "내 기기."
+
+msgid "Make it yours."
+msgstr "내 취향대로."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "주변 소리를 얼마나 들을지 선택하세요."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "프로필을 고르거나 모든 주파수를 조정하세요."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "코덱, 지연 시간, 사운드 처리 방식."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "좋아하는 조합을 저장하고 클릭 한 번으로 돌아가세요."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "탭 동작과 전환할 모드를 정합니다."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "이어폰을 사용 습관에 맞추는 설정입니다."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "스피커를 사용 습관에 맞추는 설정입니다."
+
+msgid "When the device turns off and what it tells you."
+msgstr "기기가 꺼지는 시점과 음성 안내."
+
+msgid "Switch between your phone and computer."
+msgstr "휴대폰과 컴퓨터 사이를 전환하세요."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "케이스 화면 기능과 케이스 상태."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "배터리, 펌웨어, 일련번호."
+
+msgid "All your familiar headphones in one place."
+msgstr "익숙한 모든 헤드폰을 한곳에서."
+
+msgid "An app that feels comfortable to use."
+msgstr "사용하기 편한 앱."
+
+# Connection
+msgid "No devices"
+msgstr "기기 없음"
+
+msgid "Add a device"
+msgstr "기기 추가"
+
+msgid "Connected"
+msgstr "연결됨"
+
+msgid "Connecting…"
+msgstr "연결 중…"
+
+msgid "Not connected"
+msgstr "연결되지 않음"
+
+msgid "Connected to {}"
+msgstr "{}에 연결됨"
+
+msgid "Connecting to {}"
+msgstr "{}에 연결 중"
+
+msgid "Connection lost"
+msgstr "연결이 끊어졌습니다"
+
+msgid "Bluetooth is off"
+msgstr "블루투스가 꺼져 있습니다"
+
+msgid "Disconnected"
+msgstr "연결 해제됨"
+
+msgid "Connecting to your headphones"
+msgstr "헤드폰에 연결하는 중"
+
+msgid "Connecting to your speaker"
+msgstr "스피커에 연결하는 중"
+
+msgid "Could not connect"
+msgstr "연결할 수 없습니다"
+
+msgid "{} is not connected"
+msgstr "{}이(가) 연결되어 있지 않습니다"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "케이스를 열거나 헤드폰을 켜세요. 연결되면 조작 항목이 나타납니다."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "스피커를 켜세요. 연결되면 조작 항목이 나타납니다."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "헤드폰이 가까이 있고 이 컴퓨터에 블루투스로 연결되어 있는지 확인하세요."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "스피커가 가까이 있고 이 컴퓨터에 블루투스로 연결되어 있는지 확인하세요."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Windows 설정에서 블루투스를 켠 다음 다시 연결해 보세요."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "연결하면 배터리를 확인하고 설정을 바꿀 수 있습니다."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "기기를 찾을 수 없습니다. 기기가 켜져 있고 가까이 있는지 확인하세요."
+
+msgid "The device did not answer in time. Try again."
+msgstr "기기가 제때 응답하지 않았습니다. 다시 시도하세요."
+
+msgid "Cancel"
+msgstr "취소"
+
+msgid "Connect"
+msgstr "연결"
+
+msgid "Connect again"
+msgstr "다시 연결"
+
+msgid "Bluetooth settings"
+msgstr "블루투스 설정"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "“{}”을(를) 바꿀 수 없습니다. 기기가 이전 값을 유지했습니다."
+
+msgid "Retry"
+msgstr "다시 시도"
+
+msgid "Close"
+msgstr "닫기"
+
+# My devices
+msgid "Open"
+msgstr "열기"
+
+msgid "Forget device"
+msgstr "기기 삭제"
+
+msgid "Demo device · Not connected"
+msgstr "데모 기기 · 연결되지 않음"
+
+msgid "Saved device · Not connected"
+msgstr "저장된 기기 · 연결되지 않음"
+
+msgid "Add device"
+msgstr "기기 추가"
+
+msgid "A model, then its paired device"
+msgstr "모델을 고른 다음 페어링된 기기 선택"
+
+msgid "Your sound starts here."
+msgstr "나만의 사운드가 여기서 시작됩니다."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "헤드폰을 추가해 사운드와 조작을 조정하세요."
+
+msgid "Forget {}?"
+msgstr "{}을(를) 삭제할까요?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "기기가 앱의 프로필 및 프리셋과 함께 이 목록에서 사라집니다. Windows와의 페어링은 유지됩니다."
+
+msgid "Forget"
+msgstr "삭제"
+
+# Adding a device
+msgid "Find your model."
+msgstr "모델을 찾아보세요."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "정확한 모델을 선택하면 기기가 지원하는 설정이 표시됩니다."
+
+msgid "Model name or code, such as A3954"
+msgstr "모델 이름 또는 코드(예: A3954)"
+
+msgid "All"
+msgstr "전체"
+
+msgid "Earbuds"
+msgstr "이어폰"
+
+msgid "Over-ear"
+msgstr "오버이어"
+
+msgid "Open-ear"
+msgstr "오픈형"
+
+msgid "Speakers"
+msgstr "스피커"
+
+msgid "No models found. Try another name or code."
+msgstr "모델을 찾을 수 없습니다. 다른 이름이나 코드를 입력해 보세요."
+
+msgid "Ready to connect your headphones?"
+msgstr "헤드폰을 연결할 준비가 되셨나요?"
+
+msgid "Ready to connect your speaker?"
+msgstr "스피커를 연결할 준비가 되셨나요?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Windows와 페어링된 기기를 선택하세요. 목록에 없다면 먼저 블루투스 설정에서 페어링하세요."
+
+msgid "Another model"
+msgstr "다른 모델"
+
+msgid "Demo mode"
+msgstr "데모 모드"
+
+msgid "Explore the interface without real headphones"
+msgstr "실제 헤드폰 없이 화면을 둘러보세요"
+
+msgid "Paired devices"
+msgstr "페어링된 기기"
+
+msgid "Refresh"
+msgstr "새로 고침"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "블루투스가 꺼져 있습니다. Windows 설정에서 켜세요."
+
+msgid "Looking for paired devices…"
+msgstr "페어링된 기기를 찾는 중…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "헤드폰이 켜져 있고 Windows와 페어링되어 있는지 확인한 다음 새로 고치세요."
+
+msgid "Simulated device data"
+msgstr "시뮬레이션된 기기 데이터"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Windows에서 페어링됨 · 선택한 모델로 보임"
+
+msgid "Paired in Windows"
+msgstr "Windows에서 페어링됨"
+
+msgid "Could not add the device."
+msgstr "기기를 추가할 수 없습니다."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "데모 모드는 시뮬레이션된 데이터를 사용하며 실제 헤드폰을 제어하지 않습니다."
+
+msgid "Back"
+msgstr "뒤로"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "모드 및 강도"
+
+msgid "Sound mode from 1 to 11"
+msgstr "1~11 사운드 모드"
+
+msgid "Transparency, strength {}"
+msgstr "주변음 허용, 강도 {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "노이즈 캔슬링, 강도 {}"
+
+msgid "Your strength is remembered."
+msgstr "강도가 기억됩니다."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "노이즈 캔슬링이나 주변음 허용으로 돌아가면 그 모드의 마지막 강도가 사용됩니다."
+
+msgid "Lowers the noise around you."
+msgstr "주변 소음을 줄입니다."
+
+msgid "Keeps the sounds around you audible."
+msgstr "주변 소리가 들리도록 합니다."
+
+msgid "No processing of ambient sound."
+msgstr "주변 소리를 처리하지 않습니다."
+
+msgid "Single press"
+msgstr "한 번 탭"
+
+msgid "Double press"
+msgstr "두 번 탭"
+
+msgid "Triple press"
+msgstr "세 번 탭"
+
+msgid "Long press"
+msgstr "길게 누르기"
+
+msgid "Slide up"
+msgstr "위로 밀기"
+
+msgid "Slide down"
+msgstr "아래로 밀기"
+
+msgid "Noise canceling"
+msgstr "노이즈 캔슬링"
+
+msgid "Transparency"
+msgstr "주변음 허용"
+
+msgid "Normal"
+msgstr "일반"
+
+msgid "Noise canceling strength"
+msgstr "노이즈 캔슬링 강도"
+
+msgid "Transparency strength"
+msgstr "주변음 허용 강도"
+
+msgid "Airplane mode updates"
+msgstr "비행기 모드 업데이트"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "마이크의 바람 소리를 줄입니다"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "이어폰을 빼면 자동으로 일시 정지"
+
+msgid "Lower the music while you talk"
+msgstr "말하는 동안 음악 소리 줄이기"
+
+msgid "When the music comes back after you stop talking"
+msgstr "말을 멈춘 뒤 음악이 다시 나오는 시점"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "이어폰이 헐겁게 끼워져도 풍성한 소리를 유지합니다"
+
+msgid "Limit the volume of your earbuds"
+msgstr "이어폰 음량을 제한합니다"
+
+msgid "Limit the volume of your speaker"
+msgstr "스피커 음량을 제한합니다"
+
+msgid "Volume of the speaker"
+msgstr "스피커 음량"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "블루투스로 듣는 고음질 사운드"
+
+msgid "A wider sound stage for music and video"
+msgstr "음악과 영상을 위한 더 넓은 음장"
+
+msgid "Connect to up to two devices at once"
+msgstr "최대 두 기기에 동시 연결"
+
+msgid "When the device is not in use"
+msgstr "기기를 사용하지 않을 때"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "배터리가 부족할 때 음성 안내"
+
+msgid "Voice messages about modes and connections"
+msgstr "모드와 연결에 관한 음성 메시지"
+
+msgid "Turn the speaker off now"
+msgstr "지금 스피커 끄기"
+
+msgid "Show this function on the case screen"
+msgstr "이 기능을 케이스 화면에 표시"
+
+msgid "Independent of the app language"
+msgstr "앱 언어와 별개"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "버튼 동작을 처음 상태로 되돌립니다"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "복사"
+
+msgid "Copied"
+msgstr "복사됨"
+
+msgid "Reset"
+msgstr "초기화"
+
+msgid "Turn off"
+msgstr "끄기"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "이어폰이 페어링된 기기를 알려 주지 않습니다."
+
+msgid "Volume"
+msgstr "음량"
+
+msgid "Presses"
+msgstr "탭"
+
+msgid "Switching modes"
+msgstr "모드 전환"
+
+msgid "Case screen"
+msgstr "케이스 화면"
+
+msgid "Status"
+msgstr "상태"
+
+msgid "Connected devices"
+msgstr "연결된 기기"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "주변음 모드 동작이 전환하는 모드입니다."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "이어폰 음량 제한은 안전한 청취 시간에 대한 안내를 대신하지 않습니다."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "스피커 음량 제한은 안전한 청취 시간에 대한 안내를 대신하지 않습니다."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "이 목록은 주변 블루투스 기기가 아니라 이어폰과 페어링된 기기를 보여 줍니다. 이 컴퓨터를 삭제하면 이어폰을 제어할 수 없게 됩니다."
+
+msgid "Left earbud"
+msgstr "왼쪽 이어폰"
+
+msgid "Right earbud"
+msgstr "오른쪽 이어폰"
+
+msgid "Earbud"
+msgstr "이어폰"
+
+msgid "Left"
+msgstr "왼쪽"
+
+msgid "Right"
+msgstr "오른쪽"
+
+msgid "Actions for the chosen earbud."
+msgstr "선택한 이어폰의 동작입니다."
+
+msgid "Actions of the buttons on the device."
+msgstr "기기 버튼의 동작입니다."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "이 동작은 기기가 직접 수행합니다. Windows 미디어 키는 평소처럼 작동합니다."
+
+msgid "Small details. More comfort."
+msgstr "작은 배려. 더 큰 편안함."
+
+msgid "Let your earbuds adapt to you."
+msgstr "이어폰이 나에게 맞춰지도록 하세요."
+
+msgid "Let your speaker adapt to you."
+msgstr "스피커가 나에게 맞춰지도록 하세요."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "이 설정은 기기에 저장되며 모든 음원에서 작동합니다."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "자동 전원 끄기는 기기가 소리를 재생하지 않을 때 작동합니다."
+
+msgid "Bluetooth and devices"
+msgstr "블루투스 및 기기"
+
+msgid "Pairing and removing devices"
+msgstr "기기 페어링 및 제거"
+
+msgid "Output device and volume"
+msgstr "출력 장치 및 음량"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows는 LDAC 없이 소리를 재생합니다. 이 설정은 휴대폰 등 LDAC를 지원하는 음원용입니다."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "Liberty 4 Pro에서는 이퀄라이저를 바꾸면 공간 음향이 꺼집니다. 여기서 다시 켤 수 있습니다."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "케이스 화면에서 사용할 기능을 선택하세요. 케이스 언어는 앱 언어와 별개입니다."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "기기가 이 정보를 직접 알려 주고 최신 상태로 유지합니다."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "고객 지원에 문의할 때 일련번호와 펌웨어 버전이 도움이 됩니다."
+
+# Overview
+msgid "Presses and slides"
+msgstr "탭과 밀기"
+
+msgid "Presses and switching modes"
+msgstr "탭과 모드 전환"
+
+msgid "on"
+msgstr "켜짐"
+
+msgid "off"
+msgstr "꺼짐"
+
+msgid "On: {} of {}"
+msgstr "켜짐: {}/{}"
+
+msgid "Volume: {}"
+msgstr "음량: {}"
+
+msgid "Auto power off: {}"
+msgstr "자동 전원 끄기: {}"
+
+msgid "Two devices at once"
+msgstr "두 기기 동시 연결"
+
+msgid "One device at a time"
+msgstr "한 번에 한 기기"
+
+msgid "Case battery {}"
+msgstr "케이스 배터리 {}"
+
+msgid "Battery"
+msgstr "배터리"
+
+msgid "1 earbud"
+msgstr "이어폰 1개"
+
+msgid "Add quick toggles"
+msgstr "빠른 전환 추가"
+
+msgid "Quick toggles"
+msgstr "빠른 전환"
+
+msgid "Your sound"
+msgstr "나의 사운드"
+
+msgid "All presets"
+msgstr "모든 프리셋"
+
+msgid "Customize"
+msgstr "사용자 지정"
+
+msgid "Available when both earbuds are connected"
+msgstr "양쪽 이어폰이 연결되면 사용할 수 있습니다"
+
+msgid "Current profile"
+msgstr "현재 프로필"
+
+msgid "Your own settings"
+msgstr "사용자 설정"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{}밴드 · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "저음역"
+
+msgid "High frequencies"
+msgstr "고음역"
+
+msgid "Save your favourite combinations of settings."
+msgstr "좋아하는 설정 조합을 저장하세요."
+
+msgid "No settings chosen yet"
+msgstr "아직 선택한 설정이 없습니다"
+
+msgid "Edit device screen"
+msgstr "기기 화면 편집"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "이어폰이 하나만 연결되어 있습니다. 이퀄라이저 등 일부 설정은 양쪽 이어폰이 연결되면 사용할 수 있습니다."
+
+msgid "Move up"
+msgstr "위로 이동"
+
+msgid "Move down"
+msgstr "아래로 이동"
+
+msgid "Your device screen."
+msgstr "내 기기 화면."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "사용하는 블록을 켜고 위아래로 옮겨 순서를 바꾸세요."
+
+msgid "Ready-made sets"
+msgstr "기본 구성"
+
+msgid "Minimal"
+msgstr "최소"
+
+msgid "Standard"
+msgstr "표준"
+
+msgid "Full"
+msgstr "전체"
+
+msgid "Done"
+msgstr "완료"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "기기 카드에 표시할 스위치를 고르세요. 설정 자체는 바뀌지 않습니다."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "이퀄라이저 밴드: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "이퀄라이저 곡선. 드래그해서 주파수를 조정하거나 아래 슬라이더를 사용하세요."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "이 기기는 내장 이퀄라이저 프로필만 지원합니다."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "데시벨 단위 값, {}부터 {} dB까지"
+
+msgid "Save profile"
+msgstr "프로필 저장"
+
+msgid "All profiles ({})"
+msgstr "모든 프로필({})"
+
+msgid "Show fewer"
+msgstr "간단히 보기"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "이 기기에서는 이퀄라이저 값을 사용할 수 없습니다."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "이퀄라이저를 바꾸면 공간 음향이 꺼집니다."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "그래프의 점을 드래그하거나, ↑ ↓ 키로 슬라이더를 움직이거나, 값을 입력하세요."
+
+msgid "My profiles"
+msgstr "내 프로필"
+
+msgid "Save the current sound to come back to it later."
+msgstr "현재 사운드를 저장해 나중에 다시 사용하세요."
+
+msgid "Applied"
+msgstr "적용됨"
+
+msgid "Bands: {}"
+msgstr "밴드: {}"
+
+msgid "More for “{}”"
+msgstr "“{}” 추가 작업"
+
+msgid "Export"
+msgstr "내보내기"
+
+msgid "Delete"
+msgstr "삭제"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "저장된 프로필은 그대로 남아 있습니다. 양쪽 이어폰이 연결되면 적용할 수 있습니다."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "이전 이퀄라이저 프로필: {}. 이 기기에서 사용하려면 내 프로필로 옮기세요."
+
+msgid "Show"
+msgstr "보기"
+
+msgid "Hide"
+msgstr "숨기기"
+
+msgid "Move all"
+msgstr "모두 옮기기"
+
+msgid "Move"
+msgstr "옮기기"
+
+msgid "Import and export"
+msgstr "가져오기 및 내보내기"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "프로필을 공유하고, 파일로 보관하거나, 다른 컴퓨터로 옮기세요."
+
+msgid "Import"
+msgstr "가져오기"
+
+msgid "Select all"
+msgstr "모두 선택"
+
+msgid "Save a profile to export it."
+msgstr "내보내려면 프로필을 저장하세요."
+
+msgid "Save to file"
+msgstr "파일로 저장"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "OpenSCQ30 프로필이 담긴 파일 또는 텍스트입니다. 가져오기 전에 바뀌는 내용을 보여 드립니다."
+
+msgid "Open file"
+msgstr "파일 열기"
+
+msgid "Paste"
+msgstr "붙여넣기"
+
+msgid "Saved to the file"
+msgstr "파일에 저장했습니다"
+
+msgid "Could not save the file"
+msgstr "파일을 저장할 수 없습니다"
+
+msgid "This is not an equalizer profiles file"
+msgstr "이퀄라이저 프로필 파일이 아닙니다"
+
+msgid "The clipboard is empty"
+msgstr "클립보드가 비어 있습니다"
+
+msgid "The file is too large"
+msgstr "파일이 너무 큽니다"
+
+msgid "Could not read the file"
+msgstr "파일을 읽을 수 없습니다"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "프로필 {n}개를 가져왔습니다"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "프로필 {n}개를 옮겼습니다"
+
+msgid "Profile saved"
+msgstr "프로필을 저장했습니다"
+
+msgid "Profile deleted"
+msgstr "프로필을 삭제했습니다"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "기기의 현재 이퀄라이저 값을 다시 쓸 수 있는 프로필로 저장합니다."
+
+msgid "Name"
+msgstr "이름"
+
+msgid "My sound"
+msgstr "나의 사운드"
+
+msgid "Enter a profile name."
+msgstr "프로필 이름을 입력하세요."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "“{}” 프로필이 이미 있습니다. 저장된 값을 바꿀까요?"
+
+msgid "Replace profile"
+msgstr "프로필 바꾸기"
+
+msgid "Save"
+msgstr "저장"
+
+msgid "Delete equalizer profile?"
+msgstr "이퀄라이저 프로필을 삭제할까요?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "“{}”을(를) 삭제하시겠습니까?"
+
+msgid "Import profiles"
+msgstr "프로필 가져오기"
+
+msgid "New"
+msgstr "새 프로필"
+
+msgid "Replaces the saved profile"
+msgstr "저장된 프로필을 바꿉니다"
+
+msgid "{} bands, this device has {}"
+msgstr "{}밴드, 이 기기는 {}밴드"
+
+msgid "Values outside this device’s range"
+msgstr "이 기기의 범위를 벗어난 값"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "빨간색으로 표시된 프로필은 이 기기에 맞지 않아 파일을 가져올 수 없습니다."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "프로필 {n}개 가져오기"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "{} 추가 작업"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "편집을 눌러 적용할 설정을 고르세요."
+
+msgid "+{} more"
+msgstr "+{}개 더"
+
+msgid "Apply"
+msgstr "적용"
+
+msgid "Edit"
+msgstr "편집"
+
+msgid "Matches current settings"
+msgstr "현재 설정과 같음"
+
+msgid "Your sound, in one preset"
+msgstr "하나의 프리셋에 담긴 나의 사운드"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "현재 설정을 저장하고 함께 적용할 설정을 고르세요."
+
+msgid "Create preset"
+msgstr "프리셋 만들기"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "프리셋의 이퀄라이저는 양쪽 이어폰이 연결되면 적용됩니다."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "현재 설정을 저장합니다. 그런 다음 적용할 설정을 고르세요."
+
+msgid "For example, for work"
+msgstr "예: 업무용"
+
+msgid "Enter a preset name."
+msgstr "프리셋 이름을 입력하세요."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "“{}”이(가) 이미 있습니다. 저장된 값을 기기의 현재 설정으로 바꿀까요? 포함할 설정 선택은 유지됩니다."
+
+msgid "Replace"
+msgstr "바꾸기"
+
+msgid "Create"
+msgstr "만들기"
+
+msgid "Custom curve"
+msgstr "사용자 곡선"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "이 프리셋은 선택한 설정만 적용합니다. 선택 변경 사항은 바로 저장됩니다."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "아직 저장된 설정이 없습니다. 기기의 현재 설정을 불러와 시작하세요."
+
+msgid "Load current settings"
+msgstr "현재 설정 불러오기"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "이 프리셋에 저장된 값을 기기의 현재 설정으로 바꿀까요? 포함할 설정 선택은 유지됩니다. 기기는 바뀌지 않습니다."
+
+msgid "Load"
+msgstr "불러오기"
+
+msgid "Delete preset?"
+msgstr "프리셋을 삭제할까요?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "“{}”을(를) 삭제할까요? 기기의 현재 설정은 유지됩니다."
+
+msgid "Preset “{}” applied"
+msgstr "“{}” 프리셋을 적용했습니다"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "“{}” 프리셋을 적용했습니다. 이퀄라이저는 양쪽 이어폰이 연결되면 적용됩니다."
+
+msgid "Preset deleted"
+msgstr "프리셋을 삭제했습니다"
+
+msgid "Preset values replaced"
+msgstr "프리셋 값을 바꿨습니다"
+
+msgid "Current settings loaded into the preset"
+msgstr "현재 설정을 프리셋에 불러왔습니다"
+
+# App settings
+msgid "Appearance"
+msgstr "모양"
+
+msgid "Theme"
+msgstr "테마"
+
+msgid "As in Windows"
+msgstr "Windows 설정에 따름"
+
+msgid "Light"
+msgstr "밝게"
+
+msgid "Dark"
+msgstr "어둡게"
+
+msgid "Palette"
+msgstr "팔레트"
+
+msgid "Colors of buttons and highlights"
+msgstr "버튼과 강조 표시 색"
+
+msgid "Purple"
+msgstr "퍼플"
+
+msgid "Sage"
+msgstr "세이지"
+
+msgid "Rose"
+msgstr "로즈"
+
+msgid "Device color in pictures"
+msgstr "그림 속 기기 색상"
+
+msgid "As the theme"
+msgstr "테마에 따름"
+
+msgid "Silver"
+msgstr "실버"
+
+msgid "Black"
+msgstr "블랙"
+
+msgid "Sound modes"
+msgstr "사운드 모드"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Liberty 4 Pro처럼 단계가 있는 기기의 표시 방식"
+
+msgid "Tiles"
+msgstr "타일"
+
+msgid "Scale 1–11"
+msgstr "단계 1~11"
+
+msgid "One earbud badge"
+msgstr "이어폰 1개 배지"
+
+msgid "Show when only one earbud is connected"
+msgstr "이어폰이 하나만 연결되었을 때 표시"
+
+msgid "App language"
+msgstr "앱 언어"
+
+msgid "Your color.\nYour mood."
+msgstr "나의 색.\n나의 기분."
+
+msgid "A familiar character. A new space."
+msgstr "익숙한 개성. 새로운 공간."
+
+msgid "Home screen"
+msgstr "홈 화면"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "필요한 블록만 남기고 원하는 순서로 배치하세요."
+
+msgid "Edit home screen"
+msgstr "홈 화면 편집"
+
+msgid "About"
+msgstr "정보"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "Windows용 OpenSCQ30 {} · GNU GPL 3 자유 소프트웨어"
+
+msgid "More"
+msgstr "자세히"
+
+msgid "Diagnostics"
+msgstr "진단"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "문제의 원인을 찾을 수 있도록 최근 로그를 복사합니다."
+
+msgid "Copy logs"
+msgstr "로그 복사"

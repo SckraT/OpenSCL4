@@ -1,0 +1,1065 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: he\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "סקירה"
+
+msgid "Sound mode"
+msgstr "מצב צליל"
+
+msgid "Equalizer"
+msgstr "איקוולייזר"
+
+msgid "Sound and effects"
+msgstr "צליל ואפקטים"
+
+msgid "Quick presets"
+msgstr "הגדרות מהירות"
+
+msgid "Controls"
+msgstr "שליטה"
+
+msgid "Comfort"
+msgstr "נוחות"
+
+msgid "Power and prompts"
+msgstr "חשמל והודעות"
+
+msgid "Connections"
+msgstr "חיבורים"
+
+msgid "Case"
+msgstr "קייס"
+
+msgid "About the device"
+msgstr "אודות המכשיר"
+
+msgid "Sleep"
+msgstr "שינה"
+
+msgid "Lights"
+msgstr "תאורה"
+
+msgid "Alarms"
+msgstr "שעונים מעוררים"
+
+msgid "Other"
+msgstr "אחר"
+
+msgid "My devices"
+msgstr "המכשירים שלי"
+
+msgid "Settings"
+msgstr "הגדרות"
+
+msgid "Sound"
+msgstr "צליל"
+
+msgid "Device"
+msgstr "מכשיר"
+
+msgid "SOUND"
+msgstr "צליל"
+
+msgid "DEVICE"
+msgstr "מכשיר"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "לשמוע את מה שחשוב."
+
+msgid "Your sound, your way."
+msgstr "הצליל שלך, בדרך שלך."
+
+msgid "Inside the sound."
+msgstr "בתוך הצליל."
+
+msgid "One preset. Your settings."
+msgstr "הגדרה אחת. ההעדפות שלך."
+
+msgid "A touch. And you’re in control."
+msgstr "נגיעה אחת. והשליטה בידיים שלך."
+
+msgid "Comfortable listening. Every day."
+msgstr "האזנה נוחה. בכל יום."
+
+msgid "Always ready."
+msgstr "תמיד מוכן."
+
+msgid "Stay connected. To two at once."
+msgstr "להישאר מחובר. לשניים בבת אחת."
+
+msgid "A little case. More possibilities."
+msgstr "קייס קטן. יותר אפשרויות."
+
+msgid "All about your device."
+msgstr "הכול על המכשיר שלך."
+
+msgid "Your devices."
+msgstr "המכשירים שלך."
+
+msgid "Make it yours."
+msgstr "בדיוק לטעמך."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "בחר כמה מהעולם להכניס לצליל שלך."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "בחר פרופיל או כוונן כל תדר."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "קודק, השהיה ואופן עיבוד הצליל."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "שמור את השילובים האהובים עליך וחזור אליהם בלחיצה."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "מה עושות הנגיעות ובין אילו מצבים הן מחליפות."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "הגדרות שמתאימות את האוזניות להרגלים שלך."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "הגדרות שמתאימות את הרמקול להרגלים שלך."
+
+msgid "When the device turns off and what it tells you."
+msgstr "מתי המכשיר נכבה ומה הוא מודיע לך."
+
+msgid "Switch between your phone and computer."
+msgstr "מעבר בין הטלפון למחשב."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "הפונקציות של מסך הקייס ומצב הקייס."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "סוללה, קושחה ומספרים סידוריים."
+
+msgid "All your familiar headphones in one place."
+msgstr "כל האוזניות המוכרות שלך במקום אחד."
+
+msgid "An app that feels comfortable to use."
+msgstr "אפליקציה נוחה לשימוש."
+
+# Connection
+msgid "No devices"
+msgstr "אין מכשירים"
+
+msgid "Add a device"
+msgstr "הוסף מכשיר"
+
+msgid "Connected"
+msgstr "מחובר"
+
+msgid "Connecting…"
+msgstr "מתחבר…"
+
+msgid "Not connected"
+msgstr "לא מחובר"
+
+msgid "Connected to {}"
+msgstr "מחובר אל {}"
+
+msgid "Connecting to {}"
+msgstr "מתחבר אל {}"
+
+msgid "Connection lost"
+msgstr "החיבור אבד"
+
+msgid "Bluetooth is off"
+msgstr "ה-Bluetooth כבוי"
+
+msgid "Disconnected"
+msgstr "מנותק"
+
+msgid "Connecting to your headphones"
+msgstr "מתחבר לאוזניות"
+
+msgid "Connecting to your speaker"
+msgstr "מתחבר לרמקול"
+
+msgid "Could not connect"
+msgstr "לא ניתן להתחבר"
+
+msgid "{} is not connected"
+msgstr "{} לא מחובר"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "פתח את הקייס או הדלק את האוזניות. הפקדים יופיעו לאחר החיבור."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "הדלק את הרמקול. הפקדים יופיעו לאחר החיבור."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "ודא שהאוזניות בקרבת מקום ומחוברות למחשב הזה ב-Bluetooth."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "ודא שהרמקול בקרבת מקום ומחובר למחשב הזה ב-Bluetooth."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "הפעל Bluetooth בהגדרות Windows ונסה להתחבר שוב."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "התחבר כדי לראות את הסוללה ולשנות הגדרות."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "המכשיר לא נמצא. ודא שהוא דולק וקרוב."
+
+msgid "The device did not answer in time. Try again."
+msgstr "המכשיר לא ענה בזמן. נסה שוב."
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Connect"
+msgstr "התחבר"
+
+msgid "Connect again"
+msgstr "התחבר שוב"
+
+msgid "Bluetooth settings"
+msgstr "הגדרות Bluetooth"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "לא ניתן לשנות את „{}”. המכשיר שמר על הערך הקודם."
+
+msgid "Retry"
+msgstr "נסה שוב"
+
+msgid "Close"
+msgstr "סגור"
+
+# My devices
+msgid "Open"
+msgstr "פתח"
+
+msgid "Forget device"
+msgstr "שכח מכשיר"
+
+msgid "Demo device · Not connected"
+msgstr "מכשיר הדגמה · לא מחובר"
+
+msgid "Saved device · Not connected"
+msgstr "מכשיר שמור · לא מחובר"
+
+msgid "Add device"
+msgstr "הוסף מכשיר"
+
+msgid "A model, then its paired device"
+msgstr "דגם, ואז המכשיר המותאם שלו"
+
+msgid "Your sound starts here."
+msgstr "הצליל שלך מתחיל כאן."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "הוסף את האוזניות כדי לכוונן צליל ופקדים."
+
+msgid "Forget {}?"
+msgstr "לשכוח את {}?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "המכשיר יוסר מהרשימה יחד עם הפרופילים וההגדרות שלו באפליקציה. ההתאמה ל-Windows נשארת."
+
+msgid "Forget"
+msgstr "שכח"
+
+# Adding a device
+msgid "Find your model."
+msgstr "מצא את הדגם שלך."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "בחר את הדגם המדויק כדי לראות את ההגדרות שהמכשיר שלך תומך בהן."
+
+msgid "Model name or code, such as A3954"
+msgstr "שם או קוד דגם, למשל A3954"
+
+msgid "All"
+msgstr "הכול"
+
+msgid "Earbuds"
+msgstr "אוזניות תוך-אוזן"
+
+msgid "Over-ear"
+msgstr "אוזניות מעל האוזן"
+
+msgid "Open-ear"
+msgstr "אוזניות פתוחות"
+
+msgid "Speakers"
+msgstr "רמקולים"
+
+msgid "No models found. Try another name or code."
+msgstr "לא נמצאו דגמים. נסה שם או קוד אחר."
+
+msgid "Ready to connect your headphones?"
+msgstr "מוכן לחבר את האוזניות?"
+
+msgid "Ready to connect your speaker?"
+msgstr "מוכן לחבר את הרמקול?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "בחר את המכשיר שמותאם ל-Windows. אם הוא לא ברשימה, התאם אותו קודם בהגדרות Bluetooth."
+
+msgid "Another model"
+msgstr "דגם אחר"
+
+msgid "Demo mode"
+msgstr "מצב הדגמה"
+
+msgid "Explore the interface without real headphones"
+msgstr "לחקור את הממשק בלי אוזניות אמיתיות"
+
+msgid "Paired devices"
+msgstr "מכשירים מותאמים"
+
+msgid "Refresh"
+msgstr "רענן"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "ה-Bluetooth כבוי. הפעל אותו בהגדרות Windows."
+
+msgid "Looking for paired devices…"
+msgstr "מחפש מכשירים מותאמים…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "ודא שהאוזניות דולקות ומותאמות ל-Windows, ואז רענן."
+
+msgid "Simulated device data"
+msgstr "נתוני מכשיר מדומים"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "מותאם ב-Windows · נראה כמו הדגם שנבחר"
+
+msgid "Paired in Windows"
+msgstr "מותאם ב-Windows"
+
+msgid "Could not add the device."
+msgstr "לא ניתן להוסיף את המכשיר."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "מצב הדגמה משתמש בנתונים מדומים ואינו שולט באוזניות אמיתיות."
+
+msgid "Back"
+msgstr "חזרה"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "מצב ועוצמה"
+
+msgid "Sound mode from 1 to 11"
+msgstr "מצב צליל מ-1 עד 11"
+
+msgid "Transparency, strength {}"
+msgstr "שקיפות, עוצמה {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "סינון רעשים, עוצמה {}"
+
+msgid "Your strength is remembered."
+msgstr "העוצמה שלך נשמרת."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "בחזרה לסינון רעשים או לשקיפות, נעשה שימוש בעוצמה האחרונה של אותו מצב."
+
+msgid "Lowers the noise around you."
+msgstr "מנמיך את הרעש סביבך."
+
+msgid "Keeps the sounds around you audible."
+msgstr "משאיר את הצלילים סביבך נשמעים."
+
+msgid "No processing of ambient sound."
+msgstr "ללא עיבוד של צליל הסביבה."
+
+msgid "Single press"
+msgstr "נגיעה אחת"
+
+msgid "Double press"
+msgstr "נגיעה כפולה"
+
+msgid "Triple press"
+msgstr "נגיעה משולשת"
+
+msgid "Long press"
+msgstr "לחיצה ארוכה"
+
+msgid "Slide up"
+msgstr "החלקה למעלה"
+
+msgid "Slide down"
+msgstr "החלקה למטה"
+
+msgid "Noise canceling"
+msgstr "סינון רעשים"
+
+msgid "Transparency"
+msgstr "שקיפות"
+
+msgid "Normal"
+msgstr "רגיל"
+
+msgid "Noise canceling strength"
+msgstr "עוצמת סינון הרעשים"
+
+msgid "Transparency strength"
+msgstr "עוצמת השקיפות"
+
+msgid "Airplane mode updates"
+msgstr "עדכוני מצב טיסה"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "מנמיך רעשי רוח במיקרופונים"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "השהיה אוטומטית כשמוציאים אוזנייה"
+
+msgid "Lower the music while you talk"
+msgstr "הנמכת המוזיקה בזמן שאתה מדבר"
+
+msgid "When the music comes back after you stop talking"
+msgstr "מתי המוזיקה חוזרת אחרי שהפסקת לדבר"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "שומר על צליל מלא כשאוזנייה יושבת רופפת"
+
+msgid "Limit the volume of your earbuds"
+msgstr "הגבלת עוצמת השמע של האוזניות"
+
+msgid "Limit the volume of your speaker"
+msgstr "הגבלת עוצמת השמע של הרמקול"
+
+msgid "Volume of the speaker"
+msgstr "עוצמת השמע של הרמקול"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "צליל באיכות גבוהה דרך Bluetooth"
+
+msgid "A wider sound stage for music and video"
+msgstr "במת צליל רחבה יותר למוזיקה ולווידאו"
+
+msgid "Connect to up to two devices at once"
+msgstr "חיבור לעד שני מכשירים בבת אחת"
+
+msgid "When the device is not in use"
+msgstr "כשהמכשיר לא בשימוש"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "הודעה קולית כשהסוללה עומדת להיגמר"
+
+msgid "Voice messages about modes and connections"
+msgstr "הודעות קוליות על מצבים וחיבורים"
+
+msgid "Turn the speaker off now"
+msgstr "כבה את הרמקול עכשיו"
+
+msgid "Show this function on the case screen"
+msgstr "הצג פונקציה זו במסך הקייס"
+
+msgid "Independent of the app language"
+msgstr "בלתי תלויה בשפת האפליקציה"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "להחזיר את פעולות הכפתורים המקוריות"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "העתק"
+
+msgid "Copied"
+msgstr "הועתק"
+
+msgid "Reset"
+msgstr "איפוס"
+
+msgid "Turn off"
+msgstr "כבה"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "האוזניות לא מדווחות על מכשירים מותאמים."
+
+msgid "Volume"
+msgstr "עוצמת שמע"
+
+msgid "Presses"
+msgstr "נגיעות"
+
+msgid "Switching modes"
+msgstr "החלפת מצבים"
+
+msgid "Case screen"
+msgstr "מסך הקייס"
+
+msgid "Status"
+msgstr "מצב"
+
+msgid "Connected devices"
+msgstr "מכשירים מחוברים"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "המצבים שביניהם מחליפה הפעולה של מצב צליל הסביבה."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "הגבלת עוצמת השמע של האוזניות אינה מחליפה הנחיות לגבי משך האזנה בטוח."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "הגבלת עוצמת השמע של הרמקול אינה מחליפה הנחיות לגבי משך האזנה בטוח."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "ברשימה זו מכשירים שמותאמים לאוזניות שלך, לא מכשירי Bluetooth בסביבה. שכחת המחשב הזה מסיימת את השליטה באוזניות."
+
+msgid "Left earbud"
+msgstr "אוזנייה שמאלית"
+
+msgid "Right earbud"
+msgstr "אוזנייה ימנית"
+
+msgid "Earbud"
+msgstr "אוזנייה"
+
+msgid "Left"
+msgstr "שמאל"
+
+msgid "Right"
+msgstr "ימין"
+
+msgid "Actions for the chosen earbud."
+msgstr "פעולות לאוזנייה שנבחרה."
+
+msgid "Actions of the buttons on the device."
+msgstr "פעולות הכפתורים במכשיר."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "המכשיר מבצע את הפעולות האלה בעצמו. מקשי המדיה של Windows עובדים כרגיל."
+
+msgid "Small details. More comfort."
+msgstr "פרטים קטנים. יותר נוחות."
+
+msgid "Let your earbuds adapt to you."
+msgstr "תן לאוזניות להתאים את עצמן אליך."
+
+msgid "Let your speaker adapt to you."
+msgstr "תן לרמקול להתאים את עצמו אליך."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "הגדרות אלה נשמרות במכשיר ופועלות עם כל מקור צליל."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "הכיבוי האוטומטי פועל כשהמכשיר לא מנגן."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth ומכשירים"
+
+msgid "Pairing and removing devices"
+msgstr "התאמה והסרה של מכשירים"
+
+msgid "Output device and volume"
+msgstr "התקן פלט ועוצמת שמע"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows מנגן צליל בלי LDAC. ההגדרה מיועדת לטלפון ולמקורות אחרים עם LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "ב-Liberty 4 Pro, שינוי האיקוולייזר מכבה את השמע המרחבי. אפשר להפעיל אותו שוב כאן."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "בחר את הפונקציות שזמינות במסך הקייס. שפת הקייס אינה תלויה בשפת האפליקציה."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "המכשיר מדווח על הנתונים האלה בעצמו ושומר אותם מעודכנים."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "המספר הסידורי וגרסת הקושחה עוזרים כשפונים לתמיכה."
+
+# Overview
+msgid "Presses and slides"
+msgstr "נגיעות והחלקות"
+
+msgid "Presses and switching modes"
+msgstr "נגיעות והחלפת מצבים"
+
+msgid "on"
+msgstr "פועל"
+
+msgid "off"
+msgstr "כבוי"
+
+msgid "On: {} of {}"
+msgstr "פועלים: {} מתוך {}"
+
+msgid "Volume: {}"
+msgstr "עוצמת שמע: {}"
+
+msgid "Auto power off: {}"
+msgstr "כיבוי אוטומטי: {}"
+
+msgid "Two devices at once"
+msgstr "שני מכשירים בבת אחת"
+
+msgid "One device at a time"
+msgstr "מכשיר אחד בכל פעם"
+
+msgid "Case battery {}"
+msgstr "סוללת הקייס {}"
+
+msgid "Battery"
+msgstr "סוללה"
+
+msgid "1 earbud"
+msgstr "אוזנייה אחת"
+
+msgid "Add quick toggles"
+msgstr "הוסף מתגים מהירים"
+
+msgid "Quick toggles"
+msgstr "מתגים מהירים"
+
+msgid "Your sound"
+msgstr "הצליל שלך"
+
+msgid "All presets"
+msgstr "כל ההגדרות המהירות"
+
+msgid "Customize"
+msgstr "התאמה אישית"
+
+msgid "Available when both earbuds are connected"
+msgstr "זמין כששתי האוזניות מחוברות"
+
+msgid "Current profile"
+msgstr "פרופיל נוכחי"
+
+msgid "Your own settings"
+msgstr "ההגדרות שלך"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} פסים · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "תדרים נמוכים"
+
+msgid "High frequencies"
+msgstr "תדרים גבוהים"
+
+msgid "Save your favourite combinations of settings."
+msgstr "שמור את שילובי ההגדרות האהובים עליך."
+
+msgid "No settings chosen yet"
+msgstr "עדיין לא נבחרו הגדרות"
+
+msgid "Edit device screen"
+msgstr "ערוך את מסך המכשיר"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "רק אוזנייה אחת מחוברת. האיקוולייזר וחלק מההגדרות האחרות יהיו זמינים כששתי האוזניות יתחברו."
+
+msgid "Move up"
+msgstr "הזז למעלה"
+
+msgid "Move down"
+msgstr "הזז למטה"
+
+msgid "Your device screen."
+msgstr "מסך המכשיר שלך."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "הפעל את הבלוקים שבהם אתה משתמש והזז אותם למעלה או למטה כדי לשנות את הסדר."
+
+msgid "Ready-made sets"
+msgstr "ערכות מוכנות"
+
+msgid "Minimal"
+msgstr "מינימלי"
+
+msgid "Standard"
+msgstr "רגיל"
+
+msgid "Full"
+msgstr "מלא"
+
+msgid "Done"
+msgstr "סיום"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "בחר את המתגים בכרטיס המכשיר. ההגדרות עצמן לא משתנות."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "פסי האיקוולייזר: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "עקומת האיקוולייזר. גרור כדי לכוונן תדר, או השתמש במחוונים למטה."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "מכשיר זה תומך רק בפרופילי האיקוולייזר המובנים."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "ערכים בדציבלים, מ-{} עד {} dB"
+
+msgid "Save profile"
+msgstr "שמור פרופיל"
+
+msgid "All profiles ({})"
+msgstr "כל הפרופילים ({})"
+
+msgid "Show fewer"
+msgstr "הצג פחות"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "ערכי האיקוולייזר אינם זמינים במכשיר זה."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "שינוי האיקוולייזר מכבה את השמע המרחבי."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "גרור את הנקודות בגרף, הזז את המחוונים עם ↑ ↓ או הקלד ערכים."
+
+msgid "My profiles"
+msgstr "הפרופילים שלי"
+
+msgid "Save the current sound to come back to it later."
+msgstr "שמור את הצליל הנוכחי כדי לחזור אליו מאוחר יותר."
+
+msgid "Applied"
+msgstr "הוחל"
+
+msgid "Bands: {}"
+msgstr "פסים: {}"
+
+msgid "More for “{}”"
+msgstr "עוד עבור „{}”"
+
+msgid "Export"
+msgstr "ייצוא"
+
+msgid "Delete"
+msgstr "מחק"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "הפרופילים השמורים נשארים במקומם. אפשר להחיל אותם כששתי האוזניות מחוברות."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "פרופילי איקוולייזר ישנים: {}. העבר אותם לפרופילים שלך כדי להשתמש בהם במכשיר זה."
+
+msgid "Show"
+msgstr "הצג"
+
+msgid "Hide"
+msgstr "הסתר"
+
+msgid "Move all"
+msgstr "העבר הכול"
+
+msgid "Move"
+msgstr "העבר"
+
+msgid "Import and export"
+msgstr "ייבוא וייצוא"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "שתף פרופילים, שמור אותם בקובץ או העבר אותם למחשב אחר."
+
+msgid "Import"
+msgstr "ייבוא"
+
+msgid "Select all"
+msgstr "בחר הכול"
+
+msgid "Save a profile to export it."
+msgstr "שמור פרופיל כדי לייצא אותו."
+
+msgid "Save to file"
+msgstr "שמור לקובץ"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "קובץ או טקסט עם פרופילים של OpenSCQ30. לפני הייבוא תראה מה ישתנה."
+
+msgid "Open file"
+msgstr "פתח קובץ"
+
+msgid "Paste"
+msgstr "הדבק"
+
+msgid "Saved to the file"
+msgstr "נשמר בקובץ"
+
+msgid "Could not save the file"
+msgstr "לא ניתן לשמור את הקובץ"
+
+msgid "This is not an equalizer profiles file"
+msgstr "זה לא קובץ של פרופילי איקוולייזר"
+
+msgid "The clipboard is empty"
+msgstr "הלוח ריק"
+
+msgid "The file is too large"
+msgstr "הקובץ גדול מדי"
+
+msgid "Could not read the file"
+msgstr "לא ניתן לקרוא את הקובץ"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "יובא פרופיל {n}"
+msgstr[1] "יובאו {n} פרופילים"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "הועבר פרופיל {n}"
+msgstr[1] "הועברו {n} פרופילים"
+
+msgid "Profile saved"
+msgstr "הפרופיל נשמר"
+
+msgid "Profile deleted"
+msgstr "הפרופיל נמחק"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "שמור את ערכי האיקוולייזר הנוכחיים של המכשיר כפרופיל לשימוש חוזר."
+
+msgid "Name"
+msgstr "שם"
+
+msgid "My sound"
+msgstr "הצליל שלי"
+
+msgid "Enter a profile name."
+msgstr "הזן שם לפרופיל."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "כבר קיים פרופיל בשם „{}”. להחליף את הערכים השמורים שלו?"
+
+msgid "Replace profile"
+msgstr "החלף פרופיל"
+
+msgid "Save"
+msgstr "שמור"
+
+msgid "Delete equalizer profile?"
+msgstr "למחוק את פרופיל האיקוולייזר?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "האם למחוק את „{}”?"
+
+msgid "Import profiles"
+msgstr "ייבוא פרופילים"
+
+msgid "New"
+msgstr "חדש"
+
+msgid "Replaces the saved profile"
+msgstr "יחליף את הפרופיל השמור"
+
+msgid "{} bands, this device has {}"
+msgstr "{} פסים, למכשיר זה יש {}"
+
+msgid "Values outside this device’s range"
+msgstr "ערכים מחוץ לטווח של מכשיר זה"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "הפרופילים המסומנים באדום לא מתאימים למכשיר זה, ולכן לא ניתן לייבא את הקובץ."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "ייבא פרופיל {n}"
+msgstr[1] "ייבא {n} פרופילים"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "פעולות נוספות עבור {}"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "השתמש בעריכה כדי לבחור אילו הגדרות להחיל."
+
+msgid "+{} more"
+msgstr "+{} נוספים"
+
+msgid "Apply"
+msgstr "החל"
+
+msgid "Edit"
+msgstr "עריכה"
+
+msgid "Matches current settings"
+msgstr "תואם להגדרות הנוכחיות"
+
+msgid "Your sound, in one preset"
+msgstr "הצליל שלך, בהגדרה מהירה אחת"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "שמור את ההגדרות הנוכחיות ובחר את אלה שתרצה להחיל יחד."
+
+msgid "Create preset"
+msgstr "צור הגדרה מהירה"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "האיקוולייזר מההגדרות המהירות יוחל כששתי האוזניות יתחברו."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "נשמור את ההגדרות הנוכחיות. אחר כך בחר אילו מהן להחיל."
+
+msgid "For example, for work"
+msgstr "למשל, לעבודה"
+
+msgid "Enter a preset name."
+msgstr "הזן שם להגדרה המהירה."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "„{}” כבר קיים. להחליף את הערכים השמורים בהגדרות הנוכחיות של המכשיר? הבחירה של ההגדרות הכלולות תישמר."
+
+msgid "Replace"
+msgstr "החלף"
+
+msgid "Create"
+msgstr "צור"
+
+msgid "Custom curve"
+msgstr "עקומה אישית"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "ההגדרה המהירה הזו מחילה רק את ההגדרות שנבחרו. שינויים בבחירה נשמרים מיד."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "עדיין אין הגדרות שמורות. טען את ההגדרות הנוכחיות של המכשיר כדי להתחיל."
+
+msgid "Load current settings"
+msgstr "טען את ההגדרות הנוכחיות"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "להחליף את הערכים השמורים של ההגדרה המהירה בהגדרות הנוכחיות של המכשיר? הבחירה של ההגדרות הכלולות תישמר. המכשיר עצמו לא ישתנה."
+
+msgid "Load"
+msgstr "טען"
+
+msgid "Delete preset?"
+msgstr "למחוק את ההגדרה המהירה?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "למחוק את „{}”? ההגדרות הנוכחיות של המכשיר יישמרו."
+
+msgid "Preset “{}” applied"
+msgstr "ההגדרה המהירה „{}” הוחלה"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "ההגדרה המהירה „{}” הוחלה. האיקוולייזר שלה יוחל כששתי האוזניות יתחברו."
+
+msgid "Preset deleted"
+msgstr "ההגדרה המהירה נמחקה"
+
+msgid "Preset values replaced"
+msgstr "ערכי ההגדרה המהירה הוחלפו"
+
+msgid "Current settings loaded into the preset"
+msgstr "ההגדרות הנוכחיות נטענו להגדרה המהירה"
+
+# App settings
+msgid "Appearance"
+msgstr "מראה"
+
+msgid "Theme"
+msgstr "ערכת נושא"
+
+msgid "As in Windows"
+msgstr "כמו ב-Windows"
+
+msgid "Light"
+msgstr "בהירה"
+
+msgid "Dark"
+msgstr "כהה"
+
+msgid "Palette"
+msgstr "לוח צבעים"
+
+msgid "Colors of buttons and highlights"
+msgstr "צבעי כפתורים והדגשות"
+
+msgid "Purple"
+msgstr "סגול"
+
+msgid "Sage"
+msgstr "מרווה"
+
+msgid "Rose"
+msgstr "ורוד"
+
+msgid "Device color in pictures"
+msgstr "צבע המכשיר בתמונות"
+
+msgid "As the theme"
+msgstr "כמו ערכת הנושא"
+
+msgid "Silver"
+msgstr "כסוף"
+
+msgid "Black"
+msgstr "שחור"
+
+msgid "Sound modes"
+msgstr "מצבי צליל"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "התצוגה למכשירים עם סולם, כמו Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "אריחים"
+
+msgid "Scale 1–11"
+msgstr "סולם 1–11"
+
+msgid "One earbud badge"
+msgstr "תג אוזנייה אחת"
+
+msgid "Show when only one earbud is connected"
+msgstr "להציג כשרק אוזנייה אחת מחוברת"
+
+msgid "App language"
+msgstr "שפת האפליקציה"
+
+msgid "Your color.\nYour mood."
+msgstr "הצבע שלך.\nמצב הרוח שלך."
+
+msgid "A familiar character. A new space."
+msgstr "אופי מוכר. מרחב חדש."
+
+msgid "Home screen"
+msgstr "מסך הבית"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "השאר את הבלוקים שאתה צריך וסדר אותם כרצונך."
+
+msgid "Edit home screen"
+msgstr "ערוך את מסך הבית"
+
+msgid "About"
+msgstr "אודות"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 ל-Windows {} · תוכנה חופשית תחת GNU GPL 3."
+
+msgid "More"
+msgstr "עוד"
+
+msgid "Diagnostics"
+msgstr "אבחון"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "העתק את רשומות היומן האחרונות כדי למצוא את הגורם לבעיה."
+
+msgid "Copy logs"
+msgstr "העתק יומנים"

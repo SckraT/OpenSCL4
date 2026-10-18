@@ -25,6 +25,7 @@ use crate::{
         battery::is_only_one_earbud_connected,
         device_art::{EarbudsColor, art_color},
         devices::featured_device,
+        languages,
         legacy::LegacyEqualizerProfile,
         sound_mode::sound_mode_scale_settings,
     },
@@ -581,14 +582,20 @@ impl App {
     }
 
     fn apply_language(&mut self) {
-        let language = match self.config.settings.language.as_deref() {
-            Some(language) => language.to_string(),
-            None => DesktopLanguageRequester::requested_languages()
-                .first()
-                .map(|l| l.language.as_str().to_string())
-                .unwrap_or_default(),
-        };
-        let language = if language == "ru" { "ru" } else { "en" };
+        let language = self
+            .config
+            .settings
+            .language
+            .as_deref()
+            .and_then(languages::find)
+            .unwrap_or_else(|| {
+                let requested: Vec<String> = DesktopLanguageRequester::requested_languages()
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect();
+                languages::choose(&requested)
+            })
+            .code;
         self.language = language;
         if let Err(err) = slint::select_bundled_translation(language) {
             tracing::warn!("could not select the {language} translation: {err:?}");

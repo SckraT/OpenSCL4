@@ -221,7 +221,7 @@ pub(super) struct EqualizerState {
 impl App {
     fn numbers(&self) -> Numbers {
         Numbers {
-            comma: self.language == "ru",
+            comma: crate::model::languages::find(self.language).is_some_and(|l| l.decimal_comma),
         }
     }
 

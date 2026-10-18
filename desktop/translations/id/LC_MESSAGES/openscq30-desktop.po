@@ -1,0 +1,1062 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "Ringkasan"
+
+msgid "Sound mode"
+msgstr "Mode suara"
+
+msgid "Equalizer"
+msgstr "Equalizer"
+
+msgid "Sound and effects"
+msgstr "Suara dan efek"
+
+msgid "Quick presets"
+msgstr "Preset cepat"
+
+msgid "Controls"
+msgstr "Kontrol"
+
+msgid "Comfort"
+msgstr "Kenyamanan"
+
+msgid "Power and prompts"
+msgstr "Daya dan pemberitahuan"
+
+msgid "Connections"
+msgstr "Koneksi"
+
+msgid "Case"
+msgstr "Casing"
+
+msgid "About the device"
+msgstr "Tentang perangkat"
+
+msgid "Sleep"
+msgstr "Tidur"
+
+msgid "Lights"
+msgstr "Lampu"
+
+msgid "Alarms"
+msgstr "Alarm"
+
+msgid "Other"
+msgstr "Lainnya"
+
+msgid "My devices"
+msgstr "Perangkat saya"
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "Sound"
+msgstr "Suara"
+
+msgid "Device"
+msgstr "Perangkat"
+
+msgid "SOUND"
+msgstr "SUARA"
+
+msgid "DEVICE"
+msgstr "PERANGKAT"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "Dengarkan yang penting."
+
+msgid "Your sound, your way."
+msgstr "Suaramu, sesuai caramu."
+
+msgid "Inside the sound."
+msgstr "Di dalam suara."
+
+msgid "One preset. Your settings."
+msgstr "Satu preset. Pengaturanmu."
+
+msgid "A touch. And you’re in control."
+msgstr "Satu sentuhan. Kamu yang mengendalikan."
+
+msgid "Comfortable listening. Every day."
+msgstr "Mendengarkan dengan nyaman. Setiap hari."
+
+msgid "Always ready."
+msgstr "Selalu siap."
+
+msgid "Stay connected. To two at once."
+msgstr "Tetap terhubung. Ke dua perangkat sekaligus."
+
+msgid "A little case. More possibilities."
+msgstr "Casing kecil. Lebih banyak kemungkinan."
+
+msgid "All about your device."
+msgstr "Semua tentang perangkatmu."
+
+msgid "Your devices."
+msgstr "Perangkatmu."
+
+msgid "Make it yours."
+msgstr "Sesuai seleramu."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "Pilih seberapa banyak dunia luar masuk ke suaramu."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "Pilih profil atau atur setiap frekuensi."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "Codec, latensi, dan cara suara diproses."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "Simpan kombinasi favoritmu dan kembali ke sana dengan sekali klik."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "Apa fungsi ketukan dan mode mana yang dipindahkannya."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "Pengaturan yang menyesuaikan earbud dengan kebiasaanmu."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "Pengaturan yang menyesuaikan speaker dengan kebiasaanmu."
+
+msgid "When the device turns off and what it tells you."
+msgstr "Kapan perangkat mati dan apa yang diberitahukannya."
+
+msgid "Switch between your phone and computer."
+msgstr "Beralih antara ponsel dan komputer."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "Fungsi layar casing dan kondisinya."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "Baterai, firmware, dan nomor seri."
+
+msgid "All your familiar headphones in one place."
+msgstr "Semua headphone yang kamu kenal di satu tempat."
+
+msgid "An app that feels comfortable to use."
+msgstr "Aplikasi yang nyaman digunakan."
+
+# Connection
+msgid "No devices"
+msgstr "Tidak ada perangkat"
+
+msgid "Add a device"
+msgstr "Tambah perangkat"
+
+msgid "Connected"
+msgstr "Terhubung"
+
+msgid "Connecting…"
+msgstr "Menghubungkan…"
+
+msgid "Not connected"
+msgstr "Tidak terhubung"
+
+msgid "Connected to {}"
+msgstr "Terhubung ke {}"
+
+msgid "Connecting to {}"
+msgstr "Menghubungkan ke {}"
+
+msgid "Connection lost"
+msgstr "Koneksi terputus"
+
+msgid "Bluetooth is off"
+msgstr "Bluetooth mati"
+
+msgid "Disconnected"
+msgstr "Diputuskan"
+
+msgid "Connecting to your headphones"
+msgstr "Menghubungkan ke headphone"
+
+msgid "Connecting to your speaker"
+msgstr "Menghubungkan ke speaker"
+
+msgid "Could not connect"
+msgstr "Tidak dapat terhubung"
+
+msgid "{} is not connected"
+msgstr "{} tidak terhubung"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "Buka casing atau nyalakan headphone. Kontrol akan muncul setelah terhubung."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "Nyalakan speaker. Kontrol akan muncul setelah terhubung."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "Pastikan headphone ada di dekatmu dan terhubung ke komputer ini lewat Bluetooth."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "Pastikan speaker ada di dekatmu dan terhubung ke komputer ini lewat Bluetooth."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Nyalakan Bluetooth di pengaturan Windows, lalu coba hubungkan lagi."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "Hubungkan untuk melihat baterai dan mengubah pengaturan."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "Perangkat tidak ditemukan. Pastikan perangkat menyala dan ada di dekatmu."
+
+msgid "The device did not answer in time. Try again."
+msgstr "Perangkat tidak menjawab tepat waktu. Coba lagi."
+
+msgid "Cancel"
+msgstr "Batal"
+
+msgid "Connect"
+msgstr "Hubungkan"
+
+msgid "Connect again"
+msgstr "Hubungkan lagi"
+
+msgid "Bluetooth settings"
+msgstr "Pengaturan Bluetooth"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "Tidak dapat mengubah “{}”. Perangkat tetap memakai nilai sebelumnya."
+
+msgid "Retry"
+msgstr "Coba lagi"
+
+msgid "Close"
+msgstr "Tutup"
+
+# My devices
+msgid "Open"
+msgstr "Buka"
+
+msgid "Forget device"
+msgstr "Lupakan perangkat"
+
+msgid "Demo device · Not connected"
+msgstr "Perangkat demo · Tidak terhubung"
+
+msgid "Saved device · Not connected"
+msgstr "Perangkat tersimpan · Tidak terhubung"
+
+msgid "Add device"
+msgstr "Tambah perangkat"
+
+msgid "A model, then its paired device"
+msgstr "Sebuah model, lalu perangkat yang dipasangkan"
+
+msgid "Your sound starts here."
+msgstr "Suaramu dimulai di sini."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "Tambahkan headphone untuk mengatur suara dan kontrol."
+
+msgid "Forget {}?"
+msgstr "Lupakan {}?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "Perangkat keluar dari daftar ini beserta profil dan presetnya di aplikasi. Pemasangannya dengan Windows tetap ada."
+
+msgid "Forget"
+msgstr "Lupakan"
+
+# Adding a device
+msgid "Find your model."
+msgstr "Temukan modelmu."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "Pilih model yang tepat agar kamu melihat pengaturan yang didukung perangkatmu."
+
+msgid "Model name or code, such as A3954"
+msgstr "Nama atau kode model, misalnya A3954"
+
+msgid "All"
+msgstr "Semua"
+
+msgid "Earbuds"
+msgstr "Earbud"
+
+msgid "Over-ear"
+msgstr "Over-ear"
+
+msgid "Open-ear"
+msgstr "Open-ear"
+
+msgid "Speakers"
+msgstr "Speaker"
+
+msgid "No models found. Try another name or code."
+msgstr "Model tidak ditemukan. Coba nama atau kode lain."
+
+msgid "Ready to connect your headphones?"
+msgstr "Siap menghubungkan headphone?"
+
+msgid "Ready to connect your speaker?"
+msgstr "Siap menghubungkan speaker?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Pilih perangkat yang dipasangkan dengan Windows. Jika tidak ada di daftar, pasangkan dulu di pengaturan Bluetooth."
+
+msgid "Another model"
+msgstr "Model lain"
+
+msgid "Demo mode"
+msgstr "Mode demo"
+
+msgid "Explore the interface without real headphones"
+msgstr "Jelajahi antarmuka tanpa headphone sungguhan"
+
+msgid "Paired devices"
+msgstr "Perangkat yang dipasangkan"
+
+msgid "Refresh"
+msgstr "Segarkan"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "Bluetooth mati. Nyalakan di pengaturan Windows."
+
+msgid "Looking for paired devices…"
+msgstr "Mencari perangkat yang dipasangkan…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "Pastikan headphone menyala dan dipasangkan dengan Windows, lalu segarkan."
+
+msgid "Simulated device data"
+msgstr "Data perangkat simulasi"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Dipasangkan di Windows · mirip model yang dipilih"
+
+msgid "Paired in Windows"
+msgstr "Dipasangkan di Windows"
+
+msgid "Could not add the device."
+msgstr "Tidak dapat menambahkan perangkat."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "Mode demo memakai data simulasi dan tidak mengendalikan headphone sungguhan."
+
+msgid "Back"
+msgstr "Kembali"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "Mode dan kekuatan"
+
+msgid "Sound mode from 1 to 11"
+msgstr "Mode suara dari 1 sampai 11"
+
+msgid "Transparency, strength {}"
+msgstr "Transparansi, kekuatan {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "Peredam kebisingan, kekuatan {}"
+
+msgid "Your strength is remembered."
+msgstr "Kekuatanmu diingat."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "Saat kembali ke peredam kebisingan atau transparansi, kekuatan terakhir mode itu yang dipakai."
+
+msgid "Lowers the noise around you."
+msgstr "Meredam kebisingan di sekitarmu."
+
+msgid "Keeps the sounds around you audible."
+msgstr "Menjaga suara di sekitarmu tetap terdengar."
+
+msgid "No processing of ambient sound."
+msgstr "Suara sekitar tidak diproses."
+
+msgid "Single press"
+msgstr "Ketuk sekali"
+
+msgid "Double press"
+msgstr "Ketuk dua kali"
+
+msgid "Triple press"
+msgstr "Ketuk tiga kali"
+
+msgid "Long press"
+msgstr "Tekan lama"
+
+msgid "Slide up"
+msgstr "Geser ke atas"
+
+msgid "Slide down"
+msgstr "Geser ke bawah"
+
+msgid "Noise canceling"
+msgstr "Peredam kebisingan"
+
+msgid "Transparency"
+msgstr "Transparansi"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Noise canceling strength"
+msgstr "Kekuatan peredam kebisingan"
+
+msgid "Transparency strength"
+msgstr "Kekuatan transparansi"
+
+msgid "Airplane mode updates"
+msgstr "Pembaruan mode pesawat"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "Meredam suara angin di mikrofon"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "Jeda otomatis saat kamu melepas earbud"
+
+msgid "Lower the music while you talk"
+msgstr "Kecilkan musik saat kamu berbicara"
+
+msgid "When the music comes back after you stop talking"
+msgstr "Kapan musik kembali setelah kamu berhenti berbicara"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "Menjaga suara tetap penuh saat earbud agak longgar"
+
+msgid "Limit the volume of your earbuds"
+msgstr "Batasi volume earbud"
+
+msgid "Limit the volume of your speaker"
+msgstr "Batasi volume speaker"
+
+msgid "Volume of the speaker"
+msgstr "Volume speaker"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Suara berkualitas tinggi lewat Bluetooth"
+
+msgid "A wider sound stage for music and video"
+msgstr "Panggung suara lebih luas untuk musik dan video"
+
+msgid "Connect to up to two devices at once"
+msgstr "Terhubung ke hingga dua perangkat sekaligus"
+
+msgid "When the device is not in use"
+msgstr "Saat perangkat tidak digunakan"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "Pemberitahuan suara saat baterai hampir habis"
+
+msgid "Voice messages about modes and connections"
+msgstr "Pesan suara tentang mode dan koneksi"
+
+msgid "Turn the speaker off now"
+msgstr "Matikan speaker sekarang"
+
+msgid "Show this function on the case screen"
+msgstr "Tampilkan fungsi ini di layar casing"
+
+msgid "Independent of the app language"
+msgstr "Tidak bergantung pada bahasa aplikasi"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "Kembalikan fungsi bawaan tombol"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "Salin"
+
+msgid "Copied"
+msgstr "Disalin"
+
+msgid "Reset"
+msgstr "Atur ulang"
+
+msgid "Turn off"
+msgstr "Matikan"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "Earbud tidak melaporkan perangkat yang dipasangkan."
+
+msgid "Volume"
+msgstr "Volume"
+
+msgid "Presses"
+msgstr "Ketukan"
+
+msgid "Switching modes"
+msgstr "Pergantian mode"
+
+msgid "Case screen"
+msgstr "Layar casing"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Connected devices"
+msgstr "Perangkat terhubung"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "Mode yang dilalui aksi mode suara sekitar."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "Batas volume earbud tidak menggantikan panduan tentang lama mendengarkan yang aman."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "Batas volume speaker tidak menggantikan panduan tentang lama mendengarkan yang aman."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "Daftar ini menampilkan perangkat yang dipasangkan dengan earbud, bukan perangkat Bluetooth di sekitar. Melupakan komputer ini mengakhiri kontrol earbud."
+
+msgid "Left earbud"
+msgstr "Earbud kiri"
+
+msgid "Right earbud"
+msgstr "Earbud kanan"
+
+msgid "Earbud"
+msgstr "Earbud"
+
+msgid "Left"
+msgstr "Kiri"
+
+msgid "Right"
+msgstr "Kanan"
+
+msgid "Actions for the chosen earbud."
+msgstr "Aksi untuk earbud yang dipilih."
+
+msgid "Actions of the buttons on the device."
+msgstr "Aksi tombol pada perangkat."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "Perangkat menjalankan aksi ini sendiri. Tombol media Windows berfungsi seperti biasa."
+
+msgid "Small details. More comfort."
+msgstr "Detail kecil. Lebih nyaman."
+
+msgid "Let your earbuds adapt to you."
+msgstr "Biarkan earbud menyesuaikan diri denganmu."
+
+msgid "Let your speaker adapt to you."
+msgstr "Biarkan speaker menyesuaikan diri denganmu."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "Pengaturan ini disimpan di perangkat dan berlaku untuk sumber suara apa pun."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "Mati otomatis bekerja saat perangkat tidak memutar suara."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth dan perangkat"
+
+msgid "Pairing and removing devices"
+msgstr "Memasangkan dan menghapus perangkat"
+
+msgid "Output device and volume"
+msgstr "Perangkat output dan volume"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows memutar suara tanpa LDAC. Pengaturan ini untuk ponsel dan sumber lain dengan LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "Pada Liberty 4 Pro, mengubah equalizer mematikan audio spasial. Kamu bisa menyalakannya lagi di sini."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "Pilih fungsi yang tersedia di layar casing. Bahasa casing tidak bergantung pada bahasa aplikasi."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "Perangkat melaporkan data ini sendiri dan selalu memperbaruinya."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "Nomor seri dan versi firmware membantu saat kamu menghubungi dukungan."
+
+# Overview
+msgid "Presses and slides"
+msgstr "Ketukan dan geseran"
+
+msgid "Presses and switching modes"
+msgstr "Ketukan dan pergantian mode"
+
+msgid "on"
+msgstr "aktif"
+
+msgid "off"
+msgstr "mati"
+
+msgid "On: {} of {}"
+msgstr "Aktif: {} dari {}"
+
+msgid "Volume: {}"
+msgstr "Volume: {}"
+
+msgid "Auto power off: {}"
+msgstr "Mati otomatis: {}"
+
+msgid "Two devices at once"
+msgstr "Dua perangkat sekaligus"
+
+msgid "One device at a time"
+msgstr "Satu perangkat sekali waktu"
+
+msgid "Case battery {}"
+msgstr "Baterai casing {}"
+
+msgid "Battery"
+msgstr "Baterai"
+
+msgid "1 earbud"
+msgstr "1 earbud"
+
+msgid "Add quick toggles"
+msgstr "Tambah sakelar cepat"
+
+msgid "Quick toggles"
+msgstr "Sakelar cepat"
+
+msgid "Your sound"
+msgstr "Suaramu"
+
+msgid "All presets"
+msgstr "Semua preset"
+
+msgid "Customize"
+msgstr "Sesuaikan"
+
+msgid "Available when both earbuds are connected"
+msgstr "Tersedia saat kedua earbud terhubung"
+
+msgid "Current profile"
+msgstr "Profil saat ini"
+
+msgid "Your own settings"
+msgstr "Pengaturanmu sendiri"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} pita · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "Frekuensi rendah"
+
+msgid "High frequencies"
+msgstr "Frekuensi tinggi"
+
+msgid "Save your favourite combinations of settings."
+msgstr "Simpan kombinasi pengaturan favoritmu."
+
+msgid "No settings chosen yet"
+msgstr "Belum ada pengaturan yang dipilih"
+
+msgid "Edit device screen"
+msgstr "Edit layar perangkat"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "Hanya satu earbud yang terhubung. Equalizer dan beberapa pengaturan lain tersedia saat kedua earbud terhubung."
+
+msgid "Move up"
+msgstr "Pindah ke atas"
+
+msgid "Move down"
+msgstr "Pindah ke bawah"
+
+msgid "Your device screen."
+msgstr "Layar perangkatmu."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "Aktifkan blok yang kamu pakai dan pindahkan ke atas atau ke bawah untuk mengubah urutan."
+
+msgid "Ready-made sets"
+msgstr "Set siap pakai"
+
+msgid "Minimal"
+msgstr "Minimal"
+
+msgid "Standard"
+msgstr "Standar"
+
+msgid "Full"
+msgstr "Lengkap"
+
+msgid "Done"
+msgstr "Selesai"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "Pilih sakelar di kartu perangkat. Pengaturannya sendiri tidak berubah."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "Pita equalizer: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "Kurva equalizer. Seret untuk mengatur frekuensi, atau gunakan penggeser di bawah."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "Perangkat ini hanya mendukung profil equalizer bawaan."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "Nilai dalam desibel, dari {} sampai {} dB"
+
+msgid "Save profile"
+msgstr "Simpan profil"
+
+msgid "All profiles ({})"
+msgstr "Semua profil ({})"
+
+msgid "Show fewer"
+msgstr "Tampilkan lebih sedikit"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "Nilai equalizer tidak tersedia untuk perangkat ini."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "Mengubah equalizer mematikan audio spasial."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "Seret titik pada grafik, gerakkan penggeser dengan ↑ ↓, atau ketik nilainya."
+
+msgid "My profiles"
+msgstr "Profil saya"
+
+msgid "Save the current sound to come back to it later."
+msgstr "Simpan suara saat ini untuk kembali nanti."
+
+msgid "Applied"
+msgstr "Diterapkan"
+
+msgid "Bands: {}"
+msgstr "Pita: {}"
+
+msgid "More for “{}”"
+msgstr "Lainnya untuk “{}”"
+
+msgid "Export"
+msgstr "Ekspor"
+
+msgid "Delete"
+msgstr "Hapus"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "Profil tersimpan tetap ada. Kamu bisa menerapkannya saat kedua earbud terhubung."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "Profil equalizer lama: {}. Pindahkan ke profilmu untuk memakainya dengan perangkat ini."
+
+msgid "Show"
+msgstr "Tampilkan"
+
+msgid "Hide"
+msgstr "Sembunyikan"
+
+msgid "Move all"
+msgstr "Pindahkan semua"
+
+msgid "Move"
+msgstr "Pindahkan"
+
+msgid "Import and export"
+msgstr "Impor dan ekspor"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "Bagikan profil, simpan dalam file, atau pindahkan ke komputer lain."
+
+msgid "Import"
+msgstr "Impor"
+
+msgid "Select all"
+msgstr "Pilih semua"
+
+msgid "Save a profile to export it."
+msgstr "Simpan profil untuk mengekspornya."
+
+msgid "Save to file"
+msgstr "Simpan ke file"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "File atau teks berisi profil OpenSCQ30. Sebelum mengimpor, kamu akan melihat apa yang berubah."
+
+msgid "Open file"
+msgstr "Buka file"
+
+msgid "Paste"
+msgstr "Tempel"
+
+msgid "Saved to the file"
+msgstr "Disimpan ke file"
+
+msgid "Could not save the file"
+msgstr "Tidak dapat menyimpan file"
+
+msgid "This is not an equalizer profiles file"
+msgstr "Ini bukan file profil equalizer"
+
+msgid "The clipboard is empty"
+msgstr "Papan klip kosong"
+
+msgid "The file is too large"
+msgstr "File terlalu besar"
+
+msgid "Could not read the file"
+msgstr "Tidak dapat membaca file"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "{n} profil diimpor"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "{n} profil dipindahkan"
+
+msgid "Profile saved"
+msgstr "Profil disimpan"
+
+msgid "Profile deleted"
+msgstr "Profil dihapus"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "Simpan nilai equalizer perangkat saat ini sebagai profil yang bisa dipakai lagi."
+
+msgid "Name"
+msgstr "Nama"
+
+msgid "My sound"
+msgstr "Suaraku"
+
+msgid "Enter a profile name."
+msgstr "Masukkan nama profil."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "Profil bernama “{}” sudah ada. Ganti nilai yang tersimpan?"
+
+msgid "Replace profile"
+msgstr "Ganti profil"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "Delete equalizer profile?"
+msgstr "Hapus profil equalizer?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "Yakin ingin menghapus “{}”?"
+
+msgid "Import profiles"
+msgstr "Impor profil"
+
+msgid "New"
+msgstr "Baru"
+
+msgid "Replaces the saved profile"
+msgstr "Mengganti profil tersimpan"
+
+msgid "{} bands, this device has {}"
+msgstr "{} pita, perangkat ini punya {}"
+
+msgid "Values outside this device’s range"
+msgstr "Nilai di luar rentang perangkat ini"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "Profil bertanda merah tidak cocok untuk perangkat ini, jadi file tidak dapat diimpor."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "Impor {n} profil"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "Aksi lain untuk {}"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "Gunakan Edit untuk memilih pengaturan yang diterapkan."
+
+msgid "+{} more"
+msgstr "+{} lainnya"
+
+msgid "Apply"
+msgstr "Terapkan"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Matches current settings"
+msgstr "Sama dengan pengaturan saat ini"
+
+msgid "Your sound, in one preset"
+msgstr "Suaramu dalam satu preset"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "Simpan pengaturanmu saat ini dan pilih yang ingin diterapkan bersama."
+
+msgid "Create preset"
+msgstr "Buat preset"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "Equalizer dari preset diterapkan saat kedua earbud terhubung."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "Kami akan menyimpan pengaturan saat ini. Lalu pilih mana yang diterapkan."
+
+msgid "For example, for work"
+msgstr "Misalnya, untuk kerja"
+
+msgid "Enter a preset name."
+msgstr "Masukkan nama preset."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "“{}” sudah ada. Ganti nilai tersimpannya dengan pengaturan perangkat saat ini? Pilihan pengaturan yang disertakan tetap dipertahankan."
+
+msgid "Replace"
+msgstr "Ganti"
+
+msgid "Create"
+msgstr "Buat"
+
+msgid "Custom curve"
+msgstr "Kurva sendiri"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "Preset ini hanya menerapkan pengaturan yang dipilih. Perubahan pilihan langsung disimpan."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "Belum ada pengaturan tersimpan. Muat pengaturan perangkat saat ini untuk memulai."
+
+msgid "Load current settings"
+msgstr "Muat pengaturan saat ini"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "Ganti nilai tersimpan preset ini dengan pengaturan perangkat saat ini? Pilihan pengaturan yang disertakan tetap dipertahankan. Perangkat tidak berubah."
+
+msgid "Load"
+msgstr "Muat"
+
+msgid "Delete preset?"
+msgstr "Hapus preset?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "Hapus “{}”? Pengaturan perangkat saat ini tetap ada."
+
+msgid "Preset “{}” applied"
+msgstr "Preset “{}” diterapkan"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "Preset “{}” diterapkan. Equalizernya diterapkan saat kedua earbud terhubung."
+
+msgid "Preset deleted"
+msgstr "Preset dihapus"
+
+msgid "Preset values replaced"
+msgstr "Nilai preset diganti"
+
+msgid "Current settings loaded into the preset"
+msgstr "Pengaturan saat ini dimuat ke preset"
+
+# App settings
+msgid "Appearance"
+msgstr "Tampilan"
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "As in Windows"
+msgstr "Seperti di Windows"
+
+msgid "Light"
+msgstr "Terang"
+
+msgid "Dark"
+msgstr "Gelap"
+
+msgid "Palette"
+msgstr "Palet"
+
+msgid "Colors of buttons and highlights"
+msgstr "Warna tombol dan sorotan"
+
+msgid "Purple"
+msgstr "Ungu"
+
+msgid "Sage"
+msgstr "Sage"
+
+msgid "Rose"
+msgstr "Mawar"
+
+msgid "Device color in pictures"
+msgstr "Warna perangkat di gambar"
+
+msgid "As the theme"
+msgstr "Seperti tema"
+
+msgid "Silver"
+msgstr "Perak"
+
+msgid "Black"
+msgstr "Hitam"
+
+msgid "Sound modes"
+msgstr "Mode suara"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Tampilan untuk perangkat dengan skala, seperti Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "Ubin"
+
+msgid "Scale 1–11"
+msgstr "Skala 1–11"
+
+msgid "One earbud badge"
+msgstr "Lencana satu earbud"
+
+msgid "Show when only one earbud is connected"
+msgstr "Tampilkan saat hanya satu earbud terhubung"
+
+msgid "App language"
+msgstr "Bahasa aplikasi"
+
+msgid "Your color.\nYour mood."
+msgstr "Warnamu.\nSuasana hatimu."
+
+msgid "A familiar character. A new space."
+msgstr "Karakter yang akrab. Ruang yang baru."
+
+msgid "Home screen"
+msgstr "Layar utama"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "Simpan blok yang kamu perlukan dan susun sesuai urutan yang kamu suka."
+
+msgid "Edit home screen"
+msgstr "Edit layar utama"
+
+msgid "About"
+msgstr "Tentang"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 untuk Windows {} · perangkat lunak bebas di bawah GNU GPL 3."
+
+msgid "More"
+msgstr "Selengkapnya"
+
+msgid "Diagnostics"
+msgstr "Diagnostik"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "Salin entri log terbaru untuk menemukan penyebab masalah."
+
+msgid "Copy logs"
+msgstr "Salin log"

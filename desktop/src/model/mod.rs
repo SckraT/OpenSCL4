@@ -10,6 +10,7 @@ pub mod device_art;
 pub mod devices;
 pub mod equalizer;
 pub mod groups;
+pub mod languages;
 pub mod legacy;
 pub mod overview;
 pub mod presets;

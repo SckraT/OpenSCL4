@@ -4,11 +4,11 @@ use slint::ComponentHandle;
 
 use super::{App, with_app};
 use crate::{
-    Actions, AppState, AppWindow, ToastKind,
+    Actions, AppState, AppWindow, Strings, ToastKind,
     config::{Accent, AppTheme, Settings, SoundModeView},
     controller::Command,
     logs,
-    model::device_art::EarbudsColor,
+    model::{device_art::EarbudsColor, languages::LANGUAGES},
 };
 
 /// Changes a setting, saves it and shows the window with it.
@@ -62,11 +62,11 @@ pub(super) fn install_actions(window: &AppWindow) {
     actions.on_set_badge(|on| change(|settings| settings.one_earbud_badge = on));
     actions.on_set_language(|index| {
         with_app(|app| {
-            app.config.settings.language = match index {
-                1 => Some("ru".to_string()),
-                2 => Some("en".to_string()),
-                _ => None,
-            };
+            // the first choice is the system's language
+            app.config.settings.language = usize::try_from(index - 1)
+                .ok()
+                .and_then(|i| LANGUAGES.get(i))
+                .map(|l| l.code.to_string());
             app.config.save();
             app.apply_language();
             // the library words the device's settings as it reads them
@@ -106,11 +106,22 @@ impl App {
             SoundModeView::Tiles => 0,
             SoundModeView::Scale => 1,
         });
-        state.set_app_language(match settings.language.as_deref() {
-            Some("ru") => 1,
-            Some("en") => 2,
-            _ => 0,
-        });
+        state.set_app_language(
+            settings
+                .language
+                .as_deref()
+                .and_then(|code| LANGUAGES.iter().position(|l| l.code == code))
+                .map_or(0, |i| i as i32 + 1),
+        );
+        // the first choice, in the window's language
+        let system = self
+            .window()
+            .map(|w| w.global::<Strings>().get_system_language())
+            .unwrap_or_default();
+        let names: Vec<slint::SharedString> = std::iter::once(system)
+            .chain(LANGUAGES.iter().map(|l| l.name.into()))
+            .collect();
+        state.set_language_names(slint::ModelRc::new(slint::VecModel::from(names)));
         state.set_show_one_earbud_badge(settings.one_earbud_badge);
         state.set_app_version(env!("CARGO_PKG_VERSION").into());
     }

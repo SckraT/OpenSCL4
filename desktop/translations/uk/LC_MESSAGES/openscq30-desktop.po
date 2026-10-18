@@ -1,0 +1,1068 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "Огляд"
+
+msgid "Sound mode"
+msgstr "Режим звуку"
+
+msgid "Equalizer"
+msgstr "Еквалайзер"
+
+msgid "Sound and effects"
+msgstr "Звук і ефекти"
+
+msgid "Quick presets"
+msgstr "Швидкі пресети"
+
+msgid "Controls"
+msgstr "Керування"
+
+msgid "Comfort"
+msgstr "Комфорт"
+
+msgid "Power and prompts"
+msgstr "Живлення та підказки"
+
+msgid "Connections"
+msgstr "Підключення"
+
+msgid "Case"
+msgstr "Кейс"
+
+msgid "About the device"
+msgstr "Про пристрій"
+
+msgid "Sleep"
+msgstr "Сон"
+
+msgid "Lights"
+msgstr "Підсвітка"
+
+msgid "Alarms"
+msgstr "Будильники"
+
+msgid "Other"
+msgstr "Інше"
+
+msgid "My devices"
+msgstr "Мої пристрої"
+
+msgid "Settings"
+msgstr "Налаштування"
+
+msgid "Sound"
+msgstr "Звук"
+
+msgid "Device"
+msgstr "Пристрій"
+
+msgid "SOUND"
+msgstr "ЗВУК"
+
+msgid "DEVICE"
+msgstr "ПРИСТРІЙ"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "Чуйте те, що важливо."
+
+msgid "Your sound, your way."
+msgstr "Звук по-своєму."
+
+msgid "Inside the sound."
+msgstr "Усередині звуку."
+
+msgid "One preset. Your settings."
+msgstr "Один пресет. Ваші налаштування."
+
+msgid "A touch. And you’re in control."
+msgstr "Один дотик. І все під контролем."
+
+msgid "Comfortable listening. Every day."
+msgstr "Комфортне прослуховування. Щодня."
+
+msgid "Always ready."
+msgstr "Завжди напоготові."
+
+msgid "Stay connected. To two at once."
+msgstr "Залишайтеся на зв’язку. З двома одразу."
+
+msgid "A little case. More possibilities."
+msgstr "Маленький кейс. Більше можливостей."
+
+msgid "All about your device."
+msgstr "Усе про ваш пристрій."
+
+msgid "Your devices."
+msgstr "Ваші пристрої."
+
+msgid "Make it yours."
+msgstr "На ваш смак."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "Виберіть, скільки навколишнього світу залишити у звуці."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "Підберіть профіль або налаштуйте кожну частоту."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "Кодек, затримка та обробка звуку."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "Збережіть улюблені поєднання й повертайтеся до них одним клацанням."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "Що роблять натискання і між якими режимами вони перемикають."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "Налаштування, що підлаштовують навушники під ваші звички."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "Налаштування, що підлаштовують колонку під ваші звички."
+
+msgid "When the device turns off and what it tells you."
+msgstr "Коли пристрій вимикається і що він повідомляє."
+
+msgid "Switch between your phone and computer."
+msgstr "Перемикайтеся між телефоном і комп’ютером."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "Функції екрана кейса та його стан."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "Акумулятор, прошивка та серійні номери."
+
+msgid "All your familiar headphones in one place."
+msgstr "Усі ваші знайомі навушники в одному місці."
+
+msgid "An app that feels comfortable to use."
+msgstr "Застосунок, яким зручно користуватися."
+
+# Connection
+msgid "No devices"
+msgstr "Немає пристроїв"
+
+msgid "Add a device"
+msgstr "Додати пристрій"
+
+msgid "Connected"
+msgstr "Підключено"
+
+msgid "Connecting…"
+msgstr "Підключення…"
+
+msgid "Not connected"
+msgstr "Не підключено"
+
+msgid "Connected to {}"
+msgstr "Підключено до {}"
+
+msgid "Connecting to {}"
+msgstr "Підключення до {}"
+
+msgid "Connection lost"
+msgstr "Зв’язок втрачено"
+
+msgid "Bluetooth is off"
+msgstr "Bluetooth вимкнено"
+
+msgid "Disconnected"
+msgstr "Відключено"
+
+msgid "Connecting to your headphones"
+msgstr "Підключення до навушників"
+
+msgid "Connecting to your speaker"
+msgstr "Підключення до колонки"
+
+msgid "Could not connect"
+msgstr "Не вдалося підключитися"
+
+msgid "{} is not connected"
+msgstr "{} не підключено"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "Відкрийте кейс або увімкніть навушники. Керування з’явиться після підключення."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "Увімкніть колонку. Керування з’явиться після підключення."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "Перевірте, що навушники поруч і підключені до цього комп’ютера через Bluetooth."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "Перевірте, що колонка поруч і підключена до цього комп’ютера через Bluetooth."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Увімкніть Bluetooth у параметрах Windows і спробуйте підключитися знову."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "Підключіться, щоб бачити заряд і змінювати налаштування."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "Пристрій не знайдено. Переконайтеся, що він увімкнений і поруч."
+
+msgid "The device did not answer in time. Try again."
+msgstr "Пристрій не відповів вчасно. Спробуйте ще раз."
+
+msgid "Cancel"
+msgstr "Скасувати"
+
+msgid "Connect"
+msgstr "Підключити"
+
+msgid "Connect again"
+msgstr "Підключити знову"
+
+msgid "Bluetooth settings"
+msgstr "Параметри Bluetooth"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "Не вдалося змінити «{}». Пристрій зберіг попереднє значення."
+
+msgid "Retry"
+msgstr "Повторити"
+
+msgid "Close"
+msgstr "Закрити"
+
+# My devices
+msgid "Open"
+msgstr "Відкрити"
+
+msgid "Forget device"
+msgstr "Забути пристрій"
+
+msgid "Demo device · Not connected"
+msgstr "Демопристрій · Не підключено"
+
+msgid "Saved device · Not connected"
+msgstr "Збережений пристрій · Не підключено"
+
+msgid "Add device"
+msgstr "Додати пристрій"
+
+msgid "A model, then its paired device"
+msgstr "Модель, потім сполучений пристрій"
+
+msgid "Your sound starts here."
+msgstr "Ваш звук починається тут."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "Додайте навушники, щоб налаштувати звук і керування."
+
+msgid "Forget {}?"
+msgstr "Забути {}?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "Пристрій зникне з цього списку разом із профілями та пресетами в застосунку. Сполучення з Windows залишиться."
+
+msgid "Forget"
+msgstr "Забути"
+
+# Adding a device
+msgid "Find your model."
+msgstr "Знайдімо вашу модель."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "Виберіть точну модель, щоб бачити налаштування, які вона підтримує."
+
+msgid "Model name or code, such as A3954"
+msgstr "Назва або код моделі, наприклад A3954"
+
+msgid "All"
+msgstr "Усі"
+
+msgid "Earbuds"
+msgstr "Вкладиші"
+
+msgid "Over-ear"
+msgstr "Накладні"
+
+msgid "Open-ear"
+msgstr "Відкриті"
+
+msgid "Speakers"
+msgstr "Колонки"
+
+msgid "No models found. Try another name or code."
+msgstr "Моделей не знайдено. Спробуйте іншу назву або код."
+
+msgid "Ready to connect your headphones?"
+msgstr "Готові підключити навушники?"
+
+msgid "Ready to connect your speaker?"
+msgstr "Готові підключити колонку?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Виберіть пристрій, сполучений з Windows. Якщо його немає у списку, спершу сполучіть його в параметрах Bluetooth."
+
+msgid "Another model"
+msgstr "Інша модель"
+
+msgid "Demo mode"
+msgstr "Демонстраційний режим"
+
+msgid "Explore the interface without real headphones"
+msgstr "Ознайомтеся з інтерфейсом без справжніх навушників"
+
+msgid "Paired devices"
+msgstr "Сполучені пристрої"
+
+msgid "Refresh"
+msgstr "Оновити"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "Bluetooth вимкнено. Увімкніть його в параметрах Windows."
+
+msgid "Looking for paired devices…"
+msgstr "Пошук сполучених пристроїв…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "Переконайтеся, що навушники увімкнені й сполучені з Windows, а потім оновіть список."
+
+msgid "Simulated device data"
+msgstr "Імітовані дані пристрою"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Сполучено в Windows · схоже на вибрану модель"
+
+msgid "Paired in Windows"
+msgstr "Сполучено в Windows"
+
+msgid "Could not add the device."
+msgstr "Не вдалося додати пристрій."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "Демонстраційний режим використовує імітовані дані й не керує справжніми навушниками."
+
+msgid "Back"
+msgstr "Назад"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "Режим і сила"
+
+msgid "Sound mode from 1 to 11"
+msgstr "Режим звуку від 1 до 11"
+
+msgid "Transparency, strength {}"
+msgstr "Прозорість, сила {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "Шумозаглушення, сила {}"
+
+msgid "Your strength is remembered."
+msgstr "Сила запам’ятовується."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "Після повернення до шумозаглушення чи прозорості використовується остання сила цього режиму."
+
+msgid "Lowers the noise around you."
+msgstr "Зменшує шум навколо вас."
+
+msgid "Keeps the sounds around you audible."
+msgstr "Залишає чутними звуки довкола."
+
+msgid "No processing of ambient sound."
+msgstr "Без обробки навколишнього звуку."
+
+msgid "Single press"
+msgstr "Одне натискання"
+
+msgid "Double press"
+msgstr "Подвійне натискання"
+
+msgid "Triple press"
+msgstr "Потрійне натискання"
+
+msgid "Long press"
+msgstr "Довге натискання"
+
+msgid "Slide up"
+msgstr "Проведення вгору"
+
+msgid "Slide down"
+msgstr "Проведення вниз"
+
+msgid "Noise canceling"
+msgstr "Шумозаглушення"
+
+msgid "Transparency"
+msgstr "Прозорість"
+
+msgid "Normal"
+msgstr "Звичайний"
+
+msgid "Noise canceling strength"
+msgstr "Сила шумозаглушення"
+
+msgid "Transparency strength"
+msgstr "Сила прозорості"
+
+msgid "Airplane mode updates"
+msgstr "Оновлення режиму польоту"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "Зменшує шум вітру в мікрофонах"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "Автоматична пауза, коли ви виймаєте навушник"
+
+msgid "Lower the music while you talk"
+msgstr "Приглушувати музику, коли ви говорите"
+
+msgid "When the music comes back after you stop talking"
+msgstr "Коли повертається музика після того, як ви замовкли"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "Зберігає повний звук, коли навушник сидить нещільно"
+
+msgid "Limit the volume of your earbuds"
+msgstr "Обмежте гучність навушників"
+
+msgid "Limit the volume of your speaker"
+msgstr "Обмежте гучність колонки"
+
+msgid "Volume of the speaker"
+msgstr "Гучність колонки"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Якісний звук через Bluetooth"
+
+msgid "A wider sound stage for music and video"
+msgstr "Ширша звукова сцена для музики й відео"
+
+msgid "Connect to up to two devices at once"
+msgstr "Підключення до двох пристроїв одночасно"
+
+msgid "When the device is not in use"
+msgstr "Коли пристрій не використовується"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "Голосова підказка, коли заряд закінчується"
+
+msgid "Voice messages about modes and connections"
+msgstr "Голосові повідомлення про режими та підключення"
+
+msgid "Turn the speaker off now"
+msgstr "Вимкнути колонку зараз"
+
+msgid "Show this function on the case screen"
+msgstr "Показувати цю функцію на екрані кейса"
+
+msgid "Independent of the app language"
+msgstr "Не залежить від мови застосунку"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "Повернути заводські дії кнопок"
+
+msgid "dB"
+msgstr "дБ"
+
+msgid "Copy"
+msgstr "Копіювати"
+
+msgid "Copied"
+msgstr "Скопійовано"
+
+msgid "Reset"
+msgstr "Скинути"
+
+msgid "Turn off"
+msgstr "Вимкнути"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "Навушники не повідомили про сполучені пристрої."
+
+msgid "Volume"
+msgstr "Гучність"
+
+msgid "Presses"
+msgstr "Натискання"
+
+msgid "Switching modes"
+msgstr "Перемикання режимів"
+
+msgid "Case screen"
+msgstr "Екран кейса"
+
+msgid "Status"
+msgstr "Стан"
+
+msgid "Connected devices"
+msgstr "Підключені пристрої"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "Режими, між якими перемикає дія режиму навколишнього звуку."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "Обмеження гучності навушників не замінює рекомендацій щодо безпечної тривалості прослуховування."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "Обмеження гучності колонки не замінює рекомендацій щодо безпечної тривалості прослуховування."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "У цьому списку пристрої, сполучені з навушниками, а не пристрої Bluetooth поблизу. Якщо забути цей комп’ютер, керування навушниками припиниться."
+
+msgid "Left earbud"
+msgstr "Лівий навушник"
+
+msgid "Right earbud"
+msgstr "Правий навушник"
+
+msgid "Earbud"
+msgstr "Навушник"
+
+msgid "Left"
+msgstr "Лівий"
+
+msgid "Right"
+msgstr "Правий"
+
+msgid "Actions for the chosen earbud."
+msgstr "Дії для вибраного навушника."
+
+msgid "Actions of the buttons on the device."
+msgstr "Дії кнопок на пристрої."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "Пристрій виконує ці дії сам. Мультимедійні клавіші Windows працюють як зазвичай."
+
+msgid "Small details. More comfort."
+msgstr "Дрібні деталі. Більше комфорту."
+
+msgid "Let your earbuds adapt to you."
+msgstr "Нехай навушники підлаштуються під вас."
+
+msgid "Let your speaker adapt to you."
+msgstr "Нехай колонка підлаштується під вас."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "Ці налаштування зберігаються в пристрої й працюють із будь-яким джерелом звуку."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "Автовимкнення спрацьовує, поки пристрій не відтворює звук."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth і пристрої"
+
+msgid "Pairing and removing devices"
+msgstr "Сполучення та видалення пристроїв"
+
+msgid "Output device and volume"
+msgstr "Пристрій виведення та гучність"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows передає звук без LDAC. Налаштування потрібне для телефона та інших джерел із LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "На Liberty 4 Pro зміна еквалайзера вимикає просторовий звук. Його можна знову ввімкнути тут."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "Виберіть функції, доступні на екрані кейса. Мова кейса не залежить від мови застосунку."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "Пристрій сам повідомляє ці дані й оновлює їх."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "Серійний номер і версія прошивки допоможуть під час звернення до підтримки."
+
+# Overview
+msgid "Presses and slides"
+msgstr "Натискання та проведення"
+
+msgid "Presses and switching modes"
+msgstr "Натискання та перемикання режимів"
+
+msgid "on"
+msgstr "увімк."
+
+msgid "off"
+msgstr "вимк."
+
+msgid "On: {} of {}"
+msgstr "Увімкнено: {} з {}"
+
+msgid "Volume: {}"
+msgstr "Гучність: {}"
+
+msgid "Auto power off: {}"
+msgstr "Автовимкнення: {}"
+
+msgid "Two devices at once"
+msgstr "Два пристрої одночасно"
+
+msgid "One device at a time"
+msgstr "Один пристрій за раз"
+
+msgid "Case battery {}"
+msgstr "Заряд кейса {}"
+
+msgid "Battery"
+msgstr "Заряд"
+
+msgid "1 earbud"
+msgstr "1 навушник"
+
+msgid "Add quick toggles"
+msgstr "Додати швидкі перемикачі"
+
+msgid "Quick toggles"
+msgstr "Швидкі перемикачі"
+
+msgid "Your sound"
+msgstr "Ваше звучання"
+
+msgid "All presets"
+msgstr "Усі пресети"
+
+msgid "Customize"
+msgstr "Налаштувати"
+
+msgid "Available when both earbuds are connected"
+msgstr "Доступно, коли підключено обидва навушники"
+
+msgid "Current profile"
+msgstr "Поточний профіль"
+
+msgid "Your own settings"
+msgstr "Власні налаштування"
+
+msgid "{} bands · {}…{} dB"
+msgstr "Смуг: {} · {}…{} дБ"
+
+msgid "Low frequencies"
+msgstr "Низькі частоти"
+
+msgid "High frequencies"
+msgstr "Високі частоти"
+
+msgid "Save your favourite combinations of settings."
+msgstr "Зберігайте улюблені поєднання налаштувань."
+
+msgid "No settings chosen yet"
+msgstr "Налаштування ще не вибрано"
+
+msgid "Edit device screen"
+msgstr "Змінити екран пристрою"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "Підключено лише один навушник. Еквалайзер та деякі інші налаштування стануть доступні, коли підключаться обидва навушники."
+
+msgid "Move up"
+msgstr "Вище"
+
+msgid "Move down"
+msgstr "Нижче"
+
+msgid "Your device screen."
+msgstr "Екран вашого пристрою."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "Увімкніть потрібні блоки й переміщуйте їх вгору чи вниз, щоб змінити порядок."
+
+msgid "Ready-made sets"
+msgstr "Готові набори"
+
+msgid "Minimal"
+msgstr "Мінімальний"
+
+msgid "Standard"
+msgstr "Звичайний"
+
+msgid "Full"
+msgstr "Повний"
+
+msgid "Done"
+msgstr "Готово"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "Виберіть перемикачі на картці пристрою. Самі налаштування не зміняться."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Гц"
+
+msgid "{} kHz"
+msgstr "{} кГц"
+
+msgid "{}, dB"
+msgstr "{}, дБ"
+
+msgid "Equalizer bands: {}"
+msgstr "Смуги еквалайзера: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "Крива еквалайзера. Перетягніть, щоб змінити частоту, або скористайтеся повзунками нижче."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "Ця модель підтримує лише вбудовані профілі еквалайзера."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "Значення в децибелах, від {} до {} дБ"
+
+msgid "Save profile"
+msgstr "Зберегти профіль"
+
+msgid "All profiles ({})"
+msgstr "Усі профілі ({})"
+
+msgid "Show fewer"
+msgstr "Згорнути"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "Значення еквалайзера для цього пристрою недоступні."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "Зміна еквалайзера вимикає просторовий звук."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "Перетягуйте точки на графіку, рухайте повзунки клавішами ↑ ↓ або вводьте значення."
+
+msgid "My profiles"
+msgstr "Мої профілі"
+
+msgid "Save the current sound to come back to it later."
+msgstr "Збережіть поточний звук, щоб повернутися до нього пізніше."
+
+msgid "Applied"
+msgstr "Застосовано"
+
+msgid "Bands: {}"
+msgstr "Смуг: {}"
+
+msgid "More for “{}”"
+msgstr "Ще для «{}»"
+
+msgid "Export"
+msgstr "Експорт"
+
+msgid "Delete"
+msgstr "Видалити"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "Збережені профілі залишаються на місці. Застосувати їх можна, коли підключаться обидва навушники."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "Застарілі профілі еквалайзера: {}. Перенесіть їх у свої профілі, щоб користуватися ними з цим пристроєм."
+
+msgid "Show"
+msgstr "Показати"
+
+msgid "Hide"
+msgstr "Сховати"
+
+msgid "Move all"
+msgstr "Перенести всі"
+
+msgid "Move"
+msgstr "Перенести"
+
+msgid "Import and export"
+msgstr "Імпорт та експорт"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "Діліться профілями, зберігайте їх у файлі чи переносьте на інший комп’ютер."
+
+msgid "Import"
+msgstr "Імпорт"
+
+msgid "Select all"
+msgstr "Вибрати всі"
+
+msgid "Save a profile to export it."
+msgstr "Збережіть профіль, щоб його експортувати."
+
+msgid "Save to file"
+msgstr "Зберегти у файл"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "Файл або текст із профілями OpenSCQ30. Перед імпортом покажемо, що зміниться."
+
+msgid "Open file"
+msgstr "Відкрити файл"
+
+msgid "Paste"
+msgstr "Вставити"
+
+msgid "Saved to the file"
+msgstr "Збережено у файл"
+
+msgid "Could not save the file"
+msgstr "Не вдалося зберегти файл"
+
+msgid "This is not an equalizer profiles file"
+msgstr "Це не файл профілів еквалайзера"
+
+msgid "The clipboard is empty"
+msgstr "Буфер обміну порожній"
+
+msgid "The file is too large"
+msgstr "Файл завеликий"
+
+msgid "Could not read the file"
+msgstr "Не вдалося прочитати файл"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "Імпортовано {n} профіль"
+msgstr[1] "Імпортовано {n} профілі"
+msgstr[2] "Імпортовано {n} профілів"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "Перенесено {n} профіль"
+msgstr[1] "Перенесено {n} профілі"
+msgstr[2] "Перенесено {n} профілів"
+
+msgid "Profile saved"
+msgstr "Профіль збережено"
+
+msgid "Profile deleted"
+msgstr "Профіль видалено"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "Збережіть поточні значення еквалайзера пристрою, щоб використовувати їх знову."
+
+msgid "Name"
+msgstr "Назва"
+
+msgid "My sound"
+msgstr "Мій звук"
+
+msgid "Enter a profile name."
+msgstr "Введіть назву профілю."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "Профіль «{}» уже існує. Замінити збережені значення?"
+
+msgid "Replace profile"
+msgstr "Замінити профіль"
+
+msgid "Save"
+msgstr "Зберегти"
+
+msgid "Delete equalizer profile?"
+msgstr "Видалити профіль еквалайзера?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "Ви впевнені, що хочете видалити «{}»?"
+
+msgid "Import profiles"
+msgstr "Імпорт профілів"
+
+msgid "New"
+msgstr "Новий"
+
+msgid "Replaces the saved profile"
+msgstr "Замінить збережений профіль"
+
+msgid "{} bands, this device has {}"
+msgstr "Смуг: {}, а в пристрої {}"
+
+msgid "Values outside this device’s range"
+msgstr "Значення поза діапазоном пристрою"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "Профілі, позначені червоним, не підходять для цього пристрою, тому файл не можна імпортувати."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "Імпортувати {n} профіль"
+msgstr[1] "Імпортувати {n} профілі"
+msgstr[2] "Імпортувати {n} профілів"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "Дії з пресетом «{}»"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "Натисніть «Змінити» й виберіть налаштування для застосування."
+
+msgid "+{} more"
+msgstr "Ще: {}"
+
+msgid "Apply"
+msgstr "Застосувати"
+
+msgid "Edit"
+msgstr "Змінити"
+
+msgid "Matches current settings"
+msgstr "Збігається з поточними налаштуваннями"
+
+msgid "Your sound, in one preset"
+msgstr "Ваш звук — в одному пресеті"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "Збережіть поточні налаштування й виберіть ті, які хочете застосовувати разом."
+
+msgid "Create preset"
+msgstr "Створити пресет"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "Еквалайзер із пресетів застосується, коли підключаться обидва навушники."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "Збережемо поточні налаштування. Потім позначте, які з них застосовувати."
+
+msgid "For example, for work"
+msgstr "Наприклад, для роботи"
+
+msgid "Enter a preset name."
+msgstr "Введіть назву пресета."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "Пресет «{}» уже існує. Замінити його значення поточними налаштуваннями? Вибір увімкнених налаштувань збережеться."
+
+msgid "Replace"
+msgstr "Замінити"
+
+msgid "Create"
+msgstr "Створити"
+
+msgid "Custom curve"
+msgstr "Власна крива"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "Пресет застосовує лише позначені налаштування. Зміни вибору зберігаються одразу."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "Збережених налаштувань ще немає. Завантажте поточні налаштування пристрою, щоб почати."
+
+msgid "Load current settings"
+msgstr "Завантажити поточні налаштування"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "Замінити збережені значення пресета поточними налаштуваннями пристрою? Вибір увімкнених налаштувань збережеться. Налаштування самого пристрою не зміняться."
+
+msgid "Load"
+msgstr "Завантажити"
+
+msgid "Delete preset?"
+msgstr "Видалити пресет?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "Видалити «{}»? Поточні налаштування пристрою збережуться."
+
+msgid "Preset “{}” applied"
+msgstr "Пресет «{}» застосовано"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "Пресет «{}» застосовано. Еквалайзер застосується, коли підключаться обидва навушники."
+
+msgid "Preset deleted"
+msgstr "Пресет видалено"
+
+msgid "Preset values replaced"
+msgstr "Значення пресета замінено"
+
+msgid "Current settings loaded into the preset"
+msgstr "Поточні налаштування завантажено в пресет"
+
+# App settings
+msgid "Appearance"
+msgstr "Вигляд"
+
+msgid "Theme"
+msgstr "Тема"
+
+msgid "As in Windows"
+msgstr "Як у Windows"
+
+msgid "Light"
+msgstr "Світла"
+
+msgid "Dark"
+msgstr "Темна"
+
+msgid "Palette"
+msgstr "Палітра"
+
+msgid "Colors of buttons and highlights"
+msgstr "Кольори кнопок і виділення"
+
+msgid "Purple"
+msgstr "Фіолетова"
+
+msgid "Sage"
+msgstr "Шавлієва"
+
+msgid "Rose"
+msgstr "Рожева"
+
+msgid "Device color in pictures"
+msgstr "Колір пристрою на малюнках"
+
+msgid "As the theme"
+msgstr "Як тема"
+
+msgid "Silver"
+msgstr "Сріблястий"
+
+msgid "Black"
+msgstr "Чорний"
+
+msgid "Sound modes"
+msgstr "Режими звуку"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Вигляд для пристроїв зі шкалою, наприклад Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "Плитки"
+
+msgid "Scale 1–11"
+msgstr "Шкала 1–11"
+
+msgid "One earbud badge"
+msgstr "Значок одного навушника"
+
+msgid "Show when only one earbud is connected"
+msgstr "Показувати, коли підключено лише один навушник"
+
+msgid "App language"
+msgstr "Мова застосунку"
+
+msgid "Your color.\nYour mood."
+msgstr "Ваш колір.\nВаш настрій."
+
+msgid "A familiar character. A new space."
+msgstr "Знайомий характер. Новий простір."
+
+msgid "Home screen"
+msgstr "Головний екран"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "Залиште потрібні блоки й розставте їх у зручному порядку."
+
+msgid "Edit home screen"
+msgstr "Змінити головний екран"
+
+msgid "About"
+msgstr "Про застосунок"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 для Windows {} · вільна програма під GNU GPL 3."
+
+msgid "More"
+msgstr "Докладніше"
+
+msgid "Diagnostics"
+msgstr "Діагностика"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "Скопіювати останні записи журналу, щоб знайти причину несправності."
+
+msgid "Copy logs"
+msgstr "Скопіювати журнали"

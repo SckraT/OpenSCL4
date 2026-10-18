@@ -300,6 +300,8 @@ export global AppState {
     in property <int> app-device-color;
     in property <int> app-mode-view;
     in property <int> app-language;
+    // the system's language, then every language by its own name
+    in property <[string]> language-names;
     in property <string> app-version;
 
     // what the asides of the section pages show

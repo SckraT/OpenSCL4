@@ -1,0 +1,1062 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "概要"
+
+msgid "Sound mode"
+msgstr "サウンドモード"
+
+msgid "Equalizer"
+msgstr "イコライザー"
+
+msgid "Sound and effects"
+msgstr "サウンドとエフェクト"
+
+msgid "Quick presets"
+msgstr "クイックプリセット"
+
+msgid "Controls"
+msgstr "操作"
+
+msgid "Comfort"
+msgstr "快適さ"
+
+msgid "Power and prompts"
+msgstr "電源と音声ガイド"
+
+msgid "Connections"
+msgstr "接続"
+
+msgid "Case"
+msgstr "ケース"
+
+msgid "About the device"
+msgstr "デバイス情報"
+
+msgid "Sleep"
+msgstr "睡眠"
+
+msgid "Lights"
+msgstr "ライト"
+
+msgid "Alarms"
+msgstr "アラーム"
+
+msgid "Other"
+msgstr "その他"
+
+msgid "My devices"
+msgstr "マイデバイス"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Sound"
+msgstr "サウンド"
+
+msgid "Device"
+msgstr "デバイス"
+
+msgid "SOUND"
+msgstr "サウンド"
+
+msgid "DEVICE"
+msgstr "デバイス"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "大切な音を聴こう。"
+
+msgid "Your sound, your way."
+msgstr "あなたらしいサウンドを。"
+
+msgid "Inside the sound."
+msgstr "音の中へ。"
+
+msgid "One preset. Your settings."
+msgstr "ひとつのプリセットに、あなたの設定を。"
+
+msgid "A touch. And you’re in control."
+msgstr "ワンタッチで思いのままに。"
+
+msgid "Comfortable listening. Every day."
+msgstr "毎日、快適なリスニングを。"
+
+msgid "Always ready."
+msgstr "いつでも準備万端。"
+
+msgid "Stay connected. To two at once."
+msgstr "2台同時につながる。"
+
+msgid "A little case. More possibilities."
+msgstr "小さなケースに、もっと多くの可能性を。"
+
+msgid "All about your device."
+msgstr "デバイスのすべて。"
+
+msgid "Your devices."
+msgstr "あなたのデバイス。"
+
+msgid "Make it yours."
+msgstr "お好みのままに。"
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "周囲の音をどれだけ取り込むかを選びます。"
+
+msgid "Pick a profile or tune every frequency."
+msgstr "プロファイルを選ぶか、各周波数を調整します。"
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "コーデック、遅延、音の処理方法。"
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "お気に入りの組み合わせを保存して、クリックひとつで呼び出せます。"
+
+msgid "What presses do, and which modes they switch between."
+msgstr "タップの動作と、切り替えるモードを設定します。"
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "イヤホンをあなたの習慣に合わせる設定です。"
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "スピーカーをあなたの習慣に合わせる設定です。"
+
+msgid "When the device turns off and what it tells you."
+msgstr "デバイスの電源が切れるタイミングと音声ガイド。"
+
+msgid "Switch between your phone and computer."
+msgstr "スマートフォンとコンピューターを切り替えます。"
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "ケース画面の機能とケースの状態。"
+
+msgid "Battery, firmware and serial numbers."
+msgstr "バッテリー、ファームウェア、シリアル番号。"
+
+msgid "All your familiar headphones in one place."
+msgstr "おなじみのヘッドホンをひとつの場所に。"
+
+msgid "An app that feels comfortable to use."
+msgstr "使いやすいアプリ。"
+
+# Connection
+msgid "No devices"
+msgstr "デバイスがありません"
+
+msgid "Add a device"
+msgstr "デバイスを追加"
+
+msgid "Connected"
+msgstr "接続済み"
+
+msgid "Connecting…"
+msgstr "接続中…"
+
+msgid "Not connected"
+msgstr "未接続"
+
+msgid "Connected to {}"
+msgstr "{} に接続済み"
+
+msgid "Connecting to {}"
+msgstr "{} に接続中"
+
+msgid "Connection lost"
+msgstr "接続が切れました"
+
+msgid "Bluetooth is off"
+msgstr "Bluetooth がオフです"
+
+msgid "Disconnected"
+msgstr "切断しました"
+
+msgid "Connecting to your headphones"
+msgstr "ヘッドホンに接続しています"
+
+msgid "Connecting to your speaker"
+msgstr "スピーカーに接続しています"
+
+msgid "Could not connect"
+msgstr "接続できませんでした"
+
+msgid "{} is not connected"
+msgstr "{} は接続されていません"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "ケースを開けるか、ヘッドホンの電源を入れてください。接続すると操作項目が表示されます。"
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "スピーカーの電源を入れてください。接続すると操作項目が表示されます。"
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "ヘッドホンが近くにあり、このコンピューターに Bluetooth で接続されているか確認してください。"
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "スピーカーが近くにあり、このコンピューターに Bluetooth で接続されているか確認してください。"
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Windows の設定で Bluetooth をオンにしてから、もう一度接続してください。"
+
+msgid "Connect to see battery levels and change settings."
+msgstr "接続するとバッテリー残量の確認や設定の変更ができます。"
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "デバイスが見つかりません。電源が入っていて近くにあるか確認してください。"
+
+msgid "The device did not answer in time. Try again."
+msgstr "デバイスが時間内に応答しませんでした。もう一度お試しください。"
+
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgid "Connect"
+msgstr "接続"
+
+msgid "Connect again"
+msgstr "再接続"
+
+msgid "Bluetooth settings"
+msgstr "Bluetooth の設定"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "「{}」を変更できませんでした。デバイスは以前の値のままです。"
+
+msgid "Retry"
+msgstr "再試行"
+
+msgid "Close"
+msgstr "閉じる"
+
+# My devices
+msgid "Open"
+msgstr "開く"
+
+msgid "Forget device"
+msgstr "デバイスを削除"
+
+msgid "Demo device · Not connected"
+msgstr "デモデバイス · 未接続"
+
+msgid "Saved device · Not connected"
+msgstr "保存済みのデバイス · 未接続"
+
+msgid "Add device"
+msgstr "デバイスを追加"
+
+msgid "A model, then its paired device"
+msgstr "モデルを選び、ペアリング済みのデバイスを選択"
+
+msgid "Your sound starts here."
+msgstr "あなたのサウンドはここから。"
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "ヘッドホンを追加して、サウンドと操作を調整しましょう。"
+
+msgid "Forget {}?"
+msgstr "{} を削除しますか？"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "このデバイスは、アプリ内のプロファイルやプリセットとともにこの一覧から削除されます。Windows とのペアリングはそのままです。"
+
+msgid "Forget"
+msgstr "削除"
+
+# Adding a device
+msgid "Find your model."
+msgstr "モデルを探しましょう。"
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "正確なモデルを選ぶと、デバイスが対応する設定が表示されます。"
+
+msgid "Model name or code, such as A3954"
+msgstr "モデル名またはコード（例: A3954）"
+
+msgid "All"
+msgstr "すべて"
+
+msgid "Earbuds"
+msgstr "イヤホン"
+
+msgid "Over-ear"
+msgstr "オーバーイヤー"
+
+msgid "Open-ear"
+msgstr "オープンイヤー"
+
+msgid "Speakers"
+msgstr "スピーカー"
+
+msgid "No models found. Try another name or code."
+msgstr "モデルが見つかりません。別の名前かコードをお試しください。"
+
+msgid "Ready to connect your headphones?"
+msgstr "ヘッドホンを接続しますか？"
+
+msgid "Ready to connect your speaker?"
+msgstr "スピーカーを接続しますか？"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Windows とペアリング済みのデバイスを選んでください。一覧にない場合は、先に Bluetooth の設定でペアリングしてください。"
+
+msgid "Another model"
+msgstr "別のモデル"
+
+msgid "Demo mode"
+msgstr "デモモード"
+
+msgid "Explore the interface without real headphones"
+msgstr "実機なしでインターフェースを試せます"
+
+msgid "Paired devices"
+msgstr "ペアリング済みのデバイス"
+
+msgid "Refresh"
+msgstr "更新"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "Bluetooth がオフです。Windows の設定でオンにしてください。"
+
+msgid "Looking for paired devices…"
+msgstr "ペアリング済みのデバイスを探しています…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "ヘッドホンの電源が入っていて Windows とペアリングされているか確認してから、更新してください。"
+
+msgid "Simulated device data"
+msgstr "シミュレーションのデバイスデータ"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Windows でペアリング済み · 選んだモデルと思われます"
+
+msgid "Paired in Windows"
+msgstr "Windows でペアリング済み"
+
+msgid "Could not add the device."
+msgstr "デバイスを追加できませんでした。"
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "デモモードはシミュレーションのデータを使い、実際のヘッドホンは操作しません。"
+
+msgid "Back"
+msgstr "戻る"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "モードと強さ"
+
+msgid "Sound mode from 1 to 11"
+msgstr "1〜11 のサウンドモード"
+
+msgid "Transparency, strength {}"
+msgstr "外音取り込み、強さ {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "ノイズキャンセリング、強さ {}"
+
+msgid "Your strength is remembered."
+msgstr "強さは記憶されます。"
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "ノイズキャンセリングや外音取り込みに戻ると、そのモードで最後に使った強さになります。"
+
+msgid "Lowers the noise around you."
+msgstr "周囲の騒音を抑えます。"
+
+msgid "Keeps the sounds around you audible."
+msgstr "周囲の音が聞こえるようにします。"
+
+msgid "No processing of ambient sound."
+msgstr "周囲の音を処理しません。"
+
+msgid "Single press"
+msgstr "1回タップ"
+
+msgid "Double press"
+msgstr "2回タップ"
+
+msgid "Triple press"
+msgstr "3回タップ"
+
+msgid "Long press"
+msgstr "長押し"
+
+msgid "Slide up"
+msgstr "上にスワイプ"
+
+msgid "Slide down"
+msgstr "下にスワイプ"
+
+msgid "Noise canceling"
+msgstr "ノイズキャンセリング"
+
+msgid "Transparency"
+msgstr "外音取り込み"
+
+msgid "Normal"
+msgstr "標準"
+
+msgid "Noise canceling strength"
+msgstr "ノイズキャンセリングの強さ"
+
+msgid "Transparency strength"
+msgstr "外音取り込みの強さ"
+
+msgid "Airplane mode updates"
+msgstr "機内モードの更新"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "マイクの風切り音を抑えます"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "イヤホンを外すと自動で一時停止"
+
+msgid "Lower the music while you talk"
+msgstr "話している間は音楽の音量を下げる"
+
+msgid "When the music comes back after you stop talking"
+msgstr "話し終えてから音楽が戻るまでの時間"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "イヤホンがゆるくても音の厚みを保ちます"
+
+msgid "Limit the volume of your earbuds"
+msgstr "イヤホンの音量を制限します"
+
+msgid "Limit the volume of your speaker"
+msgstr "スピーカーの音量を制限します"
+
+msgid "Volume of the speaker"
+msgstr "スピーカーの音量"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Bluetooth で高音質"
+
+msgid "A wider sound stage for music and video"
+msgstr "音楽や動画のための広い音場"
+
+msgid "Connect to up to two devices at once"
+msgstr "最大2台のデバイスに同時接続"
+
+msgid "When the device is not in use"
+msgstr "デバイスを使っていないとき"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "バッテリー残量が少ないときの音声ガイド"
+
+msgid "Voice messages about modes and connections"
+msgstr "モードや接続についての音声メッセージ"
+
+msgid "Turn the speaker off now"
+msgstr "スピーカーの電源を今すぐ切る"
+
+msgid "Show this function on the case screen"
+msgstr "この機能をケース画面に表示"
+
+msgid "Independent of the app language"
+msgstr "アプリの言語とは別に設定"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "ボタンの動作を工場出荷時に戻します"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "コピー"
+
+msgid "Copied"
+msgstr "コピーしました"
+
+msgid "Reset"
+msgstr "リセット"
+
+msgid "Turn off"
+msgstr "電源を切る"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "イヤホンからペアリング済みデバイスの情報がありません。"
+
+msgid "Volume"
+msgstr "音量"
+
+msgid "Presses"
+msgstr "タップ"
+
+msgid "Switching modes"
+msgstr "モードの切り替え"
+
+msgid "Case screen"
+msgstr "ケース画面"
+
+msgid "Status"
+msgstr "状態"
+
+msgid "Connected devices"
+msgstr "接続中のデバイス"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "環境サウンドモードの操作で切り替わるモード。"
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "イヤホンの音量制限は、安全な聴取時間の目安に代わるものではありません。"
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "スピーカーの音量制限は、安全な聴取時間の目安に代わるものではありません。"
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "この一覧はイヤホンとペアリングしたデバイスで、近くの Bluetooth デバイスではありません。このコンピューターを削除すると、イヤホンを操作できなくなります。"
+
+msgid "Left earbud"
+msgstr "左イヤホン"
+
+msgid "Right earbud"
+msgstr "右イヤホン"
+
+msgid "Earbud"
+msgstr "イヤホン"
+
+msgid "Left"
+msgstr "左"
+
+msgid "Right"
+msgstr "右"
+
+msgid "Actions for the chosen earbud."
+msgstr "選んだイヤホンの動作。"
+
+msgid "Actions of the buttons on the device."
+msgstr "デバイスのボタンの動作。"
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "これらの動作はデバイス自身が行います。Windows のメディアキーは通常どおり使えます。"
+
+msgid "Small details. More comfort."
+msgstr "小さな工夫で、もっと快適に。"
+
+msgid "Let your earbuds adapt to you."
+msgstr "イヤホンをあなたに合わせましょう。"
+
+msgid "Let your speaker adapt to you."
+msgstr "スピーカーをあなたに合わせましょう。"
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "これらの設定はデバイスに保存され、どの音源でも有効です。"
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "自動電源オフは、デバイスが音を再生していないときに働きます。"
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth とデバイス"
+
+msgid "Pairing and removing devices"
+msgstr "デバイスのペアリングと削除"
+
+msgid "Output device and volume"
+msgstr "出力デバイスと音量"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows は LDAC を使わずに再生します。この設定はスマートフォンなど LDAC 対応の音源向けです。"
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "Liberty 4 Pro では、イコライザーを変更すると空間オーディオがオフになります。ここで再びオンにできます。"
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "ケース画面で使える機能を選びます。ケースの言語はアプリの言語とは別です。"
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "これらの情報はデバイスが自ら報告し、常に最新に保ちます。"
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "サポートに問い合わせる際は、シリアル番号とファームウェアのバージョンが役立ちます。"
+
+# Overview
+msgid "Presses and slides"
+msgstr "タップとスワイプ"
+
+msgid "Presses and switching modes"
+msgstr "タップとモードの切り替え"
+
+msgid "on"
+msgstr "オン"
+
+msgid "off"
+msgstr "オフ"
+
+msgid "On: {} of {}"
+msgstr "オン: {} / {}"
+
+msgid "Volume: {}"
+msgstr "音量: {}"
+
+msgid "Auto power off: {}"
+msgstr "自動電源オフ: {}"
+
+msgid "Two devices at once"
+msgstr "2台同時"
+
+msgid "One device at a time"
+msgstr "1台ずつ"
+
+msgid "Case battery {}"
+msgstr "ケースのバッテリー {}"
+
+msgid "Battery"
+msgstr "バッテリー"
+
+msgid "1 earbud"
+msgstr "イヤホン1つ"
+
+msgid "Add quick toggles"
+msgstr "クイックトグルを追加"
+
+msgid "Quick toggles"
+msgstr "クイックトグル"
+
+msgid "Your sound"
+msgstr "あなたのサウンド"
+
+msgid "All presets"
+msgstr "すべてのプリセット"
+
+msgid "Customize"
+msgstr "カスタマイズ"
+
+msgid "Available when both earbuds are connected"
+msgstr "両方のイヤホンが接続されているときに利用できます"
+
+msgid "Current profile"
+msgstr "現在のプロファイル"
+
+msgid "Your own settings"
+msgstr "カスタム設定"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} バンド · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "低音域"
+
+msgid "High frequencies"
+msgstr "高音域"
+
+msgid "Save your favourite combinations of settings."
+msgstr "お気に入りの設定の組み合わせを保存します。"
+
+msgid "No settings chosen yet"
+msgstr "まだ設定が選ばれていません"
+
+msgid "Edit device screen"
+msgstr "デバイス画面を編集"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "イヤホンが1つだけ接続されています。イコライザーなど一部の設定は、両方のイヤホンを接続すると利用できます。"
+
+msgid "Move up"
+msgstr "上へ移動"
+
+msgid "Move down"
+msgstr "下へ移動"
+
+msgid "Your device screen."
+msgstr "デバイス画面。"
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "使うブロックをオンにし、上下に移動して順番を変えます。"
+
+msgid "Ready-made sets"
+msgstr "セット"
+
+msgid "Minimal"
+msgstr "最小"
+
+msgid "Standard"
+msgstr "標準"
+
+msgid "Full"
+msgstr "すべて"
+
+msgid "Done"
+msgstr "完了"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "デバイスカードに表示するスイッチを選びます。設定そのものは変わりません。"
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}、dB"
+
+msgid "Equalizer bands: {}"
+msgstr "イコライザーのバンド: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "イコライザーのカーブ。ドラッグして周波数を調整するか、下のスライダーを使います。"
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "このデバイスは内蔵のイコライザープロファイルのみに対応しています。"
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "値はデシベルで、{} から {} dB まで"
+
+msgid "Save profile"
+msgstr "プロファイルを保存"
+
+msgid "All profiles ({})"
+msgstr "すべてのプロファイル ({})"
+
+msgid "Show fewer"
+msgstr "表示を減らす"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "このデバイスではイコライザーの値を利用できません。"
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "イコライザーを変更すると空間オーディオがオフになります。"
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "グラフの点をドラッグするか、↑ ↓ キーでスライダーを動かすか、値を入力します。"
+
+msgid "My profiles"
+msgstr "マイプロファイル"
+
+msgid "Save the current sound to come back to it later."
+msgstr "今のサウンドを保存して、あとで戻れるようにします。"
+
+msgid "Applied"
+msgstr "適用中"
+
+msgid "Bands: {}"
+msgstr "バンド: {}"
+
+msgid "More for “{}”"
+msgstr "「{}」のその他の操作"
+
+msgid "Export"
+msgstr "エクスポート"
+
+msgid "Delete"
+msgstr "削除"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "保存したプロファイルはそのまま残ります。両方のイヤホンを接続すると適用できます。"
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "古いイコライザープロファイル: {}。このデバイスで使うにはマイプロファイルに移行してください。"
+
+msgid "Show"
+msgstr "表示"
+
+msgid "Hide"
+msgstr "隠す"
+
+msgid "Move all"
+msgstr "すべて移行"
+
+msgid "Move"
+msgstr "移行"
+
+msgid "Import and export"
+msgstr "インポートとエクスポート"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "プロファイルを共有したり、ファイルに保存したり、別のコンピューターに移したりできます。"
+
+msgid "Import"
+msgstr "インポート"
+
+msgid "Select all"
+msgstr "すべて選択"
+
+msgid "Save a profile to export it."
+msgstr "エクスポートするにはプロファイルを保存してください。"
+
+msgid "Save to file"
+msgstr "ファイルに保存"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "OpenSCQ30 のプロファイルを含むファイルまたはテキスト。インポートの前に変更内容を確認できます。"
+
+msgid "Open file"
+msgstr "ファイルを開く"
+
+msgid "Paste"
+msgstr "貼り付け"
+
+msgid "Saved to the file"
+msgstr "ファイルに保存しました"
+
+msgid "Could not save the file"
+msgstr "ファイルを保存できませんでした"
+
+msgid "This is not an equalizer profiles file"
+msgstr "イコライザープロファイルのファイルではありません"
+
+msgid "The clipboard is empty"
+msgstr "クリップボードが空です"
+
+msgid "The file is too large"
+msgstr "ファイルが大きすぎます"
+
+msgid "Could not read the file"
+msgstr "ファイルを読み込めませんでした"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "{n} 件のプロファイルをインポートしました"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "{n} 件のプロファイルを移行しました"
+
+msgid "Profile saved"
+msgstr "プロファイルを保存しました"
+
+msgid "Profile deleted"
+msgstr "プロファイルを削除しました"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "デバイスの現在のイコライザーの値を、再利用できるプロファイルとして保存します。"
+
+msgid "Name"
+msgstr "名前"
+
+msgid "My sound"
+msgstr "マイサウンド"
+
+msgid "Enter a profile name."
+msgstr "プロファイル名を入力してください。"
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "「{}」という名前のプロファイルがすでにあります。保存済みの値を置き換えますか？"
+
+msgid "Replace profile"
+msgstr "プロファイルを置き換え"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Delete equalizer profile?"
+msgstr "イコライザープロファイルを削除しますか？"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "「{}」を削除してもよろしいですか？"
+
+msgid "Import profiles"
+msgstr "プロファイルをインポート"
+
+msgid "New"
+msgstr "新規"
+
+msgid "Replaces the saved profile"
+msgstr "保存済みのプロファイルを置き換えます"
+
+msgid "{} bands, this device has {}"
+msgstr "{} バンド、このデバイスは {} バンド"
+
+msgid "Values outside this device’s range"
+msgstr "このデバイスの範囲外の値です"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "赤で示したプロファイルはこのデバイスで使えないため、ファイルをインポートできません。"
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "{n} 件のプロファイルをインポート"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "{} のその他の操作"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "「編集」で適用する設定を選んでください。"
+
+msgid "+{} more"
+msgstr "ほか {} 件"
+
+msgid "Apply"
+msgstr "適用"
+
+msgid "Edit"
+msgstr "編集"
+
+msgid "Matches current settings"
+msgstr "現在の設定と一致"
+
+msgid "Your sound, in one preset"
+msgstr "あなたのサウンドをひとつのプリセットに"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "今の設定を保存し、まとめて適用したい設定を選びます。"
+
+msgid "Create preset"
+msgstr "プリセットを作成"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "プリセットのイコライザーは、両方のイヤホンが接続されると適用されます。"
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "今の設定を保存します。そのあと適用する設定を選んでください。"
+
+msgid "For example, for work"
+msgstr "例: 仕事用"
+
+msgid "Enter a preset name."
+msgstr "プリセット名を入力してください。"
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "「{}」はすでにあります。保存済みの値をデバイスの現在の設定で置き換えますか？含める設定の選択はそのままです。"
+
+msgid "Replace"
+msgstr "置き換え"
+
+msgid "Create"
+msgstr "作成"
+
+msgid "Custom curve"
+msgstr "カスタムカーブ"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "このプリセットは選んだ設定だけを適用します。選択の変更はすぐに保存されます。"
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "保存された設定はまだありません。デバイスの現在の設定を読み込んで始めましょう。"
+
+msgid "Load current settings"
+msgstr "現在の設定を読み込む"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "このプリセットの保存済みの値をデバイスの現在の設定で置き換えますか？含める設定の選択はそのままです。デバイスは変更されません。"
+
+msgid "Load"
+msgstr "読み込む"
+
+msgid "Delete preset?"
+msgstr "プリセットを削除しますか？"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "「{}」を削除しますか？デバイスの現在の設定はそのままです。"
+
+msgid "Preset “{}” applied"
+msgstr "プリセット「{}」を適用しました"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "プリセット「{}」を適用しました。イコライザーは両方のイヤホンが接続されると適用されます。"
+
+msgid "Preset deleted"
+msgstr "プリセットを削除しました"
+
+msgid "Preset values replaced"
+msgstr "プリセットの値を置き換えました"
+
+msgid "Current settings loaded into the preset"
+msgstr "現在の設定をプリセットに読み込みました"
+
+# App settings
+msgid "Appearance"
+msgstr "外観"
+
+msgid "Theme"
+msgstr "テーマ"
+
+msgid "As in Windows"
+msgstr "Windows に合わせる"
+
+msgid "Light"
+msgstr "ライト"
+
+msgid "Dark"
+msgstr "ダーク"
+
+msgid "Palette"
+msgstr "パレット"
+
+msgid "Colors of buttons and highlights"
+msgstr "ボタンと強調表示の色"
+
+msgid "Purple"
+msgstr "パープル"
+
+msgid "Sage"
+msgstr "セージ"
+
+msgid "Rose"
+msgstr "ローズ"
+
+msgid "Device color in pictures"
+msgstr "画像のデバイスの色"
+
+msgid "As the theme"
+msgstr "テーマに合わせる"
+
+msgid "Silver"
+msgstr "シルバー"
+
+msgid "Black"
+msgstr "ブラック"
+
+msgid "Sound modes"
+msgstr "サウンドモード"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Liberty 4 Pro などスケールのあるデバイスの表示"
+
+msgid "Tiles"
+msgstr "タイル"
+
+msgid "Scale 1–11"
+msgstr "スケール 1〜11"
+
+msgid "One earbud badge"
+msgstr "イヤホン1つのバッジ"
+
+msgid "Show when only one earbud is connected"
+msgstr "イヤホンが1つだけ接続されているときに表示"
+
+msgid "App language"
+msgstr "アプリの言語"
+
+msgid "Your color.\nYour mood."
+msgstr "あなたの色。\nあなたの気分。"
+
+msgid "A familiar character. A new space."
+msgstr "おなじみの個性。新しい空間。"
+
+msgid "Home screen"
+msgstr "ホーム画面"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "必要なブロックを残し、好きな順番に並べます。"
+
+msgid "Edit home screen"
+msgstr "ホーム画面を編集"
+
+msgid "About"
+msgstr "このアプリについて"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "Windows 版 OpenSCQ30 {} · GNU GPL 3 のフリーソフトウェア"
+
+msgid "More"
+msgstr "詳細"
+
+msgid "Diagnostics"
+msgstr "診断"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "問題の原因を調べるため、最新のログをコピーします。"
+
+msgid "Copy logs"
+msgstr "ログをコピー"

@@ -1,0 +1,1065 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: bn\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "সংক্ষিপ্ত বিবরণ"
+
+msgid "Sound mode"
+msgstr "সাউন্ড মোড"
+
+msgid "Equalizer"
+msgstr "ইকুয়ালাইজার"
+
+msgid "Sound and effects"
+msgstr "সাউন্ড ও ইফেক্ট"
+
+msgid "Quick presets"
+msgstr "দ্রুত প্রিসেট"
+
+msgid "Controls"
+msgstr "নিয়ন্ত্রণ"
+
+msgid "Comfort"
+msgstr "আরাম"
+
+msgid "Power and prompts"
+msgstr "পাওয়ার ও ঘোষণা"
+
+msgid "Connections"
+msgstr "সংযোগ"
+
+msgid "Case"
+msgstr "কেস"
+
+msgid "About the device"
+msgstr "ডিভাইস সম্পর্কে"
+
+msgid "Sleep"
+msgstr "ঘুম"
+
+msgid "Lights"
+msgstr "আলো"
+
+msgid "Alarms"
+msgstr "অ্যালার্ম"
+
+msgid "Other"
+msgstr "অন্যান্য"
+
+msgid "My devices"
+msgstr "আমার ডিভাইস"
+
+msgid "Settings"
+msgstr "সেটিংস"
+
+msgid "Sound"
+msgstr "সাউন্ড"
+
+msgid "Device"
+msgstr "ডিভাইস"
+
+msgid "SOUND"
+msgstr "সাউন্ড"
+
+msgid "DEVICE"
+msgstr "ডিভাইস"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "যা জরুরি, তা শুনুন।"
+
+msgid "Your sound, your way."
+msgstr "আপনার সাউন্ড, আপনার মতো।"
+
+msgid "Inside the sound."
+msgstr "সাউন্ডের ভেতরে।"
+
+msgid "One preset. Your settings."
+msgstr "একটি প্রিসেট। আপনার সেটিংস।"
+
+msgid "A touch. And you’re in control."
+msgstr "একটি স্পর্শ। নিয়ন্ত্রণ আপনার হাতে।"
+
+msgid "Comfortable listening. Every day."
+msgstr "আরামদায়ক শোনা। প্রতিদিন।"
+
+msgid "Always ready."
+msgstr "সবসময় প্রস্তুত।"
+
+msgid "Stay connected. To two at once."
+msgstr "সংযুক্ত থাকুন। একসাথে দুটির সাথে।"
+
+msgid "A little case. More possibilities."
+msgstr "ছোট্ট কেস। আরও সম্ভাবনা।"
+
+msgid "All about your device."
+msgstr "আপনার ডিভাইসের সবকিছু।"
+
+msgid "Your devices."
+msgstr "আপনার ডিভাইসগুলো।"
+
+msgid "Make it yours."
+msgstr "আপনার রুচি অনুযায়ী।"
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "আপনার সাউন্ডে বাইরের পৃথিবীর কতটা ঢুকবে, বেছে নিন।"
+
+msgid "Pick a profile or tune every frequency."
+msgstr "একটি প্রোফাইল বেছে নিন বা প্রতিটি ফ্রিকোয়েন্সি সমন্বয় করুন।"
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "কোডেক, লেটেন্সি এবং সাউন্ড কীভাবে প্রক্রিয়া করা হয়।"
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "পছন্দের সমন্বয়গুলো সংরক্ষণ করুন এবং এক ক্লিকে ফিরে আসুন।"
+
+msgid "What presses do, and which modes they switch between."
+msgstr "ট্যাপ কী করে এবং কোন মোডগুলোর মধ্যে বদলায়।"
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "যে সেটিংস আপনার ইয়ারবাডকে আপনার অভ্যাসের সাথে মানিয়ে নেয়।"
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "যে সেটিংস আপনার স্পিকারকে আপনার অভ্যাসের সাথে মানিয়ে নেয়।"
+
+msgid "When the device turns off and what it tells you."
+msgstr "ডিভাইস কখন বন্ধ হয় এবং আপনাকে কী জানায়।"
+
+msgid "Switch between your phone and computer."
+msgstr "ফোন আর কম্পিউটারের মধ্যে বদল করুন।"
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "কেসের স্ক্রিনের ফাংশন এবং কেসের অবস্থা।"
+
+msgid "Battery, firmware and serial numbers."
+msgstr "ব্যাটারি, ফার্মওয়্যার এবং সিরিয়াল নম্বর।"
+
+msgid "All your familiar headphones in one place."
+msgstr "আপনার পরিচিত সব হেডফোন এক জায়গায়।"
+
+msgid "An app that feels comfortable to use."
+msgstr "ব্যবহারে আরামদায়ক একটি অ্যাপ।"
+
+# Connection
+msgid "No devices"
+msgstr "কোনো ডিভাইস নেই"
+
+msgid "Add a device"
+msgstr "ডিভাইস যোগ করুন"
+
+msgid "Connected"
+msgstr "সংযুক্ত"
+
+msgid "Connecting…"
+msgstr "সংযোগ হচ্ছে…"
+
+msgid "Not connected"
+msgstr "সংযুক্ত নয়"
+
+msgid "Connected to {}"
+msgstr "{}-এর সাথে সংযুক্ত"
+
+msgid "Connecting to {}"
+msgstr "{}-এর সাথে সংযোগ হচ্ছে"
+
+msgid "Connection lost"
+msgstr "সংযোগ বিচ্ছিন্ন হয়েছে"
+
+msgid "Bluetooth is off"
+msgstr "ব্লুটুথ বন্ধ"
+
+msgid "Disconnected"
+msgstr "সংযোগ বিচ্ছিন্ন"
+
+msgid "Connecting to your headphones"
+msgstr "আপনার হেডফোনের সাথে সংযোগ হচ্ছে"
+
+msgid "Connecting to your speaker"
+msgstr "আপনার স্পিকারের সাথে সংযোগ হচ্ছে"
+
+msgid "Could not connect"
+msgstr "সংযোগ করা যায়নি"
+
+msgid "{} is not connected"
+msgstr "{} সংযুক্ত নয়"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "কেস খুলুন বা হেডফোন চালু করুন। সংযোগের পরে নিয়ন্ত্রণগুলো দেখা যাবে।"
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "স্পিকার চালু করুন। সংযোগের পরে নিয়ন্ত্রণগুলো দেখা যাবে।"
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "হেডফোন কাছেই আছে এবং ব্লুটুথে এই কম্পিউটারের সাথে সংযুক্ত কি না দেখুন।"
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "স্পিকার কাছেই আছে এবং ব্লুটুথে এই কম্পিউটারের সাথে সংযুক্ত কি না দেখুন।"
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Windows সেটিংসে ব্লুটুথ চালু করুন, তারপর আবার সংযোগের চেষ্টা করুন।"
+
+msgid "Connect to see battery levels and change settings."
+msgstr "ব্যাটারি দেখতে এবং সেটিংস বদলাতে সংযোগ করুন।"
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "ডিভাইসটি পাওয়া যায়নি। এটি চালু এবং কাছে আছে কি না নিশ্চিত করুন।"
+
+msgid "The device did not answer in time. Try again."
+msgstr "ডিভাইস সময়মতো সাড়া দেয়নি। আবার চেষ্টা করুন।"
+
+msgid "Cancel"
+msgstr "বাতিল"
+
+msgid "Connect"
+msgstr "সংযোগ করুন"
+
+msgid "Connect again"
+msgstr "আবার সংযোগ করুন"
+
+msgid "Bluetooth settings"
+msgstr "ব্লুটুথ সেটিংস"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "“{}” বদলানো যায়নি। ডিভাইস আগের মান রেখেছে।"
+
+msgid "Retry"
+msgstr "আবার চেষ্টা করুন"
+
+msgid "Close"
+msgstr "বন্ধ করুন"
+
+# My devices
+msgid "Open"
+msgstr "খুলুন"
+
+msgid "Forget device"
+msgstr "ডিভাইস ভুলে যান"
+
+msgid "Demo device · Not connected"
+msgstr "ডেমো ডিভাইস · সংযুক্ত নয়"
+
+msgid "Saved device · Not connected"
+msgstr "সংরক্ষিত ডিভাইস · সংযুক্ত নয়"
+
+msgid "Add device"
+msgstr "ডিভাইস যোগ করুন"
+
+msgid "A model, then its paired device"
+msgstr "প্রথমে মডেল, তারপর জোড়া লাগানো ডিভাইস"
+
+msgid "Your sound starts here."
+msgstr "আপনার সাউন্ড এখান থেকে শুরু।"
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "সাউন্ড ও নিয়ন্ত্রণ সমন্বয় করতে আপনার হেডফোন যোগ করুন।"
+
+msgid "Forget {}?"
+msgstr "{} ভুলে যাবেন?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "ডিভাইসটি অ্যাপে এর প্রোফাইল ও প্রিসেটসহ এই তালিকা থেকে সরে যাবে। Windows-এর সাথে জোড়া থেকে যাবে।"
+
+msgid "Forget"
+msgstr "ভুলে যান"
+
+# Adding a device
+msgid "Find your model."
+msgstr "আপনার মডেল খুঁজুন।"
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "সঠিক মডেল বেছে নিন, যাতে আপনার ডিভাইস যে সেটিংস সমর্থন করে তা দেখতে পান।"
+
+msgid "Model name or code, such as A3954"
+msgstr "মডেলের নাম বা কোড, যেমন A3954"
+
+msgid "All"
+msgstr "সব"
+
+msgid "Earbuds"
+msgstr "ইয়ারবাড"
+
+msgid "Over-ear"
+msgstr "ওভার-ইয়ার"
+
+msgid "Open-ear"
+msgstr "ওপেন-ইয়ার"
+
+msgid "Speakers"
+msgstr "স্পিকার"
+
+msgid "No models found. Try another name or code."
+msgstr "কোনো মডেল পাওয়া যায়নি। অন্য নাম বা কোড চেষ্টা করুন।"
+
+msgid "Ready to connect your headphones?"
+msgstr "হেডফোন সংযোগের জন্য প্রস্তুত?"
+
+msgid "Ready to connect your speaker?"
+msgstr "স্পিকার সংযোগের জন্য প্রস্তুত?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Windows-এর সাথে জোড়া লাগানো ডিভাইসটি বেছে নিন। তালিকায় না থাকলে আগে ব্লুটুথ সেটিংসে জোড়া লাগান।"
+
+msgid "Another model"
+msgstr "অন্য মডেল"
+
+msgid "Demo mode"
+msgstr "ডেমো মোড"
+
+msgid "Explore the interface without real headphones"
+msgstr "আসল হেডফোন ছাড়াই ইন্টারফেস ঘুরে দেখুন"
+
+msgid "Paired devices"
+msgstr "জোড়া লাগানো ডিভাইস"
+
+msgid "Refresh"
+msgstr "রিফ্রেশ করুন"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "ব্লুটুথ বন্ধ। Windows সেটিংসে এটি চালু করুন।"
+
+msgid "Looking for paired devices…"
+msgstr "জোড়া লাগানো ডিভাইস খোঁজা হচ্ছে…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "হেডফোন চালু এবং Windows-এর সাথে জোড়া লাগানো আছে কি না নিশ্চিত করুন, তারপর রিফ্রেশ করুন।"
+
+msgid "Simulated device data"
+msgstr "সিমুলেটেড ডিভাইস ডেটা"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Windows-এ জোড়া লাগানো · বেছে নেওয়া মডেলের মতো"
+
+msgid "Paired in Windows"
+msgstr "Windows-এ জোড়া লাগানো"
+
+msgid "Could not add the device."
+msgstr "ডিভাইস যোগ করা যায়নি।"
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "ডেমো মোড সিমুলেটেড ডেটা ব্যবহার করে এবং আসল হেডফোন নিয়ন্ত্রণ করে না।"
+
+msgid "Back"
+msgstr "পেছনে"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "মোড ও শক্তি"
+
+msgid "Sound mode from 1 to 11"
+msgstr "১ থেকে ১১ পর্যন্ত সাউন্ড মোড"
+
+msgid "Transparency, strength {}"
+msgstr "স্বচ্ছতা, শক্তি {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "নয়েজ ক্যান্সেলিং, শক্তি {}"
+
+msgid "Your strength is remembered."
+msgstr "আপনার বেছে নেওয়া শক্তি মনে রাখা হয়।"
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "নয়েজ ক্যান্সেলিং বা স্বচ্ছতায় ফিরলে সেই মোডের শেষ শক্তি ব্যবহার হয়।"
+
+msgid "Lowers the noise around you."
+msgstr "চারপাশের শব্দ কমায়।"
+
+msgid "Keeps the sounds around you audible."
+msgstr "চারপাশের শব্দ শোনা যায় রাখে।"
+
+msgid "No processing of ambient sound."
+msgstr "পারিপার্শ্বিক শব্দ প্রক্রিয়া করা হয় না।"
+
+msgid "Single press"
+msgstr "একবার ট্যাপ"
+
+msgid "Double press"
+msgstr "দুবার ট্যাপ"
+
+msgid "Triple press"
+msgstr "তিনবার ট্যাপ"
+
+msgid "Long press"
+msgstr "দীর্ঘ চাপ"
+
+msgid "Slide up"
+msgstr "উপরে সোয়াইপ"
+
+msgid "Slide down"
+msgstr "নিচে সোয়াইপ"
+
+msgid "Noise canceling"
+msgstr "নয়েজ ক্যান্সেলিং"
+
+msgid "Transparency"
+msgstr "স্বচ্ছতা"
+
+msgid "Normal"
+msgstr "স্বাভাবিক"
+
+msgid "Noise canceling strength"
+msgstr "নয়েজ ক্যান্সেলিংয়ের শক্তি"
+
+msgid "Transparency strength"
+msgstr "স্বচ্ছতার শক্তি"
+
+msgid "Airplane mode updates"
+msgstr "এয়ারপ্লেন মোডের আপডেট"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "মাইক্রোফোনে বাতাসের শব্দ কমায়"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "ইয়ারবাড খুললে স্বয়ংক্রিয়ভাবে বিরতি"
+
+msgid "Lower the music while you talk"
+msgstr "কথা বলার সময় গানের আওয়াজ কমান"
+
+msgid "When the music comes back after you stop talking"
+msgstr "কথা থামানোর পর কখন গান ফিরে আসবে"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "ইয়ারবাড ঢিলে বসলেও সাউন্ড পূর্ণ রাখে"
+
+msgid "Limit the volume of your earbuds"
+msgstr "ইয়ারবাডের ভলিউম সীমিত করুন"
+
+msgid "Limit the volume of your speaker"
+msgstr "স্পিকারের ভলিউম সীমিত করুন"
+
+msgid "Volume of the speaker"
+msgstr "স্পিকারের ভলিউম"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "ব্লুটুথে উচ্চমানের সাউন্ড"
+
+msgid "A wider sound stage for music and video"
+msgstr "গান ও ভিডিওর জন্য আরও প্রশস্ত সাউন্ডস্টেজ"
+
+msgid "Connect to up to two devices at once"
+msgstr "একসাথে দুটি পর্যন্ত ডিভাইসের সাথে সংযোগ"
+
+msgid "When the device is not in use"
+msgstr "যখন ডিভাইস ব্যবহার হচ্ছে না"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "ব্যাটারি কমে গেলে ভয়েস ঘোষণা"
+
+msgid "Voice messages about modes and connections"
+msgstr "মোড ও সংযোগ নিয়ে ভয়েস বার্তা"
+
+msgid "Turn the speaker off now"
+msgstr "এখনই স্পিকার বন্ধ করুন"
+
+msgid "Show this function on the case screen"
+msgstr "এই ফাংশনটি কেসের স্ক্রিনে দেখান"
+
+msgid "Independent of the app language"
+msgstr "অ্যাপের ভাষা থেকে আলাদা"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "বোতামের কারখানার কাজ ফিরিয়ে আনুন"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "কপি করুন"
+
+msgid "Copied"
+msgstr "কপি হয়েছে"
+
+msgid "Reset"
+msgstr "রিসেট"
+
+msgid "Turn off"
+msgstr "বন্ধ করুন"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "আপনার ইয়ারবাড কোনো জোড়া লাগানো ডিভাইসের তথ্য দেয়নি।"
+
+msgid "Volume"
+msgstr "ভলিউম"
+
+msgid "Presses"
+msgstr "ট্যাপ"
+
+msgid "Switching modes"
+msgstr "মোড বদল"
+
+msgid "Case screen"
+msgstr "কেসের স্ক্রিন"
+
+msgid "Status"
+msgstr "অবস্থা"
+
+msgid "Connected devices"
+msgstr "সংযুক্ত ডিভাইস"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "পারিপার্শ্বিক সাউন্ড মোডের অ্যাকশন যে মোডগুলোর মধ্যে বদলায়।"
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "ইয়ারবাডের ভলিউম সীমা নিরাপদে শোনার সময়ের নির্দেশনার বিকল্প নয়।"
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "স্পিকারের ভলিউম সীমা নিরাপদে শোনার সময়ের নির্দেশনার বিকল্প নয়।"
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "এই তালিকায় আপনার ইয়ারবাডের সাথে জোড়া লাগানো ডিভাইস দেখায়, আশপাশের ব্লুটুথ ডিভাইস নয়। এই কম্পিউটার ভুলে গেলে ইয়ারবাডের নিয়ন্ত্রণ শেষ হবে।"
+
+msgid "Left earbud"
+msgstr "বাম ইয়ারবাড"
+
+msgid "Right earbud"
+msgstr "ডান ইয়ারবাড"
+
+msgid "Earbud"
+msgstr "ইয়ারবাড"
+
+msgid "Left"
+msgstr "বাম"
+
+msgid "Right"
+msgstr "ডান"
+
+msgid "Actions for the chosen earbud."
+msgstr "বেছে নেওয়া ইয়ারবাডের অ্যাকশন।"
+
+msgid "Actions of the buttons on the device."
+msgstr "ডিভাইসের বোতামের অ্যাকশন।"
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "ডিভাইস নিজেই এই অ্যাকশনগুলো করে। Windows-এর মিডিয়া কী আগের মতোই কাজ করে।"
+
+msgid "Small details. More comfort."
+msgstr "ছোট ছোট খুঁটিনাটি। আরও আরাম।"
+
+msgid "Let your earbuds adapt to you."
+msgstr "ইয়ারবাডকে আপনার সাথে মানিয়ে নিতে দিন।"
+
+msgid "Let your speaker adapt to you."
+msgstr "স্পিকারকে আপনার সাথে মানিয়ে নিতে দিন।"
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "এই সেটিংস ডিভাইসে সংরক্ষিত থাকে এবং যেকোনো সাউন্ড উৎসের সাথে কাজ করে।"
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "ডিভাইস কোনো শব্দ না বাজালে স্বয়ংক্রিয় বন্ধ কাজ করে।"
+
+msgid "Bluetooth and devices"
+msgstr "ব্লুটুথ ও ডিভাইস"
+
+msgid "Pairing and removing devices"
+msgstr "ডিভাইস জোড়া লাগানো ও সরানো"
+
+msgid "Output device and volume"
+msgstr "আউটপুট ডিভাইস ও ভলিউম"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows LDAC ছাড়াই সাউন্ড বাজায়। এই সেটিং আপনার ফোন ও LDAC সমর্থিত অন্য উৎসের জন্য।"
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "Liberty 4 Pro-তে ইকুয়ালাইজার বদলালে স্পেশিয়াল অডিও বন্ধ হয়ে যায়। এখান থেকে আবার চালু করতে পারেন।"
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "কেসের স্ক্রিনে কোন ফাংশন থাকবে বেছে নিন। কেসের ভাষা অ্যাপের ভাষা থেকে আলাদা।"
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "ডিভাইস নিজেই এই তথ্য দেয় এবং হালনাগাদ রাখে।"
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "সহায়তায় যোগাযোগের সময় সিরিয়াল নম্বর ও ফার্মওয়্যার সংস্করণ কাজে আসে।"
+
+# Overview
+msgid "Presses and slides"
+msgstr "ট্যাপ ও সোয়াইপ"
+
+msgid "Presses and switching modes"
+msgstr "ট্যাপ ও মোড বদল"
+
+msgid "on"
+msgstr "চালু"
+
+msgid "off"
+msgstr "বন্ধ"
+
+msgid "On: {} of {}"
+msgstr "চালু: {}টি, মোট {}টি"
+
+msgid "Volume: {}"
+msgstr "ভলিউম: {}"
+
+msgid "Auto power off: {}"
+msgstr "স্বয়ংক্রিয় বন্ধ: {}"
+
+msgid "Two devices at once"
+msgstr "একসাথে দুটি ডিভাইস"
+
+msgid "One device at a time"
+msgstr "একবারে একটি ডিভাইস"
+
+msgid "Case battery {}"
+msgstr "কেসের ব্যাটারি {}"
+
+msgid "Battery"
+msgstr "ব্যাটারি"
+
+msgid "1 earbud"
+msgstr "১টি ইয়ারবাড"
+
+msgid "Add quick toggles"
+msgstr "দ্রুত সুইচ যোগ করুন"
+
+msgid "Quick toggles"
+msgstr "দ্রুত সুইচ"
+
+msgid "Your sound"
+msgstr "আপনার সাউন্ড"
+
+msgid "All presets"
+msgstr "সব প্রিসেট"
+
+msgid "Customize"
+msgstr "কাস্টমাইজ করুন"
+
+msgid "Available when both earbuds are connected"
+msgstr "দুটি ইয়ারবাডই সংযুক্ত থাকলে পাওয়া যায়"
+
+msgid "Current profile"
+msgstr "বর্তমান প্রোফাইল"
+
+msgid "Your own settings"
+msgstr "আপনার নিজের সেটিংস"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{}টি ব্যান্ড · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "নিম্ন ফ্রিকোয়েন্সি"
+
+msgid "High frequencies"
+msgstr "উচ্চ ফ্রিকোয়েন্সি"
+
+msgid "Save your favourite combinations of settings."
+msgstr "আপনার পছন্দের সেটিংসের সমন্বয় সংরক্ষণ করুন।"
+
+msgid "No settings chosen yet"
+msgstr "এখনও কোনো সেটিং বেছে নেওয়া হয়নি"
+
+msgid "Edit device screen"
+msgstr "ডিভাইসের স্ক্রিন সম্পাদনা করুন"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "শুধু একটি ইয়ারবাড সংযুক্ত। দুটি ইয়ারবাড সংযুক্ত হলে ইকুয়ালাইজার এবং আরও কিছু সেটিং পাওয়া যাবে।"
+
+msgid "Move up"
+msgstr "উপরে সরান"
+
+msgid "Move down"
+msgstr "নিচে সরান"
+
+msgid "Your device screen."
+msgstr "আপনার ডিভাইসের স্ক্রিন।"
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "যে ব্লকগুলো ব্যবহার করেন সেগুলো চালু করুন এবং ক্রম বদলাতে উপরে বা নিচে সরান।"
+
+msgid "Ready-made sets"
+msgstr "তৈরি সেট"
+
+msgid "Minimal"
+msgstr "ন্যূনতম"
+
+msgid "Standard"
+msgstr "মানক"
+
+msgid "Full"
+msgstr "সম্পূর্ণ"
+
+msgid "Done"
+msgstr "সম্পন্ন"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "ডিভাইস কার্ডের সুইচগুলো বেছে নিন। সেটিংস নিজে বদলায় না।"
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "ইকুয়ালাইজারের ব্যান্ড: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "ইকুয়ালাইজারের বক্ররেখা। একটি ফ্রিকোয়েন্সি সমন্বয় করতে টানুন, অথবা নিচের স্লাইডার ব্যবহার করুন।"
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "এই ডিভাইস শুধু বিল্ট-ইন ইকুয়ালাইজার প্রোফাইল সমর্থন করে।"
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "ডেসিবেলে মান, {} থেকে {} dB পর্যন্ত"
+
+msgid "Save profile"
+msgstr "প্রোফাইল সংরক্ষণ করুন"
+
+msgid "All profiles ({})"
+msgstr "সব প্রোফাইল ({})"
+
+msgid "Show fewer"
+msgstr "কম দেখান"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "এই ডিভাইসের জন্য ইকুয়ালাইজারের মান পাওয়া যায় না।"
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "ইকুয়ালাইজার বদলালে স্পেশিয়াল অডিও বন্ধ হয়ে যায়।"
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "গ্রাফের বিন্দু টানুন, ↑ ↓ দিয়ে স্লাইডার সরান বা মান লিখুন।"
+
+msgid "My profiles"
+msgstr "আমার প্রোফাইল"
+
+msgid "Save the current sound to come back to it later."
+msgstr "বর্তমান সাউন্ড সংরক্ষণ করুন, যাতে পরে ফিরে আসতে পারেন।"
+
+msgid "Applied"
+msgstr "প্রয়োগ হয়েছে"
+
+msgid "Bands: {}"
+msgstr "ব্যান্ড: {}"
+
+msgid "More for “{}”"
+msgstr "“{}”-এর জন্য আরও"
+
+msgid "Export"
+msgstr "এক্সপোর্ট"
+
+msgid "Delete"
+msgstr "মুছুন"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "সংরক্ষিত প্রোফাইল থেকে যাবে। দুটি ইয়ারবাড সংযুক্ত হলে সেগুলো প্রয়োগ করতে পারবেন।"
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "পুরনো ইকুয়ালাইজার প্রোফাইল: {}। এই ডিভাইসে ব্যবহার করতে সেগুলো আপনার প্রোফাইলে সরান।"
+
+msgid "Show"
+msgstr "দেখান"
+
+msgid "Hide"
+msgstr "লুকান"
+
+msgid "Move all"
+msgstr "সব সরান"
+
+msgid "Move"
+msgstr "সরান"
+
+msgid "Import and export"
+msgstr "ইমপোর্ট ও এক্সপোর্ট"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "প্রোফাইল শেয়ার করুন, ফাইলে রাখুন বা অন্য কম্পিউটারে নিয়ে যান।"
+
+msgid "Import"
+msgstr "ইমপোর্ট"
+
+msgid "Select all"
+msgstr "সব নির্বাচন করুন"
+
+msgid "Save a profile to export it."
+msgstr "এক্সপোর্ট করতে একটি প্রোফাইল সংরক্ষণ করুন।"
+
+msgid "Save to file"
+msgstr "ফাইলে সংরক্ষণ করুন"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "OpenSCQ30 প্রোফাইলসহ একটি ফাইল বা লেখা। ইমপোর্টের আগে দেখতে পাবেন কী বদলাবে।"
+
+msgid "Open file"
+msgstr "ফাইল খুলুন"
+
+msgid "Paste"
+msgstr "পেস্ট করুন"
+
+msgid "Saved to the file"
+msgstr "ফাইলে সংরক্ষণ হয়েছে"
+
+msgid "Could not save the file"
+msgstr "ফাইল সংরক্ষণ করা যায়নি"
+
+msgid "This is not an equalizer profiles file"
+msgstr "এটি ইকুয়ালাইজার প্রোফাইলের ফাইল নয়"
+
+msgid "The clipboard is empty"
+msgstr "ক্লিপবোর্ড খালি"
+
+msgid "The file is too large"
+msgstr "ফাইলটি অনেক বড়"
+
+msgid "Could not read the file"
+msgstr "ফাইল পড়া যায়নি"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "{n}টি প্রোফাইল ইমপোর্ট হয়েছে"
+msgstr[1] "{n}টি প্রোফাইল ইমপোর্ট হয়েছে"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "{n}টি প্রোফাইল সরানো হয়েছে"
+msgstr[1] "{n}টি প্রোফাইল সরানো হয়েছে"
+
+msgid "Profile saved"
+msgstr "প্রোফাইল সংরক্ষণ হয়েছে"
+
+msgid "Profile deleted"
+msgstr "প্রোফাইল মুছে ফেলা হয়েছে"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "ডিভাইসের বর্তমান ইকুয়ালাইজারের মান পুনরায় ব্যবহারযোগ্য প্রোফাইল হিসেবে সংরক্ষণ করুন।"
+
+msgid "Name"
+msgstr "নাম"
+
+msgid "My sound"
+msgstr "আমার সাউন্ড"
+
+msgid "Enter a profile name."
+msgstr "একটি প্রোফাইলের নাম লিখুন।"
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "“{}” নামে একটি প্রোফাইল আগে থেকেই আছে। এর সংরক্ষিত মান বদলাবেন?"
+
+msgid "Replace profile"
+msgstr "প্রোফাইল বদলান"
+
+msgid "Save"
+msgstr "সংরক্ষণ করুন"
+
+msgid "Delete equalizer profile?"
+msgstr "ইকুয়ালাইজার প্রোফাইল মুছবেন?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "আপনি কি নিশ্চিত যে “{}” মুছতে চান?"
+
+msgid "Import profiles"
+msgstr "প্রোফাইল ইমপোর্ট করুন"
+
+msgid "New"
+msgstr "নতুন"
+
+msgid "Replaces the saved profile"
+msgstr "সংরক্ষিত প্রোফাইলের জায়গা নেবে"
+
+msgid "{} bands, this device has {}"
+msgstr "{}টি ব্যান্ড, এই ডিভাইসে আছে {}টি"
+
+msgid "Values outside this device’s range"
+msgstr "এই ডিভাইসের সীমার বাইরের মান"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "লাল চিহ্নিত প্রোফাইলগুলো এই ডিভাইসে চলবে না, তাই ফাইলটি ইমপোর্ট করা যাবে না।"
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "{n}টি প্রোফাইল ইমপোর্ট করুন"
+msgstr[1] "{n}টি প্রোফাইল ইমপোর্ট করুন"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "{}-এর জন্য আরও অ্যাকশন"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "কোন সেটিংস প্রয়োগ হবে বাছতে সম্পাদনা ব্যবহার করুন।"
+
+msgid "+{} more"
+msgstr "আরও {}টি"
+
+msgid "Apply"
+msgstr "প্রয়োগ করুন"
+
+msgid "Edit"
+msgstr "সম্পাদনা"
+
+msgid "Matches current settings"
+msgstr "বর্তমান সেটিংসের সাথে মিলে যায়"
+
+msgid "Your sound, in one preset"
+msgstr "এক প্রিসেটে আপনার সাউন্ড"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "বর্তমান সেটিংস সংরক্ষণ করুন এবং একসাথে যেগুলো প্রয়োগ করতে চান সেগুলো বেছে নিন।"
+
+msgid "Create preset"
+msgstr "প্রিসেট তৈরি করুন"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "দুটি ইয়ারবাড সংযুক্ত হলে প্রিসেটের ইকুয়ালাইজার প্রয়োগ হয়।"
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "আমরা বর্তমান সেটিংস সংরক্ষণ করব। তারপর কোনগুলো প্রয়োগ হবে বেছে নিন।"
+
+msgid "For example, for work"
+msgstr "যেমন, কাজের জন্য"
+
+msgid "Enter a preset name."
+msgstr "একটি প্রিসেটের নাম লিখুন।"
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "“{}” আগে থেকেই আছে। এর সংরক্ষিত মান ডিভাইসের বর্তমান সেটিংস দিয়ে বদলাবেন? অন্তর্ভুক্ত সেটিংসের পছন্দ থেকে যাবে।"
+
+msgid "Replace"
+msgstr "বদলান"
+
+msgid "Create"
+msgstr "তৈরি করুন"
+
+msgid "Custom curve"
+msgstr "নিজস্ব বক্ররেখা"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "এই প্রিসেট শুধু নির্বাচিত সেটিংস প্রয়োগ করে। নির্বাচনের পরিবর্তন সঙ্গে সঙ্গে সংরক্ষিত হয়।"
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "এখনও কোনো সংরক্ষিত সেটিং নেই। শুরু করতে ডিভাইসের বর্তমান সেটিংস লোড করুন।"
+
+msgid "Load current settings"
+msgstr "বর্তমান সেটিংস লোড করুন"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "এই প্রিসেটের সংরক্ষিত মান ডিভাইসের বর্তমান সেটিংস দিয়ে বদলাবেন? অন্তর্ভুক্ত সেটিংসের পছন্দ থেকে যাবে। এতে ডিভাইস বদলায় না।"
+
+msgid "Load"
+msgstr "লোড করুন"
+
+msgid "Delete preset?"
+msgstr "প্রিসেট মুছবেন?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "“{}” মুছবেন? ডিভাইসের বর্তমান সেটিংস থেকে যাবে।"
+
+msgid "Preset “{}” applied"
+msgstr "“{}” প্রিসেট প্রয়োগ হয়েছে"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "“{}” প্রিসেট প্রয়োগ হয়েছে। দুটি ইয়ারবাড সংযুক্ত হলে এর ইকুয়ালাইজার প্রয়োগ হবে।"
+
+msgid "Preset deleted"
+msgstr "প্রিসেট মুছে ফেলা হয়েছে"
+
+msgid "Preset values replaced"
+msgstr "প্রিসেটের মান বদলানো হয়েছে"
+
+msgid "Current settings loaded into the preset"
+msgstr "বর্তমান সেটিংস প্রিসেটে লোড হয়েছে"
+
+# App settings
+msgid "Appearance"
+msgstr "চেহারা"
+
+msgid "Theme"
+msgstr "থিম"
+
+msgid "As in Windows"
+msgstr "Windows-এর মতো"
+
+msgid "Light"
+msgstr "হালকা"
+
+msgid "Dark"
+msgstr "গাঢ়"
+
+msgid "Palette"
+msgstr "প্যালেট"
+
+msgid "Colors of buttons and highlights"
+msgstr "বোতাম ও হাইলাইটের রং"
+
+msgid "Purple"
+msgstr "বেগুনি"
+
+msgid "Sage"
+msgstr "সেজ"
+
+msgid "Rose"
+msgstr "গোলাপি"
+
+msgid "Device color in pictures"
+msgstr "ছবিতে ডিভাইসের রং"
+
+msgid "As the theme"
+msgstr "থিমের মতো"
+
+msgid "Silver"
+msgstr "রুপালি"
+
+msgid "Black"
+msgstr "কালো"
+
+msgid "Sound modes"
+msgstr "সাউন্ড মোড"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "স্কেলযুক্ত ডিভাইসের জন্য দৃশ্য, যেমন Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "টাইল"
+
+msgid "Scale 1–11"
+msgstr "স্কেল ১–১১"
+
+msgid "One earbud badge"
+msgstr "একটি ইয়ারবাডের ব্যাজ"
+
+msgid "Show when only one earbud is connected"
+msgstr "শুধু একটি ইয়ারবাড সংযুক্ত থাকলে দেখান"
+
+msgid "App language"
+msgstr "অ্যাপের ভাষা"
+
+msgid "Your color.\nYour mood."
+msgstr "আপনার রং।\nআপনার মেজাজ।"
+
+msgid "A familiar character. A new space."
+msgstr "পরিচিত চরিত্র। নতুন পরিসর।"
+
+msgid "Home screen"
+msgstr "হোম স্ক্রিন"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "দরকারি ব্লকগুলো রাখুন এবং পছন্দের ক্রমে সাজান।"
+
+msgid "Edit home screen"
+msgstr "হোম স্ক্রিন সম্পাদনা করুন"
+
+msgid "About"
+msgstr "সম্পর্কে"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "Windows-এর জন্য OpenSCQ30 {} · GNU GPL 3-এর অধীনে মুক্ত সফটওয়্যার।"
+
+msgid "More"
+msgstr "আরও জানুন"
+
+msgid "Diagnostics"
+msgstr "ডায়াগনস্টিক"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "সমস্যার কারণ খুঁজতে সর্বশেষ লগ এন্ট্রিগুলো কপি করুন।"
+
+msgid "Copy logs"
+msgstr "লগ কপি করুন"

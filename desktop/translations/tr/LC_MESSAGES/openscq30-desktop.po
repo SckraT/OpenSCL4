@@ -1,0 +1,1065 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "Genel bakış"
+
+msgid "Sound mode"
+msgstr "Ses modu"
+
+msgid "Equalizer"
+msgstr "Ekolayzer"
+
+msgid "Sound and effects"
+msgstr "Ses ve efektler"
+
+msgid "Quick presets"
+msgstr "Hızlı ön ayarlar"
+
+msgid "Controls"
+msgstr "Kontroller"
+
+msgid "Comfort"
+msgstr "Konfor"
+
+msgid "Power and prompts"
+msgstr "Güç ve bildirimler"
+
+msgid "Connections"
+msgstr "Bağlantılar"
+
+msgid "Case"
+msgstr "Kutu"
+
+msgid "About the device"
+msgstr "Cihaz hakkında"
+
+msgid "Sleep"
+msgstr "Uyku"
+
+msgid "Lights"
+msgstr "Işıklar"
+
+msgid "Alarms"
+msgstr "Alarmlar"
+
+msgid "Other"
+msgstr "Diğer"
+
+msgid "My devices"
+msgstr "Cihazlarım"
+
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgid "Sound"
+msgstr "Ses"
+
+msgid "Device"
+msgstr "Cihaz"
+
+msgid "SOUND"
+msgstr "SES"
+
+msgid "DEVICE"
+msgstr "CİHAZ"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "Önemli olanı duyun."
+
+msgid "Your sound, your way."
+msgstr "Sesiniz, sizin tarzınız."
+
+msgid "Inside the sound."
+msgstr "Sesin içinde."
+
+msgid "One preset. Your settings."
+msgstr "Tek ön ayar. Sizin ayarlarınız."
+
+msgid "A touch. And you’re in control."
+msgstr "Bir dokunuş. Kontrol sizde."
+
+msgid "Comfortable listening. Every day."
+msgstr "Rahat dinleme. Her gün."
+
+msgid "Always ready."
+msgstr "Her zaman hazır."
+
+msgid "Stay connected. To two at once."
+msgstr "Bağlı kalın. Aynı anda iki cihaza."
+
+msgid "A little case. More possibilities."
+msgstr "Küçük bir kutu. Daha çok olanak."
+
+msgid "All about your device."
+msgstr "Cihazınız hakkında her şey."
+
+msgid "Your devices."
+msgstr "Cihazlarınız."
+
+msgid "Make it yours."
+msgstr "Zevkinize göre."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "Sesinize dünyanın ne kadarını katacağınızı seçin."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "Bir profil seçin ya da her frekansı ayarlayın."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "Kodek, gecikme ve sesin işlenme biçimi."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "Sevdiğiniz kombinasyonları kaydedin ve tek tıkla onlara dönün."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "Dokunuşların ne yaptığı ve hangi modlar arasında geçtiği."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "Kulaklıklarınızı alışkanlıklarınıza uyduran ayarlar."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "Hoparlörünüzü alışkanlıklarınıza uyduran ayarlar."
+
+msgid "When the device turns off and what it tells you."
+msgstr "Cihazın ne zaman kapandığı ve size neler söylediği."
+
+msgid "Switch between your phone and computer."
+msgstr "Telefonunuzla bilgisayarınız arasında geçiş yapın."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "Kutu ekranının işlevleri ve kutunun durumu."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "Pil, donanım yazılımı ve seri numaraları."
+
+msgid "All your familiar headphones in one place."
+msgstr "Tanıdık tüm kulaklıklarınız tek bir yerde."
+
+msgid "An app that feels comfortable to use."
+msgstr "Kullanması rahat bir uygulama."
+
+# Connection
+msgid "No devices"
+msgstr "Cihaz yok"
+
+msgid "Add a device"
+msgstr "Cihaz ekle"
+
+msgid "Connected"
+msgstr "Bağlandı"
+
+msgid "Connecting…"
+msgstr "Bağlanıyor…"
+
+msgid "Not connected"
+msgstr "Bağlı değil"
+
+msgid "Connected to {}"
+msgstr "{} cihazına bağlı"
+
+msgid "Connecting to {}"
+msgstr "{} cihazına bağlanıyor"
+
+msgid "Connection lost"
+msgstr "Bağlantı koptu"
+
+msgid "Bluetooth is off"
+msgstr "Bluetooth kapalı"
+
+msgid "Disconnected"
+msgstr "Bağlantı kesildi"
+
+msgid "Connecting to your headphones"
+msgstr "Kulaklığınıza bağlanılıyor"
+
+msgid "Connecting to your speaker"
+msgstr "Hoparlörünüze bağlanılıyor"
+
+msgid "Could not connect"
+msgstr "Bağlanılamadı"
+
+msgid "{} is not connected"
+msgstr "{} bağlı değil"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "Kutuyu açın veya kulaklığınızı açın. Kontroller bağlandıktan sonra görünür."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "Hoparlörünüzü açın. Kontroller bağlandıktan sonra görünür."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "Kulaklığınızın yakında olduğunu ve bu bilgisayara Bluetooth ile bağlı olduğunu kontrol edin."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "Hoparlörünüzün yakında olduğunu ve bu bilgisayara Bluetooth ile bağlı olduğunu kontrol edin."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Windows ayarlarında Bluetooth’u açın ve yeniden bağlanmayı deneyin."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "Pil düzeyini görmek ve ayarları değiştirmek için bağlanın."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "Cihaz bulunamadı. Açık ve yakında olduğundan emin olun."
+
+msgid "The device did not answer in time. Try again."
+msgstr "Cihaz zamanında yanıt vermedi. Yeniden deneyin."
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "Connect"
+msgstr "Bağlan"
+
+msgid "Connect again"
+msgstr "Yeniden bağlan"
+
+msgid "Bluetooth settings"
+msgstr "Bluetooth ayarları"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "“{}” değiştirilemedi. Cihaz önceki değerini korudu."
+
+msgid "Retry"
+msgstr "Yeniden dene"
+
+msgid "Close"
+msgstr "Kapat"
+
+# My devices
+msgid "Open"
+msgstr "Aç"
+
+msgid "Forget device"
+msgstr "Cihazı unut"
+
+msgid "Demo device · Not connected"
+msgstr "Demo cihaz · Bağlı değil"
+
+msgid "Saved device · Not connected"
+msgstr "Kayıtlı cihaz · Bağlı değil"
+
+msgid "Add device"
+msgstr "Cihaz ekle"
+
+msgid "A model, then its paired device"
+msgstr "Önce model, sonra eşlenmiş cihaz"
+
+msgid "Your sound starts here."
+msgstr "Sesiniz burada başlar."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "Ses ve kontrolleri ayarlamak için kulaklığınızı ekleyin."
+
+msgid "Forget {}?"
+msgstr "{} unutulsun mu?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "Cihaz, uygulamadaki profilleri ve ön ayarlarıyla birlikte bu listeden çıkar. Windows ile eşleşmesi kalır."
+
+msgid "Forget"
+msgstr "Unut"
+
+# Adding a device
+msgid "Find your model."
+msgstr "Modelinizi bulun."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "Cihazınızın desteklediği ayarları görmek için tam modeli seçin."
+
+msgid "Model name or code, such as A3954"
+msgstr "Model adı veya kodu, örneğin A3954"
+
+msgid "All"
+msgstr "Tümü"
+
+msgid "Earbuds"
+msgstr "Kulak içi"
+
+msgid "Over-ear"
+msgstr "Kulak üstü"
+
+msgid "Open-ear"
+msgstr "Açık kulak"
+
+msgid "Speakers"
+msgstr "Hoparlörler"
+
+msgid "No models found. Try another name or code."
+msgstr "Model bulunamadı. Başka bir ad veya kod deneyin."
+
+msgid "Ready to connect your headphones?"
+msgstr "Kulaklığınızı bağlamaya hazır mısınız?"
+
+msgid "Ready to connect your speaker?"
+msgstr "Hoparlörünüzü bağlamaya hazır mısınız?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Windows ile eşlenmiş cihazı seçin. Listede yoksa önce Bluetooth ayarlarında eşleyin."
+
+msgid "Another model"
+msgstr "Başka model"
+
+msgid "Demo mode"
+msgstr "Demo modu"
+
+msgid "Explore the interface without real headphones"
+msgstr "Arayüzü gerçek kulaklık olmadan keşfedin"
+
+msgid "Paired devices"
+msgstr "Eşlenmiş cihazlar"
+
+msgid "Refresh"
+msgstr "Yenile"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "Bluetooth kapalı. Windows ayarlarında açın."
+
+msgid "Looking for paired devices…"
+msgstr "Eşlenmiş cihazlar aranıyor…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "Kulaklığınızın açık ve Windows ile eşlenmiş olduğundan emin olun, sonra yenileyin."
+
+msgid "Simulated device data"
+msgstr "Benzetilmiş cihaz verileri"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Windows’ta eşlenmiş · seçilen modele benziyor"
+
+msgid "Paired in Windows"
+msgstr "Windows’ta eşlenmiş"
+
+msgid "Could not add the device."
+msgstr "Cihaz eklenemedi."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "Demo modu benzetilmiş veriler kullanır ve gerçek kulaklıkları kontrol etmez."
+
+msgid "Back"
+msgstr "Geri"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "Mod ve güç"
+
+msgid "Sound mode from 1 to 11"
+msgstr "1’den 11’e ses modu"
+
+msgid "Transparency, strength {}"
+msgstr "Şeffaflık, güç {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "Gürültü engelleme, güç {}"
+
+msgid "Your strength is remembered."
+msgstr "Seçtiğiniz güç hatırlanır."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "Gürültü engellemeye veya şeffaflığa dönüldüğünde o modun son gücü kullanılır."
+
+msgid "Lowers the noise around you."
+msgstr "Etrafınızdaki gürültüyü azaltır."
+
+msgid "Keeps the sounds around you audible."
+msgstr "Etrafınızdaki sesleri duyulur tutar."
+
+msgid "No processing of ambient sound."
+msgstr "Ortam sesi işlenmez."
+
+msgid "Single press"
+msgstr "Tek dokunuş"
+
+msgid "Double press"
+msgstr "Çift dokunuş"
+
+msgid "Triple press"
+msgstr "Üçlü dokunuş"
+
+msgid "Long press"
+msgstr "Uzun basma"
+
+msgid "Slide up"
+msgstr "Yukarı kaydırma"
+
+msgid "Slide down"
+msgstr "Aşağı kaydırma"
+
+msgid "Noise canceling"
+msgstr "Gürültü engelleme"
+
+msgid "Transparency"
+msgstr "Şeffaflık"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Noise canceling strength"
+msgstr "Gürültü engelleme gücü"
+
+msgid "Transparency strength"
+msgstr "Şeffaflık gücü"
+
+msgid "Airplane mode updates"
+msgstr "Uçak modu güncellemeleri"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "Mikrofonlardaki rüzgâr gürültüsünü azaltır"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "Bir kulaklığı çıkardığınızda otomatik duraklat"
+
+msgid "Lower the music while you talk"
+msgstr "Siz konuşurken müziği kıs"
+
+msgid "When the music comes back after you stop talking"
+msgstr "Konuşmayı bıraktıktan sonra müziğin ne zaman döneceği"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "Kulaklık gevşek oturduğunda sesi dolgun tutar"
+
+msgid "Limit the volume of your earbuds"
+msgstr "Kulaklığınızın ses düzeyini sınırlayın"
+
+msgid "Limit the volume of your speaker"
+msgstr "Hoparlörünüzün ses düzeyini sınırlayın"
+
+msgid "Volume of the speaker"
+msgstr "Hoparlörün ses düzeyi"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Bluetooth üzerinden yüksek kaliteli ses"
+
+msgid "A wider sound stage for music and video"
+msgstr "Müzik ve video için daha geniş bir ses sahnesi"
+
+msgid "Connect to up to two devices at once"
+msgstr "Aynı anda en fazla iki cihaza bağlanın"
+
+msgid "When the device is not in use"
+msgstr "Cihaz kullanılmadığında"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "Pil azaldığında sesli uyarı"
+
+msgid "Voice messages about modes and connections"
+msgstr "Modlar ve bağlantılar hakkında sesli mesajlar"
+
+msgid "Turn the speaker off now"
+msgstr "Hoparlörü şimdi kapat"
+
+msgid "Show this function on the case screen"
+msgstr "Bu işlevi kutu ekranında göster"
+
+msgid "Independent of the app language"
+msgstr "Uygulama dilinden bağımsız"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "Düğmelerin fabrika işlevlerini geri getir"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "Kopyala"
+
+msgid "Copied"
+msgstr "Kopyalandı"
+
+msgid "Reset"
+msgstr "Sıfırla"
+
+msgid "Turn off"
+msgstr "Kapat"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "Kulaklığınız eşlenmiş cihaz bildirmiyor."
+
+msgid "Volume"
+msgstr "Ses düzeyi"
+
+msgid "Presses"
+msgstr "Dokunuşlar"
+
+msgid "Switching modes"
+msgstr "Mod geçişi"
+
+msgid "Case screen"
+msgstr "Kutu ekranı"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Connected devices"
+msgstr "Bağlı cihazlar"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "Ortam ses modu eyleminin aralarında geçiş yaptığı modlar."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "Kulaklığın ses sınırı, güvenli dinleme süresiyle ilgili önerilerin yerini tutmaz."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "Hoparlörün ses sınırı, güvenli dinleme süresiyle ilgili önerilerin yerini tutmaz."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "Bu liste yakındaki Bluetooth cihazlarını değil, kulaklığınızla eşlenmiş cihazları gösterir. Bu bilgisayarı unutmak kulaklığın kontrolünü sonlandırır."
+
+msgid "Left earbud"
+msgstr "Sol kulaklık"
+
+msgid "Right earbud"
+msgstr "Sağ kulaklık"
+
+msgid "Earbud"
+msgstr "Kulaklık"
+
+msgid "Left"
+msgstr "Sol"
+
+msgid "Right"
+msgstr "Sağ"
+
+msgid "Actions for the chosen earbud."
+msgstr "Seçilen kulaklığın eylemleri."
+
+msgid "Actions of the buttons on the device."
+msgstr "Cihazdaki düğmelerin eylemleri."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "Bu eylemleri cihazın kendisi yapar. Windows medya tuşları her zamanki gibi çalışır."
+
+msgid "Small details. More comfort."
+msgstr "Küçük ayrıntılar. Daha fazla konfor."
+
+msgid "Let your earbuds adapt to you."
+msgstr "Kulaklığınız size uysun."
+
+msgid "Let your speaker adapt to you."
+msgstr "Hoparlörünüz size uysun."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "Bu ayarlar cihazda saklanır ve her ses kaynağıyla çalışır."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "Otomatik kapanma, cihaz ses çalmıyorken çalışır."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth ve cihazlar"
+
+msgid "Pairing and removing devices"
+msgstr "Cihaz eşleme ve kaldırma"
+
+msgid "Output device and volume"
+msgstr "Çıkış cihazı ve ses düzeyi"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "Windows sesi LDAC olmadan çalar. Bu ayar telefonunuz ve LDAC destekli diğer kaynaklar içindir."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "Liberty 4 Pro’da ekolayzeri değiştirmek uzamsal sesi kapatır. Buradan yeniden açabilirsiniz."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "Kutu ekranında bulunacak işlevleri seçin. Kutunun dili uygulama dilinden bağımsızdır."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "Cihaz bu bilgileri kendisi bildirir ve güncel tutar."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "Seri numarası ve donanım yazılımı sürümü desteğe başvururken işe yarar."
+
+# Overview
+msgid "Presses and slides"
+msgstr "Dokunuşlar ve kaydırmalar"
+
+msgid "Presses and switching modes"
+msgstr "Dokunuşlar ve mod geçişi"
+
+msgid "on"
+msgstr "açık"
+
+msgid "off"
+msgstr "kapalı"
+
+msgid "On: {} of {}"
+msgstr "Açık: {} / {}"
+
+msgid "Volume: {}"
+msgstr "Ses düzeyi: {}"
+
+msgid "Auto power off: {}"
+msgstr "Otomatik kapanma: {}"
+
+msgid "Two devices at once"
+msgstr "Aynı anda iki cihaz"
+
+msgid "One device at a time"
+msgstr "Tek seferde bir cihaz"
+
+msgid "Case battery {}"
+msgstr "Kutu pili {}"
+
+msgid "Battery"
+msgstr "Pil"
+
+msgid "1 earbud"
+msgstr "1 kulaklık"
+
+msgid "Add quick toggles"
+msgstr "Hızlı anahtar ekle"
+
+msgid "Quick toggles"
+msgstr "Hızlı anahtarlar"
+
+msgid "Your sound"
+msgstr "Sesiniz"
+
+msgid "All presets"
+msgstr "Tüm ön ayarlar"
+
+msgid "Customize"
+msgstr "Özelleştir"
+
+msgid "Available when both earbuds are connected"
+msgstr "İki kulaklık da bağlıyken kullanılabilir"
+
+msgid "Current profile"
+msgstr "Geçerli profil"
+
+msgid "Your own settings"
+msgstr "Kendi ayarlarınız"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} bant · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "Düşük frekanslar"
+
+msgid "High frequencies"
+msgstr "Yüksek frekanslar"
+
+msgid "Save your favourite combinations of settings."
+msgstr "Sevdiğiniz ayar kombinasyonlarını kaydedin."
+
+msgid "No settings chosen yet"
+msgstr "Henüz ayar seçilmedi"
+
+msgid "Edit device screen"
+msgstr "Cihaz ekranını düzenle"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "Yalnızca bir kulaklık bağlı. Ekolayzer ve bazı diğer ayarlar iki kulaklık da bağlandığında kullanılabilir."
+
+msgid "Move up"
+msgstr "Yukarı taşı"
+
+msgid "Move down"
+msgstr "Aşağı taşı"
+
+msgid "Your device screen."
+msgstr "Cihaz ekranınız."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "Kullandığınız blokları açın ve sırayı değiştirmek için yukarı veya aşağı taşıyın."
+
+msgid "Ready-made sets"
+msgstr "Hazır setler"
+
+msgid "Minimal"
+msgstr "En az"
+
+msgid "Standard"
+msgstr "Standart"
+
+msgid "Full"
+msgstr "Tam"
+
+msgid "Done"
+msgstr "Bitti"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "Cihaz kartındaki anahtarları seçin. Ayarların kendisi değişmez."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "Ekolayzer bantları: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "Ekolayzer eğrisi. Bir frekansı ayarlamak için sürükleyin ya da aşağıdaki kaydırıcıları kullanın."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "Bu cihaz yalnızca yerleşik ekolayzer profillerini destekler."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "Desibel cinsinden değerler, {} ile {} dB arası"
+
+msgid "Save profile"
+msgstr "Profili kaydet"
+
+msgid "All profiles ({})"
+msgstr "Tüm profiller ({})"
+
+msgid "Show fewer"
+msgstr "Daha az göster"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "Bu cihaz için ekolayzer değerleri kullanılamıyor."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "Ekolayzeri değiştirmek uzamsal sesi kapatır."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "Grafikteki noktaları sürükleyin, kaydırıcıları ↑ ↓ tuşlarıyla hareket ettirin veya değerleri yazın."
+
+msgid "My profiles"
+msgstr "Profillerim"
+
+msgid "Save the current sound to come back to it later."
+msgstr "Daha sonra geri dönmek için geçerli sesi kaydedin."
+
+msgid "Applied"
+msgstr "Uygulandı"
+
+msgid "Bands: {}"
+msgstr "Bant: {}"
+
+msgid "More for “{}”"
+msgstr "“{}” için daha fazlası"
+
+msgid "Export"
+msgstr "Dışa aktarma"
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "Kayıtlı profiller yerinde kalır. İki kulaklık da bağlandığında uygulayabilirsiniz."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "Eski ekolayzer profilleri: {}. Bu cihazla kullanmak için profillerinize taşıyın."
+
+msgid "Show"
+msgstr "Göster"
+
+msgid "Hide"
+msgstr "Gizle"
+
+msgid "Move all"
+msgstr "Tümünü taşı"
+
+msgid "Move"
+msgstr "Taşı"
+
+msgid "Import and export"
+msgstr "İçe ve dışa aktarma"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "Profilleri paylaşın, bir dosyada saklayın ya da başka bir bilgisayara taşıyın."
+
+msgid "Import"
+msgstr "İçe aktarma"
+
+msgid "Select all"
+msgstr "Tümünü seç"
+
+msgid "Save a profile to export it."
+msgstr "Dışa aktarmak için bir profil kaydedin."
+
+msgid "Save to file"
+msgstr "Dosyaya kaydet"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "OpenSCQ30 profilleri içeren bir dosya veya metin. İçe aktarmadan önce nelerin değişeceğini göreceksiniz."
+
+msgid "Open file"
+msgstr "Dosya aç"
+
+msgid "Paste"
+msgstr "Yapıştır"
+
+msgid "Saved to the file"
+msgstr "Dosyaya kaydedildi"
+
+msgid "Could not save the file"
+msgstr "Dosya kaydedilemedi"
+
+msgid "This is not an equalizer profiles file"
+msgstr "Bu bir ekolayzer profili dosyası değil"
+
+msgid "The clipboard is empty"
+msgstr "Pano boş"
+
+msgid "The file is too large"
+msgstr "Dosya çok büyük"
+
+msgid "Could not read the file"
+msgstr "Dosya okunamadı"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "{n} profil içe aktarıldı"
+msgstr[1] "{n} profil içe aktarıldı"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "{n} profil taşındı"
+msgstr[1] "{n} profil taşındı"
+
+msgid "Profile saved"
+msgstr "Profil kaydedildi"
+
+msgid "Profile deleted"
+msgstr "Profil silindi"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "Cihazın geçerli ekolayzer değerlerini yeniden kullanılabilir bir profil olarak kaydedin."
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "My sound"
+msgstr "Benim sesim"
+
+msgid "Enter a profile name."
+msgstr "Bir profil adı girin."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "“{}” adlı bir profil zaten var. Kayıtlı değerleri değiştirilsin mi?"
+
+msgid "Replace profile"
+msgstr "Profili değiştir"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Delete equalizer profile?"
+msgstr "Ekolayzer profili silinsin mi?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "“{}” profilini silmek istediğinizden emin misiniz?"
+
+msgid "Import profiles"
+msgstr "Profilleri içe aktar"
+
+msgid "New"
+msgstr "Yeni"
+
+msgid "Replaces the saved profile"
+msgstr "Kayıtlı profilin yerini alır"
+
+msgid "{} bands, this device has {}"
+msgstr "{} bant, bu cihazda {} var"
+
+msgid "Values outside this device’s range"
+msgstr "Değerler bu cihazın aralığının dışında"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "Kırmızıyla işaretlenen profiller bu cihaza uymuyor, bu yüzden dosya içe aktarılamaz."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "{n} profili içe aktar"
+msgstr[1] "{n} profili içe aktar"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "{} için diğer eylemler"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "Hangi ayarların uygulanacağını seçmek için Düzenle’yi kullanın."
+
+msgid "+{} more"
+msgstr "+{} tane daha"
+
+msgid "Apply"
+msgstr "Uygula"
+
+msgid "Edit"
+msgstr "Düzenle"
+
+msgid "Matches current settings"
+msgstr "Geçerli ayarlarla aynı"
+
+msgid "Your sound, in one preset"
+msgstr "Sesiniz tek bir ön ayarda"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "Geçerli ayarlarınızı kaydedin ve birlikte uygulamak istediklerinizi seçin."
+
+msgid "Create preset"
+msgstr "Ön ayar oluştur"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "Ön ayarlardaki ekolayzer iki kulaklık da bağlandığında uygulanır."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "Geçerli ayarları kaydedeceğiz. Ardından hangilerinin uygulanacağını seçin."
+
+msgid "For example, for work"
+msgstr "Örneğin iş için"
+
+msgid "Enter a preset name."
+msgstr "Bir ön ayar adı girin."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "“{}” zaten var. Kayıtlı değerleri cihazın geçerli ayarlarıyla değiştirilsin mi? Dahil edilen ayar seçiminiz korunur."
+
+msgid "Replace"
+msgstr "Değiştir"
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid "Custom curve"
+msgstr "Özel eğri"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "Bu ön ayar yalnızca seçili ayarları uygular. Seçimdeki değişiklikler hemen kaydedilir."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "Henüz kayıtlı ayar yok. Başlamak için cihazın geçerli ayarlarını yükleyin."
+
+msgid "Load current settings"
+msgstr "Geçerli ayarları yükle"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "Bu ön ayarın kayıtlı değerleri cihazın geçerli ayarlarıyla değiştirilsin mi? Dahil edilen ayar seçiminiz korunur. Cihazın kendisi değişmez."
+
+msgid "Load"
+msgstr "Yükle"
+
+msgid "Delete preset?"
+msgstr "Ön ayar silinsin mi?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "“{}” silinsin mi? Cihazın geçerli ayarları korunur."
+
+msgid "Preset “{}” applied"
+msgstr "“{}” ön ayarı uygulandı"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "“{}” ön ayarı uygulandı. Ekolayzeri iki kulaklık da bağlandığında uygulanacak."
+
+msgid "Preset deleted"
+msgstr "Ön ayar silindi"
+
+msgid "Preset values replaced"
+msgstr "Ön ayar değerleri değiştirildi"
+
+msgid "Current settings loaded into the preset"
+msgstr "Geçerli ayarlar ön ayara yüklendi"
+
+# App settings
+msgid "Appearance"
+msgstr "Görünüm"
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "As in Windows"
+msgstr "Windows’taki gibi"
+
+msgid "Light"
+msgstr "Açık"
+
+msgid "Dark"
+msgstr "Koyu"
+
+msgid "Palette"
+msgstr "Palet"
+
+msgid "Colors of buttons and highlights"
+msgstr "Düğme ve vurgu renkleri"
+
+msgid "Purple"
+msgstr "Mor"
+
+msgid "Sage"
+msgstr "Adaçayı"
+
+msgid "Rose"
+msgstr "Gül"
+
+msgid "Device color in pictures"
+msgstr "Resimlerdeki cihaz rengi"
+
+msgid "As the theme"
+msgstr "Tema gibi"
+
+msgid "Silver"
+msgstr "Gümüş"
+
+msgid "Black"
+msgstr "Siyah"
+
+msgid "Sound modes"
+msgstr "Ses modları"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "Liberty 4 Pro gibi ölçekli cihazlar için görünüm"
+
+msgid "Tiles"
+msgstr "Kutucuklar"
+
+msgid "Scale 1–11"
+msgstr "Ölçek 1–11"
+
+msgid "One earbud badge"
+msgstr "Tek kulaklık rozeti"
+
+msgid "Show when only one earbud is connected"
+msgstr "Yalnızca bir kulaklık bağlıyken göster"
+
+msgid "App language"
+msgstr "Uygulama dili"
+
+msgid "Your color.\nYour mood."
+msgstr "Sizin renginiz.\nSizin ruh haliniz."
+
+msgid "A familiar character. A new space."
+msgstr "Tanıdık bir karakter. Yeni bir alan."
+
+msgid "Home screen"
+msgstr "Ana ekran"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "İhtiyacınız olan blokları tutun ve istediğiniz sıraya koyun."
+
+msgid "Edit home screen"
+msgstr "Ana ekranı düzenle"
+
+msgid "About"
+msgstr "Hakkında"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "Windows için OpenSCQ30 {} · GNU GPL 3 lisanslı özgür yazılım."
+
+msgid "More"
+msgstr "Daha fazla"
+
+msgid "Diagnostics"
+msgstr "Tanılama"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "Bir sorunun nedenini bulmak için son günlük kayıtlarını kopyalayın."
+
+msgid "Copy logs"
+msgstr "Günlükleri kopyala"

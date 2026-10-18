@@ -1,0 +1,1065 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: openscq30-desktop\n"
+"Language: pt-BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+# Sidebar and page names
+msgid "Overview"
+msgstr "Visão geral"
+
+msgid "Sound mode"
+msgstr "Modo de som"
+
+msgid "Equalizer"
+msgstr "Equalizador"
+
+msgid "Sound and effects"
+msgstr "Som e efeitos"
+
+msgid "Quick presets"
+msgstr "Predefinições rápidas"
+
+msgid "Controls"
+msgstr "Controles"
+
+msgid "Comfort"
+msgstr "Conforto"
+
+msgid "Power and prompts"
+msgstr "Energia e avisos"
+
+msgid "Connections"
+msgstr "Conexões"
+
+msgid "Case"
+msgstr "Estojo"
+
+msgid "About the device"
+msgstr "Sobre o dispositivo"
+
+msgid "Sleep"
+msgstr "Sono"
+
+msgid "Lights"
+msgstr "Luzes"
+
+msgid "Alarms"
+msgstr "Alarmes"
+
+msgid "Other"
+msgstr "Outros"
+
+msgid "My devices"
+msgstr "Meus dispositivos"
+
+msgid "Settings"
+msgstr "Configurações"
+
+msgid "Sound"
+msgstr "Som"
+
+msgid "Device"
+msgstr "Dispositivo"
+
+msgid "SOUND"
+msgstr "SOM"
+
+msgid "DEVICE"
+msgstr "DISPOSITIVO"
+
+# Slogans and descriptions, as in the Android app
+msgid "Hear what matters."
+msgstr "Ouça o que importa."
+
+msgid "Your sound, your way."
+msgstr "Seu som, do seu jeito."
+
+msgid "Inside the sound."
+msgstr "Dentro do som."
+
+msgid "One preset. Your settings."
+msgstr "Uma predefinição. Suas configurações."
+
+msgid "A touch. And you’re in control."
+msgstr "Um toque. E você no controle."
+
+msgid "Comfortable listening. Every day."
+msgstr "Audição confortável. Todos os dias."
+
+msgid "Always ready."
+msgstr "Sempre pronto."
+
+msgid "Stay connected. To two at once."
+msgstr "Fique conectado. A dois ao mesmo tempo."
+
+msgid "A little case. More possibilities."
+msgstr "Um estojo pequeno. Mais possibilidades."
+
+msgid "All about your device."
+msgstr "Tudo sobre o seu dispositivo."
+
+msgid "Your devices."
+msgstr "Seus dispositivos."
+
+msgid "Make it yours."
+msgstr "Do seu jeito."
+
+msgid "Choose how much of the world to let into your sound."
+msgstr "Escolha quanto do mundo deixar entrar no seu som."
+
+msgid "Pick a profile or tune every frequency."
+msgstr "Escolha um perfil ou ajuste cada frequência."
+
+msgid "Codec, latency and how the sound is processed."
+msgstr "Codec, latência e como o som é processado."
+
+msgid "Save your favourite combinations and return to them with a click."
+msgstr "Salve suas combinações favoritas e volte a elas com um clique."
+
+msgid "What presses do, and which modes they switch between."
+msgstr "O que os toques fazem e entre quais modos alternam."
+
+msgid "Settings that adapt your earbuds to your habits."
+msgstr "Configurações que adaptam seus fones aos seus hábitos."
+
+msgid "Settings that adapt your speaker to your habits."
+msgstr "Configurações que adaptam sua caixa de som aos seus hábitos."
+
+msgid "When the device turns off and what it tells you."
+msgstr "Quando o dispositivo desliga e o que ele avisa."
+
+msgid "Switch between your phone and computer."
+msgstr "Alterne entre o celular e o computador."
+
+msgid "The case screen’s features and how the case is doing."
+msgstr "As funções da tela do estojo e o estado dele."
+
+msgid "Battery, firmware and serial numbers."
+msgstr "Bateria, firmware e números de série."
+
+msgid "All your familiar headphones in one place."
+msgstr "Todos os seus fones conhecidos em um só lugar."
+
+msgid "An app that feels comfortable to use."
+msgstr "Um app confortável de usar."
+
+# Connection
+msgid "No devices"
+msgstr "Nenhum dispositivo"
+
+msgid "Add a device"
+msgstr "Adicionar um dispositivo"
+
+msgid "Connected"
+msgstr "Conectado"
+
+msgid "Connecting…"
+msgstr "Conectando…"
+
+msgid "Not connected"
+msgstr "Não conectado"
+
+msgid "Connected to {}"
+msgstr "Conectado a {}"
+
+msgid "Connecting to {}"
+msgstr "Conectando a {}"
+
+msgid "Connection lost"
+msgstr "Conexão perdida"
+
+msgid "Bluetooth is off"
+msgstr "O Bluetooth está desligado"
+
+msgid "Disconnected"
+msgstr "Desconectado"
+
+msgid "Connecting to your headphones"
+msgstr "Conectando aos seus fones"
+
+msgid "Connecting to your speaker"
+msgstr "Conectando à sua caixa de som"
+
+msgid "Could not connect"
+msgstr "Não foi possível conectar"
+
+msgid "{} is not connected"
+msgstr "{} não está conectado"
+
+msgid "Open the case or turn on your headphones. Controls will appear once connected."
+msgstr "Abra o estojo ou ligue seus fones. Os controles aparecem depois da conexão."
+
+msgid "Turn on your speaker. Controls will appear once connected."
+msgstr "Ligue sua caixa de som. Os controles aparecem depois da conexão."
+
+msgid "Check that your headphones are nearby and connected to this computer by Bluetooth."
+msgstr "Verifique se seus fones estão por perto e conectados a este computador por Bluetooth."
+
+msgid "Check that your speaker is nearby and connected to this computer by Bluetooth."
+msgstr "Verifique se sua caixa de som está por perto e conectada a este computador por Bluetooth."
+
+msgid "Turn on Bluetooth in Windows settings, then try connecting again."
+msgstr "Ligue o Bluetooth nas configurações do Windows e tente conectar de novo."
+
+msgid "Connect to see battery levels and change settings."
+msgstr "Conecte para ver a bateria e alterar as configurações."
+
+msgid "The device was not found. Make sure it is turned on and nearby."
+msgstr "O dispositivo não foi encontrado. Verifique se ele está ligado e por perto."
+
+msgid "The device did not answer in time. Try again."
+msgstr "O dispositivo não respondeu a tempo. Tente de novo."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Connect"
+msgstr "Conectar"
+
+msgid "Connect again"
+msgstr "Conectar de novo"
+
+msgid "Bluetooth settings"
+msgstr "Configurações de Bluetooth"
+
+msgid "Could not change “{}”. The device kept its previous value."
+msgstr "Não foi possível alterar “{}”. O dispositivo manteve o valor anterior."
+
+msgid "Retry"
+msgstr "Tentar de novo"
+
+msgid "Close"
+msgstr "Fechar"
+
+# My devices
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Forget device"
+msgstr "Esquecer dispositivo"
+
+msgid "Demo device · Not connected"
+msgstr "Dispositivo de demonstração · Não conectado"
+
+msgid "Saved device · Not connected"
+msgstr "Dispositivo salvo · Não conectado"
+
+msgid "Add device"
+msgstr "Adicionar dispositivo"
+
+msgid "A model, then its paired device"
+msgstr "Um modelo, depois o dispositivo pareado"
+
+msgid "Your sound starts here."
+msgstr "Seu som começa aqui."
+
+msgid "Add your headphones to adjust sound and controls."
+msgstr "Adicione seus fones para ajustar som e controles."
+
+msgid "Forget {}?"
+msgstr "Esquecer {}?"
+
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
+msgstr "O dispositivo sai desta lista junto com seus perfis e predefinições no app. O pareamento com o Windows continua."
+
+msgid "Forget"
+msgstr "Esquecer"
+
+# Adding a device
+msgid "Find your model."
+msgstr "Encontre seu modelo."
+
+msgid "Choose the exact model so you see the controls your device supports."
+msgstr "Escolha o modelo exato para ver as configurações compatíveis com seu dispositivo."
+
+msgid "Model name or code, such as A3954"
+msgstr "Nome ou código do modelo, como A3954"
+
+msgid "All"
+msgstr "Todos"
+
+msgid "Earbuds"
+msgstr "Fones intra-auriculares"
+
+msgid "Over-ear"
+msgstr "Over-ear"
+
+msgid "Open-ear"
+msgstr "Abertos"
+
+msgid "Speakers"
+msgstr "Caixas de som"
+
+msgid "No models found. Try another name or code."
+msgstr "Nenhum modelo encontrado. Tente outro nome ou código."
+
+msgid "Ready to connect your headphones?"
+msgstr "Pronto para conectar seus fones?"
+
+msgid "Ready to connect your speaker?"
+msgstr "Pronto para conectar sua caixa de som?"
+
+msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Escolha o dispositivo pareado com o Windows. Se ele não estiver na lista, pareie-o antes nas configurações de Bluetooth."
+
+msgid "Another model"
+msgstr "Outro modelo"
+
+msgid "Demo mode"
+msgstr "Modo de demonstração"
+
+msgid "Explore the interface without real headphones"
+msgstr "Explore a interface sem fones de verdade"
+
+msgid "Paired devices"
+msgstr "Dispositivos pareados"
+
+msgid "Refresh"
+msgstr "Atualizar"
+
+msgid "Bluetooth is off. Turn it on in Windows settings."
+msgstr "O Bluetooth está desligado. Ligue-o nas configurações do Windows."
+
+msgid "Looking for paired devices…"
+msgstr "Procurando dispositivos pareados…"
+
+msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
+msgstr "Verifique se seus fones estão ligados e pareados com o Windows e atualize."
+
+msgid "Simulated device data"
+msgstr "Dados de dispositivo simulados"
+
+msgid "Paired in Windows · looks like the chosen model"
+msgstr "Pareado no Windows · parece o modelo escolhido"
+
+msgid "Paired in Windows"
+msgstr "Pareado no Windows"
+
+msgid "Could not add the device."
+msgstr "Não foi possível adicionar o dispositivo."
+
+msgid "Demo mode uses simulated device data and does not control real headphones."
+msgstr "O modo de demonstração usa dados simulados e não controla fones de verdade."
+
+msgid "Back"
+msgstr "Voltar"
+
+# Section pages
+msgid "Mode and strength"
+msgstr "Modo e intensidade"
+
+msgid "Sound mode from 1 to 11"
+msgstr "Modo de som de 1 a 11"
+
+msgid "Transparency, strength {}"
+msgstr "Transparência, intensidade {}"
+
+msgid "Noise canceling, strength {}"
+msgstr "Cancelamento de ruído, intensidade {}"
+
+msgid "Your strength is remembered."
+msgstr "Sua intensidade fica guardada."
+
+msgid "Back in noise canceling or transparency, the last strength of that mode is used."
+msgstr "Ao voltar ao cancelamento de ruído ou à transparência, é usada a última intensidade desse modo."
+
+msgid "Lowers the noise around you."
+msgstr "Reduz o ruído ao seu redor."
+
+msgid "Keeps the sounds around you audible."
+msgstr "Mantém audíveis os sons ao seu redor."
+
+msgid "No processing of ambient sound."
+msgstr "Sem processamento do som ambiente."
+
+msgid "Single press"
+msgstr "Toque único"
+
+msgid "Double press"
+msgstr "Toque duplo"
+
+msgid "Triple press"
+msgstr "Toque triplo"
+
+msgid "Long press"
+msgstr "Toque longo"
+
+msgid "Slide up"
+msgstr "Deslizar para cima"
+
+msgid "Slide down"
+msgstr "Deslizar para baixo"
+
+msgid "Noise canceling"
+msgstr "Cancelamento de ruído"
+
+msgid "Transparency"
+msgstr "Transparência"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Noise canceling strength"
+msgstr "Intensidade do cancelamento de ruído"
+
+msgid "Transparency strength"
+msgstr "Intensidade da transparência"
+
+msgid "Airplane mode updates"
+msgstr "Atualizações do modo avião"
+
+msgid "Lowers wind noise in the microphones"
+msgstr "Reduz o ruído do vento nos microfones"
+
+msgid "Pause automatically when you remove an earbud"
+msgstr "Pausar ao tirar um fone"
+
+msgid "Lower the music while you talk"
+msgstr "Abaixar a música enquanto você fala"
+
+msgid "When the music comes back after you stop talking"
+msgstr "Quando a música volta depois que você para de falar"
+
+msgid "Keeps the sound full when an earbud sits loosely"
+msgstr "Mantém o som cheio quando um fone fica frouxo"
+
+msgid "Limit the volume of your earbuds"
+msgstr "Limitar o volume dos seus fones"
+
+msgid "Limit the volume of your speaker"
+msgstr "Limitar o volume da sua caixa de som"
+
+msgid "Volume of the speaker"
+msgstr "Volume da caixa de som"
+
+msgid "High-quality sound over Bluetooth"
+msgstr "Som de alta qualidade por Bluetooth"
+
+msgid "A wider sound stage for music and video"
+msgstr "Um palco sonoro mais amplo para música e vídeo"
+
+msgid "Connect to up to two devices at once"
+msgstr "Conecte até dois dispositivos ao mesmo tempo"
+
+msgid "When the device is not in use"
+msgstr "Quando o dispositivo não está em uso"
+
+msgid "A voice prompt when the battery runs low"
+msgstr "Um aviso de voz quando a bateria está fraca"
+
+msgid "Voice messages about modes and connections"
+msgstr "Mensagens de voz sobre modos e conexões"
+
+msgid "Turn the speaker off now"
+msgstr "Desligar a caixa de som agora"
+
+msgid "Show this function on the case screen"
+msgstr "Mostrar esta função na tela do estojo"
+
+msgid "Independent of the app language"
+msgstr "Independente do idioma do app"
+
+msgid "Bring back what the buttons did out of the box"
+msgstr "Restaurar as funções originais dos botões"
+
+msgid "dB"
+msgstr "dB"
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Copied"
+msgstr "Copiado"
+
+msgid "Reset"
+msgstr "Redefinir"
+
+msgid "Turn off"
+msgstr "Desligar"
+
+msgid "No paired devices reported by your earbuds."
+msgstr "Seus fones não informam dispositivos pareados."
+
+msgid "Volume"
+msgstr "Volume"
+
+msgid "Presses"
+msgstr "Toques"
+
+msgid "Switching modes"
+msgstr "Troca de modos"
+
+msgid "Case screen"
+msgstr "Tela do estojo"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Connected devices"
+msgstr "Dispositivos conectados"
+
+msgid "The modes the ambient sound mode action switches between."
+msgstr "Os modos entre os quais a ação do modo de som ambiente alterna."
+
+msgid "The earbud volume limit does not replace guidance on safe listening duration."
+msgstr "O limite de volume dos fones não substitui as orientações sobre o tempo seguro de audição."
+
+msgid "The speaker’s volume limit does not replace guidance on safe listening duration."
+msgstr "O limite de volume da caixa de som não substitui as orientações sobre o tempo seguro de audição."
+
+msgid "This list shows devices paired with your earbuds, not nearby Bluetooth devices. Forgetting this computer ends control of the earbuds."
+msgstr "Esta lista mostra os dispositivos pareados com seus fones, não os dispositivos Bluetooth por perto. Esquecer este computador encerra o controle dos fones."
+
+msgid "Left earbud"
+msgstr "Fone esquerdo"
+
+msgid "Right earbud"
+msgstr "Fone direito"
+
+msgid "Earbud"
+msgstr "Fone"
+
+msgid "Left"
+msgstr "Esquerdo"
+
+msgid "Right"
+msgstr "Direito"
+
+msgid "Actions for the chosen earbud."
+msgstr "Ações do fone escolhido."
+
+msgid "Actions of the buttons on the device."
+msgstr "Ações dos botões do dispositivo."
+
+msgid "The device carries out these actions itself. Windows media keys work as usual."
+msgstr "O próprio dispositivo executa essas ações. As teclas de mídia do Windows funcionam normalmente."
+
+msgid "Small details. More comfort."
+msgstr "Pequenos detalhes. Mais conforto."
+
+msgid "Let your earbuds adapt to you."
+msgstr "Deixe seus fones se adaptarem a você."
+
+msgid "Let your speaker adapt to you."
+msgstr "Deixe sua caixa de som se adaptar a você."
+
+msgid "These settings are stored in the device and work with any sound source."
+msgstr "Estas configurações ficam salvas no dispositivo e funcionam com qualquer fonte de som."
+
+msgid "Auto power off works while the device plays no sound."
+msgstr "O desligamento automático age enquanto o dispositivo não reproduz som."
+
+msgid "Bluetooth and devices"
+msgstr "Bluetooth e dispositivos"
+
+msgid "Pairing and removing devices"
+msgstr "Parear e remover dispositivos"
+
+msgid "Output device and volume"
+msgstr "Dispositivo de saída e volume"
+
+msgid "Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC."
+msgstr "O Windows reproduz o som sem LDAC. A configuração serve para o celular e outras fontes com LDAC."
+
+msgid "On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here."
+msgstr "No Liberty 4 Pro, mudar o equalizador desliga o áudio espacial. Você pode ligá-lo de novo aqui."
+
+msgid "Choose the features available on your case screen. The case language is independent of the app language."
+msgstr "Escolha as funções disponíveis na tela do estojo. O idioma do estojo é independente do idioma do app."
+
+msgid "The device reports these itself and keeps them up to date."
+msgstr "O próprio dispositivo informa esses dados e os mantém atualizados."
+
+msgid "The serial number and firmware version help when you contact support."
+msgstr "O número de série e a versão do firmware ajudam quando você fala com o suporte."
+
+# Overview
+msgid "Presses and slides"
+msgstr "Toques e deslizes"
+
+msgid "Presses and switching modes"
+msgstr "Toques e troca de modos"
+
+msgid "on"
+msgstr "ligado"
+
+msgid "off"
+msgstr "desligado"
+
+msgid "On: {} of {}"
+msgstr "Ligados: {} de {}"
+
+msgid "Volume: {}"
+msgstr "Volume: {}"
+
+msgid "Auto power off: {}"
+msgstr "Desligamento automático: {}"
+
+msgid "Two devices at once"
+msgstr "Dois dispositivos ao mesmo tempo"
+
+msgid "One device at a time"
+msgstr "Um dispositivo por vez"
+
+msgid "Case battery {}"
+msgstr "Bateria do estojo {}"
+
+msgid "Battery"
+msgstr "Bateria"
+
+msgid "1 earbud"
+msgstr "1 fone"
+
+msgid "Add quick toggles"
+msgstr "Adicionar botões rápidos"
+
+msgid "Quick toggles"
+msgstr "Botões rápidos"
+
+msgid "Your sound"
+msgstr "Seu som"
+
+msgid "All presets"
+msgstr "Todas as predefinições"
+
+msgid "Customize"
+msgstr "Personalizar"
+
+msgid "Available when both earbuds are connected"
+msgstr "Disponível quando os dois fones estão conectados"
+
+msgid "Current profile"
+msgstr "Perfil atual"
+
+msgid "Your own settings"
+msgstr "Suas próprias configurações"
+
+msgid "{} bands · {}…{} dB"
+msgstr "{} bandas · {}…{} dB"
+
+msgid "Low frequencies"
+msgstr "Frequências baixas"
+
+msgid "High frequencies"
+msgstr "Frequências altas"
+
+msgid "Save your favourite combinations of settings."
+msgstr "Salve suas combinações favoritas de configurações."
+
+msgid "No settings chosen yet"
+msgstr "Nenhuma configuração escolhida ainda"
+
+msgid "Edit device screen"
+msgstr "Editar a tela do dispositivo"
+
+msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
+msgstr "Só um fone está conectado. O equalizador e outras configurações ficam disponíveis quando os dois fones estiverem conectados."
+
+msgid "Move up"
+msgstr "Mover para cima"
+
+msgid "Move down"
+msgstr "Mover para baixo"
+
+msgid "Your device screen."
+msgstr "A tela do seu dispositivo."
+
+msgid "Turn on the blocks you use and move them up or down to change the order."
+msgstr "Ligue os blocos que você usa e mova-os para cima ou para baixo para mudar a ordem."
+
+msgid "Ready-made sets"
+msgstr "Conjuntos prontos"
+
+msgid "Minimal"
+msgstr "Mínimo"
+
+msgid "Standard"
+msgstr "Padrão"
+
+msgid "Full"
+msgstr "Completo"
+
+msgid "Done"
+msgstr "Concluído"
+
+msgid "Choose the switches on the device card. The settings themselves do not change."
+msgstr "Escolha os botões do cartão do dispositivo. As configurações em si não mudam."
+
+# Equalizer
+msgid "{} Hz"
+msgstr "{} Hz"
+
+msgid "{} kHz"
+msgstr "{} kHz"
+
+msgid "{}, dB"
+msgstr "{}, dB"
+
+msgid "Equalizer bands: {}"
+msgstr "Bandas do equalizador: {}"
+
+msgid "Equalizer curve. Drag to adjust a frequency, or use the sliders below."
+msgstr "Curva do equalizador. Arraste para ajustar uma frequência ou use os controles deslizantes abaixo."
+
+msgid "This device only supports the built-in equalizer profiles."
+msgstr "Este dispositivo só aceita os perfis de equalizador integrados."
+
+msgid "Values in decibels, from {} to {} dB"
+msgstr "Valores em decibéis, de {} a {} dB"
+
+msgid "Save profile"
+msgstr "Salvar perfil"
+
+msgid "All profiles ({})"
+msgstr "Todos os perfis ({})"
+
+msgid "Show fewer"
+msgstr "Mostrar menos"
+
+msgid "Equalizer values are unavailable for this device."
+msgstr "Os valores do equalizador não estão disponíveis para este dispositivo."
+
+msgid "Changing the equalizer turns off spatial audio."
+msgstr "Mudar o equalizador desliga o áudio espacial."
+
+msgid "Drag the points on the chart, move the sliders with ↑ ↓ or type the values."
+msgstr "Arraste os pontos do gráfico, mova os controles com ↑ ↓ ou digite os valores."
+
+msgid "My profiles"
+msgstr "Meus perfis"
+
+msgid "Save the current sound to come back to it later."
+msgstr "Salve o som atual para voltar a ele depois."
+
+msgid "Applied"
+msgstr "Aplicado"
+
+msgid "Bands: {}"
+msgstr "Bandas: {}"
+
+msgid "More for “{}”"
+msgstr "Mais para “{}”"
+
+msgid "Export"
+msgstr "Exportação"
+
+msgid "Delete"
+msgstr "Excluir"
+
+msgid "Saved profiles stay where they are. You can apply them when both earbuds are connected."
+msgstr "Os perfis salvos continuam onde estão. Você pode aplicá-los quando os dois fones estiverem conectados."
+
+msgid "Old equalizer profiles: {}. Move them to your saved profiles to use them with this device."
+msgstr "Perfis de equalizador antigos: {}. Mova-os para seus perfis para usá-los com este dispositivo."
+
+msgid "Show"
+msgstr "Mostrar"
+
+msgid "Hide"
+msgstr "Ocultar"
+
+msgid "Move all"
+msgstr "Mover todos"
+
+msgid "Move"
+msgstr "Mover"
+
+msgid "Import and export"
+msgstr "Importação e exportação"
+
+msgid "Share profiles, keep them in a file or move them to another computer."
+msgstr "Compartilhe perfis, guarde-os em um arquivo ou leve-os para outro computador."
+
+msgid "Import"
+msgstr "Importação"
+
+msgid "Select all"
+msgstr "Selecionar todos"
+
+msgid "Save a profile to export it."
+msgstr "Salve um perfil para exportá-lo."
+
+msgid "Save to file"
+msgstr "Salvar em arquivo"
+
+msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
+msgstr "Um arquivo ou texto com perfis do OpenSCQ30. Antes de importar, você verá o que muda."
+
+msgid "Open file"
+msgstr "Abrir arquivo"
+
+msgid "Paste"
+msgstr "Colar"
+
+msgid "Saved to the file"
+msgstr "Salvo no arquivo"
+
+msgid "Could not save the file"
+msgstr "Não foi possível salvar o arquivo"
+
+msgid "This is not an equalizer profiles file"
+msgstr "Este não é um arquivo de perfis de equalizador"
+
+msgid "The clipboard is empty"
+msgstr "A área de transferência está vazia"
+
+msgid "The file is too large"
+msgstr "O arquivo é grande demais"
+
+msgid "Could not read the file"
+msgstr "Não foi possível ler o arquivo"
+
+msgid "Imported {n} profile"
+msgid_plural "Imported {n} profiles"
+msgstr[0] "{n} perfil importado"
+msgstr[1] "{n} perfis importados"
+
+msgid "Moved {n} profile"
+msgid_plural "Moved {n} profiles"
+msgstr[0] "{n} perfil movido"
+msgstr[1] "{n} perfis movidos"
+
+msgid "Profile saved"
+msgstr "Perfil salvo"
+
+msgid "Profile deleted"
+msgstr "Perfil excluído"
+
+msgid "Save the current device equalizer values as a reusable profile."
+msgstr "Salve os valores atuais do equalizador do dispositivo como um perfil reutilizável."
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "My sound"
+msgstr "Meu som"
+
+msgid "Enter a profile name."
+msgstr "Digite um nome para o perfil."
+
+msgid "A profile named “{}” already exists. Replace its saved values?"
+msgstr "Já existe um perfil chamado “{}”. Substituir os valores salvos?"
+
+msgid "Replace profile"
+msgstr "Substituir perfil"
+
+msgid "Save"
+msgstr "Salvar"
+
+msgid "Delete equalizer profile?"
+msgstr "Excluir o perfil de equalizador?"
+
+msgid "Are you sure you want to delete “{}”?"
+msgstr "Tem certeza de que quer excluir “{}”?"
+
+msgid "Import profiles"
+msgstr "Importar perfis"
+
+msgid "New"
+msgstr "Novo"
+
+msgid "Replaces the saved profile"
+msgstr "Substitui o perfil salvo"
+
+msgid "{} bands, this device has {}"
+msgstr "{} bandas, este dispositivo tem {}"
+
+msgid "Values outside this device’s range"
+msgstr "Valores fora do intervalo deste dispositivo"
+
+msgid "Profiles marked in red can not be used with this device, so the file can not be imported."
+msgstr "Os perfis marcados em vermelho não servem para este dispositivo, então o arquivo não pode ser importado."
+
+msgid "Import {n} profile"
+msgid_plural "Import {n} profiles"
+msgstr[0] "Importar {n} perfil"
+msgstr[1] "Importar {n} perfis"
+
+# Quick presets
+msgid "More actions for {}"
+msgstr "Mais ações para {}"
+
+msgid "Use Edit to choose which settings to apply."
+msgstr "Use Editar para escolher quais configurações aplicar."
+
+msgid "+{} more"
+msgstr "+{} outros"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Matches current settings"
+msgstr "Igual às configurações atuais"
+
+msgid "Your sound, in one preset"
+msgstr "Seu som em uma predefinição"
+
+msgid "Save your current settings and choose the ones you want to apply together."
+msgstr "Salve suas configurações atuais e escolha as que quer aplicar juntas."
+
+msgid "Create preset"
+msgstr "Criar predefinição"
+
+msgid "The equalizer from presets is applied once both earbuds are connected."
+msgstr "O equalizador das predefinições é aplicado quando os dois fones estão conectados."
+
+msgid "We'll save the current settings. Then choose which of them to apply."
+msgstr "Vamos salvar as configurações atuais. Depois escolha quais aplicar."
+
+msgid "For example, for work"
+msgstr "Por exemplo, para o trabalho"
+
+msgid "Enter a preset name."
+msgstr "Digite um nome para a predefinição."
+
+msgid "“{}” already exists. Replace its saved values with the current device settings? Your choice of included settings will be kept."
+msgstr "“{}” já existe. Substituir os valores salvos pelas configurações atuais do dispositivo? Sua escolha das configurações incluídas será mantida."
+
+msgid "Replace"
+msgstr "Substituir"
+
+msgid "Create"
+msgstr "Criar"
+
+msgid "Custom curve"
+msgstr "Curva própria"
+
+msgid "Only selected settings are applied with this preset. Changes to this selection are saved immediately."
+msgstr "Esta predefinição aplica só as configurações selecionadas. As mudanças na seleção são salvas na hora."
+
+msgid "No saved settings yet. Load the current device settings to get started."
+msgstr "Ainda não há configurações salvas. Carregue as configurações atuais do dispositivo para começar."
+
+msgid "Load current settings"
+msgstr "Carregar configurações atuais"
+
+msgid "Replace this preset’s saved values with the current device settings? Your choice of included settings will be kept. This does not change the device."
+msgstr "Substituir os valores salvos desta predefinição pelas configurações atuais do dispositivo? Sua escolha das configurações incluídas será mantida. O dispositivo não muda."
+
+msgid "Load"
+msgstr "Carregar"
+
+msgid "Delete preset?"
+msgstr "Excluir a predefinição?"
+
+msgid "Delete “{}”? Your current device settings will be kept."
+msgstr "Excluir “{}”? As configurações atuais do dispositivo serão mantidas."
+
+msgid "Preset “{}” applied"
+msgstr "Predefinição “{}” aplicada"
+
+msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
+msgstr "Predefinição “{}” aplicada. O equalizador dela será aplicado quando os dois fones estiverem conectados."
+
+msgid "Preset deleted"
+msgstr "Predefinição excluída"
+
+msgid "Preset values replaced"
+msgstr "Valores da predefinição substituídos"
+
+msgid "Current settings loaded into the preset"
+msgstr "Configurações atuais carregadas na predefinição"
+
+# App settings
+msgid "Appearance"
+msgstr "Aparência"
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "As in Windows"
+msgstr "Como no Windows"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "Dark"
+msgstr "Escuro"
+
+msgid "Palette"
+msgstr "Paleta"
+
+msgid "Colors of buttons and highlights"
+msgstr "Cores dos botões e destaques"
+
+msgid "Purple"
+msgstr "Roxo"
+
+msgid "Sage"
+msgstr "Sálvia"
+
+msgid "Rose"
+msgstr "Rosa"
+
+msgid "Device color in pictures"
+msgstr "Cor do dispositivo nas imagens"
+
+msgid "As the theme"
+msgstr "Como o tema"
+
+msgid "Silver"
+msgstr "Prateado"
+
+msgid "Black"
+msgstr "Preto"
+
+msgid "Sound modes"
+msgstr "Modos de som"
+
+msgid "The view for devices with the scale, such as Liberty 4 Pro"
+msgstr "A visualização para dispositivos com escala, como o Liberty 4 Pro"
+
+msgid "Tiles"
+msgstr "Blocos"
+
+msgid "Scale 1–11"
+msgstr "Escala 1–11"
+
+msgid "One earbud badge"
+msgstr "Selo de um fone"
+
+msgid "Show when only one earbud is connected"
+msgstr "Mostrar quando só um fone está conectado"
+
+msgid "App language"
+msgstr "Idioma do app"
+
+msgid "Your color.\nYour mood."
+msgstr "Sua cor.\nSeu humor."
+
+msgid "A familiar character. A new space."
+msgstr "Um caráter familiar. Um espaço novo."
+
+msgid "Home screen"
+msgstr "Tela inicial"
+
+msgid "Keep the blocks you need and put them in the order you like."
+msgstr "Mantenha os blocos de que precisa e coloque-os na ordem que preferir."
+
+msgid "Edit home screen"
+msgstr "Editar a tela inicial"
+
+msgid "About"
+msgstr "Sobre"
+
+msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
+msgstr "OpenSCQ30 para Windows {} · software livre sob a GNU GPL 3."
+
+msgid "More"
+msgstr "Saiba mais"
+
+msgid "Diagnostics"
+msgstr "Diagnóstico"
+
+msgid "Copy the latest log entries to find the cause of a problem."
+msgstr "Copie as últimas entradas do registro para encontrar a causa de um problema."
+
+msgid "Copy logs"
+msgstr "Copiar registros"
