@@ -445,10 +445,10 @@ export component OverviewPage inherits VerticalLayout {
     for row in AppState.overview-rows: VerticalLayout {
         if !row.shortcuts && root.wide: HorizontalLayout {
             spacing: 16px;
+            // equal and set widths, so that what a block says does not move the edge between them
             for block in row.blocks: BlockPanel {
                 data: block;
-                horizontal-stretch: 1;
-                preferred-width: 0px;
+                width: (parent.width - parent.spacing * (row.blocks.length - 1)) / row.blocks.length;
             }
         }
         if !row.shortcuts && !root.wide: VerticalLayout {

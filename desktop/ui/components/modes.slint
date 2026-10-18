@@ -112,16 +112,17 @@ export component ModeScale inherits VerticalLayout {
         opacity: root.airplane ? 0.45 : 1;
         committed(position) => { Actions.set-scale(position); }
     }
-    HorizontalLayout {
-        padding-left: 4px;
-        padding-right: 4px;
+    // each number under the place the slider's thumb stops at for it, as RangeSlider places the thumb
+    Rectangle {
+        height: 14px;
         for n in 11: Text {
+            x: 7.5px + (parent.width - 15px) * n / 10 - self.width / 2;
+            width: 24px;
             text: n + 1;
             color: n == 5 ? Theme.primary : Theme.muted;
             font-size: 10px;
             font-weight: n == 5 ? 700 : 400;
             horizontal-alignment: center;
-            horizontal-stretch: 1;
         }
     }
     HorizontalLayout {

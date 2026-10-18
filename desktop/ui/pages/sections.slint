@@ -296,21 +296,26 @@ export component SectionPage inherits VerticalLayout {
     if root.wide: HorizontalLayout {
         spacing: 20px;
         alignment: stretch;
-        // the settings take most of the width, the side column at most a third
+        // the settings take most of the width, the side column at most a third; set widths, so that what the
+        // settings say does not move the edge between them
         MainColumn {
             page: root.page;
-            horizontal-stretch: 1;
-            min-width: 0px;
-            preferred-width: 0px;
+            width: parent.width - parent.spacing - aside.width;
         }
-        AsideColumn {
+        aside := AsideColumn {
             page: root.page;
             width: max(280px, min(420px, parent.width * 0.36));
         }
     }
     if !root.wide: VerticalLayout {
         spacing: 16px;
-        MainColumn { page: root.page; }
-        AsideColumn { page: root.page; }
+        MainColumn {
+            page: root.page;
+            width: parent.width;
+        }
+        AsideColumn {
+            page: root.page;
+            width: parent.width;
+        }
     }
 }
