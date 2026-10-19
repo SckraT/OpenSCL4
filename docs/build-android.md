@@ -1,46 +1,52 @@
-> Current OpenSCL4 builds use [the common build and release guide](build-release.md). The instructions below are retained from OpenSCQ30; references to `gui/` describe the legacy desktop client.
+# OpenSCL4 on Android
 
-## Building OpenSCQ30 on Android
+The Android app uses Jetpack Compose with the Rust core through UniFFI. Minimum Android version is 8.0 (API 26). The release application ID is `io.github.sckrat.openscl4`; debug builds append `.debug`. The Kotlin namespace remains `com.oppzippy.openscq30`.
 
-### If you do not have Android Studio installed:
+## Tools
 
-1. Install a JDK distribution of your choice
-2. Download the [Android command line tools (scroll down a bit)](https://developer.android.com/studio), extract it to `~/Android/Sdk` (or somewhere else, this is just where Android Studio puts it), and set the `ANDROID_HOME` environment variable to `~/Android/Sdk`.
-3. Accept licenses by running `$ANDROID_HOME/cmdline-tools/bin/sdkmanager --licenses --sdk_root=$ANDROID_HOME`.
-4. Check the ndk version required for the commit you have checked out (it's listed in listed in [`android/app/build.gradle.kts`](https://github.com/Oppzippy/OpenSCQ30/blob/master/android/app/build.gradle.kts), Ctrl-F ndkVersion) and [download that version of the ndk](https://developer.android.com/ndk/downloads), extract it to `$ANDROID_HOME/ndk/your_ndk_version_number` (and ensure symlinks are preserved), and set the `ANDROID_NDK_HOME` environment variable to `$ANDROID_HOME/ndk/your_ndk_version_number`.
+Use Rust via rustup, Python 3.11+, and the JDK, Android SDK/build-tools, NDK and cargo-ndk versions in [`.build-tool-versions`](../.build-tool-versions). The Gradle wrapper in `android/` is authoritative; a separate system Gradle installation is unnecessary. The same tool setup is recorded in [the CI action](../.github/actions/install-android-build-tools/action.yml).
 
-### If you do have Android Studio installed:
+Install the specified SDK platform, build-tools and NDK with Android Studio's SDK manager or the command-line SDK manager, and accept SDK licenses. Set `ANDROID_HOME` to the SDK directory and `JAVA_HOME` to the pinned JDK. Set `ANDROID_NDK_HOME` to the selected SDK `ndk/VERSION` directory if invoking native tooling directly.
 
-1. Ensure the version of ndk listed in [`android/app/build.gradle.kts`](https://github.com/Oppzippy/OpenSCQ30/blob/master/android/app/build.gradle.kts) (Ctrl-F ndkVersion) is installed (File -> Settings -> Appearance & Behavior -> System Settings -> Android SDK -> SDK Tools).
+Install cargo-ndk at its pinned version. Add Rust targets for the ABIs being built:
 
-### Then:
+| Android ABI   | Rust target               |
+| ------------- | ------------------------- |
+| `arm64-v8a`   | `aarch64-linux-android`   |
+| `armeabi-v7a` | `armv7-linux-androideabi` |
+| `x86_64`      | `x86_64-linux-android`    |
+| `x86`         | `i686-linux-android`      |
 
-If it's inconvenient to install the latest version of [just](https://github.com/casey/just), use the without just instructions. The catch is that the without just instructions are more likely to change in the future, so if you're packaging openscq30 and the latest version of just is easily available, prefer the with just instructions.
+## Debug builds
 
-1. Install rustup
-2. Add all supported cpu architecture targets that you plan to build: `rustup target add armv7-linux-androideabi aarch64-linux-android i686-linux-android x86_64-linux-android`
-3. Install [cargo-ndk](https://github.com/bbqsrc/cargo-ndk): `cargo install cargo-ndk`
+Open `android/` in Android Studio, or run from that directory:
 
-#### Without just:
+```sh
+./gradlew assembleArm64-v8aDebug
+./gradlew testX86_64DebugUnitTest
+```
 
-4. In the `android` directory, run `./gradlew assembleRelease` for a universal apk, or one or more of these for a specific cpu architecture:
+Use `gradlew.bat` in PowerShell. Use `assembleX86_64Debug` for an x86_64 emulator. Gradle builds the native library and generates its bindings; do not edit generated Kotlin wrappers. APK outputs are under `android/app/build/outputs/apk/ABI/debug/`.
 
-- `./gradlew assembleRelease-arm64-v8a`
-- `./gradlew assembleRelease-armeabi-v7a`
-- `./gradlew assembleRelease-x86_64`
-- `./gradlew assembleRelease-x86`
+The four ABI product flavors are defined in `android/app/build.gradle.kts`. The old `assembleRelease-arm64-v8a` tasks and `build-android-universal` recipe are not current commands; the common release produces one APK per ABI.
 
-5. The apk can be found at `android/app/build/outputs/apk/release/app-release-unsigned.apk` for a universal apk or `android/app/build/outputs/apk/release-arm64-v8a/app-release-arm64-v8a-unsigned.apk` for example otherwise.
+## Release or preview APKs
 
-#### With just:
+Run from the repository root, choosing the ABI:
 
-4. In the project root directory, run one or more of these commands:
+```sh
+python3 scripts/release.py build android --abi arm64-v8a
+```
 
-- `just build-android`: builds all of the following
-- `just build-android-universal`: builds a single apk supporting all of the following architectures
-- `just build-android-arm64-v8a`
-- `just build-android-armeabi-v7a`
-- `just build-android-x86_64`
-- `just build-android-x86`
+On Windows, use `python`. Make the wrapper discoverable to the Python subprocess before invoking the script from PowerShell:
 
-5. The apks can be found at `build-output/openscq30-android-*.apk`
+```powershell
+$env:PATH = "$(Resolve-Path android);$env:JAVA_HOME\bin;$env:PATH"
+python scripts/release.py build android --abi arm64-v8a
+```
+
+A signed build uses the ignored `android/openscl4-keystore.properties`, not the upstream `keystore.properties`. Create a permanent OpenSCL4 key only if one does not already exist; retain it for future updates. See [signing and backup](build-release.md#android-signing).
+
+Append `--unsigned` for an unsigned preview and `--allow-dirty` for uncommitted source. These do not qualify as stable builds. Outputs are `openscl4-VERSION-android-ABI.apk` (or `-unsigned.apk`) and `build-android-ABI.json` in `build-output/`.
+
+OpenSCL4 installs separately from upstream and does not automatically migrate its data. A debug APK and a release APK also have separate identities. Instrumented UI checks are distinct from JVM tests and require an emulator/device; see [Android interface validation](android-interface.md#validation). Bluetooth behavior and upgrades with the retained signing key need physical-device QA.

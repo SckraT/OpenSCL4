@@ -1,4 +1,4 @@
-name: validate fastlane metadata
+name: validate draft Android distribution metadata
 
 on:
   push:

@@ -1,4 +1,4 @@
-//! OpenSCQ30 for Windows. The window is described in ui/*.slint; `model` works out what it shows from the device,
+//! OpenSCL4 desktop client. The window is described in ui/*.slint; `model` works out what it shows from the device,
 //! `controller` talks to the device, and `app` keeps the window up to date.
 
 mod app;

@@ -10,7 +10,7 @@
 
 ## What data is collected
 
-If you would rather not make any of the information listed below publicly available, feel free to email the logs to [kyle@kylescheuing.com](mailto:kyle@kylescheuing.com)
+Bluetooth logs can contain private information. Review the capture and attach only the relevant, redacted material to [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues). If a capture cannot be shared publicly, ask the fork maintainer for an agreed private route before sending it; this project does not designate the upstream author's email as its support channel.
 
 ### General
 

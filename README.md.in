@@ -1,58 +1,90 @@
-## About
+# OpenSCL4
 
-OpenSCL4 is free software for controlling Soundcore headphones and speakers, based on [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30). It keeps the shared Rust device library, uses Compose on Android and Slint on desktop, and installs separately from OpenSCQ30 with its own data.
+OpenSCL4 controls supported Soundcore headphones, earbuds and speakers. It is an independent fork of [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30) by Kyle Scheuing and contributors, developed in [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4).
 
-### Platforms
+The current clients are **Jetpack Compose on Android** and **Slint on desktop**, sharing device protocols and client rules in Rust. Features depend on the model, firmware and connection state; the application reads the device's reported settings rather than assuming a write succeeded.
 
-- Android and Windows: existing clients; the new OpenSCL4 release pipeline is being validated.
-- Linux x86_64: initial Ubuntu 24.04/26.04 packages and CI checks are prepared. Preview until session and real-device QA pass.
-- macOS: planned after this stage.
+## What has changed from upstream
 
-See the [accepted plan](docs/cross-platform-release-plan.md) and [implementation status](docs/implementation-status-2026-10-19.md).
+- A Slint desktop interface for device settings, sound modes, equalizer profiles and quick presets, with Windows tray controls.
+- An Android interface with device, preset and application settings pages, a foreground connection service, notifications and widgets.
+- Shared Rust rules for setting availability, battery readings, sound mode scales, equalizer validation and preset matching. Equalizer profile transfer and quick preset activation also use the common core.
+- Grouped setting snapshots for desktop and Android; the last successfully applied quick preset is remembered only for the current connection.
+- A separate application identity, signing key and data storage, plus a common build script for Android, Windows and experimental Linux packages.
 
-### Supported Devices
+Internal Rust crate names and Kotlin packages still use `openscq30` / `com.oppzippy.openscq30`. These are implementation names, not the identity of the installed OpenSCL4 application. The old libcosmic client in `gui/` and the `openscq30` CLI remain development/legacy tools; they are not the current desktop release.
 
-If there's a device not in this list that you want to see supported, check if there's an issue for it, and give the issue for it a 👍 so that I can sort by reactions and prioritize. Otherwise, please open an issue to request support for the device.
+## Platform status
+
+Status at the documentation audit on **2026-10-19**:
+
+| Platform     | Implemented and checked                                                                      | Remaining before a stable common release                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Android 8.0+ | Compose client; native/JVM checks; a locally built, signed ARM64 preview APK                 | Release coverage for all four ABIs and physical-device/upgrade QA                                                   |
+| Windows x64  | Slint client; tray integration; locally built portable EXE and installer                     | Final device and installer/upgrade QA; packages initially have no Authenticode signature                            |
+| Linux x86_64 | Slint integration, `.deb`/`.tar.gz` packaging, and CI package/session checks are implemented | Experimental: successful Linux builds, the agreed GNOME/KDE session matrix and real-headphone QA are still required |
+| macOS        | A later goal                                                                                 | No release build or validated support matrix yet                                                                    |
+
+The first Linux target is Ubuntu/Kubuntu 24.04 and 26.04; this is a validation target, not a claim that every session has passed. See the [implementation log](docs/implementation-status-2026-10-19.md), [accepted plan](docs/cross-platform-release-plan.md) and [release gates](docs/build-release.md#ci-and-verification). AppImage, Flatpak, stores and automatic updates are outside the first release stage. Performance measurements exist, but a general improvement in startup time, CPU or memory has not been established.
+
+## Install or try a build
+
+[GitHub Releases](https://github.com/SckraT/OpenSCL4/releases) is the publication location for OpenSCL4. **No GitHub releases were published at the audit above.** Local test packages do not establish a published release; until packages are available there, use the source build guides below. A successful release workflow run can also provide preview artifacts, without publishing a release.
+
+When packages are published:
+
+- **Android:** choose the APK matching your device ABI. The release application ID is `io.github.sckrat.openscl4`; debug builds use `.debug`. Updates within OpenSCL4 must keep its signing key.
+- **Windows:** use the x64 installer or portable `openscl4` executable. The initial packages are unsigned by Authenticode.
+- **Linux (preview):** use the `.deb` on the target Ubuntu systems or the `.tar.gz` with the same runtime dependencies. See [Linux installation and build notes](docs/build-linux.md).
+
+Verify downloads against the accompanying `SHA256SUMS`. Pair the headphones in the operating system's Bluetooth settings, then add/connect the matching model in OpenSCL4. Demo devices can be used to explore the interface without headphones.
+
+OpenSCL4 installs alongside OpenSCQ30 and starts with its own settings and presets. It does not automatically import the old application's data. Upstream store listings and signatures are not OpenSCL4 distribution channels.
+
+## Supported device implementations
+
+This catalog is generated from the Rust device model list. It means a protocol implementation exists; it is not a guarantee that every setting, firmware version and platform combination has been physically tested. Liberty 4 Pro is the primary device for the current cross-platform work; other inherited models remain available.
 
 @SUPPORTED_DEVICES_TABLE@
 
-## Installing
+For a missing model, search [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues) and follow the [device request guide](docs/request-soundcore-device.md).
 
-See [OpenSCL4 GitHub Releases](https://github.com/SckraT/OpenSCL4/releases) for published builds. A prepared pipeline does not mean a stable release has been published. Packages in the first common release are Android APKs, a Windows installer/portable executable, and Linux `.deb`/`.tar.gz` files. Verify package hashes against the release's `SHA256SUMS`.
+## Build and develop
 
-OpenSCL4 has a separate Android signing key. Windows initially ships without Authenticode. OpenSCQ30 store listings, signatures and mirrors belong to the upstream project.
+Use the [common build and release guide](docs/build-release.md) for pinned tools, signing, package verification and publication. Platform setup:
 
-Issues and pull requests for this fork belong in [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4).
+- [Windows](docs/build-windows.md)
+- [Android](docs/build-android.md)
+- [Linux](docs/build-linux.md)
 
-## Contributing
+The workspace contains:
 
-### Code
+| Path                               | Role                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------- |
+| `lib/`                             | Device protocols, settings API, SQLite storage and shared client rules |
+| `android/`                         | Rust/UniFFI adapter and Kotlin/Compose application                     |
+| `desktop/`                         | Current Slint desktop client; executable `openscl4`                    |
+| `cli/`, `gui/`                     | Retained CLI and legacy libcosmic GUI                                  |
+| `scripts/release.py`, `packaging/` | Common release entry point and platform packages                       |
 
-See [docs/development.md](docs/development.md)
-
-### Translations
-
-[![Translation status](https://translate.codeberg.org/widget/openscq30/multi-auto.svg)](https://translate.codeberg.org/engage/openscq30/)
-
-## Historical upstream demos
-
-### Desktop
-
-[desktop-demo.webm](https://github.com/user-attachments/assets/3df615f5-2e5d-44e8-9604-f5175c11ea5b)
-
-### Android
-
-[android-demo.webm](https://github.com/user-attachments/assets/bf48a9f3-db73-4f26-b1e7-edac5f3fba32)
-
-## Building
-
-See [the common build and release guide](docs/build-release.md) for current clients, pinned tools, signing and verification. Older platform guides describe the legacy GUI where indicated.
-
-## Running Tests
+For a desktop development build, with the platform prerequisites installed:
 
 ```text
-cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
-python -m unittest discover -s scripts/tests -v
+cargo build --locked -p openscq30-desktop
 ```
 
-Android adapter tests run with `testX86_64DebugUnitTest` in the `android/` Gradle project and require its native host build tools. Rust and Android share fixtures in `lib/tests/fixtures/client_rules.json`.
+The output is `target/debug/openscl4` (or `openscl4.exe`). The root `build-gui` and `install` recipes target the legacy GUI; use the current release script for OpenSCL4 packages. See [development and checks](docs/development.md) for architecture, test commands and README generation.
+
+## Support and contributions
+
+Report problems and send pull requests to [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4). Include the OpenSCL4 version/commit, package source, OS, device model and reproduction steps. Linux reports should also name the desktop environment and Wayland/X11 session.
+
+[Bluetooth log capture](docs/capture-bluetooth-logs.md) explains what information a capture can contain. Review logs before attaching them. This fork does not designate the upstream author's email as a private support channel.
+
+Translation updates should be submitted here as pull requests. Existing translations are inherited from upstream; its translation service does not automatically update this fork. See [development](docs/development.md) and [Android interface behavior](docs/android-interface.md).
+
+## Origin and license
+
+OpenSCL4 is maintained by SckraT and builds on OpenSCQ30 by **Kyle Scheuing and contributors**. Original authorship, copyright notices and dependency licenses are retained. The project is licensed under **GPL-3.0-or-later**; see [LICENSE.txt](LICENSE.txt).
+
+The [upstream history and asset notes](docs/history/upstream.md) identify retained screenshots, old release notes and legacy metadata. They are historical references, not previews or release records for the current OpenSCL4 clients.

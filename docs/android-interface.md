@@ -31,8 +31,10 @@ levels. Equalizer edits send one complete vector when a drag finishes; numeric
 entry validates the device range and decimal precision before applying it.
 Other numeric sliders also commit when the gesture finishes, so leaving a page
 cannot cancel a delayed write. Multi-select labels toggle their complete row.
-Presets are marked as applied only when all enabled fields match current device
-values. Changing equalizer values retains the native spatial-audio side effects.
+Preset matching is determined from the enabled fields and current device values.
+The separate last-successfully-applied mark is recorded only after native
+activation succeeds and is cleared on disconnect; it does not prove the current
+values still match. Changing equalizer values retains the native spatial-audio side effects.
 Settings shared by several native categories appear once in the editor. New
 presets capture each setting once; toggling a field in older presets updates all
 stored occurrences of that setting.

@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+## Current project
+
+OpenSCL4 uses Compose in `android/` and Slint in `desktop/`, with shared device protocols and client rules in `lib/`. For architecture, checks and documentation generation, read `docs/development.md`; for packaging and platform release gates, read `docs/build-release.md`.
+
+`gui/` is the legacy libcosmic client, not the current desktop release. See `docs/history/upstream.md` when changing inherited identities, attribution or historical assets.
+
 ## Agent skills
 
 ### Issue tracker

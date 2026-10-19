@@ -12,4 +12,4 @@ assignees: ""
 Soundcore Life Q30, etc.
 
 **State Update Packet**
-See https://github.com/Oppzippy/OpenSCQ30/blob/master/docs/request-soundcore-device.md and provide the requested information here.
+See https://github.com/SckraT/OpenSCL4/blob/master/docs/request-soundcore-device.md and provide the requested information here. Review captures for private information before attaching them.

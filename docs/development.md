@@ -1,68 +1,49 @@
-## Adding support for a new Soundcore device
+# Developing OpenSCL4
 
-### Acquiring a state update packet
+Start with the [README](../README.md) for product scope and platform status. Build setup is in [Windows](build-windows.md), [Android](build-android.md), [Linux](build-linux.md) and [the common release guide](build-release.md). Current development uses Android Compose and `desktop/` Slint; `gui/` is the [legacy libcosmic client](../gui/README.md).
 
-Soundcore devices have most of their state packed into one big packet. In OpenSCQ30 jargon, this is referred to as a state update packet. In order to get the device to send this, a request state packet must be sent to the device. We want to read the contents of those packets so we can figure out how to parse them.
+## Boundaries and device state
 
-There are a few ways to proceed.
+- `lib/src/devices/` implements device protocols, packet parsing and per-model settings. `lib/src/api/` exposes device operations, equalizer transfer and quick preset activation; `lib/src/storage/` owns persisted data.
+- `lib/src/client/` contains shared availability/grouping rules, battery interpretation, sound-mode scales, equalizer input validation, quick toggles and preset matching. Both clients consume these rules; Bluetooth transports, permissions and UI lifecycle remain platform-specific.
+- `android/src/` is the UniFFI adapter; `android/app/` contains Kotlin wrappers, Compose UI, services, notifications and widgets. Setting values still cross the binding as JSON inside the native API records.
+- `desktop/src/controller.rs` reads device snapshots and writes settings; `desktop/src/app/` applies them to Slint models, and `desktop/ui/` defines the interface.
 
-#### Wireshark (recommended)
+The device is the source of truth. Read settings through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write through `set_setting_values`. A successful preset activation and a preset matching current settings are different concepts. The successful-activation mark lasts only for the current connection; saved presets persist. See the [glossary](../GLOSSARY.md) and [accepted architecture decisions](adr/0001-compose-slint-shared-behavior.md).
 
-Install the soundcore wireshark plugin from [tools/wireshark/plugins/soundcore.lua](../tools/wireshark/plugins/soundcore.lua). To do so, open Help > About > Folders in Wireshark, and open the Personal Lua Plugins directory. Copy or make a symlink to `soundcore.lua`.
+Keep native types and Kotlin wrappers synchronized. Regenerate bindings through Gradle when the exported API changes. Shared examples in `lib/tests/fixtures/client_rules.json` check behavior on both sides of the Android boundary.
 
-Install the official Soundcore app and capture bluetooth packets with Wireshark. Filter for RFCOMM to see only relevant data.
+The `openscq30` CLI remains useful for protocol work. Its default database is still in the legacy `openscq30` configuration directory; set `OPENSCQ30_DATABASE_PATH` to an isolated database when testing. It does not manage the current desktop client's data directory by default.
 
-Connect to the device in the Soundcore app, and record the state update packet. Then, change a setting, disconnect, and reconnect. Record the new state update packet. Compare the two, and find what changed. Repeat with all settings.
+## Checks
 
-#### soundcore-device-faker (recommended)
+With the relevant host prerequisites installed, the current Rust-client suite is:
 
-First, acquire a state update packet either by adding the device in OpenSCQ30 with the model set to Soundcore Development Device or through Wireshark. Alternatively, have someone who does own the device provide you with the state update packet.
+```sh
+cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
+cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android -- -D warnings
+cargo fmt --all --check
+python3 -m unittest discover -s scripts/tests -v
+```
 
-In the `tools/soundcore-device-faker/` directory is a small python application that will pretend to be a soundcore device and respond to packets received from the Soundcore app with predefined data. This way, you can add the device configuration in `tools/soundcore-device-faker/devices/your_device.toml` and work in reverse from the previous methods. Rather than changing something from the app and seeing how it affects the state update packet, you can change the state update packet and find what changed in the app. See the soundcore-device-faker README for usage instructions.
+On Windows use `python`; the release workflow runs the Rust library/desktop tests there and the library/desktop/Android host checks on Linux. Android JVM tests use `./gradlew testX86_64DebugUnitTest` from `android/` (or `gradlew.bat`). CI does not currently run Android instrumentation; those checks are manual. See [Android validation](android-interface.md#validation).
 
-#### OpenSCQ30's Soundcore Development Device with Soundcore app (not recommended)
+`cargo test --workspace` and `just test` also include legacy CLI/GUI targets. They are broader than the current release-client checks and may need legacy GUI dependencies. Most `just` recipes require bash; the current release entry point is Python and does not require `just`.
 
-This method should only be used if you can't use Wireshark for whatever reason.
+## Documentation and model catalog
 
-Using OpenSCQ30, add your device with the device model "Soundcore Development Device". When you connect, it will display the state update packet.
+`README.md.in` is the source of the prose in `README.md`. Change the template first. From the repository root, regenerate the catalog and README with:
 
-Connect to the device with OpenSCQ30 and record the state update packet. Then, disconnect with OpenSCQ30 and connect with the Soundcore app, change a setting, disconnect with the Soundcore app, and reconnect with OpenSCQ30. Record the new state update packet. Compare the two, and find what changed. Repeat with all settings.
+```sh
+bash scripts/generate-readme
+```
 
-### Parsing the packet
+This existing generator requires bash, Rust/Cargo, `jq`, `sd` and Prettier. It runs the CLI's `list-models --json`, removes the development-only model, substitutes `@SUPPORTED_DEVICES_TABLE@` and formats Markdown. Its input is this checkout's template, not an upstream README download. On Windows use an environment with those tools, or update both files and run the documentation consistency checks; the device table must still match the current enum and English model names.
 
-#### Common fields
+The lightweight Python suite checks that the checked-in README matches its template and that its catalog matches the core model declarations. It is also run by documentation CI, without rebuilding the apps.
 
-##### Host Device/TWS Connected
+Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
 
-For earbuds, the first two bytes are usually host device followed by tws connected. If host device is 0, the left earbud is the host. If host device is 1, the right earbud is the host. If tws connected is 0, only the host earbud is connected. If tws connected is 1, then both earbuds are connected. Many settings are only available when TWS earbuds are connected, although OpenSCQ30 does not currently enforce this.
+## Historical material
 
-##### Sound Modes
-
-The various sound mode fields are single bytes with a value in the range of 0 through the number of options minus one. Try changing the sound mode to determine which number corresponds to which sound mode.
-
-##### Equalizer Configuration
-
-There are a few different variations here, but the equalizer configuration will always start with the preset id. Soundcore Signature is [0, 0] and Custom is [0xfe, 0xfe]. After that comes the db values for the 8 bands, with 120 being 0.0db (so 119 is -0.1db and 121 is +0.1db). Some devices will have data for 10 bands despite only 8 being used. For earbuds, another 8 (or 10) bands will come next, with the former applying to the left earbud and the latter the right earbud. OpenSCQ30 currently only uses the left values and ignores the right.
-
-##### Button Actions
-
-There are a few variations, but the general idea is that the left 4 bits refer to when TWS is not connected, and the right 4 bits refer to when TWS is connected. The button actions will be one byte for if it's enabled, and one byte for the action. So for example, [0x10, 0x23] would mean the button is enabled only when TWS is not connected, and the action is 2 when tws is disconnected and 3 when tws is connected.
-
-Some devices don't have separate tws connected and tws disconnected for some buttons, or they don't have separate values for if the button is enabled.
-
-##### Serial number
-
-This will be 16 bytes matching `/[0-9A-F]{16}/`. It should be relatively easy to identify due to the limited range of the values (48 to 57 and 65 to 70).
-
-##### Firmware Version
-
-This will be 5 bytes matching `/[0-9]{2}\.[0-9]{2}/`, so it should be easy to identify. For earbuds, it will be repeated with the former occurrence being for the left earbud and the latter for the right earbud.
-
-### openscq30-lib implementation
-
-1. Add the device model the `DeviceModel` enum in `lib/src/devices/device_model.rs` and its name to `lib/i18n/en/openscq30-lib.ftl`
-2. Add match arms for the new device in `DeviceModel`'s `device_registry` and `demo_device_registry` functions
-3. Add a module for the device in `lib/src/devices/`
-4. Create a struct for storing the device's state. Use any of the other devices as an example. The important part is `#[derive(Has)]`.
-5. Create a struct for the device's state update packet, and implement `From<YourStateUpdatePacket>` for your state packet. The state update packet should implement Default, InboundPacket, and OutboundPacket. The OutboundPacket implementation is used for demo devices. Again, refer to other devices here for examples.
-6. Use the `soundcore_device!` macro in the module for your device and call the relevant functions on the builder. Categories will be displayed in order of the first builder call that added the category, so make sure to properly order function calls.
+[Origin and historical assets](history/upstream.md) distinguish inherited screenshots, store metadata, dependencies and release records from current OpenSCL4 deliverables. Preserve copyright and license notices when editing inherited code. Keep release keys and local data out of Git.

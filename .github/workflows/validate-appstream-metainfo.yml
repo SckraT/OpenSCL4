@@ -1,4 +1,4 @@
-name: validate appstream metainfo
+name: validate legacy GUI appstream metainfo
 
 on:
   push:

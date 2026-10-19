@@ -1,1 +1,5 @@
-OpenSCQ30 is a cross platform application for controlling settings for Soundcore headphones, earbuds, and speakers.<br><br>Supports settings such as:<ul><li>Sound Modes</li><li>Equalizer</li><li>Controls</li></ul>
+<p>OpenSCL4 controls supported Soundcore headphones, earbuds and speakers. Available controls depend on the device model, firmware and connection state.</p>
+<ul><li>Sound modes and device settings</li><li>Equalizer profiles, including import and export</li><li>Quick presets and battery information</li></ul>
+<p>OpenSCL4 is an independent fork of OpenSCQ30 by Kyle Scheuing and contributors. It uses a shared Rust device library, a Jetpack Compose Android interface and a Slint desktop interface.</p>
+<p>It installs separately from OpenSCQ30 with its own settings and presets. Existing OpenSCQ30 data is not imported automatically. Android builds require Android 8.0 or newer.</p>
+<p>Source, build instructions and support: https://github.com/SckraT/OpenSCL4</p>

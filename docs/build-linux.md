@@ -1,38 +1,53 @@
-> Current OpenSCL4 builds use [the common build and release guide](build-release.md). The instructions below are retained from OpenSCQ30; references to `gui/` describe the legacy desktop client.
+# OpenSCL4 on Linux (experimental)
 
-Instructions use Ubuntu package names. Package names may differ on other distros.
+The current desktop client is `desktop/` (Slint). Linux packaging and CI checks exist, but the release session matrix and real-headphone QA have not been established as complete. The older libcosmic GUI and its `cosmic-icons` instructions are [legacy](../gui/README.md), not OpenSCL4 runtime requirements.
 
-If it's inconvenient to install the latest version of [just](https://github.com/casey/just), use the without just instructions. The catch is that the without just instructions are more likely to change in the future, so if you're packaging openscq30 and the latest version of just is easily available, prefer the with just instructions.
+## Target systems
 
-## Building openscq30-cli on Linux
+The first target is x86_64 Ubuntu/Kubuntu 24.04 and 26.04. Before stable publication, check Ubuntu 24.04 GNOME on Wayland and X11; Kubuntu 24.04 on X11; Ubuntu 26.04 GNOME and Kubuntu 26.04 on Wayland. Other architectures and distributions are later work, not a tested support promise.
 
-1. Install the latest version of rust
+## Build prerequisites
 
-### Without just
+Install Python 3.11+, Rust via rustup, a C/C++ build toolchain, and the development packages used by [release CI](../.github/workflows/build.yml). For Ubuntu:
 
-2. Run `cargo build --package openscq30-cli --profile release-fast` (or `cargo build --package openscq30-cli --release`, but it's very slow to build)
-3. The compiled binary can be found at `target/release-fast/openscq30`
+```sh
+sudo apt-get update
+sudo apt-get install build-essential pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev desktop-file-utils
+```
 
-### With just
+The Rust version is selected by `rust-toolchain.toml`. For packaging, add `x86_64-unknown-linux-gnu` with rustup if needed. Release packages must be built on **Ubuntu 24.04 x86_64**, including packages intended for 26.04, to preserve the glibc baseline; the release script rejects a different build host.
 
-2. Run `just build-cli-fast` (or `just build-cli` but it's very slow to build)
-3. The compiled binary can be found at `build-output/openscq30`
+## Development and packaging
 
-## Building openscq30-gui on Linux
+```sh
+cargo build --locked -p openscq30-desktop
+./target/debug/openscl4
+python3 scripts/release.py build linux
+```
 
-1. Install the latest version of rust
-2. Install pkg-config libdbus-1-dev libxkbcommon-dev
+The last command produces `openscl4_VERSION_amd64.deb`, `openscl4-VERSION-linux-x86_64.tar.gz`, and `build-linux.json` in `build-output/`. The tarball contains the same staged application files as the Debian package; it is not an AppImage or a distribution-independent runtime. Use `--allow-dirty` only for a source preview.
 
-### Without just
+## Install and run
 
-3. Run `cargo build --package openscq30-gui --profile release-fast` (or `cargo build --package openscq30-gui --release`, but it's very slow to build)
-4. The compiled binary can be found at `target/release-fast/openscq30-gui`
+Once a matching package is available:
 
-### With just
+```sh
+sudo apt install ./openscl4_VERSION_amd64.deb
+```
 
-3. Run `just build-gui-fast` (or `just build-gui` but it's very slow to build)
-4. The compiled binary can be found at `build-output/openscq30-gui`
+APT installs the runtime dependencies declared in [`packaging/linux/control`](../packaging/linux/control). Pair the headphones using the system Bluetooth settings, then open OpenSCL4 from the launcher.
 
-## Runtime Dependencies
+For the archive, install those same runtime dependencies, extract it and run:
 
-- [cosmic-icons](https://github.com/pop-os/cosmic-icons/): if a package isn't available, clone the git repo and run `just install`.
+```sh
+tar -xf openscl4-VERSION-linux-x86_64.tar.gz
+./openscl4-VERSION/usr/bin/openscl4
+```
+
+A working tray is optional. Without a registered tray, closing the window exits. Hiding is allowed only when the tray is available; losing it should restore a hidden window. This behavior is implemented and still needs validation on the target sessions. GNOME may need an AppIndicator extension to provide a tray host; it is not required for windowed operation.
+
+Data is kept in the system configuration directory under `openscl4/`, separately from OpenSCQ30. Use `OPENSCL4_CONFIG_DIR` for an isolated test. Linux single-instance enforcement is not implemented.
+
+## Verification
+
+The release workflow installs/removes the `.deb` on Ubuntu 24.04/26.04 and runs X11/nested-Wayland smoke checks with [`scripts/test-linux-package.sh`](../scripts/test-linux-package.sh). These are configured CI checks, not evidence that the full GNOME/KDE matrix or Bluetooth hardware checks have passed. See [the release gates](build-release.md#ci-and-verification) for the required session and Liberty 4 Pro evidence.

@@ -2,11 +2,13 @@
 
 OpenSCL4 uses Compose on Android and Slint in `desktop/` on Windows and Linux. `gui/` is the older desktop implementation and is not a release target. macOS is a later stage.
 
+This guide describes implemented release tooling and required gates, not a completed stable release. At the 2026-10-19 audit, local Android ARM64 and Windows x64 preview packages had been built, no GitHub releases were published, and Linux session/hardware QA remained open. See the [current platform status](../README.md#platform-status).
+
 ## Inputs and tools
 
 Use Python 3.11 or newer. Product version comes from `[workspace.package].version` in `Cargo.toml`; `Cargo.lock`, `rust-toolchain.toml`, `.build-tool-versions`, the Gradle wrapper and Gradle version catalog fix the other inputs. CI and local packaging call `scripts/release.py` on the appropriate operating system. This controls inputs and records provenance; it does not promise byte-identical packages.
 
-Current pins: Rust 1.99.1, JDK 21, Android SDK 37 / build tools 37.0.0, NDK 29.0.14206865, cargo-ndk 4.1.2, Inno Setup 6.7.3. Install the Rust target for the chosen platform. Android also needs the corresponding NDK targets and SDK licences. Set `JAVA_HOME` and `ANDROID_HOME`. Windows needs Visual Studio C++ build tools and the pinned Inno compiler, discoverable through `ISCC` or its normal installation path.
+Use the exact versions in [`.build-tool-versions`](../.build-tool-versions), not the newest system defaults. Install the Rust target for the chosen platform. Android also needs the corresponding NDK targets and SDK licences; set `JAVA_HOME` and `ANDROID_HOME`. Windows needs Visual Studio C++ build tools and the pinned Inno compiler, discoverable through `ISCC`, `.local/iscc/ISCC.exe` or its normal installation path. Platform setup is covered in [Windows](build-windows.md), [Android](build-android.md) and [Linux](build-linux.md).
 
 Build Linux packages on x86_64 Ubuntu 24.04, including when targeting Ubuntu 26.04. Install the build dependencies listed in `.github/workflows/build.yml`; the release script bundles the library's supported native dependencies, but the package still declares desktop/Bluetooth runtime dependencies. A newer build host can raise the minimum glibc requirement and is rejected.
 
@@ -21,7 +23,7 @@ The executable is `target/debug/openscl4[.exe]`. Set `OPENSCL4_CONFIG_DIR` to is
 
 ## Version and platform builds
 
-Choose the first published version during release preparation. The current source version is 2.13.0. Do not reset it without accounting for Android's monotonically increasing version codes. Change the common version with:
+Choose the first published version during release preparation; the source version in `Cargo.toml` is not proof of publication. Do not reset it without accounting for Android's monotonically increasing version codes. Change the common version with:
 
 ```text
 python scripts/release.py set-version 2.14.0
@@ -41,7 +43,7 @@ python scripts/release.py build android --abi x86_64
 python scripts/release.py build android --abi x86
 ```
 
-Outputs go to `build-output/`. Windows produces a portable EXE and a per-user installer; Linux produces `.deb` and `.tar.gz`; Android produces one APK per ABI. Each job records the source revision, version, actual/configured tools, build parameters, duration and package hashes in `build-*.json`.
+Outputs go to `build-output/`. Windows produces a portable EXE and a per-user installer; Linux produces `.deb` and `.tar.gz`; Android produces one APK per ABI. Each job records the source revision, version, actual/configured tools, build parameters, duration and package hashes in `build-*.json`. For PowerShell Android builds, make the Gradle wrapper discoverable as described in [the Android guide](build-android.md#release-or-preview-apks).
 
 For a local source preview, append `--allow-dirty`. For an unsigned Android preview, append `--unsigned`. These flags mark the build as preview; stable verification rejects it. A dirty manifest's commit identifies its base, not all uncommitted contents.
 
@@ -67,13 +69,13 @@ For stable verification, use signed Android packages, clean source builds and a 
 
 ```json
 {
-  "commit": "FULL_SOURCE_COMMIT",
-  "model": "Liberty 4 Pro",
-  "connect": false,
-  "settings": false,
-  "reconnect": false,
-  "suspendResume": false,
-  "quit": false
+    "commit": "FULL_SOURCE_COMMIT",
+    "model": "Liberty 4 Pro",
+    "connect": false,
+    "settings": false,
+    "reconnect": false,
+    "suspendResume": false,
+    "quit": false
 }
 ```
 
