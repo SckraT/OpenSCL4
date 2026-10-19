@@ -12,6 +12,10 @@ use crate::{
     rows::{self, Edit},
 };
 
+fn native_battery_value(value: &str) -> String {
+    value.replace(['\u{2068}', '\u{2069}'], "")
+}
+
 fn new_tray() -> Option<Tray> {
     let tray = match Tray::new() {
         Ok(tray) => tray,
@@ -40,16 +44,25 @@ fn new_tray() -> Option<Tray> {
 impl App {
     /// Shows or takes away the tray icon, as the settings say.
     pub(super) fn sync_tray(&mut self) {
-        match (self.config.settings.tray, self.tray.is_some()) {
-            (true, false) => self.tray = new_tray(),
-            (false, true) => self.tray = None,
+        match (
+            self.config.settings.tray && self.tray_host,
+            self.tray.is_some(),
+        ) {
+            (true, false) => {
+                self.tray = new_tray();
+                self.tray_registered = !cfg!(target_os = "linux") && self.tray.is_some();
+            }
+            (false, true) => {
+                self.tray = None;
+                self.tray_registered = false;
+            }
             _ => {}
         }
     }
 
     /// Closing the window leaves the app in the notification area only while its icon is there.
     pub(super) fn closes_to_tray(&self) -> bool {
-        self.tray.is_some() && self.config.settings.close_to_tray
+        self.tray.is_some() && self.tray_registered && self.config.settings.close_to_tray
     }
 
     pub(super) fn open_window(&mut self) {
@@ -92,7 +105,7 @@ impl App {
                     2 => strings.get_case_battery(),
                     _ => strings.get_device_battery(),
                 };
-                format!("{name} {}", battery.value)
+                format!("{name} {}", native_battery_value(&battery.value))
             })
             .collect::<Vec<_>>()
             .join(" · ")
@@ -132,10 +145,7 @@ impl App {
             None => tray.set_modes(ModelRc::default()),
         }
         let (on, off) = self.on_off();
-        let last_preset = settings
-            .last_preset
-            .get(&snapshot.mac_address.to_string())
-            .map(String::as_str);
+        let last_preset = snapshot.last_applied_preset.as_deref();
         tray.set_presets(ModelRc::new(VecModel::from(overview::presets(
             snapshot,
             last_preset,
@@ -155,4 +165,20 @@ impl App {
 /// Opens the window when another start of the app asks for it.
 pub fn show_from_elsewhere() {
     with_app(App::open_window);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::native_battery_value;
+
+    #[test]
+    fn native_battery_values_omit_fluent_direction_markers() {
+        assert_eq!("100%", native_battery_value("\u{2068}100\u{2069}%"));
+        assert_eq!(
+            "64%",
+            native_battery_value("\u{2068}\u{2068}64\u{2069}\u{2069}%")
+        );
+        assert_eq!("٦٠٪", native_battery_value("\u{2068}٦٠\u{2069}٪"));
+        assert_eq!("—", native_battery_value("—"));
+    }
 }

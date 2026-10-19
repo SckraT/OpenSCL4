@@ -260,14 +260,6 @@ private fun BatteryTiles(batteries: List<DeviceBattery>) {
     }
 }
 
-/** The ids of the quick toggles to show: the user's choice, or LDAC when the device has it. */
-internal fun quickToggleIds(stored: String?, available: List<String>): List<String> =
-    if (stored == null) {
-        listOf("ldac").filter { it in available }
-    } else {
-        stored.split(',').map { it.trim() }.filter { it.isNotEmpty() && it in available }.distinct()
-    }
-
 /** On/off settings as chips under the batteries, and a chip to choose which ones. */
 @Composable
 internal fun QuickToggleRow(

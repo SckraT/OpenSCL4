@@ -2,9 +2,12 @@ package com.oppzippy.openscq30.ui.deviceselection
 
 import androidx.annotation.StringRes
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.ClientBattery
+import com.oppzippy.openscq30.lib.bindings.ClientBatteryLabel
+import com.oppzippy.openscq30.lib.bindings.clientDeviceBatteries
+import com.oppzippy.openscq30.lib.bindings.clientWithMissingEarbud
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.lib.wrapper.Setting
-import com.oppzippy.openscq30.ui.sound.batteryProgress
 
 enum class ActiveDeviceState {
     Connecting,
@@ -34,33 +37,30 @@ internal fun featuredDevice(
     ?: devices.firstOrNull { it.macAddress.equals(lastMacAddress, ignoreCase = true) }
     ?: devices.firstOrNull()
 
-/** Battery levels of the connected device, in the same order as on the device overview. */
-fun deviceBatteries(settings: Map<String, Setting>): List<DeviceBattery> = listOf(
-    "batteryLevelLeft" to R.string.sound_overview_left,
-    "batteryLevelRight" to R.string.sound_overview_right,
-    "caseBatteryLevel" to R.string.sound_overview_case,
-    "batteryLevel" to R.string.sound_overview_battery,
-).mapNotNull { (id, label) ->
-    (settings[id] as? Setting.InformationSetting)?.let {
-        DeviceBattery(label, it.translatedValue, batteryProgress(it.value))
-    }
-}
+private val batteryLabels = mapOf(
+    ClientBatteryLabel.LEFT to R.string.sound_overview_left,
+    ClientBatteryLabel.RIGHT to R.string.sound_overview_right,
+    ClientBatteryLabel.CASE to R.string.sound_overview_case,
+    ClientBatteryLabel.BATTERY to R.string.sound_overview_battery,
+)
 
-/**
- * With only one earbud connected, the device reports no level for the other one; show it as a dash in its place so it
- * is clear which earbud is missing.
- */
-fun withMissingEarbud(batteries: List<DeviceBattery>, oneEarbudOnly: Boolean): List<DeviceBattery> {
-    if (!oneEarbudOnly) return batteries
-    val left = R.string.sound_overview_left
-    val right = R.string.sound_overview_right
-    val hasLeft = batteries.any { it.label == left }
-    val hasRight = batteries.any { it.label == right }
-    if (hasLeft == hasRight) return batteries
-    val missing = DeviceBattery(if (hasLeft) right else left, "—", null)
-    val earbuds = batteries.filter { it.label == left || it.label == right } + missing
-    return earbuds.sortedBy { if (it.label == left) 0 else 1 } + batteries.filter { it.label != left && it.label != right }
-}
+private fun ClientBattery.toDeviceBattery(): DeviceBattery =
+    DeviceBattery(batteryLabels.getValue(label), value, progress)
+
+fun deviceBatteries(settings: Map<String, Setting>): List<DeviceBattery> =
+    clientDeviceBatteries(settings).map { it.toDeviceBattery() }
+
+fun withMissingEarbud(batteries: List<DeviceBattery>, oneEarbudOnly: Boolean): List<DeviceBattery> =
+    clientWithMissingEarbud(
+        batteries.map { battery ->
+            ClientBattery(
+                batteryLabels.entries.first { it.value == battery.label }.key,
+                battery.value,
+                battery.progress,
+            )
+        },
+        oneEarbudOnly,
+    ).map { it.toDeviceBattery() }
 
 /** Model names start with the brand, which the list shows separately: "Soundcore Liberty 4 Pro". */
 internal fun splitBrand(modelName: String): Pair<String?, String> {

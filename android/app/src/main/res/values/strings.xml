@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">OpenSCQ30</string>
+    <string name="app_name">OpenSCL4</string>
     <string name="equalizer">Equalizer</string>
     <string name="hz">%1$d Hz</string>
     <string name="loading">Loading</string>
@@ -16,7 +16,7 @@
     <string name="back">Back</string>
     <string name="info">Info</string>
     <string name="source_code" tools:ignore="TypographyOther">
-        &lt;p>The source code and bug reports are available at &lt;a href="https://github.com/Oppzippy/OpenSCQ30">https://github.com/Oppzippy/OpenSCQ30&lt;/a>.&lt;/p>
+        &lt;p>The source code and bug reports are available at &lt;a href="https://github.com/SckraT/OpenSCL4">https://github.com/SckraT/OpenSCL4&lt;/a>.&lt;/p>
         &lt;br>
 
         &lt;p>Copyright (C) Kyle Scheuing&lt;/p>
@@ -92,7 +92,7 @@
             &lt;li>Quick presets are now stored in a different format, and no automatic migration is available, so they must be re-created.&lt;/li>
             &lt;li>Device model auto detection is removed, so you now need to select the device model when adding a device.&lt;/li>
         &lt;/ul>
-        &lt;p>See &lt;a href="https://github.com/Oppzippy/OpenSCQ30/blob/master/CHANGELOG.md">CHANGELOG.md&lt;/a> for details.&lt;/p>
+        &lt;p>See &lt;a href="https://github.com/SckraT/OpenSCL4/blob/master/CHANGELOG.md">CHANGELOG.md&lt;/a> for details.&lt;/p>
     </string>
     <string name="delete_quick_preset">Delete Quick Preset</string>
     <string name="error_deleting_quick_preset">Error deleting quick preset</string>

@@ -105,12 +105,7 @@ impl App {
     }
 
     pub(super) fn render_presets(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
-        let last_applied = self
-            .config
-            .settings
-            .last_preset
-            .get(&snapshot.mac_address.to_string())
-            .map(String::as_str);
+        let last_applied = snapshot.last_applied_preset.as_deref();
         let (on, off) = self.on_off();
         let words = presets::OnOff { on: &on, off: &off };
         state.set_preset_cards(ModelRc::new(VecModel::from(presets::cards(

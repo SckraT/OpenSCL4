@@ -786,8 +786,8 @@ msgstr "এক্সপোর্ট করতে একটি প্রোফা
 msgid "Save to file"
 msgstr "ফাইলে সংরক্ষণ করুন"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "OpenSCQ30 প্রোফাইলসহ একটি ফাইল বা লেখা। ইমপোর্টের আগে দেখতে পাবেন কী বদলাবে।"
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "OpenSCL4 প্রোফাইলসহ একটি ফাইল বা লেখা। ইমপোর্টের আগে দেখতে পাবেন কী বদলাবে।"
 
 msgid "Open file"
 msgstr "ফাইল খুলুন"
@@ -974,8 +974,8 @@ msgstr "চেহারা"
 msgid "Theme"
 msgstr "থিম"
 
-msgid "As in Windows"
-msgstr "Windows-এর মতো"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "হালকা"
@@ -1049,8 +1049,8 @@ msgstr "হোম স্ক্রিন সম্পাদনা করুন"
 msgid "About"
 msgstr "সম্পর্কে"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "Windows-এর জন্য OpenSCQ30 {} · GNU GPL 3-এর অধীনে মুক্ত সফটওয়্যার।"
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "আরও জানুন"
@@ -1076,14 +1076,17 @@ msgstr "এখনও কোনো প্রিসেট নেই"
 msgid "Notification area icon"
 msgstr "বিজ্ঞপ্তি এলাকার আইকন"
 
-msgid "Open OpenSCQ30"
-msgstr "OpenSCQ30 খুলুন"
+msgid "Open OpenSCL4"
+msgstr "OpenSCL4 খুলুন"
 
 msgid "Quit"
 msgstr "প্রস্থান"
 
-msgid "Quit OpenSCQ30"
-msgstr "OpenSCQ30 থেকে প্রস্থান"
+msgid "Quit OpenSCL4"
+msgstr "OpenSCL4 থেকে প্রস্থান"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windows ও দ্রুত প্রবেশ"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

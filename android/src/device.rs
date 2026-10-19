@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use openscq30_lib::device::OpenSCQ30Device as LibOpenSCQ30Device;
+use openscq30_lib::quick_presets::QuickPresetActivation;
 use tokio::task::JoinHandle;
 
 use crate::serializable;
@@ -8,6 +9,7 @@ use crate::serializable;
 #[derive(uniffi::Object)]
 pub struct OpenSCQ30Device {
     pub inner: Arc<dyn LibOpenSCQ30Device + Send + Sync>,
+    pub preset_activation: QuickPresetActivation,
     connection_status_callback: Arc<Mutex<Option<Arc<dyn ConnectionStatusCallback>>>>,
     connection_status_handle: JoinHandle<()>,
     watch_for_changes_callback: Arc<Mutex<Option<Arc<dyn NotificationCallback>>>>,
@@ -23,19 +25,20 @@ impl Drop for OpenSCQ30Device {
 
 impl OpenSCQ30Device {
     pub async fn new(inner: Arc<dyn LibOpenSCQ30Device + Send + Sync>) -> Self {
+        let preset_activation = QuickPresetActivation::new(inner.clone());
         let connection_status_callback: Arc<Mutex<Option<Arc<dyn ConnectionStatusCallback>>>> =
             Default::default();
         let connection_status_handle = {
             let connection_status_callback = connection_status_callback.clone();
-            let inner = inner.clone();
+            let mut status = inner.connection_status();
             tokio::spawn(async move {
                 loop {
-                    if inner.connection_status().changed().await.is_err() {
+                    if status.changed().await.is_err() {
                         break;
                     }
                     if let Some(callback) = connection_status_callback.lock().unwrap().as_ref() {
                         callback.on_change(serializable::ConnectionStatus(
-                            inner.connection_status().borrow().to_owned(),
+                            status.borrow_and_update().to_owned(),
                         ));
                     }
                 }
@@ -46,11 +49,13 @@ impl OpenSCQ30Device {
         let watch_for_changes_handle = {
             let watch_for_changes_callback = watch_for_changes_callback.clone();
             let inner = inner.clone();
+            let mut preset_changes = preset_activation.watch_for_changes();
             tokio::spawn(async move {
                 let mut watcher = inner.watch_for_changes();
                 loop {
-                    if watcher.changed().await.is_err() {
-                        break;
+                    tokio::select! {
+                        result = watcher.changed() => if result.is_err() { break; },
+                        result = preset_changes.changed() => if result.is_err() { break; },
                     }
                     if let Some(callback) = watch_for_changes_callback.lock().unwrap().as_ref() {
                         callback.on_notify();
@@ -60,6 +65,7 @@ impl OpenSCQ30Device {
         };
         Self {
             inner,
+            preset_activation,
             connection_status_callback,
             connection_status_handle,
             watch_for_changes_callback,
@@ -70,6 +76,10 @@ impl OpenSCQ30Device {
 
 #[uniffi::export(async_runtime = "tokio")]
 impl OpenSCQ30Device {
+    pub fn last_applied_preset(&self) -> Option<String> {
+        self.preset_activation.last_applied()
+    }
+
     pub fn set_connection_status_callback(&self, callback: Arc<dyn ConnectionStatusCallback>) {
         *self.connection_status_callback.lock().unwrap() = Some(callback);
     }
@@ -87,6 +97,23 @@ impl OpenSCQ30Device {
             .categories()
             .into_iter()
             .map(serializable::CategoryId)
+            .collect()
+    }
+
+    pub fn settings_by_category(&self) -> Vec<SettingCategory> {
+        self.inner
+            .settings_by_category()
+            .into_iter()
+            .map(|(category, settings)| SettingCategory {
+                category_id: serializable::CategoryId(category),
+                settings: settings
+                    .into_iter()
+                    .map(|(id, setting)| SettingIdSettingPair {
+                        setting_id: serializable::SettingId(id),
+                        setting: serializable::Setting(setting),
+                    })
+                    .collect(),
+            })
             .collect()
     }
 
@@ -122,9 +149,21 @@ impl OpenSCQ30Device {
 }
 
 #[derive(uniffi::Record)]
+pub struct SettingCategory {
+    pub category_id: serializable::CategoryId,
+    pub settings: Vec<SettingIdSettingPair>,
+}
+
+#[derive(uniffi::Record)]
+pub struct SettingIdSettingPair {
+    pub setting_id: serializable::SettingId,
+    pub setting: serializable::Setting,
+}
+
+#[derive(uniffi::Record)]
 pub struct SettingIdValuePair {
-    setting: serializable::SettingId,
-    value: serializable::Value,
+    pub(crate) setting: serializable::SettingId,
+    pub(crate) value: serializable::Value,
 }
 
 #[uniffi::export(with_foreign)]

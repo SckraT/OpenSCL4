@@ -9,7 +9,7 @@ use openscq30_lib::{
     DeviceModel, OpenSCQ30Session,
     connection::{self, ConnectionDescriptor, ConnectionStatus},
     device::{self, OpenSCQ30Device},
-    quick_presets::QuickPresetsHandler,
+    quick_presets::{QuickPresetActivation, QuickPresetsHandler},
     settings::{CategoryId, SettingId, Value},
     storage::{PairedDevice, QuickPreset},
 };
@@ -62,6 +62,7 @@ pub struct DeviceSnapshot {
     pub categories: Vec<(CategoryId, Vec<SettingId>)>,
     pub settings: SettingMap,
     pub presets: Vec<QuickPreset>,
+    pub last_applied_preset: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,6 +75,8 @@ pub enum Failure {
 
 #[derive(Debug)]
 pub enum Event {
+    #[cfg(target_os = "linux")]
+    TrayStatus(crate::linux_tray::TrayStatus),
     PairedDevices(Vec<PairedDevice>),
     Devices {
         model: DeviceModel,
@@ -138,11 +141,19 @@ impl Controller {
             .build()?;
         let session = Arc::new(runtime.block_on(OpenSCQ30Session::new(database))?);
         let (messages, inbox) = mpsc::unbounded_channel();
+        let emit: Arc<dyn Fn(Event) + Send + Sync> = Arc::new(emit);
+        #[cfg(target_os = "linux")]
+        {
+            let emit = emit.clone();
+            runtime.spawn(crate::linux_tray::watch(move |status| {
+                emit(Event::TrayStatus(status))
+            }));
+        }
         let actor = Actor {
             presets: session.quick_preset_handler(),
             session,
             config_dir,
-            emit: Box::new(emit),
+            emit,
             messages: messages.clone(),
             generation: 0,
             connecting: None,
@@ -150,6 +161,7 @@ impl Controller {
             watchers: Vec::new(),
             paired: Vec::new(),
             preset_list: Vec::new(),
+            preset_activation: None,
         };
         runtime.spawn(actor.run(inbox));
         Ok(Self { messages, runtime })
@@ -184,7 +196,7 @@ struct Actor {
     session: Arc<OpenSCQ30Session>,
     presets: QuickPresetsHandler,
     config_dir: PathBuf,
-    emit: Box<dyn Fn(Event) + Send + Sync>,
+    emit: Arc<dyn Fn(Event) + Send + Sync>,
     messages: mpsc::UnboundedSender<Message>,
     /// Counts connection attempts, so a late answer for an earlier one is ignored.
     generation: u64,
@@ -193,6 +205,7 @@ struct Actor {
     watchers: Vec<JoinHandle<()>>,
     paired: Vec<PairedDevice>,
     preset_list: Vec<QuickPreset>,
+    preset_activation: Option<QuickPresetActivation>,
 }
 
 impl Actor {
@@ -316,10 +329,13 @@ impl Actor {
                 self.refresh_presets(&device).await;
             }
             Command::ActivatePreset(name) => {
-                let Some((mac_address, device)) = self.device.clone() else {
+                let Some((mac_address, _)) = self.device.clone() else {
                     return;
                 };
-                match self.presets.activate(device.as_ref(), name.clone()).await {
+                let Some(activation) = &self.preset_activation else {
+                    return;
+                };
+                match activation.activate(&self.presets, name.clone()).await {
                     Ok(()) => {
                         (self.emit)(Event::PresetApplied { mac_address, name });
                         self.emit_snapshot(false);
@@ -409,6 +425,7 @@ impl Actor {
                 tracing::error!("could not read the quick presets: {err:?}");
                 Vec::new()
             });
+        self.preset_activation = Some(QuickPresetActivation::new(device.clone()));
         self.device = Some((mac_address, device));
         self.emit_snapshot(true);
         match legacy::equalizer_profiles(&self.config_dir).await {
@@ -426,6 +443,7 @@ impl Actor {
             watcher.abort();
         }
         self.preset_list.clear();
+        self.preset_activation = None;
         self.device.take()
     }
 
@@ -447,6 +465,10 @@ impl Actor {
                 .collect(),
             settings: by_category.into_values().flatten().collect(),
             presets: self.preset_list.clone(),
+            last_applied_preset: self
+                .preset_activation
+                .as_ref()
+                .and_then(QuickPresetActivation::last_applied),
         });
         (self.emit)(if first {
             Event::Connected(snapshot)
@@ -522,6 +544,60 @@ mod tests {
         sync::mpsc as sync_channel,
         time::{Duration, Instant},
     };
+
+    #[test]
+    fn preset_activation_lives_in_the_connection_snapshot() {
+        let dir = tempfile::tempdir().unwrap();
+        let (emit, events) = sync_channel::channel();
+        let controller = Controller::start(
+            dir.path().join("database.sqlite"),
+            dir.path().to_path_buf(),
+            move |event| {
+                let _ = emit.send(event);
+            },
+        )
+        .unwrap();
+        let model = DeviceModel::SoundcoreA3954;
+        let address = model.demo_mac_address();
+        controller.send(Command::Pair(PairedDevice {
+            mac_address: address,
+            model,
+            is_demo: true,
+        }));
+        controller.send(Command::Connect(address));
+        let next_snapshot = |matches: &dyn Fn(&DeviceSnapshot) -> bool| {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                match events
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                    .unwrap()
+                {
+                    Event::Connected(snapshot) | Event::Changed(snapshot) if matches(&snapshot) => {
+                        break snapshot;
+                    }
+                    Event::CommandFailed { command, failure } => panic!("{command:?}: {failure:?}"),
+                    _ => (),
+                }
+            }
+        };
+        assert_eq!(next_snapshot(&|_| true).last_applied_preset, None);
+        controller.send(Command::SavePreset("First".into()));
+        next_snapshot(&|s| !s.presets.is_empty());
+        controller.send(Command::TogglePresetField {
+            name: "First".into(),
+            setting_id: SettingId::WearingDetection,
+            enabled: true,
+        });
+        next_snapshot(&|s| s.presets[0].fields.iter().any(|field| field.is_enabled));
+        controller.send(Command::ActivatePreset("First".into()));
+        next_snapshot(&|s| s.last_applied_preset.as_deref() == Some("First"));
+        controller.send(Command::Disconnect);
+        controller.send(Command::Connect(address));
+        let reconnected = next_snapshot(&|s| s.last_applied_preset.is_none());
+        assert_eq!(reconnected.presets.len(), 1);
+        assert_eq!(reconnected.presets[0].name, "First");
+        controller.shutdown();
+    }
 
     #[test]
     fn shutdown_stops_even_when_a_blocking_task_is_stuck() {

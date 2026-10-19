@@ -786,8 +786,8 @@ msgstr "エクスポートするにはプロファイルを保存してくださ
 msgid "Save to file"
 msgstr "ファイルに保存"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "OpenSCQ30 のプロファイルを含むファイルまたはテキスト。インポートの前に変更内容を確認できます。"
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "OpenSCL4 のプロファイルを含むファイルまたはテキスト。インポートの前に変更内容を確認できます。"
 
 msgid "Open file"
 msgstr "ファイルを開く"
@@ -971,8 +971,8 @@ msgstr "外観"
 msgid "Theme"
 msgstr "テーマ"
 
-msgid "As in Windows"
-msgstr "Windows に合わせる"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "ライト"
@@ -1046,8 +1046,8 @@ msgstr "ホーム画面を編集"
 msgid "About"
 msgstr "このアプリについて"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "Windows 版 OpenSCQ30 {} · GNU GPL 3 のフリーソフトウェア"
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "詳細"
@@ -1073,14 +1073,17 @@ msgstr "プリセットはまだありません"
 msgid "Notification area icon"
 msgstr "通知領域のアイコン"
 
-msgid "Open OpenSCQ30"
-msgstr "OpenSCQ30を開く"
+msgid "Open OpenSCL4"
+msgstr "OpenSCL4を開く"
 
 msgid "Quit"
 msgstr "終了"
 
-msgid "Quit OpenSCQ30"
-msgstr "OpenSCQ30を終了"
+msgid "Quit OpenSCL4"
+msgstr "OpenSCL4を終了"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windowsとクイックアクセス"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

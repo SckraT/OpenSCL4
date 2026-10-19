@@ -574,7 +574,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn equalizer_becomes_available_when_the_other_earbud_connects() {
         // connected with only one earbud: host device 1, tws not connected
-        let mut state = vec![
+        let state = vec![
             1, 0, 99, 100, 0, 0, 48, 51, 46, 50, 57, 48, 51, 46, 50, 57, 51, 57, 53, 52, 68, 69,
             55, 55, 53, 49, 56, 65, 57, 68, 70, 52, 48, 50, 46, 53, 56, 9, 0xF4, 0x9D, 0x8A, 0x53,
             0x2B, 0xBA, 254, 254, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 255, 255, 255,

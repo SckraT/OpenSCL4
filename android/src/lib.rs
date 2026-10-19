@@ -1,6 +1,7 @@
 #![allow(clippy::inherent_to_string)]
 
 mod api;
+mod client;
 pub mod connection;
 mod device;
 pub mod i18n;

@@ -6,7 +6,6 @@ use std::{
 
 use async_trait::async_trait;
 use openscq30_lib_has::Has;
-use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use tokio::sync::watch;
 use tracing::instrument;
@@ -18,6 +17,7 @@ use crate::{
         settings_manager::{SettingHandler, SettingHandlerError, SettingHandlerResult},
         structures::EqualizerConfiguration,
     },
+    equalizer_profiles::{self, ProfileConstraints, TransferProfile},
     i18n::fl,
 };
 
@@ -35,13 +35,6 @@ pub struct ImportExportSettingHandler<
     profiles_receiver: watch::Receiver<Vec<(String, Vec<i16>)>>,
     selected_profiles: Mutex<HashSet<String>>,
     change_notify: watch::Sender<()>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ExportedCustomProfile<'a> {
-    pub name: Cow<'a, str>,
-    pub volume_adjustments: Vec<f64>,
 }
 
 impl<
@@ -72,50 +65,6 @@ impl<
             change_notify,
             selected_profiles: Default::default(),
         }
-    }
-
-    /// Converts an imported profile to the format we store, making sure it has exactly the bands the device has and
-    /// that every value is one the device accepts. Profiles that don't would otherwise be stored and then break
-    /// everything that reads the stored profiles.
-    fn parse_imported_profile(
-        exported: ExportedCustomProfile,
-    ) -> SettingHandlerResult<(String, Vec<i16>)> {
-        let ExportedCustomProfile {
-            name,
-            volume_adjustments,
-        } = exported;
-        if volume_adjustments.len() != VISIBLE_BANDS {
-            return Err(SettingHandlerError::Other(
-                format!(
-                    "profile \"{name}\" has {} bands, but this device's equalizer has {VISIBLE_BANDS}",
-                    volume_adjustments.len(),
-                )
-                .into(),
-            ));
-        }
-        let scale = 10u32.pow(FRACTION_DIGITS.into()) as f64;
-        let allowed_range = f64::from(MIN_VOLUME)..=f64::from(MAX_VOLUME);
-        let stored_volume_adjustments = volume_adjustments
-            .iter()
-            .enumerate()
-            .map(|(band, value)| {
-                let scaled = (value * scale).round();
-                // written as a negated contains so that NaN is rejected too
-                if !allowed_range.contains(&scaled) {
-                    return Err(SettingHandlerError::Other(
-                        format!(
-                            "profile \"{name}\" has {value} for band {}, but values must be between {} and {}",
-                            band + 1,
-                            f64::from(MIN_VOLUME) / scale,
-                            f64::from(MAX_VOLUME) / scale,
-                        )
-                        .into(),
-                    ));
-                }
-                Ok(scaled as i16)
-            })
-            .collect::<SettingHandlerResult<Vec<_>>>()?;
-        Ok((name.into_owned(), stored_volume_adjustments))
     }
 }
 
@@ -178,15 +127,15 @@ where
                 let exported_profiles = custom_profiles
                     .iter()
                     .filter(|(name, _)| selection.contains(name))
-                    .map(|(name, values)| ExportedCustomProfile {
-                        name: name.into(),
-                        volume_adjustments: values
-                            .iter()
-                            .map(|i| *i as f64 / 10u32.pow(FRACTION_DIGITS.into()) as f64)
-                            .collect(),
+                    .map(|(name, values)| TransferProfile {
+                        name: name.clone(),
+                        volume_adjustments: equalizer_profiles::decibels(
+                            values,
+                            FRACTION_DIGITS.into(),
+                        ),
                     })
                     .collect::<Vec<_>>();
-                let json = serde_json::to_string(&exported_profiles).unwrap();
+                let json = equalizer_profiles::profiles_json(&exported_profiles);
                 settings::Setting::Information {
                     value: json.to_owned(),
                     translated_value: json,
@@ -207,12 +156,22 @@ where
         match setting {
             ImportExportSetting::ImportCustomEqualizerProfiles => {
                 let json = value.try_as_str()?;
-                let exported_profiles: Vec<ExportedCustomProfile> = serde_json::from_str(json)
+                let exported_profiles = equalizer_profiles::parse_profiles(json)
                     .map_err(|err| SettingHandlerError::Other(Box::new(err)))?;
+                let constraints = ProfileConstraints {
+                    band_count: VISIBLE_BANDS,
+                    fraction_digits: FRACTION_DIGITS.into(),
+                    min: MIN_VOLUME,
+                    max: MAX_VOLUME,
+                };
                 // validate everything before storing anything, so a bad profile doesn't result in a partial import
                 let profiles = exported_profiles
                     .into_iter()
-                    .map(Self::parse_imported_profile)
+                    .map(|profile| {
+                        let values = equalizer_profiles::validate_profile(&profile, &constraints)
+                            .map_err(|err| SettingHandlerError::Other(Box::new(err)))?;
+                        Ok((profile.name, values))
+                    })
                     .collect::<SettingHandlerResult<Vec<_>>>()?;
                 self.profile_store.bulk_upsert(profiles).await?;
             }
@@ -282,6 +241,43 @@ mod tests {
 
     fn stored_profiles(profile_store: &CustomEqualizerProfileStore) -> Vec<(String, Vec<i16>)> {
         profile_store.subscribe().borrow().clone()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn preview_and_persisted_import_agree_on_shared_profiles() {
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/client_rules.json"
+        )))
+        .unwrap();
+        let equalizer = settings::Equalizer {
+            band_hz: vec![100, 200, 400, 800, 1600, 3200, 6400, 12800].into(),
+            fraction_digits: 1,
+            min: -120,
+            max: 134,
+        };
+        for case in fixtures["equalizer"].as_array().unwrap() {
+            let (handler, store) = set_up().await;
+            let mut values = vec![0.0; 8];
+            values[0] = case["value"].as_f64().unwrap();
+            let profiles = vec![TransferProfile {
+                name: "p".into(),
+                volume_adjustments: values,
+            }];
+            let status =
+                crate::client::equalizer::preview_import(&profiles, &[], Some(&equalizer))[0];
+            let result = import(&handler, &equalizer_profiles::profiles_json(&profiles)).await;
+            assert_eq!(case["status"].as_str().unwrap(), format!("{status:?}"));
+            assert_eq!(status.is_valid(), result.is_ok(), "{case}");
+            match case["units"].as_i64() {
+                Some(units) => {
+                    let mut expected = vec![0; 8];
+                    expected[0] = units as i16;
+                    assert_eq!(vec![("p".to_string(), expected)], stored_profiles(&store));
+                }
+                None => assert!(stored_profiles(&store).is_empty()),
+            }
+        }
     }
 
     #[tokio::test(start_paused = true)]

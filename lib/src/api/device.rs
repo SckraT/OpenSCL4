@@ -37,6 +37,8 @@ pub enum Error {
 
     #[error("{action} timed out")]
     ActionTimedOut { action: &'static str },
+    #[error("device disconnected")]
+    Disconnected,
     #[error("device with mac address {mac_address} not found")]
     DeviceNotFound { mac_address: MacAddr6 },
 }

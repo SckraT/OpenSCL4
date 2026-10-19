@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.clientSettingGroup
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
@@ -42,59 +43,8 @@ fun SettingGroup.title(): String = when (this) {
         translateCategoryId(requireNotNull(libraryCategory))
 }
 
-private val groupsById: Map<String, SettingGroup> = buildMap {
-    fun put(group: SettingGroup, vararg ids: String) = ids.forEach { put(it, group) }
-    SoundCapabilities.modes.forEach { put(it, SettingGroup.SoundModes) }
-    // the sleep earbuds turn noise canceling on and off with a toggle of its own
-    put(SettingGroup.SoundModes, "noiseCanceling")
-    // how the sound gets to the earbuds and what is done to it
-    put(
-        SettingGroup.SoundEffects,
-        "ldac", "gamingMode", "spatialAudio", "spatialAudioMode", "spatialAudioMusicMode", "immersiveExperience",
-        "dolbyAudio", "surroundSound",
-    )
-    // feedback for, and a lock on, the touch controls
-    put(SettingGroup.Controls, "touchTone", "touchLock")
-    // wearing the earbuds, talking with them in and how loud they get
-    put(
-        SettingGroup.Comfort,
-        "wearingDetection", "autoPlayPause", "wearingTone", "easyChat", "easyChatWaitTime", "sideTone",
-        "soundLeakCompensation", "volumeBalance", "volume",
-    )
-    put(
-        SettingGroup.Power,
-        "autoPowerOff", "autoPowerOffPrompt", "powerOff", "lowBatteryPrompt", "voicePrompt", "listeningModePrompt",
-        "noiseCancelingPrompt",
-    )
-    put(SettingGroup.Connections, "dualConnections", "dualConnectionsDevices")
-    SoundCapabilities.case.forEach { put(it, SettingGroup.Case) }
-    put(
-        SettingGroup.Sleep,
-        "autoStopTimer", "autoStopTimerDuration", "autoSwitchOnceAsleep", "listeningMode", "defaultListeningMode",
-        "incomingCallsDuringBluetoothMode",
-    )
-}
-
-/**
- * The group of a setting: by what the setting is first, then by its library category. Going by the setting first
- * also keeps the Liberty 4 Pro's spatial audio, which the library lists under its case too, off the case page.
- */
-internal fun settingGroup(settingId: String, categoryId: String?): SettingGroup {
-    groupsById[settingId]?.let { return it }
-    if (SoundCapabilities.isControl(settingId)) return SettingGroup.Controls
-    return when (categoryId) {
-        "soundModes" -> SettingGroup.SoundModes
-        "equalizer", "equalizerImportExport" -> SettingGroup.Equalizer
-        "buttonConfiguration" -> SettingGroup.Controls
-        "limitHighVolume" -> SettingGroup.Comfort
-        "dualConnections" -> SettingGroup.Connections
-        "case" -> SettingGroup.Case
-        "lights" -> SettingGroup.Lights
-        "alarms" -> SettingGroup.Alarms
-        "deviceInformation" -> SettingGroup.About
-        else -> SettingGroup.Other
-    }
-}
+internal fun settingGroup(settingId: String, categoryId: String?): SettingGroup =
+    SettingGroup.valueOf(clientSettingGroup(settingId, categoryId))
 
 /** The device's settings by group, each in the device's order. Groups without settings are left out. */
 internal fun groupSettings(

@@ -29,10 +29,10 @@ export component Tray inherits SystemTrayIcon {
     callback set-ldac(bool);
 
     icon: @image-url("icons/app.svg");
-    title: "OpenSCQ30";
-    tooltip: !root.has-device ? "OpenSCQ30"
-        : root.connected && root.battery != "" ? "OpenSCQ30 · " + root.device-name + " · " + root.battery
-        : "OpenSCQ30 · " + root.device-name;
+    title: "OpenSCL4";
+    tooltip: !root.has-device ? "OpenSCL4"
+        : root.connected && root.battery != "" ? "OpenSCL4 · " + root.device-name + "\n" + root.battery
+        : "OpenSCL4 · " + root.device-name;
     clicked => { root.open(); }
 
     Menu {
@@ -78,7 +78,7 @@ export component Tray inherits SystemTrayIcon {
         }
         MenuSeparator { }
         MenuItem {
-            title: @tr("Open OpenSCQ30");
+            title: @tr("Open OpenSCL4");
             activated => { root.open(); }
         }
         MenuItem {

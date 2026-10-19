@@ -1,12 +1,14 @@
 ## About
 
-OpenSCQ30 is free software for controlling settings for Soundcore headphones and earbuds. It was originally intended for the Soundcore Life Q30, after which the project was named, but a range of devices are now supported.
+OpenSCL4 is free software for controlling Soundcore headphones and speakers, based on [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30). It keeps the shared Rust device library, uses Compose on Android and Slint on desktop, and installs separately from OpenSCQ30 with its own data.
 
-### Supported Platforms
+### Platforms
 
-[x] Windows - Ready  
-[x] Linux - Ready  
-[x] Android - Ready
+- Android and Windows: existing clients; the new OpenSCL4 release pipeline is being validated.
+- Linux x86_64: initial Ubuntu 24.04/26.04 packages and CI checks are prepared. Preview until session and real-device QA pass.
+- macOS: planned after this stage.
+
+See the [accepted plan](docs/cross-platform-release-plan.md) and [implementation status](docs/implementation-status-2026-10-19.md).
 
 ### Supported Devices
 
@@ -57,19 +59,11 @@ If there's a device not in this list that you want to see supported, check if th
 
 ## Installing
 
-See [GitHub Releases](https://github.com/Oppzippy/OpenSCQ30/releases). All files are signed with [my GPG key](https://kylescheuing.com/publickey.txt).
+See [OpenSCL4 GitHub Releases](https://github.com/SckraT/OpenSCL4/releases) for published builds. A prepared pipeline does not mean a stable release has been published. Packages in the first common release are Android APKs, a Windows installer/portable executable, and Linux `.deb`/`.tar.gz` files. Verify package hashes against the release's `SHA256SUMS`.
 
-[![Flathub](https://img.shields.io/flathub/v/com.oppzippy.OpenSCQ30)](https://flathub.org/apps/com.oppzippy.OpenSCQ30)
-[![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.oppzippy.openscq30)](https://apt.izzysoft.de/fdroid/index/apk/com.oppzippy.openscq30)
+OpenSCL4 has a separate Android signing key. Windows initially ships without Authenticode. OpenSCQ30 store listings, signatures and mirrors belong to the upstream project.
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/openscq30.svg)](https://repology.org/project/openscq30/versions)
-
-## Mirrors
-
-Issues and pull requests are accepted on both GitHub and Codeberg, although CI and releases are only on github.
-
-- GitHub: https://github.com/Oppzippy/OpenSCQ30
-- Codeberg: https://codeberg.org/Oppzippy/OpenSCQ30
+Issues and pull requests for this fork belong in [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4).
 
 ## Contributing
 
@@ -81,7 +75,7 @@ See [docs/development.md](docs/development.md)
 
 [![Translation status](https://translate.codeberg.org/widget/openscq30/multi-auto.svg)](https://translate.codeberg.org/engage/openscq30/)
 
-## Demo
+## Historical upstream demos
 
 ### Desktop
 
@@ -93,11 +87,13 @@ See [docs/development.md](docs/development.md)
 
 ## Building
 
-- Windows: [docs/build-windows.md](docs/build-windows.md)
-- MacOS: [docs/build-macos.md](docs/build-macos.md)
-- Linux: [docs/build-linux.md](docs/build-linux.md)
-- Android: [docs/build-android.md](docs/build-android.md)
+See [the common build and release guide](docs/build-release.md) for current clients, pinned tools, signing and verification. Older platform guides describe the legacy GUI where indicated.
 
 ## Running Tests
 
-`just test` will run all unit and integration tests. To run tests for a specific package, use `just gui/ test` for example.
+```text
+cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
+python -m unittest discover -s scripts/tests -v
+```
+
+Android adapter tests run with `testX86_64DebugUnitTest` in the `android/` Gradle project and require its native host build tools. Rust and Android share fixtures in `lib/tests/fixtures/client_rules.json`.

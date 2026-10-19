@@ -16,7 +16,7 @@ resolver = "3"
 [workspace.package]
 version = "2.13.0"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/Oppzippy/OpenSCQ30"
+repository = "https://github.com/SckraT/OpenSCL4"
 authors = ["Kyle Scheuing <kyle@kylescheuing.com>"]
 
 [workspace.lints.clippy]
@@ -122,6 +122,7 @@ slint = "1.18"
 slint-build = "1.18"
 rfd = { version = "0.16", default-features = false }
 arboard = "3"
+zbus = "5.19"
 roxmltree = "0.21"
 
 [patch.'https://github.com/wash2/accesskit']

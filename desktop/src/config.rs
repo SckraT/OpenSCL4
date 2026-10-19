@@ -1,4 +1,4 @@
-//! The app's own settings, kept in openscq30-desktop-config.toml next to the database it shares with gui/.
+//! The app's own settings, kept in openscl4-config.toml next to its database.
 
 use std::{
     collections::HashMap,
@@ -76,8 +76,6 @@ pub struct Settings {
     pub quick_toggles: HashMap<String, Vec<String>>,
     /// The device opened last, by its address.
     pub last_device: Option<String>,
-    /// The quick preset applied last on each device, by address, which is the one shown as applied.
-    pub last_preset: HashMap<String, String>,
     /// The icon in the notification area.
     pub tray: bool,
     pub tray_items: TrayItems,
@@ -97,7 +95,6 @@ impl Default for Settings {
             overview_layout: None,
             quick_toggles: HashMap::new(),
             last_device: None,
-            last_preset: HashMap::new(),
             tray: true,
             tray_items: TrayItems::default(),
             close_to_tray: true,

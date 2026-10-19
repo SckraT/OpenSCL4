@@ -137,6 +137,7 @@ impl App {
         state.set_language_names(slint::ModelRc::new(slint::VecModel::from(names)));
         state.set_show_one_earbud_badge(settings.one_earbud_badge);
         state.set_app_tray(settings.tray);
+        state.set_app_tray_available(self.tray.is_some() && self.tray_registered);
         state.set_app_close_to_tray(settings.close_to_tray);
         state.set_tray_battery(settings.tray_items.battery);
         state.set_tray_modes(settings.tray_items.modes);

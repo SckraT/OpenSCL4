@@ -1,5 +1,6 @@
 // A setting as a row of a section page, in the control its kind needs.
-import { ComboBox, SpinBox } from "std-widgets.slint";
+import { SpinBox } from "std-widgets.slint";
+import { Select } from "select.slint";
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, RowKind, SettingRow, SettingsPanel, PanelKind } from "../types.slint";
@@ -265,14 +266,15 @@ export component SettingRowView inherits Rectangle {
             y: (parent.height - self.height) / 2;
             toggled(on) => { Actions.set-toggle(root.setting.id, on); }
         }
-        if root.setting.kind == RowKind.select: ComboBox {
+        if root.setting.kind == RowKind.select: Select {
             width: 250px;
             height: 40px;
             model: root.setting.options;
             current-index: root.setting.index;
             enabled: root.setting.enabled;
+            label: root.label;
             y: (parent.height - self.height) / 2;
-            selected(value) => { Actions.set-option(root.setting.id, self.current-index); }
+            selected(index) => { Actions.set-option(root.setting.id, index); }
         }
         if root.setting.kind == RowKind.range || root.setting.kind == RowKind.hue: HorizontalLayout {
             spacing: 12px;

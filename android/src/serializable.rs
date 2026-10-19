@@ -70,6 +70,18 @@ uniffi::custom_type!(QuickPreset, String, {
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
 
+pub struct QuickPresetField(pub storage::QuickPresetField);
+uniffi::custom_type!(QuickPresetField, String, {
+    try_lift: |json| Ok(QuickPresetField(serde_json::from_str(&json)?)),
+    lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
+});
+
+pub struct Equalizer(pub settings::Equalizer);
+uniffi::custom_type!(Equalizer, String, {
+    try_lift: |json| Ok(Equalizer(serde_json::from_str(&json)?)),
+    lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
+});
+
 #[derive(Debug, uniffi::Record)]
 pub struct LanguageIdentifier {
     language: String,

@@ -786,8 +786,8 @@ msgstr "Simpan profil untuk mengekspornya."
 msgid "Save to file"
 msgstr "Simpan ke file"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "File atau teks berisi profil OpenSCQ30. Sebelum mengimpor, kamu akan melihat apa yang berubah."
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "File atau teks berisi profil OpenSCL4. Sebelum mengimpor, kamu akan melihat apa yang berubah."
 
 msgid "Open file"
 msgstr "Buka file"
@@ -971,8 +971,8 @@ msgstr "Tampilan"
 msgid "Theme"
 msgstr "Tema"
 
-msgid "As in Windows"
-msgstr "Seperti di Windows"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "Terang"
@@ -1046,8 +1046,8 @@ msgstr "Edit layar utama"
 msgid "About"
 msgstr "Tentang"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "OpenSCQ30 untuk Windows {} · perangkat lunak bebas di bawah GNU GPL 3."
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "Selengkapnya"
@@ -1073,14 +1073,17 @@ msgstr "Belum ada preset"
 msgid "Notification area icon"
 msgstr "Ikon area notifikasi"
 
-msgid "Open OpenSCQ30"
-msgstr "Buka OpenSCQ30"
+msgid "Open OpenSCL4"
+msgstr "Buka OpenSCL4"
 
 msgid "Quit"
 msgstr "Keluar"
 
-msgid "Quit OpenSCQ30"
-msgstr "Keluar dari OpenSCQ30"
+msgid "Quit OpenSCL4"
+msgstr "Keluar dari OpenSCL4"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windows dan akses cepat"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

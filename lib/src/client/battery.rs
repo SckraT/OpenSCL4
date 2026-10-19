@@ -1,7 +1,7 @@
 //! Battery levels and the one earbud state, as android/app/src/main/java/com/oppzippy/openscq30/ui/deviceselection/
 //! ActiveDevice.kt and ui/sound/SoundOverview.kt read them.
 
-use openscq30_lib::settings::{Setting, SettingId};
+use crate::settings::{Setting, SettingId};
 
 use super::SettingMap;
 

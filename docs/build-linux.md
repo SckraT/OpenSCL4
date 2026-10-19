@@ -1,3 +1,5 @@
+> Current OpenSCL4 builds use [the common build and release guide](build-release.md). The instructions below are retained from OpenSCQ30; references to `gui/` describe the legacy desktop client.
+
 Instructions use Ubuntu package names. Package names may differ on other distros.
 
 If it's inconvenient to install the latest version of [just](https://github.com/casey/just), use the without just instructions. The catch is that the without just instructions are more likely to change in the future, so if you're packaging openscq30 and the latest version of just is easily available, prefer the with just instructions.

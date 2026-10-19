@@ -15,6 +15,7 @@ else
 fi
 ndk_version=$("$project_dir/android/scripts/get-ndk-version.sh")
 cargo_ndk_version=$(cargo ndk --version | awk '{ print $2 }')
+extra_versions=$(awk '$1 == "innosetup" || $1 == "android-sdk" || $1 == "android-build-tools"' "$output_path")
 
 cat <<EOF > "$output_path"
 rustup $rustup_version
@@ -22,4 +23,5 @@ rust $rust_version
 jdk $java_version
 ndk $ndk_version
 cargo-ndk $cargo_ndk_version
+$extra_versions
 EOF

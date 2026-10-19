@@ -6,6 +6,8 @@ mod art;
 mod config;
 mod controller;
 mod equalizer;
+#[cfg(any(target_os = "linux", test))]
+mod linux_tray;
 pub mod logs;
 pub mod model;
 mod models;
@@ -23,12 +25,12 @@ slint::include_modules!();
 
 /// Opens the main window and runs until it is closed.
 pub fn run() -> anyhow::Result<()> {
-    // the same folder as gui/, so both use the same devices and presets, unless another one is asked for
-    let config_dir = match std::env::var_os("OPENSCQ30_CONFIG_DIR") {
+    window_chrome::init()?;
+    let config_dir = match std::env::var_os("OPENSCL4_CONFIG_DIR") {
         Some(dir) => std::path::PathBuf::from(dir),
         None => dirs::config_dir()
             .context("no config folder")?
-            .join("openscq30"),
+            .join("openscl4"),
     };
     let window = AppWindow::new()?;
     if !single_instance::claim(&config_dir, app::show_from_elsewhere) {

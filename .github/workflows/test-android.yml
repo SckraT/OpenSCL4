@@ -4,6 +4,13 @@ on:
   push:
     paths: &push_paths
       - Cargo.lock
+      - Cargo.toml
+      - rust-toolchain.toml
+      - .build-tool-versions
+      - lib/**
+      - i18n/**
+      - i18n-macros/**
+      - uniffi-bindgen/**
       - android/**
       - .github/workflows/test-android.yml
   pull_request:
@@ -14,7 +21,7 @@ permissions:
 
 jobs:
   test-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -24,6 +31,9 @@ jobs:
         with:
           cache: true
           arch: x86_64
+
+      - name: Install host library dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libsqlite3-dev
 
       - name: Run android unit tests
         working-directory: android

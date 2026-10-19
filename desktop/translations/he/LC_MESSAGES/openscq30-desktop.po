@@ -786,8 +786,8 @@ msgstr "שמור פרופיל כדי לייצא אותו."
 msgid "Save to file"
 msgstr "שמור לקובץ"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "קובץ או טקסט עם פרופילים של OpenSCQ30. לפני הייבוא תראה מה ישתנה."
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "קובץ או טקסט עם פרופילים של OpenSCL4. לפני הייבוא תראה מה ישתנה."
 
 msgid "Open file"
 msgstr "פתח קובץ"
@@ -974,8 +974,8 @@ msgstr "מראה"
 msgid "Theme"
 msgstr "ערכת נושא"
 
-msgid "As in Windows"
-msgstr "כמו ב-Windows"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "בהירה"
@@ -1049,8 +1049,8 @@ msgstr "ערוך את מסך הבית"
 msgid "About"
 msgstr "אודות"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "OpenSCQ30 ל-Windows {} · תוכנה חופשית תחת GNU GPL 3."
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "עוד"
@@ -1076,14 +1076,17 @@ msgstr "אין עדיין הגדרות קבועות מראש"
 msgid "Notification area icon"
 msgstr "סמל באזור ההודעות"
 
-msgid "Open OpenSCQ30"
-msgstr "פתיחת OpenSCQ30"
+msgid "Open OpenSCL4"
+msgstr "פתיחת OpenSCL4"
 
 msgid "Quit"
 msgstr "יציאה"
 
-msgid "Quit OpenSCQ30"
-msgstr "יציאה מ־OpenSCQ30"
+msgid "Quit OpenSCL4"
+msgstr "יציאה מ־OpenSCL4"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windows וגישה מהירה"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

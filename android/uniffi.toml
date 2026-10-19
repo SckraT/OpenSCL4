@@ -71,3 +71,15 @@ imports = [
 ]
 into_custom = "Json.decodeFromString<QuickPreset>({})"
 from_custom = "Json.encodeToString({})"
+
+[bindings.kotlin.custom_types.QuickPresetField]
+type_name = "QuickPresetField"
+imports = ["kotlinx.serialization.json.Json", "com.oppzippy.openscq30.lib.wrapper.QuickPresetField"]
+into_custom = "Json.decodeFromString<QuickPresetField>({})"
+from_custom = "Json.encodeToString({})"
+
+[bindings.kotlin.custom_types.Equalizer]
+type_name = "Equalizer"
+imports = ["kotlinx.serialization.json.Json", "com.oppzippy.openscq30.lib.wrapper.Equalizer"]
+into_custom = "Json.decodeFromString<Equalizer>({})"
+from_custom = "Json.encodeToString({})"

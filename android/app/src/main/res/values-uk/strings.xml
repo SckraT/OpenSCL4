@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">OpenSCQ30</string>
+    <string name="app_name">OpenSCL4</string>
     <string name="equalizer">Еквалайзер</string>
     <string name="hz">%1$d Гц</string>
     <string name="loading">Завантаження</string>
@@ -16,7 +16,7 @@
     <string name="back">Назад</string>
     <string name="info">Інформація</string>
     <string name="source_code" tools:ignore="TypographyOther">
-        &lt;p&gt;Вихідний код та звіти про помилки доступні за адресою &lt;a href="https://github.com/Oppzippy/OpenSCQ30"&gt;https://github.com/Oppzippy/OpenSCQ30&lt;/a&gt;.&lt;/p&gt;
+        &lt;p&gt;Вихідний код та звіти про помилки доступні за адресою &lt;a href="https://github.com/SckraT/OpenSCL4"&gt;https://github.com/SckraT/OpenSCL4&lt;/a&gt;.&lt;/p&gt;
         &lt;br&gt;
 
         &lt;p&gt;Авторські права (C) Kyle Scheuing&lt;/p&gt;
@@ -85,7 +85,7 @@
             &lt;li&gt;Швидкі налаштування тепер зберігаються в іншому форматі, і автоматична міграція недоступна, тому їх потрібно створити знову.&lt;/li&gt;
             &lt;li&gt;Автовизначення моделі пристрою видалено, тому тепер потрібно вибирати модель пристрою під час додавання пристрою.&lt;/li&gt;
         &lt;/ul&gt;
-        &lt;p&gt;Детальніше дивись у &lt;a href="https://github.com/Oppzippy/OpenSCQ30/blob/master/CHANGELOG.md"&gt;CHANGELOG.md&lt;/a&gt;.&lt;/p&gt;
+        &lt;p&gt;Детальніше дивись у &lt;a href="https://github.com/SckraT/OpenSCL4/blob/master/CHANGELOG.md"&gt;CHANGELOG.md&lt;/a&gt;.&lt;/p&gt;
     </string>
     <string name="delete_quick_preset">Видалити швидке налаштування</string>
     <string name="error_deleting_quick_preset">Помилка видалення швидкого налаштування</string>

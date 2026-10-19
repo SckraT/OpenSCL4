@@ -17,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,6 +41,7 @@ class DeleteQuickPresetTest {
         every { session.quickPresetHandler() } returns quickPresetsHandler
         val deviceManager = mockk<DeviceConnectionManager>()
         every { deviceManager.device } returns device
+        every { deviceManager.watchForChangeNotification } returns MutableStateFlow(0)
 
         manager = DeviceSettingsManager(
             session = session,

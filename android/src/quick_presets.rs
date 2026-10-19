@@ -47,8 +47,9 @@ impl QuickPresetsHandler {
         device: &OpenSCQ30Device,
         name: &str,
     ) -> Result<(), crate::OpenSCQ30Error> {
-        self.inner
-            .activate(device.inner.as_ref(), name)
+        device
+            .preset_activation
+            .activate(&self.inner, name.to_owned())
             .await
             .map_err(Into::into)
     }

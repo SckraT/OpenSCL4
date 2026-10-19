@@ -1,0 +1,86 @@
+{
+  "battery": [
+    {"raw": "83/100", "progress": 0.83},
+    {"raw": "7/10", "progress": 0.7},
+    {"raw": " 120% ", "progress": 1.0},
+    {"raw": "-1/100", "progress": 0.0},
+    {"raw": "1/0", "progress": null},
+    {"raw": "NaN/100", "progress": null},
+    {"raw": "1/2/3", "progress": null}
+  ],
+  "groups": [
+    {"id": "spatialAudio", "category": "case", "group": "SoundEffects"},
+    {"id": "caseBatteryLevel", "category": "deviceInformation", "group": "Case"},
+    {"id": "leftSinglePress", "category": "buttonConfiguration", "group": "Controls"},
+    {"id": "unknown", "category": null, "group": "Other"}
+  ],
+  "scale": [
+    {"position": -10, "mode": "Transparency", "strengthId": "manualTransparency", "strength": 5},
+    {"position": 5, "mode": "Transparency", "strengthId": "manualTransparency", "strength": 1},
+    {"position": 6, "mode": "Normal", "strengthId": null, "strength": null},
+    {"position": 7, "mode": "NoiseCanceling", "strengthId": "manualNoiseCanceling", "strength": 1},
+    {"position": 100, "mode": "NoiseCanceling", "strengthId": "manualNoiseCanceling", "strength": 5}
+  ],
+  "equalizer": [
+    {"value": -12.04, "status": "New", "units": -120},
+    {"value": -12.05, "status": "OutOfRange", "units": null},
+    {"value": 13.4, "status": "New", "units": 134},
+    {"value": 13.5, "status": "OutOfRange", "units": null}
+  ],
+  "presets": [
+    {"enabled": [], "values": [], "current": true, "lastApplied": "p", "status": "NotApplied"},
+    {"enabled": [true, false], "values": [true, false], "current": true, "lastApplied": "p", "status": "Applied"},
+    {"enabled": [true, true], "values": [true, false], "current": true, "lastApplied": "p", "status": "NotApplied"},
+    {"enabled": [true], "values": [true], "current": true, "lastApplied": null, "status": "MatchesCurrent"}
+  ],
+  "equalizerInputs": [
+    {"text": "-12", "fractionDigits": 1, "min": -120, "max": 134, "value": -120},
+    {"text": "13.4", "fractionDigits": 1, "min": -120, "max": 134, "value": 134},
+    {"text": " 2,5 ", "fractionDigits": 1, "min": -120, "max": 134, "value": 25},
+    {"text": "−1,5", "fractionDigits": 1, "min": -120, "max": 134, "value": -15},
+    {"text": "+.5", "fractionDigits": 1, "min": -120, "max": 134, "value": 5},
+    {"text": "1.00", "fractionDigits": 1, "min": -120, "max": 134, "value": 10},
+    {"text": "-0.00", "fractionDigits": 1, "min": -120, "max": 134, "value": 0},
+    {"text": "13.5", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "-12.1", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "1.01", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "NaN", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "1e-1", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "1.2.3", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "99999999999999999999", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "-", "fractionDigits": 1, "min": -120, "max": 134, "value": null},
+    {"text": "-32768", "fractionDigits": 0, "min": -32768, "max": 32767, "value": -32768},
+    {"text": "32767", "fractionDigits": 0, "min": -32768, "max": 32767, "value": 32767},
+    {"text": "32768", "fractionDigits": 0, "min": -32768, "max": 32767, "value": null},
+    {"text": "0.25", "fractionDigits": 2, "min": -100, "max": 100, "value": 25},
+    {"text": "1", "fractionDigits": -1, "min": -120, "max": 134, "value": null}
+  ],
+  "equalizerFormats": [
+    {"value": 134, "fractionDigits": 1, "text": "13.4"},
+    {"value": -120, "fractionDigits": 1, "text": "-12"},
+    {"value": 25, "fractionDigits": 2, "text": "0.25"},
+    {"value": 0, "fractionDigits": 1, "text": "0"},
+    {"value": -5, "fractionDigits": 1, "text": "-0.5"},
+    {"value": 6, "fractionDigits": 0, "text": "6"},
+    {"value": -32768, "fractionDigits": 3, "text": "-32.768"},
+    {"value": 1, "fractionDigits": 6, "text": "0.000001"}
+  ],
+  "equalizerFrequencies": [
+    {"hz": 0, "value": "0", "khz": false},
+    {"hz": 999, "value": "999", "khz": false},
+    {"hz": 1000, "value": "1", "khz": true},
+    {"hz": 1001, "value": "1.001", "khz": true},
+    {"hz": 1600, "value": "1.6", "khz": true},
+    {"hz": 12800, "value": "12.8", "khz": true},
+    {"hz": 65535, "value": "65.535", "khz": true}
+  ],
+  "quickToggles": [
+    {"stored": null, "available": ["wearingDetection", "ldac"], "expected": ["ldac"]},
+    {"stored": null, "available": ["wearingDetection"], "expected": []},
+    {"stored": [], "available": ["ldac"], "expected": []},
+    {"stored": [" wearingDetection ", "ldac", "wearingDetection", "", "removed"], "available": ["ldac", "wearingDetection"], "expected": ["wearingDetection", "ldac"]},
+    {"stored": ["removed"], "available": ["ldac"], "expected": []},
+    {"stored": ["ldac", "wearingDetection"], "available": ["wearingDetection", "ldac"], "expected": ["ldac", "wearingDetection"]}
+  ]
+}

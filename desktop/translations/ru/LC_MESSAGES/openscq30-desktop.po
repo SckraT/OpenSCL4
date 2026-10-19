@@ -786,8 +786,8 @@ msgstr "Сохраните профиль, чтобы его экспортир�
 msgid "Save to file"
 msgstr "Сохранить в файл"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "Файл или текст с профилями OpenSCQ30. Перед импортом покажем, что изменится."
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "Файл или текст с профилями OpenSCL4. Перед импортом покажем, что изменится."
 
 msgid "Open file"
 msgstr "Открыть файл"
@@ -977,8 +977,8 @@ msgstr "Внешний вид"
 msgid "Theme"
 msgstr "Тема"
 
-msgid "As in Windows"
-msgstr "Как в Windows"
+msgid "Follow system"
+msgstr "Как в системе"
 
 msgid "Light"
 msgstr "Светлая"
@@ -1052,8 +1052,8 @@ msgstr "Изменить главный экран"
 msgid "About"
 msgstr "О приложении"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "OpenSCQ30 для Windows {} · свободная программа под GNU GPL 3."
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · свободная программа под GNU GPL 3."
 
 msgid "More"
 msgstr "Подробнее"
@@ -1079,14 +1079,17 @@ msgstr "Пресетов пока нет"
 msgid "Notification area icon"
 msgstr "Значок в области уведомлений"
 
-msgid "Open OpenSCQ30"
-msgstr "Открыть OpenSCQ30"
+msgid "Open OpenSCL4"
+msgstr "Открыть OpenSCL4"
 
 msgid "Quit"
 msgstr "Выйти"
 
-msgid "Quit OpenSCQ30"
-msgstr "Выйти из OpenSCQ30"
+msgid "Quit OpenSCL4"
+msgstr "Выйти из OpenSCL4"
 
-msgid "Windows and quick access"
-msgstr "Windows и быстрый доступ"
+msgid "Desktop and quick access"
+msgstr "Рабочий стол и быстрый доступ"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "Значок в области уведомлений недоступен. Закрытие окна завершит приложение."

@@ -19,6 +19,7 @@ import com.oppzippy.openscq30.features.statusnotification.storage.QuickPresetSlo
 import com.oppzippy.openscq30.features.whatsnew.Version2BreakingChangesMessage
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
+import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
 import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
@@ -33,8 +34,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flowOn
@@ -285,42 +292,20 @@ class DeviceSettingsManager(
         Result.failure(ex)
     }
 
-    val categoryIdsFlow: Flow<List<String>>
-        get() = deviceManager.watchForChangeNotification.map {
-            try {
-                device.categories()
-            } catch (ex: IllegalStateException) {
-                Log.w(TAG, "device was closed, can't update category ids", ex)
-                emptyList()
-            }
-        }.flowOn(Dispatchers.Default)
+    val settingsByCategoryFlow: StateFlow<List<SettingCategory>?> = deviceManager.watchForChangeNotification.map {
+        val settings = try {
+            device.settingsByCategory()
+        } catch (ex: IllegalStateException) {
+            Log.w(TAG, "device was closed, can't read settings", ex)
+            emptyList()
+        }
+        currentCoroutineContext().ensureActive()
+        settings
+    }.flowOn(Dispatchers.Default).stateIn(coroutineScope, SharingStarted.WhileSubscribed(), null)
 
-    fun getSettingsInCategoryFlow(categoryId: String): Flow<List<Pair<String, Setting>>> =
-        deviceManager.watchForChangeNotification.map {
-            try {
-                device.settingsInCategory(categoryId).mapNotNull { settingId ->
-                    device.setting(settingId)?.let { Pair(settingId, it) }
-                }
-            } catch (ex: IllegalStateException) {
-                Log.w(TAG, "device was closed, can't get settings in category $categoryId", ex)
-                emptyList()
-            }
-        }.flowOn(Dispatchers.Default)
-
-    val allSettingsFlow: Flow<List<Pair<String, Setting>>>
-        get() = deviceManager.watchForChangeNotification.map {
-            try {
-                device.categories()
-                    .flatMap { device.settingsInCategory(it) }
-                    .distinct()
-                    .mapNotNull { settingId ->
-                        device.setting(settingId)?.let { setting -> Pair(settingId, setting) }
-                    }
-            } catch (ex: IllegalStateException) {
-                Log.w(TAG, "device was closed, can't get all settings", ex)
-                emptyList()
-            }
-        }.flowOn(Dispatchers.Default)
+    val allSettingsFlow: Flow<List<Pair<String, Setting>>> = settingsByCategoryFlow.filterNotNull().map { categories ->
+        categories.flatMap { it.settings }.distinctBy { it.settingId }.map { it.settingId to it.setting }
+    }
 
     val featuredSettingSlots = featuredSettingSlotDao.allSettingIds(device.model()).map { slots ->
         // Show a fixed number of slots

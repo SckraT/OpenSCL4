@@ -786,8 +786,8 @@ msgstr "Speichere ein Profil, um es zu exportieren."
 msgid "Save to file"
 msgstr "In Datei speichern"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "Eine Datei oder ein Text mit OpenSCQ30-Profilen. Vor dem Import siehst du, was sich ändert."
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "Eine Datei oder ein Text mit OpenSCL4-Profilen. Vor dem Import siehst du, was sich ändert."
 
 msgid "Open file"
 msgstr "Datei öffnen"
@@ -974,8 +974,8 @@ msgstr "Erscheinungsbild"
 msgid "Theme"
 msgstr "Design"
 
-msgid "As in Windows"
-msgstr "Wie in Windows"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "Hell"
@@ -1049,8 +1049,8 @@ msgstr "Startbildschirm bearbeiten"
 msgid "About"
 msgstr "Über die App"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "OpenSCQ30 für Windows {} · freie Software unter der GNU GPL 3."
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "Mehr"
@@ -1076,14 +1076,17 @@ msgstr "Noch keine Voreinstellungen"
 msgid "Notification area icon"
 msgstr "Symbol im Infobereich"
 
-msgid "Open OpenSCQ30"
-msgstr "OpenSCQ30 öffnen"
+msgid "Open OpenSCL4"
+msgstr "OpenSCL4 öffnen"
 
 msgid "Quit"
 msgstr "Beenden"
 
-msgid "Quit OpenSCQ30"
-msgstr "OpenSCQ30 beenden"
+msgid "Quit OpenSCL4"
+msgstr "OpenSCL4 beenden"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windows und Schnellzugriff"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

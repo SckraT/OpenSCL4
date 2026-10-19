@@ -17,28 +17,28 @@ permissions:
 
 jobs:
   test-rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install basic requirements
         # libfontconfig1-dev for openscq30-desktop, which Slint draws
-        run: sudo apt-get install -y pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev
-      - name: Install just
-        run: sudo snap install just --classic
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev
       - name: Install rust
-        run: rustup install --profile minimal stable
+        run: rustup show active-toolchain
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-llvm-cov
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Run all rust tests
-        run: just test-cov
+      - name: Run shared and current client tests
+        run: cargo llvm-cov --locked --no-report --no-cfg-coverage -p openscq30-lib -p openscq30-desktop -p openscq30-android
       - name: Generate HTML test coverage report
-        run: just test-cov-report html
+        run: cargo llvm-cov report --html
+      - name: Check release verification
+        run: python3 -m unittest discover -s scripts/tests
       - name: Upload coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=OpenSCL4
+GenericName=Bluetooth device settings
+GenericName[ru]=Настройки Bluetooth-устройства
+Comment=Control Soundcore headphones and speakers
+Comment[ru]=Управление наушниками и колонками Soundcore
+Exec=openscl4
+Icon=io.github.sckrat.openscl4
+Terminal=false
+Categories=AudioVideo;Audio;Settings;
+StartupWMClass=io.github.sckrat.openscl4

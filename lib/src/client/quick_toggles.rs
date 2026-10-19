@@ -1,5 +1,5 @@
 //! The on/off settings shown as chips on the device card, as quickToggleIds in
-//! android/app/src/main/java/com/oppzippy/openscq30/ui/sound/DeviceHeroCard.kt.
+//! android/app/src/main/java/com/oppzippy/openscq30/ui/sound/QuickToggles.kt.
 
 /// The ids of the quick toggles to show: the user's choice, or LDAC when the device has it and nothing was chosen.
 pub fn quick_toggle_ids(stored: Option<&[String]>, available: &[&str]) -> Vec<String> {

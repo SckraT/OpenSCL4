@@ -786,8 +786,8 @@ msgstr "احفظ بروفايل علشان تصدّره."
 msgid "Save to file"
 msgstr "احفظ في ملف"
 
-msgid "A file or text with OpenSCQ30 profiles. Before importing you'll see what changes."
-msgstr "ملف أو نص فيه بروفايلات OpenSCQ30. قبل الاستيراد هتشوف إيه اللي هيتغيّر."
+msgid "A file or text with OpenSCL4 profiles. Before importing you'll see what changes."
+msgstr "ملف أو نص فيه بروفايلات OpenSCL4. قبل الاستيراد هتشوف إيه اللي هيتغيّر."
 
 msgid "Open file"
 msgstr "افتح ملف"
@@ -986,8 +986,8 @@ msgstr "الشكل"
 msgid "Theme"
 msgstr "المظهر"
 
-msgid "As in Windows"
-msgstr "زي Windows"
+msgid "Follow system"
+msgstr "Follow system"
 
 msgid "Light"
 msgstr "فاتح"
@@ -1061,8 +1061,8 @@ msgstr "عدّل الشاشة الرئيسية"
 msgid "About"
 msgstr "عن التطبيق"
 
-msgid "OpenSCQ30 for Windows {} · free software under the GNU GPL 3."
-msgstr "OpenSCQ30 لـ Windows {} · برنامج حر تحت GNU GPL 3."
+msgid "OpenSCL4 {} · free software under the GNU GPL 3."
+msgstr "OpenSCL4 {} · free software under the GNU GPL 3."
 
 msgid "More"
 msgstr "المزيد"
@@ -1088,14 +1088,17 @@ msgstr "لسه مفيش إعدادات مسبقة"
 msgid "Notification area icon"
 msgstr "أيقونة في منطقة الإشعارات"
 
-msgid "Open OpenSCQ30"
-msgstr "افتح OpenSCQ30"
+msgid "Open OpenSCL4"
+msgstr "افتح OpenSCL4"
 
 msgid "Quit"
 msgstr "خروج"
 
-msgid "Quit OpenSCQ30"
-msgstr "خروج من OpenSCQ30"
+msgid "Quit OpenSCL4"
+msgstr "خروج من OpenSCL4"
 
-msgid "Windows and quick access"
+msgid "Desktop and quick access"
 msgstr "Windows والوصول السريع"
+
+msgid "The notification area icon is unavailable. Closing the window quits the app."
+msgstr "The notification area icon is unavailable. Closing the window quits the app."

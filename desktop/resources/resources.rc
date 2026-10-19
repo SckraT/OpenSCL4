@@ -6,12 +6,12 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Oppzippy"
-            VALUE "FileDescription", "OpenSCQ30"
+            VALUE "CompanyName", "SckraT"
+            VALUE "FileDescription", "OpenSCL4"
             VALUE "FileVersion", "${VERSION}"
-            VALUE "InternalName", "openscq30-desktop"
-            VALUE "OriginalFilename", "openscq30-desktop.exe"
-            VALUE "ProductName", "OpenSCQ30"
+            VALUE "InternalName", "openscl4"
+            VALUE "OriginalFilename", "openscl4.exe"
+            VALUE "ProductName", "OpenSCL4"
             VALUE "ProductVersion", "${VERSION}"
             VALUE "LegalCopyright", "(C) Kyle Scheuing"
         END

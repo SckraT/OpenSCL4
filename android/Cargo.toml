@@ -28,6 +28,3 @@ async-trait = { workspace = true }
 strum = { workspace = true }
 i18n-embed = { workspace = true, features = ["fluent-system"] }
 i18n-embed-fl = { workspace = true }
-
-[build-dependencies]
-uniffi = { workspace = true, features = ["build"] }

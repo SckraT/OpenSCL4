@@ -1,24 +1,13 @@
 //! Equalizer values and the profile file format, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/
 //! EqualizerProfileTransfer.kt and SoundEqualizerPage.kt handle them.
 
-use openscq30_lib::settings::Equalizer;
-use serde::{Deserialize, Serialize};
+use crate::equalizer_profiles::{self, ProfileConstraints, ProfileValidationError};
+use crate::settings::Equalizer;
 
-/// A custom equalizer profile in the library's import and export format, with values in decibels.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferProfile {
-    pub name: String,
-    pub volume_adjustments: Vec<f64>,
-}
+pub use crate::equalizer_profiles::{TransferProfile, decibels, device_values, profiles_json};
 
-/// The profiles in an exported file, or None when the text isn't one.
 pub fn parse_profiles(text: &str) -> Option<Vec<TransferProfile>> {
-    serde_json::from_str(text.trim()).ok()
-}
-
-pub fn profiles_json(profiles: &[TransferProfile]) -> String {
-    serde_json::to_string(profiles).expect("profiles are plain data")
+    equalizer_profiles::parse_profiles(text.trim()).ok()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,46 +32,22 @@ pub fn preview_import(
     existing_names: &[&str],
     equalizer: Option<&Equalizer>,
 ) -> Vec<ImportStatus> {
+    let constraints = equalizer.map(ProfileConstraints::from);
     profiles
         .iter()
-        .map(|profile| match equalizer {
-            Some(eq) if profile.volume_adjustments.len() != eq.band_hz.len() => {
-                ImportStatus::WrongBandCount
+        .map(|profile| {
+            match constraints
+                .as_ref()
+                .map(|limits| equalizer_profiles::validate_profile(profile, limits))
+            {
+                Some(Err(ProfileValidationError::WrongBandCount { .. })) => {
+                    ImportStatus::WrongBandCount
+                }
+                Some(Err(ProfileValidationError::OutOfRange { .. })) => ImportStatus::OutOfRange,
+                _ if existing_names.contains(&profile.name.as_str()) => ImportStatus::Replaces,
+                _ => ImportStatus::New,
             }
-            Some(eq) if profile.volume_adjustments.iter().any(|v| !fits_in(*v, eq)) => {
-                ImportStatus::OutOfRange
-            }
-            _ if existing_names.contains(&profile.name.as_str()) => ImportStatus::Replaces,
-            _ => ImportStatus::New,
         })
-        .collect()
-}
-
-fn fits_in(value: f64, equalizer: &Equalizer) -> bool {
-    // NaN fails both comparisons, so it is rejected as well, as the library does
-    let scaled = scaled_to_device(value, equalizer.fraction_digits);
-    scaled >= f64::from(equalizer.min) && scaled <= f64::from(equalizer.max)
-}
-
-// f64::round rounds halves away from zero, as the library does.
-fn scaled_to_device(value: f64, fraction_digits: i16) -> f64 {
-    (value * 10f64.powi(i32::from(fraction_digits))).round()
-}
-
-/// Decibels to the device's units, for drawing a profile with the device's equalizer range.
-pub fn device_values(profile: &TransferProfile, fraction_digits: i16) -> Vec<i16> {
-    profile
-        .volume_adjustments
-        .iter()
-        .map(|v| scaled_to_device(*v, fraction_digits) as i16)
-        .collect()
-}
-
-/// Device units to decibels, for exporting.
-pub fn decibels(values: &[i16], fraction_digits: i16) -> Vec<f64> {
-    values
-        .iter()
-        .map(|v| f64::from(*v) / 10f64.powi(i32::from(fraction_digits)))
         .collect()
 }
 

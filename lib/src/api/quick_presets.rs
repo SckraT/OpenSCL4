@@ -1,8 +1,12 @@
 use std::{collections::HashSet, sync::Arc};
 
 use serde::{Deserialize, Serialize};
+use tokio::sync::{Mutex, watch};
 
-use crate::storage::{self, OpenSCQ30Database, QuickPreset, QuickPresetField};
+use crate::{
+    connection::ConnectionStatus,
+    storage::{self, OpenSCQ30Database, QuickPreset, QuickPresetField},
+};
 
 use super::{
     device::{self, OpenSCQ30Device},
@@ -20,6 +24,53 @@ pub enum QuickPresetAction {
 #[derive(Debug, Clone)]
 pub struct QuickPresetsHandler {
     database: Arc<OpenSCQ30Database>,
+}
+
+pub struct QuickPresetActivation {
+    device: Arc<dyn OpenSCQ30Device + Send + Sync>,
+    connection_status: watch::Receiver<ConnectionStatus>,
+    last_applied: watch::Sender<Option<String>>,
+    activation: Mutex<()>,
+}
+
+impl QuickPresetActivation {
+    pub fn new(device: Arc<dyn OpenSCQ30Device + Send + Sync>) -> Self {
+        Self {
+            connection_status: device.connection_status(),
+            device,
+            last_applied: watch::channel(None).0,
+            activation: Mutex::new(()),
+        }
+    }
+
+    pub fn last_applied(&self) -> Option<String> {
+        if *self.connection_status.borrow() == ConnectionStatus::Connected {
+            self.last_applied.borrow().clone()
+        } else {
+            None
+        }
+    }
+
+    pub fn watch_for_changes(&self) -> watch::Receiver<Option<String>> {
+        self.last_applied.subscribe()
+    }
+
+    pub async fn activate(
+        &self,
+        handler: &QuickPresetsHandler,
+        name: String,
+    ) -> device::Result<()> {
+        let _activation = self.activation.lock().await;
+        if *self.connection_status.borrow() != ConnectionStatus::Connected {
+            return Err(device::Error::Disconnected);
+        }
+        handler.activate(self.device.as_ref(), name.clone()).await?;
+        if *self.connection_status.borrow() != ConnectionStatus::Connected {
+            return Err(device::Error::Disconnected);
+        }
+        self.last_applied.send_replace(Some(name));
+        Ok(())
+    }
 }
 
 impl QuickPresetsHandler {
@@ -212,9 +263,258 @@ fn settings_to_apply(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex as StdMutex;
+
+    use async_trait::async_trait;
+    use tokio::sync::{mpsc, oneshot};
+
     use crate::DeviceModel;
 
     use super::*;
+
+    #[derive(Debug)]
+    enum WriteOutcome {
+        Apply,
+        Ignore,
+        Fail,
+    }
+
+    struct ControlledDevice {
+        inner: Arc<dyn OpenSCQ30Device + Send + Sync>,
+        status: watch::Sender<ConnectionStatus>,
+        writes: mpsc::UnboundedSender<oneshot::Sender<WriteOutcome>>,
+        write_count: StdMutex<usize>,
+    }
+
+    #[async_trait]
+    impl OpenSCQ30Device for ControlledDevice {
+        fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
+            self.status.subscribe()
+        }
+
+        fn model(&self) -> DeviceModel {
+            self.inner.model()
+        }
+
+        fn categories(&self) -> Vec<settings::CategoryId> {
+            self.inner.categories()
+        }
+
+        fn settings_in_category(&self, id: &settings::CategoryId) -> Vec<SettingId> {
+            self.inner.settings_in_category(id)
+        }
+
+        fn setting(&self, id: &SettingId) -> Option<settings::Setting> {
+            self.inner.setting(id)
+        }
+
+        fn watch_for_changes(&self) -> watch::Receiver<()> {
+            self.inner.watch_for_changes()
+        }
+
+        async fn set_setting_values(
+            &self,
+            values: Vec<(SettingId, settings::Value)>,
+        ) -> device::Result<()> {
+            *self.write_count.lock().unwrap() += 1;
+            let (reply, outcome) = oneshot::channel();
+            self.writes.send(reply).unwrap();
+            match outcome.await.unwrap() {
+                WriteOutcome::Apply => self.inner.set_setting_values(values).await,
+                WriteOutcome::Ignore => Ok(()),
+                WriteOutcome::Fail => Err(device::Error::ActionTimedOut {
+                    action: "test write",
+                }),
+            }
+        }
+    }
+
+    async fn activation_setup() -> (
+        Arc<ControlledDevice>,
+        mpsc::UnboundedReceiver<oneshot::Sender<WriteOutcome>>,
+        QuickPresetsHandler,
+    ) {
+        let (inner, database, handler) = connect_demo_a3954().await;
+        let settings::Setting::Toggle { value } =
+            inner.setting(&SettingId::WearingDetection).unwrap()
+        else {
+            panic!("demo supports wearing detection");
+        };
+        for name in ["First", "Second"] {
+            database
+                .upsert_quick_preset(
+                    inner.model(),
+                    QuickPreset {
+                        name: name.into(),
+                        fields: vec![field(SettingId::WearingDetection, (!value).into(), true)],
+                    },
+                )
+                .await
+                .unwrap();
+        }
+        let (writes, requests) = mpsc::unbounded_channel();
+        (
+            Arc::new(ControlledDevice {
+                inner,
+                status: watch::channel(ConnectionStatus::Connected).0,
+                writes,
+                write_count: StdMutex::new(0),
+            }),
+            requests,
+            handler,
+        )
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn activation_records_only_success_and_shares_it_across_handlers() {
+        let (device, mut writes, handler) = activation_setup().await;
+        let activation = QuickPresetActivation::new(device);
+        let mut changes = activation.watch_for_changes();
+        let activate = activation.activate(&handler, "First".into());
+        let finish = async {
+            let reply = writes.recv().await.unwrap();
+            assert_eq!(activation.last_applied(), None);
+            assert!(!changes.has_changed().unwrap());
+            reply.send(WriteOutcome::Apply).unwrap();
+        };
+        let (result, ()) = tokio::join!(activate, finish);
+        result.unwrap();
+        changes.changed().await.unwrap();
+        assert_eq!(activation.last_applied().as_deref(), Some("First"));
+
+        let another_handler = QuickPresetsHandler::new(handler.database.clone());
+        assert!(
+            activation
+                .activate(&another_handler, "Missing".into())
+                .await
+                .is_err()
+        );
+        assert_eq!(activation.last_applied().as_deref(), Some("First"));
+        assert!(!changes.has_changed().unwrap());
+
+        let (result, ()) = tokio::join!(
+            activation.activate(&another_handler, "Second".into()),
+            async {
+                writes
+                    .recv()
+                    .await
+                    .unwrap()
+                    .send(WriteOutcome::Apply)
+                    .unwrap();
+            }
+        );
+        result.unwrap();
+        assert_eq!(activation.last_applied().as_deref(), Some("Second"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn activation_waits_for_retry_and_retains_previous_success_on_write_failure() {
+        let (device, mut writes, handler) = activation_setup().await;
+        let activation = QuickPresetActivation::new(device.clone());
+        let (result, ()) = tokio::join!(activation.activate(&handler, "First".into()), async {
+            writes
+                .recv()
+                .await
+                .unwrap()
+                .send(WriteOutcome::Apply)
+                .unwrap();
+        });
+        result.unwrap();
+        let settings::Setting::Toggle { value } =
+            device.setting(&SettingId::WearingDetection).unwrap()
+        else {
+            unreachable!()
+        };
+        device
+            .inner
+            .set_setting_values(vec![(SettingId::WearingDetection, (!value).into())])
+            .await
+            .unwrap();
+        let (result, ()) = tokio::join!(activation.activate(&handler, "Second".into()), async {
+            writes
+                .recv()
+                .await
+                .unwrap()
+                .send(WriteOutcome::Ignore)
+                .unwrap();
+            let retry = writes.recv().await.unwrap();
+            assert_eq!(activation.last_applied().as_deref(), Some("First"));
+            retry.send(WriteOutcome::Fail).unwrap();
+        });
+        assert!(result.is_err());
+        assert_eq!(activation.last_applied().as_deref(), Some("First"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn disconnected_activation_cannot_mark_a_new_connection() {
+        let (device, mut writes, handler) = activation_setup().await;
+        let old = QuickPresetActivation::new(device.clone());
+        let new = QuickPresetActivation::new(device.inner.clone());
+        let (result, ()) = tokio::join!(old.activate(&handler, "First".into()), async {
+            let reply = writes.recv().await.unwrap();
+            device.status.send_replace(ConnectionStatus::Disconnected);
+            reply.send(WriteOutcome::Apply).unwrap();
+        });
+        assert!(matches!(result, Err(device::Error::Disconnected)));
+        assert_eq!(old.last_applied(), None);
+        assert_eq!(new.last_applied(), None);
+        let writes_before = *device.write_count.lock().unwrap();
+        assert!(old.activate(&handler, "Second".into()).await.is_err());
+        assert_eq!(*device.write_count.lock().unwrap(), writes_before);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn disconnect_and_new_connection_clear_a_successful_activation() {
+        let (device, mut writes, handler) = activation_setup().await;
+        let old = QuickPresetActivation::new(device.clone());
+        let (result, ()) = tokio::join!(old.activate(&handler, "First".into()), async {
+            writes
+                .recv()
+                .await
+                .unwrap()
+                .send(WriteOutcome::Apply)
+                .unwrap();
+        });
+        result.unwrap();
+        assert_eq!(old.last_applied().as_deref(), Some("First"));
+        device.status.send_replace(ConnectionStatus::Disconnected);
+        assert_eq!(old.last_applied(), None);
+        let new = QuickPresetActivation::new(device.inner.clone());
+        assert_eq!(new.last_applied(), None);
+        assert_eq!(
+            handler
+                .quick_presets(device.inner.as_ref())
+                .await
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn simultaneous_activations_finish_in_order_without_losing_previous_success() {
+        let (device, mut writes, handler) = activation_setup().await;
+        let activation = QuickPresetActivation::new(device);
+        let (first, second, ()) = tokio::join!(
+            activation.activate(&handler, "First".into()),
+            activation.activate(&handler, "Second".into()),
+            async {
+                let first = writes.recv().await.unwrap();
+                tokio::task::yield_now().await;
+                assert!(matches!(
+                    writes.try_recv(),
+                    Err(mpsc::error::TryRecvError::Empty)
+                ));
+                first.send(WriteOutcome::Apply).unwrap();
+                let second = writes.recv().await.unwrap();
+                assert_eq!(activation.last_applied().as_deref(), Some("First"));
+                second.send(WriteOutcome::Fail).unwrap();
+            },
+        );
+        first.unwrap();
+        assert!(second.is_err());
+        assert_eq!(activation.last_applied().as_deref(), Some("First"));
+    }
 
     async fn connect_demo_a3954() -> (
         Arc<dyn OpenSCQ30Device + Send + Sync>,

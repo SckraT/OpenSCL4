@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
 use async_trait::async_trait;
+use indexmap::IndexMap;
 use openscq30_i18n::Translate;
 use openscq30_lib_has::{Has, MaybeHas};
 use paste::paste;
@@ -771,6 +772,23 @@ where
             .get(&state, setting_id)
     }
 
+    fn settings_by_category(&self) -> IndexMap<CategoryId, IndexMap<SettingId, Setting>> {
+        let state = self.state_sender.borrow().to_owned();
+        let manager = &self.module_collection.setting_manager;
+        manager
+            .categories()
+            .iter()
+            .map(|&category| {
+                let settings = manager
+                    .category(&category)
+                    .into_iter()
+                    .filter_map(|id| manager.get(&state, &id).map(|setting| (id, setting)))
+                    .collect();
+                (category, settings)
+            })
+            .collect()
+    }
+
     fn watch_for_changes(&self) -> watch::Receiver<()> {
         let mut receiver = self.state_sender.subscribe();
         let (change_sender, change_receiver) = watch::channel(());
@@ -1032,5 +1050,155 @@ pub mod test_utils {
             let permit = self.inbound_sender.reserve().await.unwrap();
             permit.send(packet.ack().bytes(self.config.checksum_kind));
         }
+    }
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+    use crate::{
+        devices::soundcore::common::settings_manager::{SettingHandler, SettingHandlerResult},
+        mock::rfcomm::MockRfcommConnection,
+    };
+    use std::sync::{
+        Mutex,
+        atomic::{AtomicUsize, Ordering},
+        mpsc as sync_channel,
+    };
+    use std::time::Duration;
+
+    struct State {
+        value: bool,
+        clones: Arc<AtomicUsize>,
+    }
+
+    impl Clone for State {
+        fn clone(&self) -> Self {
+            self.clones.fetch_add(1, Ordering::SeqCst);
+            Self {
+                value: self.value,
+                clones: self.clones.clone(),
+            }
+        }
+    }
+
+    type Gate = Arc<Mutex<Option<(sync_channel::Sender<()>, sync_channel::Receiver<()>)>>>;
+
+    struct Handler {
+        ids: Vec<SettingId>,
+        gate: Gate,
+    }
+
+    #[async_trait]
+    impl SettingHandler<State> for Handler {
+        fn settings(&self) -> Vec<SettingId> {
+            self.ids.clone()
+        }
+        fn get(&self, state: &State, id: &SettingId) -> Option<Setting> {
+            let gate = self.gate.lock().unwrap().take();
+            if let Some((start, updated)) = gate {
+                start.send(()).unwrap();
+                updated.recv_timeout(Duration::from_secs(3)).unwrap();
+            }
+            (*id != SettingId::VoicePrompt).then_some(Setting::Toggle { value: state.value })
+        }
+        async fn set(
+            &self,
+            _state: &mut State,
+            _id: &SettingId,
+            _value: Value,
+        ) -> SettingHandlerResult<()> {
+            unreachable!()
+        }
+    }
+
+    #[tokio::test]
+    async fn bulk_read_captures_state_once_and_preserves_category_order() {
+        let clones = Arc::new(AtomicUsize::new(0));
+        let state_sender = watch::channel(State {
+            value: false,
+            clones: clones.clone(),
+        })
+        .0;
+        let (start, ready) = sync_channel::channel();
+        let (finished, updated) = sync_channel::channel();
+        let gate = Arc::new(Mutex::new(Some((start, updated))));
+        let mut modules = ModuleCollection::default();
+        for (category, ids) in [
+            (
+                CategoryId::General,
+                vec![
+                    SettingId::WearingDetection,
+                    SettingId::WearingDetection,
+                    SettingId::LimitHighVolume,
+                    SettingId::VoicePrompt,
+                ],
+            ),
+            (CategoryId::Equalizer, vec![]),
+            (
+                CategoryId::DeviceInformation,
+                vec![SettingId::WearingDetection],
+            ),
+        ] {
+            modules.setting_manager.add_handler(
+                category,
+                Handler {
+                    ids,
+                    gate: gate.clone(),
+                },
+            );
+        }
+        let (_inbound, receiver) = mpsc::channel(1);
+        let (outbound, _receiver) = mpsc::channel(1);
+        let (packet_io, _) = PacketIOController::new(
+            Arc::new(MockRfcommConnection::new(receiver, outbound)),
+            packet::ChecksumKind::Suffix,
+        )
+        .await
+        .unwrap();
+        let device = SoundcoreDeviceTemplate {
+            device_model: DeviceModel::SoundcoreA3954,
+            state_sender: state_sender.clone(),
+            module_collection: Arc::new(modules),
+            packet_io_controller: Arc::new(packet_io),
+            exit_signal: Arc::new(Semaphore::new(0)),
+            change_notify: watch::channel(()).1,
+        };
+        let writer_clones = clones.clone();
+        let writer = std::thread::spawn(move || {
+            ready.recv_timeout(Duration::from_secs(3)).unwrap();
+            state_sender.send_replace(State {
+                value: true,
+                clones: writer_clones,
+            });
+            finished.send(()).unwrap();
+        });
+        let settings = device.settings_by_category();
+        writer.join().unwrap();
+        assert_eq!(clones.load(Ordering::SeqCst), 1);
+        assert!(device.state_sender.borrow().value);
+        assert_eq!(
+            settings.keys().copied().collect::<Vec<_>>(),
+            vec![
+                CategoryId::General,
+                CategoryId::Equalizer,
+                CategoryId::DeviceInformation
+            ]
+        );
+        assert_eq!(
+            settings[&CategoryId::General]
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![SettingId::WearingDetection, SettingId::LimitHighVolume]
+        );
+        assert!(settings[&CategoryId::Equalizer].is_empty());
+        assert_eq!(settings[&CategoryId::DeviceInformation].len(), 1);
+        assert!(
+            settings
+                .values()
+                .flat_map(|category| category.values())
+                .all(|setting| *setting == Setting::Toggle { value: false })
+        );
     }
 }

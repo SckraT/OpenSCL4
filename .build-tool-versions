@@ -1,5 +1,8 @@
 rustup 1.29.1
 rust 1.99.1
 jdk 21
-ndk 30.0.16248370
+ndk 29.0.14206865
 cargo-ndk 4.1.2
+innosetup 6.7.3
+android-sdk 37
+android-build-tools 37.0.0

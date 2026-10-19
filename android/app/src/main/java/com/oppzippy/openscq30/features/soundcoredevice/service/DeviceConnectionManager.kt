@@ -11,11 +11,13 @@ class DeviceConnectionManager(val device: OpenScq30Device) : AutoCloseable {
     val connectionStatusFlow = MutableStateFlow(ConnectionStatus.Connected)
 
     val watchForChangeNotification = MutableStateFlow(0)
+    val lastAppliedPreset = MutableStateFlow(device.lastAppliedPreset())
 
     init {
         device.setConnectionStatusCallback(
             object : ConnectionStatusCallback {
                 override fun onChange(connectionStatus: ConnectionStatus) {
+                    lastAppliedPreset.value = device.lastAppliedPreset()
                     connectionStatusFlow.value = connectionStatus
                 }
             },
@@ -23,13 +25,16 @@ class DeviceConnectionManager(val device: OpenScq30Device) : AutoCloseable {
         device.setWatchForChangesCallback(
             object : NotificationCallback {
                 override fun onNotify() {
+                    lastAppliedPreset.value = device.lastAppliedPreset()
                     watchForChangeNotification.update { it + 1 }
                 }
             },
         )
+        lastAppliedPreset.value = device.lastAppliedPreset()
     }
 
     override fun close() {
         device.close()
+        lastAppliedPreset.value = null
     }
 }

@@ -182,9 +182,7 @@ private fun DeviceScreen(
                 setSettingValueForResult = { settingId, value ->
                     settingsManager.setSettingValueForResult(settingId, value)
                 },
-                allSettingsFlow = settingsManager.allSettingsFlow,
-                categoryIdsFlow = settingsManager.categoryIdsFlow,
-                getSettingsInCategoryFlow = { settingsManager.getSettingsInCategoryFlow(it) },
+                settingsByCategoryFlow = settingsManager.settingsByCategoryFlow,
                 quickPresetSlotsFlow = settingsManager.quickPresetSlots,
                 onQuickPresetSlotChange = { index, name -> settingsManager.setQuickPresetSlot(index, name) },
                 quickPresetsFlow = settingsManager.quickPresetsFlow,

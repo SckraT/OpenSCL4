@@ -1,3 +1,5 @@
+> Current OpenSCL4 builds use [the common build and release guide](build-release.md). The instructions below are retained from OpenSCQ30; references to `gui/` describe the legacy desktop client.
+
 ## Building OpenSCQ30 on Android
 
 ### If you do not have Android Studio installed:

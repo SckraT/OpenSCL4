@@ -17,6 +17,7 @@ import androidx.core.content.IntentCompat
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.oppzippy.openscq30.BuildConfig
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.quicksettings.LdacTileService
 import com.oppzippy.openscq30.features.soundcoredevice.connectionBackends
@@ -58,11 +59,11 @@ class DeviceService : LifecycleService() {
         const val NOTIFICATION_CHANNEL_ID = "com.oppzippy.openscq30.notification.DeviceServiceChannel"
         const val NOTIFICATION_ID = 1
 
-        const val ACTION_QUICK_PRESET = "com.oppzippy.openscq30.broadcast.QuickPreset"
-        const val ACTION_DISCONNECT = "com.oppzippy.openscq30.broadcast.Disconnect"
-        const val ACTION_SEND_NOTIFICATION = "com.oppzippy.openscq30.broadcast.SendNotification"
-        const val ACTION_SET_SETTING_VALUE = "com.oppzippy.openscq30.broadcast.SetSettingValue"
-        const val ACTION_UPDATE_WIDGET = "com.oppzippy.openscq30.broadcast.UPDATE_WIDGET"
+        const val ACTION_QUICK_PRESET = BuildConfig.APPLICATION_ID + ".broadcast.QuickPreset"
+        const val ACTION_DISCONNECT = BuildConfig.APPLICATION_ID + ".broadcast.Disconnect"
+        const val ACTION_SEND_NOTIFICATION = BuildConfig.APPLICATION_ID + ".broadcast.SendNotification"
+        const val ACTION_SET_SETTING_VALUE = BuildConfig.APPLICATION_ID + ".broadcast.SetSettingValue"
+        const val ACTION_UPDATE_WIDGET = BuildConfig.APPLICATION_ID + ".broadcast.UPDATE_WIDGET"
 
         private val ACTIONS = listOf(
             ACTION_DISCONNECT,

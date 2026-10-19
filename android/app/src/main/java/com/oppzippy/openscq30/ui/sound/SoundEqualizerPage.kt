@@ -64,14 +64,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
+import com.oppzippy.openscq30.lib.bindings.clientEqualizerFrequency
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
-import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 private const val PRESET_PROFILE = "presetEqualizerProfile"
@@ -606,22 +605,11 @@ private fun SaveEqualizerDialog(existingNames: List<String>, onDismiss: () -> Un
 private fun Select.localizedLabel(index: Int): String = localizedOptions.getOrNull(index) ?: options[index]
 
 @Composable
-private fun frequencyLabel(hz: UShort): String = if (hz.toInt() < 1000) {
-    stringResource(R.string.hz, hz.toInt())
-} else {
-    stringResource(R.string.khz, BigDecimal(hz.toInt()).scaleByPowerOfTen(-3).stripTrailingZeros().toPlainString())
-}
-
-internal fun formatEqualizerValue(value: Short, fractionDigits: Short): String =
-    BigDecimal(value.toInt()).scaleByPowerOfTen(-fractionDigits.toInt()).stripTrailingZeros().toPlainString()
-
-/** Reject overflow, out-of-range values, and precision the device cannot represent. */
-internal fun parseEqualizerValue(text: String, equalizer: Equalizer): Short? = try {
-    val number = BigDecimal(text.trim().replace(',', '.'))
-        .scaleByPowerOfTen(equalizer.fractionDigits.toInt()).setScale(0, RoundingMode.UNNECESSARY).intValueExact()
-    if (number in equalizer.min.toInt()..equalizer.max.toInt()) number.toShort() else null
-} catch (_: NumberFormatException) {
-    null
-} catch (_: ArithmeticException) {
-    null
+private fun frequencyLabel(hz: UShort): String {
+    val frequency = clientEqualizerFrequency(hz)
+    return if (frequency.khz) {
+        stringResource(R.string.khz, frequency.value)
+    } else {
+        stringResource(R.string.hz, hz.toInt())
+    }
 }

@@ -5,6 +5,7 @@
 use std::path::Path;
 
 /// A name for the config folder that stays the same between builds, unlike std's hasher.
+#[cfg(any(windows, test))]
 fn folder_key(config_dir: &Path) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for byte in config_dir.to_string_lossy().to_lowercase().bytes() {
@@ -29,8 +30,8 @@ pub fn claim(config_dir: &Path, show: fn()) -> bool {
     };
 
     let key = folder_key(config_dir);
-    let mutex_name = HSTRING::from(format!(r"Local\OpenSCQ30Desktop-{key}"));
-    let event_name = HSTRING::from(format!(r"Local\OpenSCQ30DesktopShow-{key}"));
+    let mutex_name = HSTRING::from(format!(r"Local\OpenSCL4-{key}"));
+    let event_name = HSTRING::from(format!(r"Local\OpenSCL4Show-{key}"));
     // SAFETY: plain calls with names that live through them; the handles stay open as long as the app runs.
     let (mutex, already) = unsafe {
         let mutex = CreateMutexW(None, false, &mutex_name);

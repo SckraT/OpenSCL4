@@ -1,5 +1,5 @@
 // The app's own settings: how it looks and speaks, the home screen, and help with problems.
-import { ComboBox } from "std-widgets.slint";
+import { Select } from "../components/select.slint";
 import { Theme, PaletteChoice } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, Page, Connection } from "../types.slint";
@@ -74,7 +74,7 @@ component AppearancePanel inherits Panel {
         title: @tr("Theme");
         Segmented {
             label: @tr("Theme");
-            options: [@tr("As in Windows"), @tr("Light"), @tr("Dark")];
+            options: [@tr("Follow system"), @tr("Light"), @tr("Dark")];
             index: AppState.app-theme;
             chosen(i) => { Actions.set-app-theme(i); }
         }
@@ -140,19 +140,19 @@ component AppearancePanel inherits Panel {
     SettingLine {
         title: @tr("App language");
         // the languages by their own names, so that anyone finds theirs
-        ComboBox {
-            accessible-label: @tr("App language");
+        Select {
+            label: @tr("App language");
             width: 240px;
             model: AppState.language-names;
             current-index: AppState.app-language;
-            selected => { Actions.set-language(self.current-index); }
+            selected(index) => { Actions.set-language(index); }
         }
     }
 }
 
 component TrayPanel inherits Panel {
     PanelHeading {
-        text: @tr("Windows and quick access");
+        text: @tr("Desktop and quick access");
         icon: Icons.tray;
     }
     SettingLine {
@@ -189,10 +189,12 @@ component TrayPanel inherits Panel {
     Divider { }
     SettingLine {
         title: @tr("Close to notification area");
-        text: @tr("Keep running when the window is closed");
+        text: AppState.app-tray && !AppState.app-tray-available
+            ? @tr("The notification area icon is unavailable. Closing the window quits the app.")
+            : @tr("Keep running when the window is closed");
         Toggle {
             label: @tr("Close to notification area");
-            enabled: AppState.app-tray;
+            enabled: AppState.app-tray-available;
             checked: AppState.app-close-to-tray;
             toggled(on) => { Actions.set-close-to-tray(on); }
         }
@@ -202,7 +204,7 @@ component TrayPanel inherits Panel {
         padding-top: 16px;
         alignment: start;
         Button {
-            text: @tr("Quit OpenSCQ30");
+            text: @tr("Quit OpenSCL4");
             has-icon: true;
             icon: Icons.disconnect;
             clicked => { Actions.quit-app(); }
@@ -254,12 +256,12 @@ component AsideColumn inherits VerticalLayout {
     AsidePanel {
         title: @tr("About");
         icon: Icons.info;
-        text: @tr("OpenSCQ30 for Windows {} · free software under the GNU GPL 3.", AppState.app-version);
+        text: @tr("OpenSCL4 {} · free software under the GNU GPL 3.", AppState.app-version);
         Button {
             text: @tr("More");
             has-icon: true;
             icon: Icons.external;
-            clicked => { Actions.open-uri("https://github.com/Oppzippy/OpenSCQ30"); }
+            clicked => { Actions.open-uri("https://github.com/SckraT/OpenSCL4"); }
         }
     }
     AsidePanel {

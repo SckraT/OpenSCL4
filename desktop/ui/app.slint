@@ -20,7 +20,7 @@ export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, B
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
-        ? Strings.title(AppState.page) + " · " + AppState.device-name : Strings.title(AppState.page)) + " — OpenSCQ30";
+        ? Strings.title(AppState.page) + " · " + AppState.device-name : Strings.title(AppState.page)) + " — OpenSCL4";
     preferred-width: 1280px;
     preferred-height: 820px;
     min-width: 800px;
@@ -28,7 +28,7 @@ export component AppWindow inherits Window {
     background: Theme.bg;
     default-font-family: "Onest";
     default-font-size: Theme.font-body;
-    icon: @image-url("icons/wave.svg");
+    icon: @image-url("icons/app.svg");
 
     private property <bool> compact: root.width <= 1030px;
     private property <bool> device-page: AppState.page != Page.devices && AppState.page != Page.settings;

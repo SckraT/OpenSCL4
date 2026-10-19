@@ -65,8 +65,7 @@ impl RfcommBackend for DemoConnectionRegistry {
 }
 
 pub struct DemoConnection {
-    _connection_status_sender: watch::Sender<ConnectionStatus>,
-    connection_status_receiver: Mutex<Option<watch::Receiver<ConnectionStatus>>>,
+    connection_status_sender: watch::Sender<ConnectionStatus>,
     packet_sender: mpsc::Sender<Vec<u8>>,
     packet_receiver: Mutex<Option<mpsc::Receiver<Vec<u8>>>>,
     packet_responses: HashMap<Command, packet::Inbound>,
@@ -78,12 +77,10 @@ impl DemoConnection {
         packet_responses: HashMap<Command, packet::Inbound>,
         config: SoundcoreDeviceConfig,
     ) -> Self {
-        let (connection_status_sender, connection_status_receiver) =
-            watch::channel(ConnectionStatus::Connected);
+        let connection_status_sender = watch::channel(ConnectionStatus::Connected).0;
         let (packet_sender, packet_receiver) = mpsc::channel(10);
         Self {
-            _connection_status_sender: connection_status_sender,
-            connection_status_receiver: Mutex::new(Some(connection_status_receiver)),
+            connection_status_sender,
             packet_sender,
             packet_receiver: Mutex::new(Some(packet_receiver)),
             packet_responses,
@@ -138,10 +135,6 @@ impl RfcommConnection for DemoConnection {
     }
 
     fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
-        self.connection_status_receiver
-            .lock()
-            .unwrap()
-            .take()
-            .unwrap()
+        self.connection_status_sender.subscribe()
     }
 }

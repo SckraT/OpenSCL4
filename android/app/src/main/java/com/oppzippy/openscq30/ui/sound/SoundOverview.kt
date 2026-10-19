@@ -44,6 +44,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.SoundModesView
+import com.oppzippy.openscq30.lib.bindings.clientBatteryProgress
+import com.oppzippy.openscq30.lib.bindings.clientBothEarbudsSettingIds
+import com.oppzippy.openscq30.lib.bindings.clientCategoryNeedsBothEarbuds
+import com.oppzippy.openscq30.lib.bindings.clientIsOnlyOneEarbudConnected
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
@@ -318,39 +322,14 @@ private fun CompactDeviceBar(deviceModel: String, batteries: List<DeviceBattery>
     }
 }
 
-/** Native battery values are fractions, e.g. 83/100 or 7/10 for coarse case readings. */
-internal fun batteryProgress(raw: String): Float? {
-    val parts = raw.trim().split('/')
-    val level: Float
-    val maximum: Float
-    if (parts.size == 2) {
-        level = parts[0].trim().toFloatOrNull() ?: return null
-        maximum = parts[1].trim().toFloatOrNull() ?: return null
-    } else if (parts.size == 1) {
-        level = raw.trim().removeSuffix("%").trim().toFloatOrNull() ?: return null
-        maximum = 100f
-    } else {
-        return null
-    }
-    return if (level.isFinite() && maximum.isFinite() && maximum > 0f) {
-        (level / maximum).coerceIn(0f, 1f)
-    } else {
-        null
-    }
-}
+internal fun batteryProgress(raw: String): Float? = clientBatteryProgress(raw)
 
-/**
- * The earbuds report whether they are connected to each other. With one of them in the case, settings that need both,
- * such as the equalizer, are not available.
- */
 internal fun isOnlyOneEarbudConnected(values: Map<String, Setting>): Boolean =
-    (values["twsStatus"] as? Setting.InformationSetting)?.value == "Disconnected"
+    clientIsOnlyOneEarbudConnected(values)
 
-/** Settings the device only exposes while both earbuds are connected. */
-internal val BOTH_EARBUDS_SETTING_IDS = setOf("presetEqualizerProfile", "customEqualizerProfile", "volumeAdjustments")
+internal val BOTH_EARBUDS_SETTING_IDS by lazy { clientBothEarbudsSettingIds().toSet() }
 
-/** Whether a settings category is empty while only one earbud is connected because all of it needs both earbuds. */
-internal fun categoryNeedsBothEarbuds(categoryId: String): Boolean = categoryId == "equalizer"
+internal fun categoryNeedsBothEarbuds(categoryId: String): Boolean = clientCategoryNeedsBothEarbuds(categoryId)
 
 @Composable
 internal fun SoundOneEarbudNotice(

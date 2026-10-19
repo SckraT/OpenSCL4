@@ -79,6 +79,8 @@ pub struct App {
     editing_preset: Option<String>,
     /// The icon in the notification area, while the settings have it.
     tray: Option<crate::Tray>,
+    tray_host: bool,
+    tray_registered: bool,
 }
 
 thread_local! {
@@ -98,7 +100,7 @@ fn with_app(f: impl FnOnce(&mut App)) {
 }
 
 pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
-    let config = Config::load(config_dir.join("openscq30-desktop-config.toml"));
+    let config = Config::load(config_dir.join("openscl4-config.toml"));
     let weak = window.as_weak();
     let controller = Controller::start(
         config_dir.join("database.sqlite"),
@@ -126,6 +128,8 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         equalizer: equalizer::EqualizerState::default(),
         editing_preset: None,
         tray: None,
+        tray_host: !cfg!(target_os = "linux"),
+        tray_registered: false,
     };
     APP.with(|cell| *cell.borrow_mut() = Some(app));
     install_actions(window);
@@ -294,6 +298,19 @@ impl App {
 
     fn on_event(&mut self, event: Event) {
         match event {
+            #[cfg(target_os = "linux")]
+            Event::TrayStatus(status) => {
+                let registered = status.registered && self.tray.is_some();
+                if self.tray_host == status.host && self.tray_registered == registered {
+                    return;
+                }
+                if !registered && self.tray_registered {
+                    self.open_window();
+                }
+                self.tray_host = status.host;
+                self.tray_registered = registered;
+                self.sync_tray();
+            }
             Event::PairedDevices(paired) => {
                 self.paired = paired;
                 if !self
@@ -403,12 +420,9 @@ impl App {
                 }
             },
             Event::PresetApplied { mac_address, name } => {
-                self.config
-                    .settings
-                    .last_preset
-                    .insert(mac_address.to_string(), name.clone());
-                self.config.save();
-                self.preset_applied(&name);
+                if self.current == Some(mac_address) {
+                    self.preset_applied(&name);
+                }
             }
             Event::LegacyProfiles(profiles) => self.legacy = profiles,
         }
@@ -631,7 +645,9 @@ impl App {
 
     fn apply_theme(&mut self) {
         self.dark = match self.config.settings.theme {
-            AppTheme::System => window_chrome::system_prefers_dark(),
+            AppTheme::System => self
+                .window()
+                .is_some_and(|window| window_chrome::system_prefers_dark(window.window())),
             AppTheme::Light => false,
             AppTheme::Dark => true,
         };
@@ -835,12 +851,7 @@ impl App {
                 .map_or(-1, |i| i as i32),
         );
         state.set_show_one_earbud_badge(self.config.settings.one_earbud_badge);
-        let last_preset = self
-            .config
-            .settings
-            .last_preset
-            .get(&snapshot.mac_address.to_string())
-            .map(String::as_str);
+        let last_preset = snapshot.last_applied_preset.as_deref();
         let (on, off) = self.on_off();
         state.set_presets(ModelRc::new(VecModel::from(overview::presets(
             snapshot,

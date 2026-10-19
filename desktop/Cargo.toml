@@ -1,11 +1,16 @@
 [package]
 name = "openscq30-desktop"
-description = "OpenSCQ30 for Windows, built with Slint"
+description = "OpenSCL4 desktop client, built with Slint"
+
 edition = "2024"
 version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+
+[[bin]]
+name = "openscl4"
+path = "src/main.rs"
 
 [lints]
 workspace = true
@@ -35,7 +40,10 @@ tempfile = { workspace = true }
 roxmltree = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading"] }
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_Shell"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }

@@ -71,8 +71,9 @@ pub fn recent() -> String {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let mut text = format!(
-        "OpenSCQ30 for Windows {} ({})\n",
+        "OpenSCL4 {} ({}, {})\n",
         env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS,
         std::env::consts::ARCH
     );
     for line in recent.iter() {
@@ -94,7 +95,7 @@ mod tests {
         keep("");
         let text = recent();
         let lines: Vec<&str> = text.lines().collect();
-        assert!(lines[0].starts_with("OpenSCQ30 for Windows "));
+        assert!(lines[0].starts_with("OpenSCL4 "));
         assert_eq!(KEPT + 1, lines.len());
         assert_eq!("line 5", lines[1]);
         assert_eq!(format!("line {}", KEPT + 4), lines[KEPT]);

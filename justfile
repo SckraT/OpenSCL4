@@ -27,12 +27,11 @@ build-gui-fast features='': create-build-output-dir
     just gui::build release-fast '{{ features }}'
     cp target/release-fast/openscq30-gui '{{ build-output-dir }}/'
 
-[doc("Build the windows installer. The gui must be built first.")]
+[doc("Build the current OpenSCL4 Windows installer through the common release script.")]
 [group("build")]
 [windows]
 build-gui-installer: create-build-output-dir
-    ./packaging/windows/build.sh
-    cp packaging/windows/Output/openscq30-gui-installer.exe '{{ build-output-dir }}/'
+    python scripts/release.py build windows
 
 [doc("Run a fully optimized release build")]
 [group("build")]
@@ -46,8 +45,6 @@ build-cli-fast features='': create-build-output-dir
     just cli::build release-fast '{{ features }}'
     cp target/release-fast/openscq30 '{{ build-output-dir }}/'
 
-android-apk-path := "./android/app/build/outputs/apk"
-
 [doc("Build apks for all supported architectures")]
 [group("build")]
 build-android: build-android-x86 build-android-x86_64 build-android-arm64-v8a build-android-armeabi-v7a
@@ -55,54 +52,22 @@ build-android: build-android-x86 build-android-x86_64 build-android-arm64-v8a bu
 [doc("Build an x86 apk")]
 [group("build")]
 build-android-x86: create-build-output-dir
-    just android::build release x86
-    just copy-apks x86
+    python scripts/release.py build android --abi x86
 
 [doc("Build an x86_64 apk")]
 [group("build")]
 build-android-x86_64: create-build-output-dir
-    just android::build release x86_64
-    just copy-apks x86_64
+    python scripts/release.py build android --abi x86_64
 
 [doc("Build an arm64-v8a apk")]
 [group("build")]
 build-android-arm64-v8a: create-build-output-dir
-    just android::build release arm64-v8a
-    just copy-apks arm64-v8a
+    python scripts/release.py build android --abi arm64-v8a
 
 [doc("Build an armeabi-v7a apk")]
 [group("build")]
 build-android-armeabi-v7a: create-build-output-dir
-    just android::build release armeabi-v7a
-    just copy-apks armeabi-v7a
-
-[doc('Copy either one or both of the signed/unsigned apks. If neither exist, abort.')]
-[group("build")]
-[private]
-[script("bash")]
-copy-apks arch:
-    set -euo pipefail
-
-    prefix='{{ android-apk-path }}/{{ arch }}/release/app-{{ arch }}-release'
-    signed_apk="$prefix.apk"
-    unsigned_apk="$prefix-unsigned.apk"
-    if [[ -f "$signed_apk" ]]; then
-        found_one=1
-        echo "Signed APK found at $signed_apk, copying to {{ build-output-dir }}"
-        cp "$signed_apk" '{{ build-output-dir }}/openscq30-android-{{ arch }}.apk'
-    fi
-    if [[ -f "$unsigned_apk" ]]; then
-        found_one=1
-        echo "Unsigned APK found at $unsigned_apk, copying to {{ build-output-dir }}"
-            cp "$unsigned_apk" '{{ build-output-dir }}/openscq30-android-{{ arch }}-unsigned.apk'
-    fi
-
-    if [[ -z "$found_one" ]]; then
-        echo '{{ RED }}error: Could not find signed or unsigned output apk. Expeced one of the following files to exist:{{ NORMAL }}'
-        echo "{{ RED }}- $signed_apk{{ NORMAL }}"
-        echo "{{ RED }}- $unsigned_apk{{ NORMAL }}"
-        exit 1
-    fi
+    python scripts/release.py build android --abi armeabi-v7a
 
 [group("build")]
 [private]

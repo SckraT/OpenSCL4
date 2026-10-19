@@ -1,6 +1,6 @@
 //! Quick preset states, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/SoundPresetsPage.kt.
 
-use openscq30_lib::{
+use crate::{
     settings::Value,
     storage::{QuickPreset, QuickPresetField},
 };
@@ -85,7 +85,7 @@ pub fn preset_status(
 
 #[cfg(test)]
 mod tests {
-    use openscq30_lib::settings::{Setting, SettingId};
+    use crate::settings::{Setting, SettingId};
 
     use super::*;
 

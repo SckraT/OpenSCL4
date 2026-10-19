@@ -45,56 +45,31 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.clientIsPresetApplied
+import com.oppzippy.openscq30.lib.bindings.clientPresetFields
+import com.oppzippy.openscq30.lib.bindings.clientPresetStatus
+import com.oppzippy.openscq30.lib.bindings.clientPresetsUseBothEarbudSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.bindings.translateValue
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.QuickPresetField
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
-/** Old presets can repeat ids shared by categories. Native activation applies the last enabled value. */
-internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField> =
-    quickPreset.fields.groupBy { it.settingId }.values.map { fields ->
-        fields.lastOrNull { it.isEnabled } ?: fields.last()
-    }
+internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField> = clientPresetFields(quickPreset)
 
-/**
- * Whether the device currently has the values of the preset's enabled fields. Several presets can match at once, for
- * example when they enable different subsets of the same settings, so this alone doesn't say which preset is applied.
- */
-internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean {
-    val enabledFields = soundPresetFields(quickPreset).filter { it.isEnabled }
-    return enabledFields.isNotEmpty() && enabledFields.all { field ->
-        settings[field.settingId]?.toValue() == field.value
-    }
-}
+internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean =
+    clientIsPresetApplied(quickPreset, settings)
 
-/** Whether any preset would change settings that are only available while both earbuds are connected. */
-internal fun presetsUseBothEarbudSettings(quickPresets: List<QuickPreset>): Boolean = quickPresets.any { preset ->
-    soundPresetFields(preset).any { it.isEnabled && it.settingId in BOTH_EARBUDS_SETTING_IDS }
-}
+internal fun presetsUseBothEarbudSettings(quickPresets: List<QuickPreset>): Boolean =
+    clientPresetsUseBothEarbudSettings(quickPresets)
 
-internal enum class SoundPresetStatus {
-    /** The preset the user applied last, and the device still has all of its values. */
-    Applied,
+internal enum class SoundPresetStatus { Applied, MatchesCurrent, NotApplied }
 
-    /** The device has the preset's values, but it wasn't the last one applied. */
-    MatchesCurrent,
-    NotApplied,
-}
-
-/**
- * Only the last preset the user applied can be [SoundPresetStatus.Applied]. It stops being applied as soon as one of
- * its enabled settings is changed, since then the device no longer has its values.
- */
 internal fun soundPresetStatus(
     quickPreset: QuickPreset,
     settings: Map<String, Setting>,
     lastAppliedName: String?,
-): SoundPresetStatus = when {
-    !isSoundPresetApplied(quickPreset, settings) -> SoundPresetStatus.NotApplied
-    quickPreset.name == lastAppliedName -> SoundPresetStatus.Applied
-    else -> SoundPresetStatus.MatchesCurrent
-}
+): SoundPresetStatus = SoundPresetStatus.valueOf(clientPresetStatus(quickPreset, settings, lastAppliedName))
 
 @Composable
 fun SoundPresetsPage(

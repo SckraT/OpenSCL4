@@ -13,9 +13,10 @@ plugins {
     id("kotlin-parcelize")
 }
 
-val keystorePropertiesFile: File = rootProject.file("keystore.properties")
+val keystorePropertiesFile: File = rootProject.file("openscl4-keystore.properties")
 val keystoreProperties = Properties()
-if (keystorePropertiesFile.exists()) {
+val signRelease = keystorePropertiesFile.exists() && providers.gradleProperty("openscl4Unsigned").orNull != "true"
+if (signRelease) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
@@ -32,9 +33,20 @@ val gradleToCargoProfiles = mapOf(
     "release" to "release-android",
 )
 
+val workspaceRoot = rootProject.projectDir.parentFile
+val packageSection = workspaceRoot.resolve("Cargo.toml").readText()
+    .substringAfter("[workspace.package]").substringBefore("\n[")
+val productVersion = Regex("(?m)^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\"")
+    .find(packageSection) ?: error("Cargo.toml must contain a numeric product version")
+val (majorVersion, minorVersion, patchVersion) = productVersion.destructured
+val versionParts = listOf(majorVersion, minorVersion, patchVersion).map(String::toInt)
+require(versionParts[0] <= 2000 && versionParts[1] < 1000 && versionParts[2] < 1000)
+val buildTools = workspaceRoot.resolve(".build-tool-versions").readLines()
+    .filter(String::isNotBlank).associate { line -> line.split(' ', limit = 2).let { it[0] to it[1] } }
+
 android {
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (signRelease) {
             create("release") {
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
@@ -44,15 +56,15 @@ android {
         }
     }
     namespace = "com.oppzippy.openscq30"
-    compileSdk = 37
-    buildToolsVersion = "37.0.0"
+    compileSdk = buildTools.getValue("android-sdk").toInt()
+    buildToolsVersion = buildTools.getValue("android-build-tools")
 
     defaultConfig {
-        applicationId = "com.oppzippy.openscq30"
+        applicationId = "io.github.sckrat.openscl4"
         minSdk = 26
-        targetSdk = 37
-        versionCode = 1029
-        versionName = "2.13.0"
+        targetSdk = buildTools.getValue("android-sdk").toInt()
+        versionCode = versionParts[0] * 1_000_000 + versionParts[1] * 1_000 + versionParts[2]
+        versionName = "$majorVersion.$minorVersion.$patchVersion"
 
         testInstrumentationRunner = "com.oppzippy.openscq30.HiltTestRunner"
         vectorDrawables {
@@ -85,6 +97,9 @@ android {
 
     sourceSets {
         getByName("main") {}
+        getByName("test") {
+            resources.directories.add("../../lib/tests/fixtures")
+        }
         getByName("androidTest") {
             assets.directories += "$projectDir/schemas"
         }
@@ -110,7 +125,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            if (keystorePropertiesFile.exists()) {
+            if (signRelease) {
                 signingConfig = signingConfigs["release"]
             }
         }
@@ -124,7 +139,7 @@ android {
         compose = true
         buildConfig = true
     }
-    ndkVersion = "30.0.16248370"
+    ndkVersion = buildTools.getValue("ndk")
     packaging {
         resources {
             excludes += "/META-INF/*"
@@ -198,6 +213,7 @@ dependencies {
     kspTest(libs.dagger.hilt.android.compiler)
 
     testImplementation(libs.junit)
+    testRuntimeOnly(libs.jna)
 
     testImplementation(libs.mockk)
 //    androidTestImplementation(libs.mockk.android)
@@ -217,12 +233,36 @@ val rustProjectDir: File = layout.projectDirectory.asFile.parentFile
 val rustWorkspaceDir: File = rustProjectDir.parentFile
 val cargoTargetDirectory: File = rustWorkspaceDir.resolve("target")
 
+val buildHostNativeForTests = tasks.register<Exec>("buildHostNativeForTests") {
+    workingDir = rustWorkspaceDir
+    commandLine("cargo", "build", "--locked", "-p", "openscq30-android")
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(buildHostNativeForTests)
+    inputs.files(fileTree(cargoTargetDirectory.resolve("debug")) {
+        include("openscq30_android.dll", "libopenscq30_android.so", "libopenscq30_android.dylib")
+    }).withPropertyName("hostNativeLibrary")
+    systemProperty("jna.library.path", cargoTargetDirectory.resolve("debug").absolutePath)
+}
+
 gradleToCargoProfiles.forEach { (gradleBuildProfile, cargoProfile) ->
     abis.forEach { abi ->
         // Build with cargo
         tasks.register<Exec>("cargo-build-$gradleBuildProfile-${abi.android}") {
             description = "Building core for $gradleBuildProfile-${abi.android}"
             workingDir = rustProjectDir
+            doFirst {
+                val localSdk = Properties().apply {
+                    rootProject.file("local.properties").takeIf(File::exists)?.inputStream()?.use { load(it) }
+                }.getProperty("sdk.dir")
+                val sdk = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT") ?: localSdk
+                    ?: error("Set ANDROID_HOME or sdk.dir to the Android SDK")
+                val ndk = File(sdk).resolve("ndk/${buildTools.getValue("ndk")}")
+                check(ndk.resolve("source.properties").isFile) { "Install pinned NDK ${buildTools.getValue("ndk")}" }
+                environment("ANDROID_NDK_HOME", ndk.absolutePath)
+                environment("ANDROID_NDK_ROOT", ndk.absolutePath)
+            }
             commandLine(
                 "cargo",
                 "ndk",
@@ -231,6 +271,7 @@ gradleToCargoProfiles.forEach { (gradleBuildProfile, cargoProfile) ->
                 "--platform",
                 "26",
                 "build",
+                "--locked",
                 "--profile",
                 if (cargoProfile == "debug") "dev" else cargoProfile,
             )
@@ -253,10 +294,11 @@ gradleToCargoProfiles.forEach { (gradleBuildProfile, cargoProfile) ->
             tasks.register<GenerateUniffiBindingsTask>("generate-uniffi-bindings-$gradleBuildProfile-${abi.android}") {
                 dependsOn("cargo-build-$gradleBuildProfile-${abi.android}")
                 description = "Generate kotlin bindings using uniffi-bindgen"
-                this.rustAbi = abi.rust
-                this.cargoProfile = cargoProfile
                 this.rustWorkspaceDirectory = rustWorkspaceDir
-                this.rustProjectDirectory = rustProjectDir
+                this.nativeLibraryFile.set(
+                    cargoTargetDirectory.resolve("${abi.rust}/$cargoProfile/libopenscq30_android.so"),
+                )
+                this.uniffiConfigFile.set(rustProjectDir.resolve("uniffi.toml"))
                 this.outputDirectory = layout.buildDirectory.get().asFile
                     .resolve("generated/source/uniffi/${abi.android}${gradleBuildProfile.capitalize()}/java")
             }

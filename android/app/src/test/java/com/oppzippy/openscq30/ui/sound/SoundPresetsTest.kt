@@ -17,26 +17,26 @@ class SoundPresetsTest {
 
     @Test
     fun presetWithOnlyDisabledFieldsIsNotApplied() {
-        val preset = QuickPreset("Disabled", listOf(QuickPresetField("wear", true.toValue(), false)))
-        assertFalse(isSoundPresetApplied(preset, mapOf("wear" to Setting.ToggleSetting(true))))
+        val preset = QuickPreset("Disabled", listOf(QuickPresetField("wearingDetection", true.toValue(), false)))
+        assertFalse(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))))
     }
 
     @Test
     fun enabledFieldMustBeAvailable() {
-        val preset = QuickPreset("Missing", listOf(QuickPresetField("wear", true.toValue(), true)))
+        val preset = QuickPreset("Missing", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
         assertFalse(isSoundPresetApplied(preset, emptyMap()))
     }
 
     @Test
     fun enabledFieldMustMatchCurrentDeviceValue() {
-        val preset = QuickPreset("Different", listOf(QuickPresetField("wear", true.toValue(), true)))
-        assertFalse(isSoundPresetApplied(preset, mapOf("wear" to Setting.ToggleSetting(false))))
+        val preset = QuickPreset("Different", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
+        assertFalse(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(false))))
     }
 
     @Test
     fun matchingEnabledFieldIsApplied() {
-        val preset = QuickPreset("Matching", listOf(QuickPresetField("wear", true.toValue(), true)))
-        assertTrue(isSoundPresetApplied(preset, mapOf("wear" to Setting.ToggleSetting(true))))
+        val preset = QuickPreset("Matching", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
+        assertTrue(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))))
     }
 
     @Test
@@ -44,11 +44,11 @@ class SoundPresetsTest {
         val preset = QuickPreset(
             "Partial",
             listOf(
-                QuickPresetField("wear", true.toValue(), true),
-                QuickPresetField("safeVolume", false.toValue(), false),
+                QuickPresetField("wearingDetection", true.toValue(), true),
+                QuickPresetField("limitHighVolume", false.toValue(), false),
             ),
         )
-        val settings = mapOf("wear" to Setting.ToggleSetting(true), "safeVolume" to Setting.ToggleSetting(true))
+        val settings = mapOf("wearingDetection" to Setting.ToggleSetting(true), "limitHighVolume" to Setting.ToggleSetting(true))
         assertTrue(isSoundPresetApplied(preset, settings))
     }
 
@@ -57,11 +57,11 @@ class SoundPresetsTest {
         val preset = QuickPreset(
             "Multiple",
             listOf(
-                QuickPresetField("wear", true.toValue(), true),
-                QuickPresetField("safeVolume", true.toValue(), true),
+                QuickPresetField("wearingDetection", true.toValue(), true),
+                QuickPresetField("limitHighVolume", true.toValue(), true),
             ),
         )
-        val settings = mapOf("wear" to Setting.ToggleSetting(true), "safeVolume" to Setting.ToggleSetting(false))
+        val settings = mapOf("wearingDetection" to Setting.ToggleSetting(true), "limitHighVolume" to Setting.ToggleSetting(false))
         assertFalse(isSoundPresetApplied(preset, settings))
     }
 
@@ -110,11 +110,11 @@ class SoundPresetsTest {
     }
 
     // Two presets that enable different settings can both match the device at the same time
-    private val anc = QuickPreset("ANC", listOf(QuickPresetField("wear", true.toValue(), true)))
-    private val equalizer = QuickPreset("Equalizer", listOf(QuickPresetField("safeVolume", false.toValue(), true)))
+    private val anc = QuickPreset("ANC", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
+    private val equalizer = QuickPreset("Equalizer", listOf(QuickPresetField("limitHighVolume", false.toValue(), true)))
     private val deviceMatchingBoth = mapOf(
-        "wear" to Setting.ToggleSetting(true),
-        "safeVolume" to Setting.ToggleSetting(false),
+        "wearingDetection" to Setting.ToggleSetting(true),
+        "limitHighVolume" to Setting.ToggleSetting(false),
     )
 
     @Test
@@ -131,20 +131,20 @@ class SoundPresetsTest {
 
     @Test
     fun lastAppliedPresetStopsBeingAppliedWhenOneOfItsSettingsChanges() {
-        val changed = deviceMatchingBoth + ("wear" to Setting.ToggleSetting(false))
+        val changed = deviceMatchingBoth + ("wearingDetection" to Setting.ToggleSetting(false))
         assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(anc, changed, "ANC"))
         assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(equalizer, changed, "ANC"))
     }
 
     @Test
     fun changingASettingThePresetDoesNotUseKeepsItApplied() {
-        val changed = deviceMatchingBoth + ("safeVolume" to Setting.ToggleSetting(true))
+        val changed = deviceMatchingBoth + ("limitHighVolume" to Setting.ToggleSetting(true))
         assertEquals(SoundPresetStatus.Applied, soundPresetStatus(anc, changed, "ANC"))
     }
 
     @Test
     fun presetWithoutEnabledFieldsIsNeverApplied() {
-        val empty = QuickPreset("Empty", listOf(QuickPresetField("wear", true.toValue(), false)))
+        val empty = QuickPreset("Empty", listOf(QuickPresetField("wearingDetection", true.toValue(), false)))
         assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(empty, deviceMatchingBoth, "Empty"))
     }
 

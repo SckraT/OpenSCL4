@@ -1,7 +1,7 @@
 //! The sound modes as one scale from 1 to 11, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/
 //! SoundModeScale.kt: 1 to 5 transparency (1 the strongest), 6 normal, 7 to 11 noise canceling (11 the strongest).
 
-use openscq30_lib::settings::{Setting, SettingId, Value};
+use crate::settings::{Setting, SettingId, Value};
 
 use super::SettingMap;
 
@@ -72,7 +72,7 @@ pub fn sound_mode_scale_settings(position: i32) -> Vec<(SettingId, Value)> {
 
 #[cfg(test)]
 mod tests {
-    use openscq30_lib::settings::{Range, Select};
+    use crate::settings::{Range, Select};
 
     use super::*;
 

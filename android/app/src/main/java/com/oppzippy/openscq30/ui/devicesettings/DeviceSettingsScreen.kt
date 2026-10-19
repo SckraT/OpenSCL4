@@ -32,7 +32,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +50,7 @@ import androidx.navigation.navArgument
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
@@ -87,8 +87,6 @@ import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
 import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
 
 private const val HOME = "overview"
 private const val PRESETS = "presets"
@@ -103,9 +101,7 @@ fun DeviceSettingsScreen(
     connectionStatus: ConnectionStatus,
     setSettingValues: (List<Pair<String, Value>>) -> Unit,
     setSettingValueForResult: suspend (String, Value) -> Result<Unit>,
-    allSettingsFlow: Flow<List<Pair<String, Setting>>>,
-    categoryIdsFlow: Flow<List<String>>,
-    getSettingsInCategoryFlow: (String) -> Flow<List<Pair<String, Setting>>>,
+    settingsByCategoryFlow: Flow<List<SettingCategory>?>,
     quickPresetSlotsFlow: Flow<List<String?>>,
     onQuickPresetSlotChange: (Int, String?) -> Unit,
     quickPresetsFlow: Flow<List<QuickPreset>>,
@@ -126,19 +122,15 @@ fun DeviceSettingsScreen(
         SoundConnectionStateScreen(connectionStatus, onBack = onBack)
         return
     }
-    val loadedSettings by remember(connection.deviceManager) { allSettingsFlow }.collectAsState(initial = null)
-    val settings = loadedSettings.orEmpty()
-    val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
-    val categories by remember(connection.deviceManager) { categoryIdsFlow }.collectAsState(emptyList())
-    val byCategory by remember(categories, connection.deviceManager) {
-        if (categories.isEmpty()) {
-            flowOf(emptyMap<String, List<Pair<String, Setting>>>())
-        } else {
-            combine(categories.map { getSettingsInCategoryFlow(it) }) { lists ->
-                categories.zip(lists.toList()).toMap()
-            }
+    val loadedSettings by remember(connection.deviceManager) { settingsByCategoryFlow }.collectAsState(initial = null)
+    val byCategory = remember(loadedSettings) {
+        loadedSettings.orEmpty().associate { category ->
+            category.categoryId to category.settings.map { it.settingId to it.setting }
         }
-    }.collectAsState(emptyMap())
+    }
+    val categories = byCategory.keys.toList()
+    val settings = remember(byCategory) { byCategory.values.flatten().distinctBy { it.first } }
+    val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
     val presets by remember(connection.deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
     val legacyProfiles by remember(connection.deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     // every setting has one group, and the group's page is where it is shown
@@ -157,9 +149,7 @@ fun DeviceSettingsScreen(
     val rootRoute = route in setOf(HOME, PRESETS, APP_SETTINGS)
     var showMenu by remember { mutableStateOf(false) }
     var confirmDisconnect by remember { mutableStateOf(false) }
-    // Which presets match the device is derived from its settings, but several can match at once, so the one the user
-    // applied last is remembered separately. Survives rotation, and starts over for a new connection.
-    var lastAppliedPreset by rememberSaveable(connection.deviceManager) { mutableStateOf<String?>(null) }
+    val lastAppliedPreset by connection.deviceManager.lastAppliedPreset.collectAsState()
 
     val equalizerPage = equalizerOpensItsPage(byCategory["equalizer"].orEmpty().map { it.first }, oneEarbudOnly)
 
@@ -354,10 +344,7 @@ fun DeviceSettingsScreen(
                         macAddress = connection.macAddress,
                         quickPresets = presets.map { it.name },
                         activeQuickPreset = lastAppliedPreset,
-                        onActivateQuickPreset = {
-                            activateQuickPreset(it)
-                            lastAppliedPreset = it
-                        },
+                        onActivateQuickPreset = activateQuickPreset,
                         onEditLayout = { navController.navigate(OVERVIEW_LAYOUT) },
                         onSound = {
                             navController.navigate("sound")
@@ -436,10 +423,7 @@ fun DeviceSettingsScreen(
                     presets,
                     settings,
                     lastAppliedPreset,
-                    onActivate = {
-                        lastAppliedPreset = it
-                        activateQuickPreset(it)
-                    },
+                    onActivate = activateQuickPreset,
                     createQuickPreset,
                     onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
                     onDelete = deleteQuickPreset,

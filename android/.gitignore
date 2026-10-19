@@ -21,4 +21,5 @@ local.properties
 /.cargo
 /glue.rs.in
 keystore.properties
+openscl4-keystore.properties
 .attach_pid*
