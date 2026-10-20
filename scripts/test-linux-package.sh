@@ -51,10 +51,18 @@ visible() {
     xwininfo -id "$1" 2>/dev/null | grep -q "Map State: IsViewable"
 }
 
-wait_visible() {
+is_hidden() {
+    ! visible "$1" || xprop -id "$1" _NET_WM_STATE 2>/dev/null | grep -q _NET_WM_STATE_HIDDEN
+}
+
+shown() {
+    visible "$1" && ! xprop -id "$1" _NET_WM_STATE 2>/dev/null | grep -q _NET_WM_STATE_HIDDEN
+}
+
+wait_shown() {
     local window="$1"
     for _ in {1..100}; do
-        if visible "$window"; then return 0; fi
+        if shown "$window"; then return 0; fi
         sleep 0.1
     done
     return 1
@@ -68,18 +76,18 @@ pids+=("$first")
 window=$(wait_window "$first")
 test -n "$window"
 wmctrl -ir "$window" -b add,hidden
-hidden=""
+hidden_state=""
 for _ in {1..50}; do
-    if ! visible "$window"; then hidden=1; break; fi
+    if is_hidden "$window"; then hidden_state=1; break; fi
     sleep 0.1
 done
-test -n "$hidden"
+test -n "$hidden_state"
 start_app "$config"
 second=$started
 wait_exit "$second"
 wait "$second"
 if ! kill -0 "$first" 2>/dev/null; then echo "the first instance quit"; exit 1; fi
-wait_visible "$window"
+wait_shown "$window"
 wmctrl -ic "$window"
 wait_exit "$first"
 wait "$first"
