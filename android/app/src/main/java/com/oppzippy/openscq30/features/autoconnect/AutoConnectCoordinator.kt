@@ -29,8 +29,7 @@ internal class AutoConnectCoordinator(
         candidates.forEach(connect)
     }
 
-    private suspend fun isEligible(macAddress: String): Boolean =
-        AutoConnectCandidates.resolve(
+    private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(
             connectedAddresses = listOf(macAddress),
             associatedAddresses = associatedAddresses(),
             savedDevices = savedDevices(),

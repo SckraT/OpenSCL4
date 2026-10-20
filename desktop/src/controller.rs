@@ -146,7 +146,7 @@ impl Controller {
         {
             let emit = emit.clone();
             runtime.spawn(crate::linux_tray::watch(move |status| {
-                emit(Event::TrayStatus(status))
+                emit(Event::TrayStatus(status));
             }));
         }
         let actor = Actor {
