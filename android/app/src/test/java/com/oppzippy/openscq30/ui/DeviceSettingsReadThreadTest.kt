@@ -19,13 +19,13 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -93,8 +93,11 @@ class DeviceSettingsReadThreadTest {
                 check(release.await(10, TimeUnit.SECONDS))
             }
             val field = SettingIdSettingPair("wearingDetection", Setting.ToggleSetting(count > 1))
-            listOf(SettingCategory("general", listOf(field)), SettingCategory("equalizer", emptyList()),
-                SettingCategory("deviceInformation", listOf(field)))
+            listOf(
+                SettingCategory("general", listOf(field)),
+                SettingCategory("equalizer", emptyList()),
+                SettingCategory("deviceInformation", listOf(field)),
+            )
         }
         val parent = Job()
         val changes = MutableStateFlow(0)
@@ -115,7 +118,12 @@ class DeviceSettingsReadThreadTest {
             val observed = withTimeout(5_000) { snapshots.await() }
             val values = withTimeout(5_000) { all.await() }
             assertEquals(2, observed.size)
-            assertEquals(listOf(listOf("wearingDetection"), listOf("wearingDetection")), values.map { row -> row.map { it.first } })
+            assertEquals(
+                listOf(listOf("wearingDetection"), listOf("wearingDetection")),
+                values.map { row ->
+                    row.map { it.first }
+                },
+            )
             assertEquals(Setting.ToggleSetting(false), values[0][0].second)
             assertEquals(Setting.ToggleSetting(true), values[1][0].second)
             assertEquals(2, reads.get())

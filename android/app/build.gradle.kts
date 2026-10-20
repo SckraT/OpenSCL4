@@ -240,9 +240,11 @@ val buildHostNativeForTests = tasks.register<Exec>("buildHostNativeForTests") {
 
 tasks.withType<Test>().configureEach {
     dependsOn(buildHostNativeForTests)
-    inputs.files(fileTree(cargoTargetDirectory.resolve("debug")) {
-        include("openscq30_android.dll", "libopenscq30_android.so", "libopenscq30_android.dylib")
-    }).withPropertyName("hostNativeLibrary")
+    inputs.files(
+        fileTree(cargoTargetDirectory.resolve("debug")) {
+            include("openscq30_android.dll", "libopenscq30_android.so", "libopenscq30_android.dylib")
+        },
+    ).withPropertyName("hostNativeLibrary")
     systemProperty("jna.library.path", cargoTargetDirectory.resolve("debug").absolutePath)
 }
 

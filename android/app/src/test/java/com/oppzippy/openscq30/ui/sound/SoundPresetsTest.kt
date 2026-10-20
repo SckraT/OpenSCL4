@@ -48,7 +48,10 @@ class SoundPresetsTest {
                 QuickPresetField("limitHighVolume", false.toValue(), false),
             ),
         )
-        val settings = mapOf("wearingDetection" to Setting.ToggleSetting(true), "limitHighVolume" to Setting.ToggleSetting(true))
+        val settings = mapOf(
+            "wearingDetection" to Setting.ToggleSetting(true),
+            "limitHighVolume" to Setting.ToggleSetting(true),
+        )
         assertTrue(isSoundPresetApplied(preset, settings))
     }
 
@@ -61,7 +64,10 @@ class SoundPresetsTest {
                 QuickPresetField("limitHighVolume", true.toValue(), true),
             ),
         )
-        val settings = mapOf("wearingDetection" to Setting.ToggleSetting(true), "limitHighVolume" to Setting.ToggleSetting(false))
+        val settings = mapOf(
+            "wearingDetection" to Setting.ToggleSetting(true),
+            "limitHighVolume" to Setting.ToggleSetting(false),
+        )
         assertFalse(isSoundPresetApplied(preset, settings))
     }
 

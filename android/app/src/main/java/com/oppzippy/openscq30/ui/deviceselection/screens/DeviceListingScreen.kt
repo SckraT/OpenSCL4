@@ -243,7 +243,14 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
     Surface(
         modifier = Modifier.fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onUnpair)
-            .semantics { customActions = listOf(CustomAccessibilityAction(unpairLabel) { onUnpair(); true }) },
+            .semantics {
+                customActions = listOf(
+                    CustomAccessibilityAction(unpairLabel) {
+                        onUnpair()
+                        true
+                    },
+                )
+            },
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
@@ -253,7 +260,9 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
+                Modifier.size(
+                    48.dp,
+                ).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 DeviceArtOrIcon(device.model, Modifier.size(44.dp))
@@ -309,14 +318,21 @@ private fun NoDevicesCard(onAddDeviceClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(painterResource(R.drawable.headphones_24px), contentDescription = null, modifier = Modifier.size(72.dp))
+            Icon(
+                painterResource(R.drawable.headphones_24px),
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+            )
             Text(stringResource(R.string.sound_no_devices_title), style = MaterialTheme.typography.headlineSmall)
             Text(
                 stringResource(R.string.sound_pairing_system_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onAddDeviceClick, modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 52.dp)) {
+            Button(
+                onClick = onAddDeviceClick,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 52.dp),
+            ) {
                 Icon(painterResource(R.drawable.add_24px), contentDescription = null)
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.sound_add_device))

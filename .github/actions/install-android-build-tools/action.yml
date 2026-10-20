@@ -26,15 +26,16 @@ runs:
       shell: bash
       env:
         NDK_VERSION: ${{ steps.build_tool_versions.outputs.ndk }}
-        SDK_VERSION: ${{ steps.build_tool_versions.outputs['android-sdk'] }}
+        ANDROID_PLATFORM: ${{ steps.build_tool_versions.outputs['android-platform'] }}
         BUILD_TOOLS_VERSION: ${{ steps.build_tool_versions.outputs['android-build-tools'] }}
       run: |
         SDKMANAGER="${ANDROID_HOME:?ANDROID_HOME is not set}/cmdline-tools/latest/bin/sdkmanager"
+        PLATFORM_PACKAGE="${ANDROID_PLATFORM:?android-platform is not set in .build-tool-versions}"
         if [[ ! -x "$SDKMANAGER" ]]; then
           echo "sdkmanager not found at $SDKMANAGER" >&2
           exit 1
         fi
-        "$SDKMANAGER" "ndk;$NDK_VERSION" "platforms;android-$SDK_VERSION" "build-tools;$BUILD_TOOLS_VERSION"
+        "$SDKMANAGER" "ndk;$NDK_VERSION" "platforms;android-$PLATFORM_PACKAGE" "build-tools;$BUILD_TOOLS_VERSION"
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
         echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
 

@@ -58,6 +58,7 @@ fun OverviewLayoutEditor(
     val layout = OverviewLayout.parse(stored)
     fun save(newLayout: OverviewLayout) = preferences.setOverviewLayout(deviceModel, newLayout.serialize())
     val shown = layout.blocks.filter { it.first in available }
+
     // moves a block among the listed ones, by its index in that list
     fun move(from: Int, to: Int) {
         val fromBlock = shown.getOrNull(from)?.first ?: return
@@ -120,9 +121,15 @@ fun OverviewLayoutEditor(
                             .onGloballyPositioned { if (rowHeight == 0) rowHeight = it.size.height }
                             .semantics {
                                 customActions = listOfNotNull(
-                                    CustomAccessibilityAction(moveUp) { move(index, index - 1); true }
+                                    CustomAccessibilityAction(moveUp) {
+                                        move(index, index - 1)
+                                        true
+                                    }
                                         .takeIf { index > 0 },
-                                    CustomAccessibilityAction(moveDown) { move(index, index + 1); true }
+                                    CustomAccessibilityAction(moveDown) {
+                                        move(index, index + 1)
+                                        true
+                                    }
                                         .takeIf { index < shown.lastIndex },
                                 )
                             },

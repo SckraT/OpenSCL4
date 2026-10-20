@@ -282,10 +282,14 @@ internal fun ProfileTransferSection(
             scope.launch {
                 when (val read = withContext(Dispatchers.IO) { readText(context, uri) }) {
                     is ReadResult.Text -> preview(read.text)
-                    ReadResult.TooLarge -> importMessage =
-                        TransferMessage(context.getString(R.string.sound_profile_file_too_large), isError = true)
-                    ReadResult.Failed -> importMessage =
-                        TransferMessage(context.getString(R.string.sound_profile_file_read_failed), isError = true)
+
+                    ReadResult.TooLarge ->
+                        importMessage =
+                            TransferMessage(context.getString(R.string.sound_profile_file_too_large), isError = true)
+
+                    ReadResult.Failed ->
+                        importMessage =
+                            TransferMessage(context.getString(R.string.sound_profile_file_read_failed), isError = true)
                 }
             }
         }
@@ -455,12 +459,15 @@ private fun ImportPreviewDialog(
                             Text(
                                 when (item.status) {
                                     ImportStatus.New -> stringResource(R.string.sound_profile_import_new)
+
                                     ImportStatus.Replaces -> stringResource(R.string.sound_profile_import_replaces)
+
                                     ImportStatus.WrongBandCount -> stringResource(
                                         R.string.sound_profile_import_wrong_bands,
                                         item.profile.volumeAdjustments.size,
                                         equalizer?.bandHz?.size ?: 0,
                                     )
+
                                     ImportStatus.OutOfRange ->
                                         stringResource(R.string.sound_profile_import_out_of_range)
                                 },

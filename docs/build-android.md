@@ -6,7 +6,7 @@ The Android app uses Jetpack Compose with the Rust core through UniFFI. Minimum 
 
 Use Rust via rustup, Python 3.11+, and the JDK, Android SDK/build-tools, NDK and cargo-ndk versions in [`.build-tool-versions`](../.build-tool-versions). The Gradle wrapper in `android/` is authoritative; a separate system Gradle installation is unnecessary. The same tool setup is recorded in [the CI action](../.github/actions/install-android-build-tools/action.yml).
 
-Install the specified SDK platform, build-tools and NDK with Android Studio's SDK manager or the command-line SDK manager, and accept SDK licenses. Set `ANDROID_HOME` to the SDK directory and `JAVA_HOME` to the pinned JDK. Set `ANDROID_NDK_HOME` to the selected SDK `ndk/VERSION` directory if invoking native tooling directly.
+Install the specified SDK platform, build-tools and NDK with Android Studio's SDK manager or the command-line SDK manager, and accept SDK licenses. `android-sdk` is the numeric API level Gradle compiles against; `android-platform` is the corresponding SDK manager package suffix (API 37 uses `37.0`). Set `ANDROID_HOME` to the SDK directory and `JAVA_HOME` to the pinned JDK. Set `ANDROID_NDK_HOME` to the selected SDK `ndk/VERSION` directory if invoking native tooling directly.
 
 Install cargo-ndk at its pinned version. Add Rust targets for the ABIs being built:
 

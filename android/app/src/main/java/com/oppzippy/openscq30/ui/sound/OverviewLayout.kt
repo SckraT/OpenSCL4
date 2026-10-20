@@ -11,6 +11,7 @@ enum class OverviewBlock(val id: String, @StringRes val title: Int, @DrawableRes
     QuickPresets("quickPresets", R.string.quick_presets, R.drawable.bolt_24px),
     Controls("controls", R.string.sound_overview_controls, R.drawable.sound_hand),
     Comfort("comfort", R.string.sound_overview_comfort, R.drawable.sound_heart),
+
     // the id stays "spatial" for layouts saved before the block covered all sound effects
     Spatial("spatial", R.string.sound_overview_effects, R.drawable.speaker_24px),
     Power("power", R.string.sound_overview_power, R.drawable.power_settings_new_24px),

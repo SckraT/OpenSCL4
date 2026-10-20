@@ -60,28 +60,28 @@ import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
+import com.oppzippy.openscq30.ui.sound.OverviewBlock
+import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.ProfileTransferSection
+import com.oppzippy.openscq30.ui.sound.SettingGroup
 import com.oppzippy.openscq30.ui.sound.SoundCasePage
 import com.oppzippy.openscq30.ui.sound.SoundComfortPage
 import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
 import com.oppzippy.openscq30.ui.sound.SoundConnectionsPage
 import com.oppzippy.openscq30.ui.sound.SoundControlsPage
 import com.oppzippy.openscq30.ui.sound.SoundDashboardLink
+import com.oppzippy.openscq30.ui.sound.SoundEffectsPage
 import com.oppzippy.openscq30.ui.sound.SoundEqualizerPage
 import com.oppzippy.openscq30.ui.sound.SoundModesPage
-import com.oppzippy.openscq30.ui.sound.SoundOverview
-import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
 import com.oppzippy.openscq30.ui.sound.SoundOneEarbudNotice
+import com.oppzippy.openscq30.ui.sound.SoundOverview
+import com.oppzippy.openscq30.ui.sound.SoundPowerPage
+import com.oppzippy.openscq30.ui.sound.SoundPresetEditorPage
 import com.oppzippy.openscq30.ui.sound.SoundPresetsPage
 import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
-import com.oppzippy.openscq30.ui.sound.SettingGroup
-import com.oppzippy.openscq30.ui.sound.SoundEffectsPage
-import com.oppzippy.openscq30.ui.sound.SoundPowerPage
 import com.oppzippy.openscq30.ui.sound.equalizerOpensItsPage
 import com.oppzippy.openscq30.ui.sound.groupSettings
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
-import com.oppzippy.openscq30.ui.sound.OverviewBlock
-import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
 import com.oppzippy.openscq30.ui.sound.title
@@ -183,24 +183,40 @@ fun DeviceSettingsScreen(
     }
     val title = when (route) {
         HOME -> stringResource(R.string.app_name)
+
         PRESETS -> stringResource(R.string.quick_presets)
+
         APP_SETTINGS -> stringResource(R.string.settings)
+
         OVERVIEW_LAYOUT -> stringResource(R.string.sound_overview_edit)
+
         "sound" -> stringResource(R.string.sound_overview_sound_mode)
+
         "equalizer" -> stringResource(R.string.equalizer)
+
         "controls" -> stringResource(R.string.sound_overview_controls)
+
         "comfort" -> stringResource(R.string.sound_overview_comfort)
+
         "connections" -> stringResource(R.string.sound_overview_connections)
+
         "case" -> stringResource(R.string.sound_overview_case)
+
         "spatial" -> stringResource(R.string.sound_overview_effects)
+
         POWER -> stringResource(R.string.sound_overview_power)
+
         "notifications" -> stringResource(R.string.sound_notification_controls)
+
         "legacy" -> stringResource(R.string.sound_overview_legacy)
+
         "preset/{name}" -> entry?.arguments?.getString("name") ?: stringResource(R.string.edit)
+
         "group/{id}" -> {
             val id = entry?.arguments?.getString("id")
             SettingGroup.entries.firstOrNull { it.id == id }?.title().orEmpty()
         }
+
         else -> stringResource(R.string.sound_overview_all_settings)
     }
     Scaffold(

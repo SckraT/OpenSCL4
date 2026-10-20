@@ -97,7 +97,10 @@ fun SelectModelForPairingScreen(onModelSelected: (String) -> Unit, onBackClick: 
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.sound_find_your_model), style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        stringResource(R.string.sound_find_your_model),
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
                     Text(
                         stringResource(R.string.sound_find_your_model_description),
                         style = MaterialTheme.typography.bodyMedium,

@@ -42,7 +42,13 @@ class DeviceConnectionManagerTest {
                         val expected = connection.device.settingsInCategory(category.categoryId).mapNotNull { id ->
                             connection.device.setting(id)?.let { id to Json.encodeToJsonElement(it) }
                         }
-                        assertEquals(expected, category.settings.map { it.settingId to Json.encodeToJsonElement(it.setting) })
+                        assertEquals(
+                            expected,
+                            category.settings.map {
+                                it.settingId to
+                                    Json.encodeToJsonElement(it.setting)
+                            },
+                        )
                     }
                     session.quickPresetHandler().use { handler ->
                         handler.save(connection.device, "First")

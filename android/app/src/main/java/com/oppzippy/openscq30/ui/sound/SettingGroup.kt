@@ -31,14 +31,23 @@ enum class SettingGroup(val id: String, @DrawableRes val icon: Int, val libraryC
 @Composable
 fun SettingGroup.title(): String = when (this) {
     SettingGroup.SoundModes -> stringResource(R.string.sound_overview_sound_mode)
+
     SettingGroup.Equalizer -> stringResource(R.string.equalizer)
+
     SettingGroup.SoundEffects -> stringResource(R.string.sound_overview_effects)
+
     SettingGroup.Controls -> stringResource(R.string.sound_overview_controls)
+
     SettingGroup.Comfort -> stringResource(R.string.sound_overview_comfort)
+
     SettingGroup.Power -> stringResource(R.string.sound_overview_power)
+
     SettingGroup.Connections -> stringResource(R.string.sound_overview_connections)
+
     SettingGroup.Case -> stringResource(R.string.sound_overview_case)
+
     SettingGroup.Sleep -> stringResource(R.string.sound_overview_sleep)
+
     SettingGroup.Lights, SettingGroup.Alarms, SettingGroup.About, SettingGroup.Other ->
         translateCategoryId(requireNotNull(libraryCategory))
 }

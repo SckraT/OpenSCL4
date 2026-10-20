@@ -112,11 +112,13 @@ fun DeviceHeroCard(
                 }
                 when {
                     batteries.isNotEmpty() -> BatteryTiles(batteries)
+
                     hint != null -> Text(
                         hint,
                         modifier = Modifier.padding(vertical = 14.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+
                     else -> Spacer(Modifier.size(16.dp))
                 }
                 footer()
@@ -170,11 +172,13 @@ internal fun DeviceStatusPill(state: ActiveDeviceState?) {
     ) {
         when (state) {
             ActiveDeviceState.Connected -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
+
             ActiveDeviceState.Connecting -> CircularProgressIndicator(
                 modifier = Modifier.size(11.dp),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
+
             null -> Box(
                 Modifier.size(9.dp).border(
                     1.5.dp,

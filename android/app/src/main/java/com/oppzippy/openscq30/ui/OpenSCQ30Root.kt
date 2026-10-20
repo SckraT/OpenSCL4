@@ -122,10 +122,12 @@ fun OpenSCQ30Root(
                                             oneEarbudOnly = oneEarbudOnly && showOneEarbudBadge,
                                         )
                                     }
+
                                     is ConnectionStatus.Connecting -> ActiveDevice(
                                         current.macAddress,
                                         ActiveDeviceState.Connecting,
                                     )
+
                                     else -> null
                                 }
                                 DeviceSelectionScreen(activeDevice = activeDevice, onDeviceSelected = {

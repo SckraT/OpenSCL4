@@ -146,13 +146,15 @@ fun SoundOverview(
                     val block = blocks[index]
                     val next = blocks.getOrNull(index + 1)
                     // controls and comfort side by side when they follow each other
-                    val pair = next != null && setOf(block, next) == setOf(OverviewBlock.Controls, OverviewBlock.Comfort)
+                    val pair =
+                        next != null && setOf(block, next) == setOf(OverviewBlock.Controls, OverviewBlock.Comfort)
                     when {
                         pair -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOfNotNull(block, next).forEach { shortcut ->
                                 OverviewShortcut(shortcut, onControls, onComfort, Modifier.weight(1f))
                             }
                         }
+
                         block == OverviewBlock.SoundMode -> {
                             SoundSectionHeading(stringResource(R.string.sound_overview_sound_mode), onClick = onSound)
                             val ambient = values["ambientSoundMode"] as? Setting.SelectSetting
@@ -164,7 +166,9 @@ fun SoundOverview(
                                 }
                             }
                         }
+
                         block == OverviewBlock.Equalizer -> OverviewEqualizer(values, oneEarbudOnly, onEqualizer)
+
                         block == OverviewBlock.QuickPresets -> {
                             SoundSectionHeading(stringResource(R.string.quick_presets))
                             FlowRow(
@@ -180,8 +184,10 @@ fun SoundOverview(
                                 }
                             }
                         }
+
                         block == OverviewBlock.Controls || block == OverviewBlock.Comfort ->
                             OverviewShortcut(block, onControls, onComfort, Modifier.fillMaxWidth())
+
                         block == OverviewBlock.Spatial -> SoundDashboardLink(
                             stringResource(R.string.sound_overview_effects),
                             // whether spatial audio is on, for the devices that have it
@@ -196,18 +202,21 @@ fun SoundOverview(
                             R.drawable.speaker_24px,
                             onSpatial,
                         )
+
                         block == OverviewBlock.Power -> SoundDashboardLink(
                             stringResource(R.string.sound_overview_power),
                             null,
                             R.drawable.power_settings_new_24px,
                             onPower,
                         )
+
                         block == OverviewBlock.Connections -> SoundDashboardLink(
                             stringResource(R.string.sound_overview_connections),
                             null,
                             R.drawable.devices_other_24px,
                             onConnections,
                         )
+
                         block == OverviewBlock.Case -> SoundDashboardLink(
                             stringResource(R.string.sound_overview_case),
                             null,
@@ -324,8 +333,7 @@ private fun CompactDeviceBar(deviceModel: String, batteries: List<DeviceBattery>
 
 internal fun batteryProgress(raw: String): Float? = clientBatteryProgress(raw)
 
-internal fun isOnlyOneEarbudConnected(values: Map<String, Setting>): Boolean =
-    clientIsOnlyOneEarbudConnected(values)
+internal fun isOnlyOneEarbudConnected(values: Map<String, Setting>): Boolean = clientIsOnlyOneEarbudConnected(values)
 
 internal val BOTH_EARBUDS_SETTING_IDS by lazy { clientBothEarbudsSettingIds().toSet() }
 

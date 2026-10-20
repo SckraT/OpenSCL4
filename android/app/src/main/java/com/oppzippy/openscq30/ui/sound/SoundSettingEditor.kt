@@ -70,11 +70,11 @@ import com.oppzippy.openscq30.ui.devicesettings.composables.Equalizer
 import com.oppzippy.openscq30.ui.devicesettings.composables.ReadOnlyEqualizer
 import com.oppzippy.openscq30.ui.utils.ModifiableSelect
 import com.oppzippy.openscq30.ui.utils.throttledState
-import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /**
  * Sets a setting and waits for the result, for settings whose editors have to keep what the user entered if setting it
@@ -243,11 +243,16 @@ fun SoundSettingEditor(
 private fun SoundSettingLabel(settingId: String, name: String, modifier: Modifier = Modifier) {
     val description = when (settingId) {
         "wearingDetection", "autoPlayPause" -> R.string.sound_device_wearing_description
+
         "limitHighVolume" -> R.string.sound_device_volume_description
+
         "easyChat" -> R.string.sound_device_chat_description
+
         "dualConnections" -> R.string.sound_device_connections_description
+
         "findDevice", "remoteCamera", "atmospheric", "caseSpatialAudio" ->
             R.string.sound_device_case_feature_description
+
         else -> null
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {

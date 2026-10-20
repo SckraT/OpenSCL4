@@ -12,9 +12,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 
-abstract class GenerateUniffiBindingsTask @Inject constructor(
-    private val execOps: ExecOperations,
-) : DefaultTask() {
+abstract class GenerateUniffiBindingsTask @Inject constructor(private val execOps: ExecOperations) : DefaultTask() {
     @get:Input
     abstract val rustWorkspaceDirectory: Property<File>
 
