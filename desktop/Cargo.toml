@@ -49,5 +49,4 @@ zbus = { workspace = true }
 slint-build = { workspace = true }
 
 [target.'cfg(windows)'.build-dependencies]
-tempfile = { workspace = true }
 embed-resource = { workspace = true }
