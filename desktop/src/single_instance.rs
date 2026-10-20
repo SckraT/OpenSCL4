@@ -1,18 +1,45 @@
 //! One app at a time for the same devices and settings. Only one app can hold the connection to a device, so a second
 //! start asks the first to show its window, which may be hidden in the notification area, and ends. Apps with another
-//! config folder, such as for tests, run beside it.
+//! config folder, such as for tests, run beside it. Windows uses a named mutex and event; Linux uses a name on the
+//! session bus, which the bus releases when the app exits or crashes, so no stale lock is left behind. Without a
+//! session bus Linux allows the start instead.
 
 use std::path::Path;
 
-/// A name for the config folder that stays the same between builds, unlike std's hasher.
-#[cfg(any(windows, test))]
+/// A name for the config folder that stays the same between builds, unlike std's hasher. Windows folder names are
+/// case-insensitive; Linux ones are not, and aliases of a folder that exists are resolved first.
+#[cfg(any(windows, target_os = "linux", test))]
 fn folder_key(config_dir: &Path) -> String {
+    #[cfg(windows)]
+    let path = config_dir.to_string_lossy().to_lowercase();
+    #[cfg(not(windows))]
+    let path = normalized(config_dir).to_string_lossy().into_owned();
+    fnv1a(&path)
+}
+
+#[cfg(any(windows, target_os = "linux", test))]
+fn fnv1a(text: &str) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in config_dir.to_string_lossy().to_lowercase().bytes() {
+    for byte in text.bytes() {
         hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0100_0000_01b3);
     }
     format!("{hash:016x}")
+}
+
+/// The folder as one absolute path, following symlinks where the folder exists. `..` remains while it does not.
+#[cfg(all(not(windows), any(target_os = "linux", test)))]
+fn normalized(config_dir: &Path) -> std::path::PathBuf {
+    std::fs::canonicalize(config_dir)
+        .or_else(|_| std::path::absolute(config_dir))
+        .unwrap_or_else(|_| config_dir.to_path_buf())
+}
+
+/// The session-bus name for a folder. Each dot-separated part of a D-Bus name must start with a letter, hence the `f`
+/// before the key.
+#[cfg(any(target_os = "linux", test))]
+fn instance_name(key: &str) -> String {
+    format!("io.github.sckrat.openscl4.Instance.f{key}")
 }
 
 /// Whether this is the only app running for the config folder. If it is, a later start makes it call `show`; if not,
@@ -64,7 +91,104 @@ pub fn claim(config_dir: &Path, show: fn()) -> bool {
     true
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+type ShowCallback = std::sync::Arc<dyn Fn() + Send + Sync>;
+
+#[cfg(target_os = "linux")]
+struct ShowOnBus {
+    show: ShowCallback,
+}
+
+#[cfg(target_os = "linux")]
+#[zbus::interface(name = "io.github.sckrat.openscl4.SingleInstance")]
+impl ShowOnBus {
+    fn show(&self) {
+        (self.show)();
+    }
+}
+
+/// Whether this is the only app running for the config folder. If it is, a later start makes it call `show`; if not,
+/// the app that runs has been asked to show its window. A session bus releases the name when its owner ends, so a
+/// crash leaves no lock behind.
+#[cfg(target_os = "linux")]
+pub fn claim(config_dir: &Path, show: fn()) -> bool {
+    use std::sync::{Arc, OnceLock};
+
+    static CONNECTION: OnceLock<zbus::blocking::Connection> = OnceLock::new();
+
+    let name = instance_name(&folder_key(config_dir));
+    let connection = match zbus::blocking::connection::Builder::session().and_then(|builder| {
+        builder
+            .method_timeout(std::time::Duration::from_secs(2))
+            .build()
+    }) {
+        Ok(connection) => connection,
+        Err(err) => {
+            tracing::warn!("no session bus, so a later start can not be asked to show: {err}");
+            return true;
+        }
+    };
+    // the handler runs on the bus's thread, so hand the window to the event loop as the Windows thread does
+    let callback: ShowCallback = Arc::new(move || {
+        if slint::invoke_from_event_loop(show).is_err() {
+            tracing::debug!("the window is gone");
+        }
+    });
+    match claim_on(&connection, &name, callback) {
+        Ok(true) => {
+            // the name lives while its connection does, so keep both for as long as the app runs
+            let _ = CONNECTION.set(connection);
+            true
+        }
+        Ok(false) => false,
+        Err(err) => {
+            tracing::warn!("could not tell whether the app runs already: {err}");
+            true
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn claim_on(
+    connection: &zbus::blocking::Connection,
+    name: &str,
+    show: ShowCallback,
+) -> zbus::Result<bool> {
+    use std::time::Duration;
+
+    use zbus::fdo::{RequestNameFlags, RequestNameReply};
+
+    // serve the window before taking the name, so a start that finds the name can call Show at once
+    connection.object_server().at(
+        "/io/github/sckrat/openscl4/SingleInstance",
+        ShowOnBus { show },
+    )?;
+    for _ in 0..3 {
+        match connection.request_name_with_flags(name, RequestNameFlags::DoNotQueue.into())? {
+            RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner => return Ok(true),
+            RequestNameReply::Exists | RequestNameReply::InQueue => {}
+        }
+        if ask_to_show(connection, name).is_ok() {
+            return Ok(false);
+        }
+        // the app that had the name may have ended as this one started; try to take it
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Ok(false)
+}
+
+#[cfg(target_os = "linux")]
+fn ask_to_show(connection: &zbus::blocking::Connection, name: &str) -> zbus::Result<()> {
+    let proxy = zbus::blocking::Proxy::new(
+        connection,
+        name,
+        "/io/github/sckrat/openscl4/SingleInstance",
+        "io.github.sckrat.openscl4.SingleInstance",
+    )?;
+    proxy.call::<_, _, ()>("Show", &())
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn claim(_config_dir: &Path, _show: fn()) -> bool {
     true
 }
@@ -73,6 +197,7 @@ pub fn claim(_config_dir: &Path, _show: fn()) -> bool {
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
     fn the_same_folder_gets_the_same_name_whatever_its_case() {
         let key = folder_key(Path::new(r"C:\Users\Me\AppData\Roaming\openscq30"));
@@ -82,5 +207,85 @@ mod tests {
         );
         assert_ne!(key, folder_key(Path::new(r"C:\tests\openscq30")));
         assert_eq!(16, key.len());
+    }
+
+    #[test]
+    fn the_bus_name_carries_the_folder_key_and_has_valid_parts() {
+        let name = instance_name("0123456789abcdef");
+        assert_eq!("io.github.sckrat.openscl4.Instance.f0123456789abcdef", name);
+        assert!(name.len() < 255);
+        assert!(name.split('.').all(|part| {
+            part.bytes()
+                .next()
+                .is_some_and(|first| first.is_ascii_alphabetic() || first == b'_')
+        }));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn folders_that_differ_only_in_case_are_different_instances() {
+        let base = tempfile::tempdir().unwrap();
+        let lower = base.path().join("a");
+        let upper = base.path().join("A");
+        std::fs::create_dir_all(&lower).unwrap();
+        std::fs::create_dir_all(&upper).unwrap();
+        assert_ne!(folder_key(&lower), folder_key(&upper));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_folder_and_its_dot_alias_get_the_same_name() {
+        let base = tempfile::tempdir().unwrap();
+        let folder = base.path().join("data");
+        std::fs::create_dir_all(&folder).unwrap();
+        assert_eq!(folder_key(&folder), folder_key(&folder.join(".")));
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod bus_tests {
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
+        time::Duration,
+    };
+
+    use super::{claim_on, instance_name};
+
+    #[test]
+    fn a_second_claim_asks_the_first_to_show_and_ends_without_the_name() {
+        if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
+            eprintln!("skipped: no session bus; run it under dbus-run-session");
+            return;
+        }
+        let name = instance_name(&format!("test{}", std::process::id()));
+        let first = zbus::blocking::Connection::session().unwrap();
+        let shown = Arc::new(AtomicUsize::new(0));
+        let counted = shown.clone();
+        assert!(
+            claim_on(
+                &first,
+                &name,
+                Arc::new(move || {
+                    counted.fetch_add(1, Ordering::SeqCst);
+                })
+            )
+            .unwrap(),
+            "the first start should own the name"
+        );
+        let second = zbus::blocking::Connection::session().unwrap();
+        assert!(
+            !claim_on(&second, &name, Arc::new(|| {})).unwrap(),
+            "the second start should not own the name"
+        );
+        for _ in 0..100 {
+            if shown.load(Ordering::SeqCst) == 1 {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        panic!("the first start was not asked to show its window");
     }
 }

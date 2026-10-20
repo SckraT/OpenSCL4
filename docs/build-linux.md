@@ -46,7 +46,9 @@ tar -xf openscl4-VERSION-linux-x86_64.tar.gz
 
 A working tray is optional. Without a registered tray, closing the window exits. Hiding is allowed only when the tray is available; losing it should restore a hidden window. This behavior is implemented and still needs validation on the target sessions. GNOME may need an AppIndicator extension to provide a tray host; it is not required for windowed operation.
 
-Data is kept in the system configuration directory under `openscl4/`, separately from OpenSCQ30. Use `OPENSCL4_CONFIG_DIR` for an isolated test. Linux single-instance enforcement is not implemented.
+Data is kept in the system configuration directory under `openscl4/`, separately from OpenSCQ30. Use `OPENSCL4_CONFIG_DIR` for an isolated test.
+
+Starting the app again for the same data directory asks the running window to show and then exits; a different data directory runs beside it. This uses a name on the D-Bus session bus, which the bus releases when the app exits or crashes, so there is no stale lock. If no session bus is available, the app still starts and single-instance enforcement is skipped. No tray icon is required.
 
 ## Verification
 
