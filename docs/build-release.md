@@ -79,7 +79,7 @@ For stable verification, use signed Android packages, clean source builds and a 
 }
 ```
 
-Run `python scripts/release.py verify --linux-evidence path/to/linux-qa.json`. Verification checks the complete package set, matching version/revision/identity/certificate and package hashes, then writes `SHA256SUMS`. It checks manifests and recorded evidence; it does not run the physical checks or authenticate a manually edited report.
+Run `python scripts/release.py verify --linux-evidence path/to/linux-qa.json`. Verification checks the complete package set, matching version/revision/identity/tool pins/certificate and package hashes, then writes `SHA256SUMS`. It checks manifests and recorded evidence; it does not run the physical checks or authenticate a manually edited report.
 
 Before first stable publication, verify these sessions on x86_64: Ubuntu 24.04 GNOME Wayland and X11; Kubuntu 24.04 X11; Ubuntu 26.04 GNOME Wayland; Kubuntu 26.04 Wayland. Check install/start/remove, no-tray close, hiding only with a registered tray, recovery when the tray disappears, and clean shutdown. Record session details alongside the JSON. Repeat real-device tests after Bluetooth or connection-lifecycle changes. Test installation alongside OpenSCQ30 and upgrades within the OpenSCL4 line with its own data.
 
