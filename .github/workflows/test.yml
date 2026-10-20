@@ -2,6 +2,7 @@ name: test
 
 on:
   push:
+    branches: ["**"]
     paths-ignore: &push_paths_ignore
       - "*.md"
       - docs/**
@@ -12,6 +13,10 @@ on:
   pull_request:
     paths-ignore: *push_paths_ignore
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

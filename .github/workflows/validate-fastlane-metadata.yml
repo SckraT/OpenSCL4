@@ -2,11 +2,17 @@ name: validate draft Android distribution metadata
 
 on:
   push:
+    branches: ["**"]
     paths: &push_paths
       - fastlane/**
       - .github/workflows/validate-fastlane-metadata.yml
   pull_request:
     paths: *push_paths
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
