@@ -87,7 +87,7 @@ jobs:
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o /tmp/linux.zip
           mkdir -p build-output
           unzip /tmp/linux.zip -d build-output
-          apt-get install -y ./build-output/*.deb xvfb xauth openbox wmctrl weston fonts-dejavu-core
+          apt-get install -y ./build-output/*.deb dbus x11-utils xvfb xauth openbox wmctrl weston fonts-dejavu-core
       - run: bash scripts/test-linux-package.sh /usr/bin/openscl4
       - run: apt-get remove -y openscl4
 
