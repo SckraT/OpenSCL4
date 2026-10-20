@@ -12,6 +12,7 @@ on:
       - i18n-macros/**
       - uniffi-bindgen/**
       - android/**
+      - .github/actions/install-android-build-tools/**
       - .github/workflows/test-android.yml
   pull_request:
     paths: *push_paths

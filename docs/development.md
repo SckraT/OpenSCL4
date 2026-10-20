@@ -28,7 +28,7 @@ python3 -m unittest discover -s scripts/tests -v
 
 On Windows use `python`; the release workflow runs the Rust library/desktop tests there and the library/desktop/Android host checks on Linux. Android JVM tests use `./gradlew testX86_64DebugUnitTest` from `android/` (or `gradlew.bat`). CI does not currently run Android instrumentation; those checks are manual. See [Android validation](android-interface.md#validation).
 
-`lint` runs on every push and pull request. The Rust, Windows and Android jobs are path-filtered, so a documentation-only change does not start them. To run the Android JVM job for an existing revision without changing app sources, dispatch `gh workflow run test-android.yml --repo SckraT/OpenSCL4 --ref <branch>` from the repository root; do not dispatch it again for a revision whose push or pull request already started the job.
+`lint` runs on every push and pull request. The Rust, Windows and Android jobs are path-filtered, so a documentation-only change does not start them. When automatic triggering is unavailable, run a check for an existing revision directly from the repository root: `gh workflow run lint.yml --repo SckraT/OpenSCL4 --ref <branch>`, `gh workflow run test.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Rust job, or `gh workflow run test-android.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Android JVM job. Do not dispatch a workflow again for a revision whose push or pull request already started it.
 
 `cargo test --workspace` and `just test` also include legacy CLI/GUI targets. They are broader than the current release-client checks and may need legacy GUI dependencies. Most `just` recipes require bash; the current release entry point is Python and does not require `just`.
 

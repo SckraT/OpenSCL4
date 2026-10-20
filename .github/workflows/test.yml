@@ -11,6 +11,7 @@ on:
       - packaging/**
   pull_request:
     paths-ignore: *push_paths_ignore
+  workflow_dispatch:
 
 permissions:
   contents: read
