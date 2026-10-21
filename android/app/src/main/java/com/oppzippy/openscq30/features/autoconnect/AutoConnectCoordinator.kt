@@ -30,8 +30,8 @@ internal class AutoConnectCoordinator(
     }
 
     private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(
-            connectedAddresses = listOf(macAddress),
-            associatedAddresses = associatedAddresses(),
-            savedDevices = savedDevices(),
-        ).isNotEmpty()
+        connectedAddresses = listOf(macAddress),
+        associatedAddresses = associatedAddresses(),
+        savedDevices = savedDevices(),
+    ).isNotEmpty()
 }

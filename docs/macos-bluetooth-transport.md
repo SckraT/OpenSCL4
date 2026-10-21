@@ -242,9 +242,9 @@ existing `RequestState` exchange, and read one setting through the existing API.
    unnotarized downloads by default.
 8. **Architecture.** Slint tests only aarch64 macOS 14+. Intel/universal needs extra targets and
    separate validation.
-9. **Parity gaps.** There is no single-instance enforcement on macOS (`single_instance.rs` returns
-   `true` on non-Windows), and tray/close/launch-at-login behavior is Windows/Linux-shaped and
-   unverified on macOS.
+9. **Parity gaps.** Single-instance enforcement exists for Windows and Linux; macOS has none
+   (`single_instance.rs` returns `true` there), and tray/close/launch-at-login behavior is
+   Windows/Linux-shaped and unverified on macOS.
 10. **Repository claims.** README, `build-release.md`, and the cross-platform plan still describe
     macOS as a later stage [S27][S28]. Do not change that wording until hardware and packaging
     evidence exists.

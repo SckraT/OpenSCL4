@@ -27,12 +27,28 @@ fn fnv1a(text: &str) -> String {
     format!("{hash:016x}")
 }
 
-/// The folder as one absolute path, following symlinks where the folder exists. `..` remains while it does not.
+/// The folder as one absolute path, following symlinks in the longest prefix that exists. Parts that do not exist yet,
+/// including `..`, stay as written.
 #[cfg(all(not(windows), any(target_os = "linux", test)))]
 fn normalized(config_dir: &Path) -> std::path::PathBuf {
-    std::fs::canonicalize(config_dir)
-        .or_else(|_| std::path::absolute(config_dir))
-        .unwrap_or_else(|_| config_dir.to_path_buf())
+    let Ok(absolute) = std::path::absolute(config_dir) else {
+        return config_dir.to_path_buf();
+    };
+    let mut missing = Vec::new();
+    let mut ancestor = absolute.as_path();
+    loop {
+        if let Ok(mut path) = std::fs::canonicalize(ancestor) {
+            for part in missing.iter().rev() {
+                path.push(part);
+            }
+            return path;
+        }
+        let (Some(parent), Some(name)) = (ancestor.parent(), ancestor.file_name()) else {
+            return absolute;
+        };
+        missing.push(name.to_os_string());
+        ancestor = parent;
+    }
 }
 
 /// The session-bus name for a folder. Each dot-separated part of a D-Bus name must start with a letter, hence the `f`
@@ -239,6 +255,23 @@ mod tests {
         let folder = base.path().join("data");
         std::fs::create_dir_all(&folder).unwrap();
         assert_eq!(folder_key(&folder), folder_key(&folder.join(".")));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_folder_that_does_not_exist_yet_gets_the_name_it_has_once_created() {
+        let base = tempfile::tempdir().unwrap();
+        let real = base.path().join("real");
+        let link = base.path().join("link");
+        std::fs::create_dir_all(&real).unwrap();
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        let folder = link.join("child");
+        assert!(!folder.exists());
+
+        let before = folder_key(&folder);
+        std::fs::create_dir_all(&folder).unwrap();
+
+        assert_eq!(before, folder_key(&folder));
     }
 }
 
