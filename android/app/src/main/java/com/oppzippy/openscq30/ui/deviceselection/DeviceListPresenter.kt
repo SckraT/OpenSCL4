@@ -15,6 +15,7 @@ object DeviceListPresenter {
         appControl: AppControlSnapshot,
         lastDeviceMacAddress: String? = null,
         isLoading: Boolean = false,
+        featuredMacAddress: String? = null,
     ): DeviceListState {
         val links = PhoneLinkReducer.reduce(
             access = phoneLink.access,
@@ -22,7 +23,9 @@ object DeviceListPresenter {
             aclAddresses = phoneLink.aclAddresses,
             controlledAddress = appControl.macAddress.takeIf { appControl.phase == AppControl.Controlling },
         )
-        val featuredDevice = featuredDevice(devices, links, appControl, lastDeviceMacAddress)
+        val featuredDevice = featuredMacAddress
+            ?.let { pinned -> devices.firstOrNull { sameMacAddress(it.macAddress, pinned) } }
+            ?: featuredDevice(devices, links, appControl, lastDeviceMacAddress)
         return DeviceListState(
             access = links.access,
             featured = featuredDevice?.let { rowState(it, links, appControl) },

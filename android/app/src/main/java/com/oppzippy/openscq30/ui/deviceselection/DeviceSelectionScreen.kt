@@ -3,24 +3,39 @@
 package com.oppzippy.openscq30.ui.deviceselection
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.phonelink.BluetoothAccess
 import com.oppzippy.openscq30.lib.wrapper.ConnectionDescriptor
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.ui.deviceselection.screens.AppInfoScreen
@@ -32,9 +47,11 @@ import com.oppzippy.openscq30.ui.utils.NavTransitions
 import com.oppzippy.openscq30.ui.utils.PermissionCheck
 import kotlinx.serialization.Serializable
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun DeviceSelectionScreen(
     onDeviceSelected: (device: PairedDevice) -> Unit,
+    onDeviceConnectRequested: (device: PairedDevice) -> Unit = onDeviceSelected,
     viewModel: DeviceSelectionViewModel = hiltViewModel(),
     onDeviceUnpaired: (PairedDevice) -> Unit = {},
     activeDevice: ActiveDevice? = null,
@@ -44,26 +61,80 @@ fun DeviceSelectionScreen(
     } else {
         Manifest.permission.BLUETOOTH
     }
+    val bluetoothPermissionState = rememberPermissionState(bluetoothPermission)
+    val pairedDevices = viewModel.pairedDevices.collectAsState().value
+    val hasSavedDevices = !pairedDevices.isNullOrEmpty()
 
     val navController = rememberNavController()
+    val context = LocalContext.current
+    var hasRequestedBluetooth by rememberSaveable { mutableStateOf(false) }
 
-    val needsLocationPermission = Build.VERSION.SDK_INT in Build.VERSION_CODES.Q..Build.VERSION_CODES.R
+    LaunchedEffect(bluetoothPermissionState.status.isGranted) {
+        if (bluetoothPermissionState.status.isGranted) {
+            viewModel.refreshPairedDevices()
+            viewModel.refreshPhoneLink()
+        }
+    }
 
-    PermissionCheck(
-        permission = bluetoothPermission,
-        prompt = stringResource(R.string.bluetooth_permission_is_required),
-        onPermissionGranted = { viewModel.refreshPairedDevices() },
-    ) {
+    val onResolveBluetoothAccess: (BluetoothAccess) -> Unit = { access ->
+        when (access) {
+            BluetoothAccess.Off -> openBluetoothSettings(context)
+
+            BluetoothAccess.PermissionDenied -> {
+                if (hasRequestedBluetooth) {
+                    openAppSettings(context)
+                } else {
+                    hasRequestedBluetooth = true
+                    bluetoothPermissionState.launchPermissionRequest()
+                }
+            }
+
+            BluetoothAccess.Unknown -> viewModel.refreshPhoneLink()
+
+            BluetoothAccess.Unsupported, BluetoothAccess.Ready -> Unit
+        }
+    }
+
+    // The first run still asks for the permission outright; once devices are saved, revoking it must not hide them.
+    if (!bluetoothPermissionState.status.isGranted && pairedDevices != null && !hasSavedDevices) {
+        PermissionCheck(
+            permission = bluetoothPermission,
+            prompt = stringResource(R.string.bluetooth_permission_is_required),
+            onPermissionGranted = {
+                viewModel.refreshPairedDevices()
+                viewModel.refreshPhoneLink()
+            },
+        ) {
+            // Granted: the list below takes over on the next recomposition.
+        }
+    } else {
+        val needsLocationPermission = Build.VERSION.SDK_INT in Build.VERSION_CODES.Q..Build.VERSION_CODES.R
         if (needsLocationPermission) {
             PermissionCheck(
                 permission = Manifest.permission.ACCESS_FINE_LOCATION,
                 prompt = stringResource(R.string.location_permission_is_required),
                 onPermissionGranted = { viewModel.refreshPairedDevices() },
             ) {
-                DeviceSelectionContent(navController, viewModel, onDeviceSelected, onDeviceUnpaired, activeDevice)
+                DeviceSelectionContent(
+                    navController,
+                    viewModel,
+                    onDeviceSelected,
+                    onDeviceConnectRequested,
+                    onDeviceUnpaired,
+                    activeDevice,
+                    onResolveBluetoothAccess,
+                )
             }
         } else {
-            DeviceSelectionContent(navController, viewModel, onDeviceSelected, onDeviceUnpaired, activeDevice)
+            DeviceSelectionContent(
+                navController,
+                viewModel,
+                onDeviceSelected,
+                onDeviceConnectRequested,
+                onDeviceUnpaired,
+                activeDevice,
+                onResolveBluetoothAccess,
+            )
         }
     }
 }
@@ -73,9 +144,24 @@ private fun DeviceSelectionContent(
     navController: NavHostController,
     viewModel: DeviceSelectionViewModel,
     onDeviceSelected: (device: PairedDevice) -> Unit,
+    onDeviceConnectRequested: (device: PairedDevice) -> Unit,
     onDeviceUnpaired: (PairedDevice) -> Unit,
     activeDevice: ActiveDevice?,
+    onResolveBluetoothAccess: (BluetoothAccess) -> Unit,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        viewModel.startPhoneLinkMonitor()
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshPhoneLink()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.stopPhoneLinkMonitor()
+        }
+    }
+    LaunchedEffect(activeDevice) { viewModel.setActiveDevice(activeDevice) }
     NavHost(
         navController = navController,
         startDestination = Screen.Connect,
@@ -88,20 +174,37 @@ private fun DeviceSelectionContent(
     ) {
         composable<Screen.Connect> {
             val activity = LocalActivity.current!!
+            val state by viewModel.deviceListState.collectAsState()
 
             DeviceListingScreen(
-                devices = viewModel.pairedDevices.collectAsState().value,
+                state = state,
                 activeDevice = activeDevice,
-                lastDeviceMacAddress = viewModel.lastDeviceMacAddress.collectAsState().value,
-                onDeviceClick = {
-                    viewModel.rememberLastDevice(it.macAddress)
-                    onDeviceSelected(it)
+                onDeviceTap = { row ->
+                    when (row.tapAction) {
+                        TapAction.Open -> {
+                            viewModel.rememberLastDevice(row.device.macAddress)
+                            onDeviceSelected(row.device)
+                        }
+
+                        TapAction.Connect -> {
+                            viewModel.rememberLastDevice(row.device.macAddress)
+                            onDeviceConnectRequested(row.device)
+                        }
+
+                        TapAction.ResolveBluetoothAccess -> onResolveBluetoothAccess(state.access)
+
+                        TapAction.None -> Unit
+                    }
                 },
+                onBannerAction = onResolveBluetoothAccess,
                 onUnpair = { device ->
                     viewModel.unpair(activity, device, onUnpaired = { onDeviceUnpaired(device) })
                 },
                 onAddDeviceClick = { navController.navigate(Screen.SelectModelForPairing) },
-                onRefreshClick = { viewModel.refreshPairedDevices() },
+                onRefreshClick = {
+                    viewModel.refreshPairedDevices()
+                    viewModel.refreshPhoneLink()
+                },
                 onSettingsClick = { navController.navigate(Screen.Settings) },
                 onInfoClick = { navController.navigate(Screen.Info) },
             )
@@ -155,6 +258,22 @@ private fun DeviceSelectionContent(
             SettingsPage(onBackClick = { navController.popBackStack() })
         }
     }
+}
+
+private fun openBluetoothSettings(context: Context) {
+    try {
+        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+    }
+}
+
+private fun openAppSettings(context: Context) {
+    context.startActivity(
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        },
+    )
 }
 
 @Serializable

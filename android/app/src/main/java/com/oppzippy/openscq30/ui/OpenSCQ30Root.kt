@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -35,6 +36,9 @@ import com.oppzippy.openscq30.features.preferences.prefersDynamicColor
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDevice
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.AppControl
+import com.oppzippy.openscq30.ui.deviceselection.AppControlSnapshot
+import com.oppzippy.openscq30.ui.deviceselection.DeviceNavigationState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceSelectionScreen
 import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
@@ -58,19 +62,14 @@ fun OpenSCQ30Root(
             val status by viewModel.connectionStatusFlow.collectAsState()
             val deviceSettings by viewModel.deviceSettingsManager.collectAsState()
             val showOneEarbudBadge by uiPreferences.oneEarbudBadgeFlow.collectAsState()
-            var showDeviceList by rememberSaveable { mutableStateOf(false) }
-            var requestedMacAddress by rememberSaveable { mutableStateOf<String?>(null) }
-            LaunchedEffect(status) {
-                when (val current = status) {
-                    is ConnectionStatus.Connected -> requestedMacAddress = current.macAddress ?: requestedMacAddress
-                    is ConnectionStatus.Connecting -> requestedMacAddress = current.macAddress
-                    else -> Unit
-                }
+            var navigation by rememberSaveable(stateSaver = deviceNavigationSaver) {
+                mutableStateOf(DeviceNavigationState())
             }
-            val showDevice = !showDeviceList && (
-                requestedMacAddress != null || status is ConnectionStatus.Connected ||
-                    status is ConnectionStatus.Connecting
-                )
+            LaunchedEffect(status) {
+                navigation = navigation.onAppControl(status.toAppControlSnapshot())
+            }
+            val showDevice = navigation.showDevice
+            val requestedMacAddress = navigation.requestedMacAddress
 
             // My devices and the device screen: the device card turns into the card on top of the overview and back.
             // A back swipe moves the change along with the finger.
@@ -84,7 +83,7 @@ fun OpenSCQ30Root(
             PredictiveBackHandler(enabled = showDevice) { progress ->
                 try {
                     progress.collect { event -> screenTransition.seekTo(event.progress, targetState = false) }
-                    showDeviceList = true
+                    navigation = navigation.showList()
                 } catch (cancelled: CancellationException) {
                     screenTransition.animateTo(true)
                     throw cancelled
@@ -102,8 +101,8 @@ fun OpenSCQ30Root(
                                     viewModel = viewModel,
                                     status = status,
                                     requestedMacAddress = requestedMacAddress,
-                                    onShowDeviceList = { showDeviceList = true },
-                                    onDisconnected = { requestedMacAddress = null },
+                                    onShowDeviceList = { navigation = navigation.showList() },
+                                    onDisconnected = { navigation = navigation.clearDevice() },
                                 )
                             } else {
                                 val activeSettings by remember(deviceSettings) {
@@ -130,16 +129,22 @@ fun OpenSCQ30Root(
 
                                     else -> null
                                 }
-                                DeviceSelectionScreen(activeDevice = activeDevice, onDeviceSelected = {
-                                    requestedMacAddress = it.macAddress
-                                    showDeviceList = false
-                                    viewModel.selectDevice(it.macAddress)
-                                }, onDeviceUnpaired = {
-                                    viewModel.onDeviceUnpaired(it.macAddress)
-                                    if (requestedMacAddress.equals(it.macAddress, ignoreCase = true)) {
-                                        requestedMacAddress = null
-                                    }
-                                })
+                                DeviceSelectionScreen(
+                                    activeDevice = activeDevice,
+                                    onDeviceSelected = {
+                                        navigation = navigation.openDevice(it.macAddress)
+                                        viewModel.selectDevice(it.macAddress)
+                                    },
+                                    onDeviceConnectRequested = {
+                                        // Keep the list visible until the app actually controls the device.
+                                        navigation = navigation.requestControl(it.macAddress)
+                                        viewModel.selectDevice(it.macAddress)
+                                    },
+                                    onDeviceUnpaired = {
+                                        viewModel.onDeviceUnpaired(it.macAddress)
+                                        navigation = navigation.forgetDevice(it.macAddress)
+                                    },
+                                )
                             }
                         }
                     }
@@ -153,6 +158,17 @@ fun OpenSCQ30Root(
             }
         }
     }
+}
+
+private val deviceNavigationSaver = listSaver<DeviceNavigationState, Any?>(
+    save = { listOf(it.showDeviceList, it.requestedMacAddress, it.listConnectMacAddress) },
+    restore = { DeviceNavigationState(it[0] as Boolean, it[1] as String?, it[2] as String?) },
+)
+
+private fun ConnectionStatus.toAppControlSnapshot(): AppControlSnapshot = when (this) {
+    is ConnectionStatus.Connected -> AppControlSnapshot(macAddress, AppControl.Controlling)
+    is ConnectionStatus.Connecting -> AppControlSnapshot(macAddress, AppControl.Connecting)
+    ConnectionStatus.AwaitingConnection, ConnectionStatus.Disconnected -> AppControlSnapshot()
 }
 
 @Composable
