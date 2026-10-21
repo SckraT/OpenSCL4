@@ -135,7 +135,7 @@ impl OpenSCQ30Device {
     pub async fn set_setting_values(
         &self,
         setting_values: Vec<SettingIdValuePair>,
-    ) -> Result<(), crate::OpenSCQ30Error> {
+    ) -> Result<Vec<serializable::SettingWriteOutcome>, crate::OpenSCQ30Error> {
         self.inner
             .set_setting_values(
                 setting_values
@@ -144,6 +144,12 @@ impl OpenSCQ30Device {
                     .collect(),
             )
             .await
+            .map(|outcomes| {
+                outcomes
+                    .into_iter()
+                    .map(serializable::SettingWriteOutcome::from)
+                    .collect()
+            })
             .map_err(Into::into)
     }
 }

@@ -302,7 +302,7 @@ impl Actor {
             Command::SetSettings(values) => {
                 let Some(device) = self.current() else { return };
                 match device.set_setting_values(values).await {
-                    Ok(()) => self.emit_snapshot(false),
+                    Ok(_) => self.emit_snapshot(false),
                     Err(err) => self.failed(command, &err),
                 }
             }

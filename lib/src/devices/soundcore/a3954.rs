@@ -14,7 +14,7 @@ use crate::{
                     COMMON_ACTIONS,
                 },
                 case_battery_level::CaseBatteryLevelConfiguration,
-                flag::FlagConfiguration,
+                flag::{FlagConfiguration, FlagVerification},
             },
             packet::{
                 self,
@@ -215,6 +215,7 @@ fn add_sound_leak_compensation(
             set_command: packet::Command([0x10, 0x9A]),
             update_command: None,
             is_inverted: false,
+            verification: FlagVerification::Bulk,
         },
     );
 }

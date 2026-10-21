@@ -133,9 +133,11 @@ impl OpenSCQ30Device for SoundcoreDevelopmentDevice {
     async fn set_setting_values(
         &self,
         setting_values: Vec<(SettingId, Value)>,
-    ) -> device::Result<()> {
+    ) -> device::Result<Vec<device::SettingWriteOutcome>> {
+        let mut outcomes = Vec::with_capacity(setting_values.len());
         for (setting_id, value) in setting_values {
             if setting_id == SettingId::SendPacket {
+                let observed = value.clone();
                 let mut data = value
                     .try_as_str()
                     .map_err(|err| device::Error::Other {
@@ -171,10 +173,21 @@ impl OpenSCQ30Device for SoundcoreDevelopmentDevice {
                     .send_with_response(&packet::Outbound::new(command, body))
                     .await
                     .unwrap();
+                outcomes.push(device::SettingWriteOutcome {
+                    setting_id,
+                    outcome: device::WriteOutcome::Applied { observed },
+                });
+            } else {
+                outcomes.push(device::SettingWriteOutcome {
+                    setting_id,
+                    outcome: device::WriteOutcome::UnsupportedInState {
+                        reason: crate::client::availability::AvailabilityReason::NoReadBack,
+                    },
+                });
             }
         }
 
-        Ok(())
+        Ok(outcomes)
     }
 }
 

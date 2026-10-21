@@ -1,6 +1,5 @@
 mod packet_handler;
 mod setting_handler;
-mod state_modifier;
 
 use std::sync::Arc;
 
@@ -21,7 +20,10 @@ use crate::{
 
 use paste::paste;
 
+pub use crate::devices::soundcore::common::write::FlagVerification;
+
 use super::ModuleCollection;
+use crate::devices::soundcore::common::write::FlagAccessor;
 
 macro_rules! flag {
     ($flag_struct:ident, $flag_configuration:expr $(,)?) => {
@@ -46,6 +48,7 @@ flag!(
         set_command: packet::outbound::SET_TOUCH_TONE_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -57,6 +60,7 @@ flag!(
         set_command: packet::outbound::SET_GAMING_MODE_COMMAND,
         update_command: Some(packet::inbound::GAMING_MODE_UPDATE_COMMAND),
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -68,6 +72,7 @@ flag!(
         set_command: packet::outbound::SET_SOUND_LEAK_COMPENSATION_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -79,6 +84,7 @@ flag!(
         set_command: packet::outbound::SET_SURROUND_SOUND_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -90,6 +96,7 @@ flag!(
         set_command: packet::outbound::SET_AUTO_PLAY_PAUSE_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -101,6 +108,7 @@ flag!(
         set_command: packet::outbound::SET_WEARING_TONE_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -112,6 +120,7 @@ flag!(
         set_command: packet::outbound::SET_TOUCH_LOCK_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -123,6 +132,7 @@ flag!(
         set_command: packet::outbound::SET_LOW_BATTERY_PROMPT_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -134,6 +144,7 @@ flag!(
         set_command: packet::outbound::SET_WEARING_DETECTION_COMMAND,
         update_command: None,
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -145,6 +156,7 @@ flag!(
         set_command: packet::Command([0x01, 0x90]),
         update_command: Some(packet::Command([0x01, 0x10])),
         is_inverted: false,
+        verification: FlagVerification::Bulk,
     },
 );
 
@@ -156,6 +168,9 @@ flag!(
         set_command: packet::Command([0x01, 0xFF]),
         update_command: Some(packet::Command([0x01, 0x7F])),
         is_inverted: false,
+        verification: FlagVerification::Targeted {
+            command: packet::Command([0x01, 0x7F]),
+        },
     },
 );
 
@@ -167,13 +182,14 @@ flag!(
         set_command: packet::Command([0x10, 0x94]),
         update_command: None,
         is_inverted: true,
+        verification: FlagVerification::Bulk,
     },
 );
 
 impl<T> ModuleCollection<T> {
     pub fn add_flag<FlagT>(
         &mut self,
-        packet_io: Arc<PacketIOController>,
+        _packet_io: Arc<PacketIOController>,
         flag_configuration: FlagConfiguration,
     ) where
         T: MaybeHas<FlagT> + Send + Sync,
@@ -192,11 +208,35 @@ impl<T> ModuleCollection<T> {
                 flag_configuration.is_inverted,
             ),
         );
-        self.state_modifiers
-            .push(Box::new(state_modifier::FlagStateModifier::new(
-                packet_io,
+        self.flags.insert(
+            flag_configuration.setting_id,
+            Box::new(FlagAccessor::<FlagT>::new(
                 flag_configuration.set_command,
-            )));
+                flag_configuration.is_inverted,
+                flag_configuration.verification,
+            )),
+        );
+    }
+}
+
+impl<T> ModuleCollection<T>
+where
+    T: MaybeHas<VoicePrompt> + Send + Sync,
+{
+    pub fn add_voice_prompt_targeted(&mut self, packet_io: Arc<PacketIOController>) {
+        self.add_flag::<VoicePrompt>(
+            packet_io,
+            FlagConfiguration {
+                category_id: CategoryId::Miscellaneous,
+                setting_id: SettingId::VoicePrompt,
+                set_command: packet::Command([0x01, 0x90]),
+                update_command: Some(packet::Command([0x01, 0x10])),
+                is_inverted: false,
+                verification: FlagVerification::Targeted {
+                    command: packet::Command([0x01, 0x10]),
+                },
+            },
+        );
     }
 }
 
@@ -208,4 +248,5 @@ pub struct FlagConfiguration {
     /// If true, the setting will have the opposite value as the flag. For example, this is used
     /// to make the disable button actions flag instead be an enable button actions flag.
     pub is_inverted: bool,
+    pub verification: FlagVerification,
 }

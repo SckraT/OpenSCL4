@@ -94,7 +94,8 @@ impl<K: Hash + Eq, V> MultiQueue<K, V> {
                 .iter()
                 .position(|entry| Arc::ptr_eq(entry, &handle.current))
         {
-            // No need to close the semaphore since we were given ownership of the only outside reference to it
+            // Release anyone waiting on this handle before it disappears from the queue.
+            handle.current.semaphore.close();
             queue.remove(index);
         }
     }
@@ -186,6 +187,23 @@ mod tests {
         assert_eq!(
             tokio::time::timeout(Duration::from_millis(1), third.wait_for_value()).await,
             Ok(3)
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_cancel_does_not_block_the_next_handle() {
+        let queues = MultiQueue::<i8, i8>::new();
+        let first = queues.add(0);
+        let second = queues.add(0);
+        queues.cancel(&0, first);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(1), second.wait_for_start()).await,
+            Ok(())
+        );
+        queues.pop(&0, 2);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(1), second.wait_for_value()).await,
+            Ok(2)
         );
     }
 }

@@ -4,7 +4,10 @@ use openscq30_lib_has::Has;
 
 use crate::{
     devices::soundcore::common::{
-        modules::{ModuleCollection, flag::FlagConfiguration},
+        modules::{
+            ModuleCollection,
+            flag::{FlagConfiguration, FlagVerification},
+        },
         packet::{self, PacketIOController},
         structures::GamingMode,
     },
@@ -24,6 +27,7 @@ where
                 set_command: packet::Command([0x10, 0x85]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }

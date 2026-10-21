@@ -11,6 +11,28 @@ use super::{
     connection::{self, ConnectionDescriptor, ConnectionStatus},
     settings::{self, CategoryId, Setting, SettingId, Value},
 };
+use crate::client::availability::AvailabilityReason;
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingWriteOutcome {
+    pub setting_id: SettingId,
+    pub outcome: WriteOutcome,
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum WriteOutcome {
+    Applied { observed: Value },
+    UnsupportedInState { reason: AvailabilityReason },
+    Rejected { observed: Option<Value> },
+    TimedOut,
+    Disconnected,
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -37,6 +59,8 @@ pub enum Error {
 
     #[error("{action} timed out")]
     ActionTimedOut { action: &'static str },
+    #[error("setting {setting_id} was not confirmed by the device")]
+    SettingWriteNotApplied { setting_id: SettingId },
     #[error("device disconnected")]
     Disconnected,
     #[error("device with mac address {mac_address} not found")]
@@ -129,5 +153,10 @@ pub trait OpenSCQ30Device {
     ///
     /// For example, if the device has a command that makes multiple changes at once, that command can be sent only a
     /// single time rather than once for each change.
-    async fn set_setting_values(&self, setting_values: Vec<(SettingId, Value)>) -> Result<()>;
+    ///
+    /// Returns one outcome per written setting in request order. `Err` is reserved for local errors.
+    async fn set_setting_values(
+        &self,
+        setting_values: Vec<(SettingId, Value)>,
+    ) -> Result<Vec<SettingWriteOutcome>>;
 }

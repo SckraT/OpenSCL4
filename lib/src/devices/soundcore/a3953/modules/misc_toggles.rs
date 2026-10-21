@@ -7,7 +7,10 @@ use crate::{
     devices::soundcore::{
         a3953::structures::AmbientSoundPrompt,
         common::{
-            modules::{ModuleCollection, flag::FlagConfiguration},
+            modules::{
+                ModuleCollection,
+                flag::{FlagConfiguration, FlagVerification},
+            },
             packet::{self, PacketIOController},
         },
     },
@@ -26,6 +29,7 @@ where
                 set_command: packet::Command([0x10, 0x83]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
