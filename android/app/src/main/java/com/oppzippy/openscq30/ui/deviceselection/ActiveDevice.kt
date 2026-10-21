@@ -25,6 +25,19 @@ data class ActiveDevice(
     val oneEarbudOnly: Boolean = false,
 )
 
+/** The app-control axis for the device list, derived from the active device screen state. */
+fun ActiveDevice?.toAppControlSnapshot(): AppControlSnapshot = if (this == null) {
+    AppControlSnapshot()
+} else {
+    AppControlSnapshot(
+        macAddress = macAddress,
+        phase = when (state) {
+            ActiveDeviceState.Connecting -> AppControl.Connecting
+            ActiveDeviceState.Connected -> AppControl.Controlling
+        },
+    )
+}
+
 /**
  * The device at the top of the list: the one the app is connected or connecting to, otherwise the one the user opened
  * last, otherwise the first saved device.

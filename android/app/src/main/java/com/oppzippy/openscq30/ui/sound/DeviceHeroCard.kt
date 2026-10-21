@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,7 +52,10 @@ import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.ControlBadge
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
+import com.oppzippy.openscq30.ui.deviceselection.DeviceListLabels
+import com.oppzippy.openscq30.ui.deviceselection.LinkBadge
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.utils.sharedDeviceCard
 import com.oppzippy.openscq30.ui.utils.sharedDevicePart
@@ -71,6 +75,8 @@ fun DeviceHeroCard(
     modifier: Modifier = Modifier,
     macAddress: String? = null,
     oneEarbudBadge: Boolean = false,
+    linkBadge: LinkBadge? = null,
+    controlBadge: ControlBadge? = null,
     hint: String? = null,
     onClick: (() -> Unit)? = null,
     topEnd: @Composable () -> Unit = {},
@@ -98,7 +104,11 @@ fun DeviceHeroCard(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             itemVerticalAlignment = Alignment.CenterVertically,
                         ) {
-                            DeviceStatusPill(state)
+                            if (linkBadge != null && controlBadge != null) {
+                                DeviceAxisBadges(linkBadge, controlBadge)
+                            } else {
+                                DeviceStatusPill(state, isDemo)
+                            }
                             if (oneEarbudBadge) OneEarbudBadge()
                         }
                     }
@@ -161,7 +171,53 @@ private fun DeviceBrand(brand: String?, isDemo: Boolean) {
 }
 
 @Composable
-internal fun DeviceStatusPill(state: ActiveDeviceState?) {
+internal fun DeviceStatusPill(state: ActiveDeviceState?, isDemo: Boolean = false) {
+    val text = when {
+        isDemo && state == null -> R.string.demo
+        state == ActiveDeviceState.Connected -> R.string.connected
+        state == ActiveDeviceState.Connecting -> R.string.sound_device_connecting
+        else -> R.string.sound_device_not_connected
+    }
+    DeviceBadge(state = state, text = stringResource(text))
+}
+
+/** The featured card's two independent facts: the phone's Bluetooth link and the app's control session. */
+@Composable
+private fun DeviceAxisBadges(linkBadge: LinkBadge, controlBadge: ControlBadge) {
+    val linkLabel = stringResource(DeviceListLabels.linkBadge(linkBadge))
+    val controlLabel = stringResource(DeviceListLabels.controlBadge(controlBadge))
+    val linkDescription = stringResource(R.string.sound_device_link_state_description, linkLabel)
+    val controlDescription = stringResource(R.string.sound_device_control_state_description, controlLabel)
+    Row(
+        Modifier.semantics(mergeDescendants = true) {
+            contentDescription = linkDescription
+        }.background(
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+            RoundedCornerShape(14.dp),
+        ).padding(horizontal = 11.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        LinkDot(linkBadge)
+        Text(linkLabel, style = MaterialTheme.typography.labelMedium)
+    }
+    Row(
+        Modifier.semantics(mergeDescendants = true) {
+            contentDescription = controlDescription
+        }.background(
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+            RoundedCornerShape(14.dp),
+        ).padding(horizontal = 11.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        ControlDot(controlBadge)
+        Text(controlLabel, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun DeviceBadge(state: ActiveDeviceState?, text: String) {
     Row(
         Modifier.background(
             MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
@@ -179,25 +235,44 @@ internal fun DeviceStatusPill(state: ActiveDeviceState?) {
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
 
-            null -> Box(
-                Modifier.size(9.dp).border(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    CircleShape,
-                ),
-            )
+            null -> EmptyDot()
         }
-        Text(
-            stringResource(
-                when (state) {
-                    ActiveDeviceState.Connected -> R.string.connected
-                    ActiveDeviceState.Connecting -> R.string.sound_device_connecting
-                    null -> R.string.sound_device_not_connected
-                },
-            ),
-            style = MaterialTheme.typography.labelMedium,
-        )
+        Text(text, style = MaterialTheme.typography.labelMedium)
     }
+}
+
+@Composable
+private fun LinkDot(badge: LinkBadge) {
+    when (badge) {
+        LinkBadge.Linked -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
+        LinkBadge.NotLinked, LinkBadge.Unknown, LinkBadge.Unconfirmed -> EmptyDot()
+    }
+}
+
+@Composable
+private fun ControlDot(badge: ControlBadge) {
+    when (badge) {
+        ControlBadge.Active -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
+
+        ControlBadge.Connecting -> CircularProgressIndicator(
+            modifier = Modifier.size(11.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        ControlBadge.Unavailable -> EmptyDot()
+    }
+}
+
+@Composable
+private fun EmptyDot() {
+    Box(
+        Modifier.size(9.dp).border(
+            1.5.dp,
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            CircleShape,
+        ),
+    )
 }
 
 /** "1 earbud" next to the connection state; tapping it explains what is unavailable. */
