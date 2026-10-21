@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    device::{self, OpenSCQ30Device},
+    device::{self, OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
     settings::{self, SettingId},
 };
 
@@ -64,9 +64,17 @@ impl QuickPresetActivation {
         if *self.connection_status.borrow() != ConnectionStatus::Connected {
             return Err(device::Error::Disconnected);
         }
-        handler.activate(self.device.as_ref(), name.clone()).await?;
+        let outcomes = handler.activate(self.device.as_ref(), name.clone()).await?;
         if *self.connection_status.borrow() != ConnectionStatus::Connected {
             return Err(device::Error::Disconnected);
+        }
+        if let Some(outcome) = outcomes
+            .iter()
+            .find(|outcome| !matches!(outcome.outcome, WriteOutcome::Applied { .. }))
+        {
+            return Err(device::Error::SettingWriteNotApplied {
+                setting_id: outcome.setting_id,
+            });
         }
         self.last_applied.send_replace(Some(name));
         Ok(())
@@ -182,30 +190,47 @@ impl QuickPresetsHandler {
         &self,
         device: &(dyn OpenSCQ30Device + Send + Sync),
         name: impl Into<String>,
-    ) -> device::Result<()> {
+    ) -> device::Result<Vec<SettingWriteOutcome>> {
         let quick_preset = self
             .database
             .fetch_quick_preset(device.model(), name.into())
             .await?;
         let settings = settings_to_apply(device, quick_preset.fields);
-        device.set_setting_values(settings.clone()).await?;
+        let mut outcomes = device.set_setting_values(settings.clone()).await?;
 
-        // Setting one value can reset another one, such as changing the equalizer turning off spatial audio on some
-        // devices. Set whatever didn't end up with the requested value once more, now that the other settings are in
-        // place.
-        let not_applied = settings
-            .into_iter()
-            .filter(|(setting_id, value)| {
-                device
-                    .setting(setting_id)
-                    .is_some_and(|setting| settings::Value::from(setting) != *value)
+        let retryable = outcomes
+            .iter()
+            .filter(|outcome| {
+                matches!(
+                    outcome.outcome,
+                    WriteOutcome::Applied { .. } | WriteOutcome::Rejected { .. }
+                )
             })
+            .map(|outcome| outcome.setting_id)
+            .collect::<HashSet<_>>();
+        let retry = settings
+            .iter()
+            .filter(|(setting_id, value)| {
+                retryable.contains(setting_id)
+                    && device
+                        .setting(setting_id)
+                        .is_some_and(|setting| settings::Value::from(setting) != *value)
+            })
+            .cloned()
             .collect::<Vec<_>>();
-        if not_applied.is_empty() {
-            Ok(())
-        } else {
-            device.set_setting_values(not_applied).await
+        if !retry.is_empty() {
+            for retry_outcome in device.set_setting_values(retry).await? {
+                match outcomes
+                    .iter_mut()
+                    .find(|outcome| outcome.setting_id == retry_outcome.setting_id)
+                {
+                    Some(outcome) => *outcome = retry_outcome,
+                    None => outcomes.push(retry_outcome),
+                }
+            }
         }
+
+        Ok(outcomes)
     }
 
     /// Deletes a quick preset.
@@ -273,7 +298,7 @@ mod tests {
     use super::*;
 
     #[derive(Debug)]
-    enum WriteOutcome {
+    enum WriteBehavior {
         Apply,
         Ignore,
         Fail,
@@ -282,7 +307,7 @@ mod tests {
     struct ControlledDevice {
         inner: Arc<dyn OpenSCQ30Device + Send + Sync>,
         status: watch::Sender<ConnectionStatus>,
-        writes: mpsc::UnboundedSender<oneshot::Sender<WriteOutcome>>,
+        writes: mpsc::UnboundedSender<oneshot::Sender<WriteBehavior>>,
         write_count: StdMutex<usize>,
     }
 
@@ -315,14 +340,22 @@ mod tests {
         async fn set_setting_values(
             &self,
             values: Vec<(SettingId, settings::Value)>,
-        ) -> device::Result<()> {
+        ) -> device::Result<Vec<SettingWriteOutcome>> {
             *self.write_count.lock().unwrap() += 1;
             let (reply, outcome) = oneshot::channel();
             self.writes.send(reply).unwrap();
             match outcome.await.unwrap() {
-                WriteOutcome::Apply => self.inner.set_setting_values(values).await,
-                WriteOutcome::Ignore => Ok(()),
-                WriteOutcome::Fail => Err(device::Error::ActionTimedOut {
+                WriteBehavior::Apply => self.inner.set_setting_values(values).await,
+                WriteBehavior::Ignore => Ok(values
+                    .into_iter()
+                    .map(|(setting_id, _)| SettingWriteOutcome {
+                        setting_id,
+                        outcome: WriteOutcome::Rejected {
+                            observed: self.inner.setting(&setting_id).map(settings::Value::from),
+                        },
+                    })
+                    .collect()),
+                WriteBehavior::Fail => Err(device::Error::ActionTimedOut {
                     action: "test write",
                 }),
             }
@@ -331,7 +364,7 @@ mod tests {
 
     async fn activation_setup() -> (
         Arc<ControlledDevice>,
-        mpsc::UnboundedReceiver<oneshot::Sender<WriteOutcome>>,
+        mpsc::UnboundedReceiver<oneshot::Sender<WriteBehavior>>,
         QuickPresetsHandler,
     ) {
         let (inner, database, handler) = connect_demo_a3954().await;
@@ -375,7 +408,7 @@ mod tests {
             let reply = writes.recv().await.unwrap();
             assert_eq!(activation.last_applied(), None);
             assert!(!changes.has_changed().unwrap());
-            reply.send(WriteOutcome::Apply).unwrap();
+            reply.send(WriteBehavior::Apply).unwrap();
         };
         let (result, ()) = tokio::join!(activate, finish);
         result.unwrap();
@@ -399,7 +432,7 @@ mod tests {
                     .recv()
                     .await
                     .unwrap()
-                    .send(WriteOutcome::Apply)
+                    .send(WriteBehavior::Apply)
                     .unwrap();
             }
         );
@@ -416,7 +449,7 @@ mod tests {
                 .recv()
                 .await
                 .unwrap()
-                .send(WriteOutcome::Apply)
+                .send(WriteBehavior::Apply)
                 .unwrap();
         });
         result.unwrap();
@@ -435,11 +468,11 @@ mod tests {
                 .recv()
                 .await
                 .unwrap()
-                .send(WriteOutcome::Ignore)
+                .send(WriteBehavior::Ignore)
                 .unwrap();
             let retry = writes.recv().await.unwrap();
             assert_eq!(activation.last_applied().as_deref(), Some("First"));
-            retry.send(WriteOutcome::Fail).unwrap();
+            retry.send(WriteBehavior::Fail).unwrap();
         });
         assert!(result.is_err());
         assert_eq!(activation.last_applied().as_deref(), Some("First"));
@@ -453,7 +486,7 @@ mod tests {
         let (result, ()) = tokio::join!(old.activate(&handler, "First".into()), async {
             let reply = writes.recv().await.unwrap();
             device.status.send_replace(ConnectionStatus::Disconnected);
-            reply.send(WriteOutcome::Apply).unwrap();
+            reply.send(WriteBehavior::Apply).unwrap();
         });
         assert!(matches!(result, Err(device::Error::Disconnected)));
         assert_eq!(old.last_applied(), None);
@@ -472,7 +505,7 @@ mod tests {
                 .recv()
                 .await
                 .unwrap()
-                .send(WriteOutcome::Apply)
+                .send(WriteBehavior::Apply)
                 .unwrap();
         });
         result.unwrap();
@@ -505,10 +538,10 @@ mod tests {
                     writes.try_recv(),
                     Err(mpsc::error::TryRecvError::Empty)
                 ));
-                first.send(WriteOutcome::Apply).unwrap();
+                first.send(WriteBehavior::Apply).unwrap();
                 let second = writes.recv().await.unwrap();
                 assert_eq!(activation.last_applied().as_deref(), Some("First"));
-                second.send(WriteOutcome::Fail).unwrap();
+                second.send(WriteBehavior::Fail).unwrap();
             },
         );
         first.unwrap();

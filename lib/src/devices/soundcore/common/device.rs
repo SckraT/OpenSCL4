@@ -108,6 +108,7 @@ pub struct SoundcoreDeviceRegistry<StateType> {
     device_model: DeviceModel,
     fetch_state: FetchStateFn<StateType>,
     config: SoundcoreDeviceConfig,
+    is_demo: bool,
     _state: PhantomData<StateType>,
 }
 
@@ -119,12 +120,34 @@ impl<StateType> SoundcoreDeviceRegistry<StateType> {
         fetch_state: FetchStateFn<StateType>,
         config: SoundcoreDeviceConfig,
     ) -> Self {
+        Self::new_with_mode(backend, database, device_model, fetch_state, config, false)
+    }
+
+    pub fn new_demo(
+        backend: Arc<dyn RfcommBackend + Send + Sync>,
+        database: Arc<OpenSCQ30Database>,
+        device_model: DeviceModel,
+        fetch_state: FetchStateFn<StateType>,
+        config: SoundcoreDeviceConfig,
+    ) -> Self {
+        Self::new_with_mode(backend, database, device_model, fetch_state, config, true)
+    }
+
+    fn new_with_mode(
+        backend: Arc<dyn RfcommBackend + Send + Sync>,
+        database: Arc<OpenSCQ30Database>,
+        device_model: DeviceModel,
+        fetch_state: FetchStateFn<StateType>,
+        config: SoundcoreDeviceConfig,
+        is_demo: bool,
+    ) -> Self {
         Self {
             backend,
             device_model,
             database,
             fetch_state,
             config,
+            is_demo,
             _state: PhantomData,
         }
     }
@@ -166,6 +189,7 @@ where
             self.device_model,
             &self.fetch_state,
             self.config,
+            self.is_demo,
         )
         .await?;
         Self::build_device(&mut builder).await;
@@ -190,6 +214,7 @@ pub struct SoundcoreDeviceBuilder<StateType> {
     database: Arc<OpenSCQ30Database>,
     packet_receiver: mpsc::Receiver<packet::Inbound>,
     change_notify: watch::Sender<()>,
+    is_demo: bool,
 }
 
 macro_rules! flag {
@@ -216,6 +241,7 @@ where
         device_model: DeviceModel,
         fetch_state: &FetchStateFn<StateType>,
         config: SoundcoreDeviceConfig,
+        is_demo: bool,
     ) -> device::Result<Self> {
         let (packet_io_controller, packet_receiver) =
             PacketIOController::new(connection, config.checksum_kind).await?;
@@ -233,6 +259,7 @@ where
             database,
             packet_receiver,
             change_notify: watch::channel(()).0,
+            is_demo,
         })
     }
 
@@ -244,6 +271,7 @@ where
             self.packet_receiver,
             self.device_model,
             self.change_notify.subscribe(),
+            self.is_demo,
         )
         .await
     }
@@ -691,6 +719,14 @@ where
     flag!(VoicePrompt);
     flag!(Ldac);
     flag!(DisableAllButtons);
+
+    pub fn voice_prompt_targeted(&mut self)
+    where
+        StateType: MaybeHas<VoicePrompt> + Send + Sync,
+    {
+        self.module_collection
+            .add_voice_prompt_targeted(self.packet_io_controller.clone());
+    }
 }
 
 pub struct SoundcoreDeviceTemplate<StateType>
@@ -704,6 +740,7 @@ where
     // TODO exit signal is necessary due to the PacketIOController Arc spaghetti.
     exit_signal: Arc<Semaphore>,
     change_notify: watch::Receiver<()>,
+    is_demo: bool,
 }
 
 impl<StateType> SoundcoreDeviceTemplate<StateType>
@@ -717,6 +754,7 @@ where
         packet_receiver: mpsc::Receiver<packet::Inbound>,
         device_model: DeviceModel,
         change_notify: watch::Receiver<()>,
+        is_demo: bool,
     ) -> Self {
         let exit_signal = Arc::new(Semaphore::new(0));
         let module_collection = Arc::new(module_collection);
@@ -731,6 +769,7 @@ where
             module_collection,
             exit_signal,
             change_notify,
+            is_demo,
         }
     }
 }
@@ -811,11 +850,25 @@ where
     async fn set_setting_values(
         &self,
         setting_values: Vec<(SettingId, Value)>,
-    ) -> device::Result<()> {
+    ) -> device::Result<Vec<device::SettingWriteOutcome>> {
         tracing::debug!("set values: {setting_values:?}");
-        self.module_collection
-            .set_setting_values(&self.state_sender, setting_values)
-            .await
+        if self.is_demo {
+            self.module_collection
+                .set_setting_values_demo(
+                    &self.state_sender,
+                    &self.packet_io_controller,
+                    setting_values,
+                )
+                .await
+        } else {
+            self.module_collection
+                .set_setting_values(
+                    &self.state_sender,
+                    &self.packet_io_controller,
+                    setting_values,
+                )
+                .await
+        }
     }
 }
 
@@ -862,11 +915,12 @@ pub mod test_utils {
             let (outbound_sender, mut outbound_receiver) = mpsc::channel(100);
             let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
 
-            let registry = constructor(
+            let mut registry = constructor(
                 Arc::new(MockRfcommBackend::new(inbound_receiver, outbound_sender)),
                 database,
                 device_model,
             );
+            registry.is_demo = true;
 
             // spawn a future to connect to the device rather than to handle packets so that we don't have to move
             // outbound_receiver into the future and back out when it's done
@@ -1016,6 +1070,21 @@ pub mod test_utils {
                  _ = self.gather_sent_packets(&mut sent_packets) => (),
                  _ = join_handle => (),
             };
+            while let Ok(bytes) = self.outbound_receiver.try_recv() {
+                let packet =
+                    packet::Outbound::take::<VerboseError<_>>(self.config.checksum_kind)(&bytes)
+                        .unwrap()
+                        .1;
+                self.ack(&packet).await;
+                if !matches!(
+                    packet.command,
+                    packet::Command([0x01, 0x01])
+                        | packet::Command([0x01, 0x7F])
+                        | packet::Command([0x01, 0x10])
+                ) {
+                    sent_packets.push(bytes);
+                }
+            }
             sent_packets
         }
 
@@ -1038,7 +1107,14 @@ pub mod test_utils {
                     .unwrap()
                     .1;
                     self.ack(&packet).await;
-                    sent_packets.push(bytes);
+                    if !matches!(
+                        packet.command,
+                        packet::Command([0x01, 0x01])
+                            | packet::Command([0x01, 0x7F])
+                            | packet::Command([0x01, 0x10])
+                    ) {
+                        sent_packets.push(bytes);
+                    }
                 } else {
                     break;
                 }
@@ -1163,6 +1239,7 @@ mod snapshot_tests {
             packet_io_controller: Arc::new(packet_io),
             exit_signal: Arc::new(Semaphore::new(0)),
             change_notify: watch::channel(()).1,
+            is_demo: false,
         };
         let writer_clones = clones.clone();
         let writer = std::thread::spawn(move || {

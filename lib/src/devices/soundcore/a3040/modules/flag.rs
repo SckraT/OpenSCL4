@@ -6,7 +6,10 @@ use crate::{
     devices::soundcore::{
         a3040,
         common::{
-            modules::{ModuleCollection, flag::FlagConfiguration},
+            modules::{
+                ModuleCollection,
+                flag::{FlagConfiguration, FlagVerification},
+            },
             packet::{self, PacketIOController},
         },
     },
@@ -26,6 +29,7 @@ where
                 set_command: packet::Command([1, 175]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -44,6 +48,7 @@ where
                 set_command: packet::Command([1, 174]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }

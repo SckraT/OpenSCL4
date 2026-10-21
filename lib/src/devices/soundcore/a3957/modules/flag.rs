@@ -4,7 +4,10 @@ use crate::{
     devices::soundcore::{
         a3957::state::A3957State,
         common::{
-            modules::{ModuleCollection, flag::FlagConfiguration},
+            modules::{
+                ModuleCollection,
+                flag::{FlagConfiguration, FlagVerification},
+            },
             packet::{self, PacketIOController},
             structures::GamingMode,
         },
@@ -22,6 +25,7 @@ impl ModuleCollection<A3957State> {
                 set_command: packet::Command([16, 133]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }

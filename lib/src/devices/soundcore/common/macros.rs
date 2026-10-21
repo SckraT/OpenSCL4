@@ -50,7 +50,7 @@ macro_rules! soundcore_device {
             database: std::sync::Arc<$crate::storage::OpenSCQ30Database>,
             device_model: $crate::devices::DeviceModel,
         ) -> $crate::devices::soundcore::common::device::SoundcoreDeviceRegistry<$state> {
-            $crate::devices::soundcore::common::device::SoundcoreDeviceRegistry::new(
+            $crate::devices::soundcore::common::device::SoundcoreDeviceRegistry::new_demo(
                 std::sync::Arc::new(
                     $crate::devices::soundcore::common::demo::DemoConnectionRegistry::new(
                         device_model,

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use i18n_embed::unic_langid::subtags;
-use openscq30_lib::{connection, settings, storage};
+use openscq30_lib::{client, connection, device, settings, storage};
 
 pub struct MacAddr6(pub macaddr::MacAddr6);
 uniffi::custom_type!(MacAddr6, String, {
@@ -63,6 +63,65 @@ uniffi::custom_type!(Value, String, {
     try_lift: |json| Ok(Value(serde_json::from_str(&json)?)),
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
+
+#[derive(uniffi::Record)]
+pub struct SettingWriteOutcome {
+    pub setting_id: SettingId,
+    pub outcome: WriteOutcome,
+}
+
+#[derive(uniffi::Enum)]
+pub enum WriteOutcome {
+    Applied { observed: Value },
+    UnsupportedInState { reason: AvailabilityReason },
+    Rejected { observed: Option<Value> },
+    TimedOut,
+    Disconnected,
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum AvailabilityReason {
+    RequiresBothEarbuds,
+    NoReadBack,
+}
+
+impl From<device::SettingWriteOutcome> for SettingWriteOutcome {
+    fn from(outcome: device::SettingWriteOutcome) -> Self {
+        Self {
+            setting_id: SettingId(outcome.setting_id),
+            outcome: outcome.outcome.into(),
+        }
+    }
+}
+
+impl From<device::WriteOutcome> for WriteOutcome {
+    fn from(outcome: device::WriteOutcome) -> Self {
+        match outcome {
+            device::WriteOutcome::Applied { observed } => Self::Applied {
+                observed: Value(observed),
+            },
+            device::WriteOutcome::UnsupportedInState { reason } => Self::UnsupportedInState {
+                reason: reason.into(),
+            },
+            device::WriteOutcome::Rejected { observed } => Self::Rejected {
+                observed: observed.map(Value),
+            },
+            device::WriteOutcome::TimedOut => Self::TimedOut,
+            device::WriteOutcome::Disconnected => Self::Disconnected,
+        }
+    }
+}
+
+impl From<client::availability::AvailabilityReason> for AvailabilityReason {
+    fn from(reason: client::availability::AvailabilityReason) -> Self {
+        match reason {
+            client::availability::AvailabilityReason::RequiresBothEarbuds => {
+                Self::RequiresBothEarbuds
+            }
+            client::availability::AvailabilityReason::NoReadBack => Self::NoReadBack,
+        }
+    }
+}
 
 pub struct QuickPreset(pub openscq30_lib::storage::QuickPreset);
 uniffi::custom_type!(QuickPreset, String, {

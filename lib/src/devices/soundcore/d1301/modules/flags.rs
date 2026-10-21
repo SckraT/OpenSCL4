@@ -3,7 +3,10 @@ use std::sync::Arc;
 use crate::{
     devices::soundcore::{
         common::{
-            modules::{ModuleCollection, flag::FlagConfiguration},
+            modules::{
+                ModuleCollection,
+                flag::{FlagConfiguration, FlagVerification},
+            },
             packet::{self, PacketIOController},
         },
         d1301::{self, state::D1301State},
@@ -21,6 +24,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([16, 158]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -34,6 +38,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([16, 159]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -47,6 +52,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([6, 135]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -63,6 +69,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([16, 117]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -76,6 +83,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([16, 148]),
                 update_command: None,
                 is_inverted: true,
+                verification: FlagVerification::Bulk,
             },
         );
     }
@@ -89,6 +97,7 @@ impl ModuleCollection<D1301State> {
                 set_command: packet::Command([16, 119]),
                 update_command: None,
                 is_inverted: false,
+                verification: FlagVerification::Bulk,
             },
         );
     }

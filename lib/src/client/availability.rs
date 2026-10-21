@@ -6,9 +6,11 @@ use super::{
 };
 
 /// Why a setting cannot be changed in the current state.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum AvailabilityReason {
     RequiresBothEarbuds,
+    NoReadBack,
 }
 
 /// What a setting allows in the device's current state.
