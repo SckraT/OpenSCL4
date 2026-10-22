@@ -16,6 +16,7 @@ mod openscq30_v1_migration;
 mod throttle;
 mod utils;
 mod warning;
+mod write_outcome;
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()

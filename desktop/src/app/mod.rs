@@ -419,6 +419,11 @@ impl App {
                     self.failed_command = Some(command);
                 }
             },
+            Event::SettingsNotApplied { command, outcomes } => {
+                tracing::warn!("{command:?} was not confirmed by the device: {outcomes:?}");
+                self.equalizer_failed();
+                self.failed_command = Some(command);
+            }
             Event::PresetApplied { mac_address, name } => {
                 if self.current == Some(mac_address) {
                     self.preset_applied(&name);

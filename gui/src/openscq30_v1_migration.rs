@@ -61,7 +61,7 @@ pub async fn migrate_legacy_profile(
     // By setting the volume adjustments, saving the profile, and reverting all in one go,
     // we won't send any packets, since the end result will be equivalent to what we started with,
     // and that is checked before performing any actions.
-    device
+    let outcomes = device
         .set_setting_values(vec![
             (SettingId::VolumeAdjustments, volume_adjustments.into()),
             (
@@ -71,6 +71,7 @@ pub async fn migrate_legacy_profile(
             (SettingId::VolumeAdjustments, old_volume_adjustments.into()),
         ])
         .await?;
+    crate::write_outcome::ensure_applied(outcomes)?;
     Ok(())
 }
 

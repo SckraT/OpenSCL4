@@ -21,6 +21,8 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
+import com.oppzippy.openscq30.lib.bindings.SettingWriteOutcome
+import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
@@ -43,11 +45,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @HiltViewModel
 class OpenSCQ30RootViewModel @Inject constructor(
@@ -230,6 +235,22 @@ class OpenSCQ30RootViewModel @Inject constructor(
     }
 }
 
+/** A write that has been sent but whose outcome the device has not reported yet. */
+data class PendingSettingWrite(
+    val requestedValue: Value,
+    val generation: Long,
+)
+
+class SettingWriteException(val outcome: WriteOutcome) : Exception(
+    when (outcome) {
+        is WriteOutcome.Rejected -> "the device rejected the value"
+        WriteOutcome.TimedOut -> "the device did not confirm the value"
+        WriteOutcome.Disconnected -> "the device disconnected"
+        is WriteOutcome.UnsupportedInState -> "the setting cannot be changed in the current state"
+        is WriteOutcome.Applied -> "the device applied the value"
+    },
+)
+
 class DeviceSettingsManager(
     session: OpenScq30Session,
     parent: Job,
@@ -246,8 +267,19 @@ class DeviceSettingsManager(
     private val _quickPresetsFlow = MutableStateFlow(emptyList<QuickPreset>())
     val quickPresetsFlow = _quickPresetsFlow.asStateFlow()
 
+    private val _pendingWrites = MutableStateFlow<Map<String, PendingSettingWrite>>(emptyMap())
+    val pendingWrites = _pendingWrites.asStateFlow()
+
+    private val _settingWriteErrors = MutableStateFlow<Map<String, WriteOutcome>>(emptyMap())
+    val settingWriteErrors = _settingWriteErrors.asStateFlow()
+
+    private var lastGeneration = 0L
+
     companion object {
         const val TAG = "DeviceSettingsManager"
+
+        /** How long an applied value may take to appear in the confirmed state before the pending entry is cleared. */
+        private const val CONFIRMED_STATE_TIMEOUT_MS = 2_000L
     }
 
     init {
@@ -263,11 +295,7 @@ class DeviceSettingsManager(
         Log.v(TAG, "Setting settings: $settingValues")
         coroutineScope.launch {
             try {
-                device.setSettingValues(
-                    settingValues.map { (settingId, value) ->
-                        SettingIdValuePair(settingId, value)
-                    },
-                )
+                writeSettings(settingValues)
             } catch (ex: OpenScq30Exception) {
                 Log.e(TAG, "error setting values of settings", ex)
                 toastHandler.add(R.string.error_changing_settings, Toast.LENGTH_SHORT)
@@ -282,14 +310,101 @@ class DeviceSettingsManager(
      * instead of only showing a generic toast, so that the UI can show what went wrong next to what the user entered.
      */
     suspend fun setSettingValueForResult(settingId: String, value: Value): Result<Unit> = try {
-        device.setSettingValues(listOf(SettingIdValuePair(settingId, value)))
-        Result.success(Unit)
+        val outcomes = writeSettings(listOf(settingId to value))
+        when (val outcome = outcomes.firstOrNull { it.settingId == settingId }?.outcome) {
+            is WriteOutcome.Applied -> Result.success(Unit)
+            null -> Result.failure(IllegalStateException("the device reported no outcome for $settingId"))
+            else -> Result.failure(SettingWriteException(outcome))
+        }
     } catch (ex: OpenScq30Exception) {
         Log.e(TAG, "error setting value of $settingId", ex)
         Result.failure(ex)
     } catch (ex: IllegalStateException) {
         Log.w(TAG, "device was closed, not setting value of $settingId", ex)
         Result.failure(ex)
+    }
+
+    private suspend fun writeSettings(settingValues: List<Pair<String, Value>>): List<SettingWriteOutcome> {
+        if (settingValues.isEmpty()) return emptyList()
+        val generation = ++lastGeneration
+        val settingIds = settingValues.map { it.first }.toSet()
+        _settingWriteErrors.update { it - settingIds }
+        _pendingWrites.update { pending ->
+            pending + settingValues.associate { (settingId, value) ->
+                settingId to PendingSettingWrite(value, generation)
+            }
+        }
+        val outcomes = try {
+            device.setSettingValues(
+                settingValues.map { (settingId, value) -> SettingIdValuePair(settingId, value) },
+            )
+        } catch (ex: Exception) {
+            clearPending(settingIds, generation)
+            throw ex
+        }
+        applyOutcomes(generation, outcomes)
+        return outcomes
+    }
+
+    private suspend fun applyOutcomes(generation: Long, outcomes: List<SettingWriteOutcome>) {
+        for (settingOutcome in outcomes) {
+            val settingId = settingOutcome.settingId
+            val pending = _pendingWrites.value[settingId]
+            // A newer write supersedes the pending entry; an older outcome must not clear or fail it.
+            if (pending?.generation != generation) continue
+            when (val outcome = settingOutcome.outcome) {
+                is WriteOutcome.Applied -> {
+                    awaitConfirmed(settingId, outcome.observed)
+                    clearPending(settingId, generation)
+                    _settingWriteErrors.update { it - settingId }
+                }
+
+                is WriteOutcome.Rejected -> {
+                    outcome.observed?.let { awaitConfirmed(settingId, it) }
+                    clearPending(settingId, generation)
+                    _settingWriteErrors.update { it + (settingId to outcome) }
+                }
+
+                is WriteOutcome.UnsupportedInState -> {
+                    clearPending(settingId, generation)
+                    _settingWriteErrors.update { it + (settingId to outcome) }
+                }
+
+                WriteOutcome.TimedOut -> {
+                    clearPending(settingId, generation)
+                    _settingWriteErrors.update { it + (settingId to outcome) }
+                }
+
+                // The connection UI takes over; there is no confirmed value to show.
+                WriteOutcome.Disconnected -> clearPending(settingId, generation)
+            }
+        }
+    }
+
+    private suspend fun awaitConfirmed(settingId: String, observed: Value) {
+        fun confirmed(): Boolean = try {
+            device.setting(settingId)?.toValue() == observed
+        } catch (ex: IllegalStateException) {
+            false
+        }
+        if (confirmed()) return
+        withTimeoutOrNull(CONFIRMED_STATE_TIMEOUT_MS) {
+            deviceManager.watchForChangeNotification.first { confirmed() }
+        }
+    }
+
+    private fun clearPending(settingId: String, generation: Long) {
+        _pendingWrites.update { pending ->
+            if (pending[settingId]?.generation == generation) pending - settingId else pending
+        }
+    }
+
+    private fun clearPending(settingIds: Set<String>, generation: Long) {
+        _pendingWrites.update { pending ->
+            pending.filterNot { (settingId, write) ->
+                settingId in settingIds && write.generation == generation
+            }
+        }
     }
 
     val settingsByCategoryFlow: StateFlow<List<SettingCategory>?> = deviceManager.watchForChangeNotification.map {

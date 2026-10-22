@@ -25,6 +25,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -59,6 +60,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
+import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.MultiSelectWithRemoveCommandInner
 import com.oppzippy.openscq30.lib.wrapper.Range
@@ -66,6 +69,7 @@ import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.PendingSettingWrite
 import com.oppzippy.openscq30.ui.devicesettings.composables.Equalizer
 import com.oppzippy.openscq30.ui.devicesettings.composables.ReadOnlyEqualizer
 import com.oppzippy.openscq30.ui.utils.ModifiableSelect
@@ -82,6 +86,12 @@ import kotlinx.coroutines.launch
  */
 val LocalSettingValueSetter = staticCompositionLocalOf<(suspend (String, Value) -> Result<Unit>)?> { null }
 
+/** Writes that the device has not confirmed yet. The controls show the requested value, disabled, until they arrive. */
+val LocalPendingSettingWrites = staticCompositionLocalOf<Map<String, PendingSettingWrite>> { emptyMap() }
+
+/** The last outcome of a write per setting, when it was not applied. */
+val LocalSettingWriteErrors = staticCompositionLocalOf<Map<String, WriteOutcome>> { emptyMap() }
+
 /** Renders the backend capability directly, including options unknown to this UI version. */
 @Composable
 fun SoundSettingEditor(
@@ -91,152 +101,221 @@ fun SoundSettingEditor(
     modifier: Modifier = Modifier,
 ) {
     val name = translateSettingId(settingId)
-    val onChange: (Value) -> Unit = { setSettings(listOf(settingId to it)) }
-    Surface(
-        modifier = modifier.fillMaxWidth().testTag("sound_setting_$settingId"),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-    ) {
-        when (setting) {
-            is Setting.ToggleSetting -> Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 72.dp)
-                    .toggleable(value = setting.value, role = Role.Switch) { onChange(it.toValue()) }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                SoundSettingLabel(settingId, name, Modifier.weight(1f))
-                Switch(checked = setting.value, onCheckedChange = null)
-            }
-
-            is Setting.SelectSetting -> SoundSelectSetting(
-                name,
-                setting.setting,
-                setting.value,
-                optional = false,
-                onSelect = { value -> value?.let { onChange(it.toValue()) } },
-            )
-
-            is Setting.OptionalSelectSetting -> SoundSelectSetting(
-                name,
-                setting.setting,
-                setting.value,
-                optional = true,
-                onSelect = { onChange(it.toValue()) },
-            )
-
-            is Setting.PresetEqualizerProfileSelect -> SoundSelectSetting(
-                name,
-                setting.select,
-                setting.value,
-                optional = true,
-                onSelect = { onChange(it.toValue()) },
-            )
-
-            is Setting.I32RangeSetting -> SoundRangeSetting(name, setting, onChange)
-
-            is Setting.MultiSelectSetting -> SoundMultiSelectSetting(
-                name = name,
-                select = setting.setting,
-                values = setting.values,
-                onChange = { onChange(it.toValue()) },
-            )
-
-            is Setting.MultiSelectWithRemoveSetting -> SoundMultiSelectSetting(
-                name = name,
-                select = setting.setting,
-                values = setting.values,
-                onChange = { onChange(it.toValue()) },
-                onRemove = { onChange(MultiSelectWithRemoveCommandInner.Remove(it).toValue()) },
-                isConnections = settingId == "dualConnectionsDevices",
-            )
-
-            is Setting.InformationSetting -> SoundInformationSetting(name, setting.translatedValue)
-
-            is Setting.Action -> SoundActionSetting(name) { onChange(true.toValue()) }
-
-            is Setting.HueColorPicker -> {
-                val (hue, setHue) = throttledState(setting.hue, 250) { onChange(it.toValue()) }
-                Column(Modifier.padding(20.dp)) {
-                    Text(name, style = MaterialTheme.typography.titleMedium)
-                    Slider(
-                        value = hue,
-                        valueRange = 0f..360f,
-                        onValueChange = setHue,
-                        modifier = Modifier.semantics { contentDescription = name },
-                    )
-                    Text(hue.roundToInt().toString(), style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            is Setting.TimeOfDay -> SoundTimeSetting(name, setting.getLocalTime()) {
-                onChange((it.hour * 60 + it.minute).toValue())
-            }
-
-            is Setting.ImportStringSetting -> {
-                val setValue = LocalSettingValueSetter.current
-                SoundImportSetting(name, setting.confirmationMessage) { text ->
-                    if (setValue != null) {
-                        setValue(settingId, text.toValue())
-                    } else {
-                        onChange(text.toValue())
-                        Result.success(Unit)
+    val pending = LocalPendingSettingWrites.current[settingId]
+    val requested = pending?.requestedValue
+    val enabled = pending == null
+    val onChange: (Value) -> Unit = { if (enabled) setSettings(listOf(settingId to it)) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().testTag("sound_setting_$settingId"),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ) {
+            when (setting) {
+                is Setting.ToggleSetting -> {
+                    val value = (requested as? Value.BoolValue)?.value ?: setting.value
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 72.dp)
+                            .toggleable(value = value, enabled = enabled, role = Role.Switch) {
+                                onChange(it.toValue())
+                            }
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        SoundSettingLabel(settingId, name, Modifier.weight(1f))
+                        Switch(checked = value, enabled = enabled, onCheckedChange = null)
                     }
                 }
-            }
 
-            is Setting.ModifiableSelectSetting -> Column(Modifier.padding(20.dp)) {
-                ModifiableSelect(
-                    name = name,
-                    options = setting.setting.localizedOptions,
-                    selectedIndex = setting.value?.let { setting.setting.options.indexOf(it) },
-                    onSelect = { onChange(setting.setting.options[it].toValue()) },
-                    onAddOption = {
-                        onChange(com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner.Add(it).toValue())
-                    },
-                    onRemoveOption = {
-                        onChange(
-                            com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner.Remove(
-                                setting.setting.options[it],
-                            ).toValue(),
-                        )
-                    },
+                is Setting.SelectSetting -> SoundSelectSetting(
+                    name,
+                    setting.setting,
+                    selectValue(requested, setting.value),
+                    optional = false,
+                    enabled = enabled,
+                    onSelect = { value -> value?.let { onChange(it.toValue()) } },
                 )
-            }
 
-            is Setting.EqualizerSetting -> Column(Modifier.padding(20.dp)) {
-                Text(name, style = MaterialTheme.typography.titleMedium)
-                if (setting.readOnly) {
-                    ReadOnlyEqualizer(
-                        modifier = Modifier.fillMaxWidth().height(120.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        bands = setting.setting.bandHz,
-                        values = setting.value,
-                        minValue = setting.setting.min,
-                        maxValue = setting.setting.max,
-                        fractionDigits = setting.setting.fractionDigits,
-                    )
-                } else {
-                    Equalizer(
-                        bands = setting.setting.bandHz,
-                        values = setting.value,
-                        minValue = setting.setting.min,
-                        maxValue = setting.setting.max,
-                        fractionDigits = setting.setting.fractionDigits,
-                        onValueChange = { changedIndex, value ->
+                is Setting.OptionalSelectSetting -> SoundSelectSetting(
+                    name,
+                    setting.setting,
+                    selectValue(requested, setting.value),
+                    optional = true,
+                    enabled = enabled,
+                    onSelect = { onChange(it.toValue()) },
+                )
+
+                is Setting.PresetEqualizerProfileSelect -> SoundSelectSetting(
+                    name,
+                    setting.select,
+                    selectValue(requested, setting.value),
+                    optional = true,
+                    enabled = enabled,
+                    onSelect = { onChange(it.toValue()) },
+                )
+
+                is Setting.I32RangeSetting -> SoundRangeSetting(
+                    name,
+                    setting,
+                    (requested as? Value.I32Value)?.value ?: setting.value,
+                    enabled,
+                    onChange,
+                )
+
+                is Setting.MultiSelectSetting -> SoundMultiSelectSetting(
+                    name = name,
+                    select = setting.setting,
+                    values = (requested as? Value.StringVecValue)?.value ?: setting.values,
+                    enabled = enabled,
+                    onChange = { onChange(it.toValue()) },
+                )
+
+                is Setting.MultiSelectWithRemoveSetting -> SoundMultiSelectSetting(
+                    name = name,
+                    select = setting.setting,
+                    values = (requested as? Value.StringVecValue)?.value ?: setting.values,
+                    enabled = enabled,
+                    onChange = { onChange(it.toValue()) },
+                    onRemove = { onChange(MultiSelectWithRemoveCommandInner.Remove(it).toValue()) },
+                    isConnections = settingId == "dualConnectionsDevices",
+                )
+
+                is Setting.InformationSetting -> SoundInformationSetting(name, setting.translatedValue)
+
+                is Setting.Action -> SoundActionSetting(name, enabled) { onChange(true.toValue()) }
+
+                is Setting.HueColorPicker -> {
+                    val (hue, setHue) = throttledState(
+                        (requested as? Value.F32Value)?.value ?: setting.hue,
+                        250,
+                    ) { onChange(it.toValue()) }
+                    Column(Modifier.padding(20.dp)) {
+                        Text(name, style = MaterialTheme.typography.titleMedium)
+                        Slider(
+                            value = hue,
+                            valueRange = 0f..360f,
+                            enabled = enabled,
+                            onValueChange = setHue,
+                            modifier = Modifier.semantics { contentDescription = name },
+                        )
+                        Text(hue.roundToInt().toString(), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+
+                is Setting.TimeOfDay -> {
+                    val minutes = (requested as? Value.I32Value)?.value
+                    SoundTimeSetting(
+                        name,
+                        minutes?.let { LocalTime.of(it / 60, it % 60) } ?: setting.getLocalTime(),
+                        enabled,
+                    ) {
+                        onChange((it.hour * 60 + it.minute).toValue())
+                    }
+                }
+
+                is Setting.ImportStringSetting -> {
+                    val setValue = LocalSettingValueSetter.current
+                    SoundImportSetting(name, setting.confirmationMessage, enabled) { text ->
+                        if (setValue != null) {
+                            setValue(settingId, text.toValue())
+                        } else {
+                            onChange(text.toValue())
+                            Result.success(Unit)
+                        }
+                    }
+                }
+
+                is Setting.ModifiableSelectSetting -> Column(Modifier.padding(20.dp)) {
+                    ModifiableSelect(
+                        name = name,
+                        options = setting.setting.localizedOptions,
+                        selectedIndex = setting.value?.let { setting.setting.options.indexOf(it) },
+                        onSelect = { onChange(setting.setting.options[it].toValue()) },
+                        onAddOption = {
                             onChange(
-                                setting.value.mapIndexed { index, old ->
-                                    if (index == changedIndex) value else old
-                                }.toValue(),
+                                com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner.Add(it).toValue(),
+                            )
+                        },
+                        onRemoveOption = {
+                            onChange(
+                                com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner.Remove(
+                                    setting.setting.options[it],
+                                ).toValue(),
                             )
                         },
                     )
                 }
+
+                is Setting.EqualizerSetting -> {
+                    val values = (requested as? Value.I16VecValue)?.value ?: setting.value
+                    Column(Modifier.padding(20.dp)) {
+                        Text(name, style = MaterialTheme.typography.titleMedium)
+                        if (setting.readOnly || !enabled) {
+                            ReadOnlyEqualizer(
+                                modifier = Modifier.fillMaxWidth().height(120.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                bands = setting.setting.bandHz,
+                                values = values,
+                                minValue = setting.setting.min,
+                                maxValue = setting.setting.max,
+                                fractionDigits = setting.setting.fractionDigits,
+                            )
+                        } else {
+                            Equalizer(
+                                bands = setting.setting.bandHz,
+                                values = values,
+                                minValue = setting.setting.min,
+                                maxValue = setting.setting.max,
+                                fractionDigits = setting.setting.fractionDigits,
+                                onValueChange = { changedIndex, value ->
+                                    onChange(
+                                        setting.value.mapIndexed { index, old ->
+                                            if (index == changedIndex) value else old
+                                        }.toValue(),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
+        if (pending != null) {
+            LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp))
+        }
+        LocalSettingWriteErrors.current[settingId]?.let { outcome ->
+            Text(
+                writeErrorText(outcome),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+        }
     }
+}
+
+private fun selectValue(requested: Value?, confirmed: String?): String? = when (requested) {
+    is Value.StringValue -> requested.value
+    is Value.OptionalStringValue -> requested.value
+    else -> confirmed
+}
+
+@Composable
+private fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
+    is WriteOutcome.Rejected -> stringResource(R.string.setting_write_rejected)
+    WriteOutcome.TimedOut -> stringResource(R.string.setting_write_timed_out)
+    WriteOutcome.Disconnected -> stringResource(R.string.setting_write_disconnected)
+    is WriteOutcome.UnsupportedInState -> when (outcome.reason) {
+        AvailabilityReason.REQUIRES_BOTH_EARBUDS ->
+            stringResource(R.string.setting_write_unsupported_requires_both_earbuds)
+
+        AvailabilityReason.NO_READ_BACK -> stringResource(R.string.setting_write_unsupported_no_read_back)
+    }
+
+    is WriteOutcome.Applied -> ""
 }
 
 @Composable
@@ -273,10 +352,15 @@ private fun SoundSelectSetting(
     select: Select,
     selectedValue: String?,
     optional: Boolean,
+    enabled: Boolean,
     onSelect: (String?) -> Unit,
 ) {
     var isOpen by rememberSaveable { mutableStateOf(false) }
-    Surface(onClick = { isOpen = true }, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+    Surface(
+        onClick = { if (enabled) isOpen = true },
+        enabled = enabled,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+    ) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(20.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -350,9 +434,15 @@ internal fun snapSoundRangeValue(range: Range<Int>, value: Float): Int {
 }
 
 @Composable
-private fun SoundRangeSetting(name: String, setting: Setting.I32RangeSetting, onChange: (Value) -> Unit) {
+private fun SoundRangeSetting(
+    name: String,
+    setting: Setting.I32RangeSetting,
+    displayedValue: Int,
+    enabled: Boolean,
+    onChange: (Value) -> Unit,
+) {
     val range = setting.setting
-    var displayed by remember(name, range, setting.value) { mutableStateOf(setting.value) }
+    var displayed by remember(name, range, displayedValue) { mutableStateOf(displayedValue) }
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -368,6 +458,7 @@ private fun SoundRangeSetting(name: String, setting: Setting.I32RangeSetting, on
         if (range.end > range.start) {
             Slider(
                 modifier = Modifier.testTag("$name slider").semantics { contentDescription = name },
+                enabled = enabled,
                 value = displayed.toFloat().coerceIn(range.start.toFloat(), range.end.toFloat()),
                 steps = ((range.end - range.start) / range.step.coerceAtLeast(1) - 1).coerceAtLeast(0),
                 valueRange = range.start.toFloat()..range.end.toFloat(),
@@ -387,6 +478,7 @@ private fun SoundMultiSelectSetting(
     name: String,
     select: Select,
     values: List<String>,
+    enabled: Boolean,
     onChange: (List<String>) -> Unit,
     onRemove: ((String) -> Unit)? = null,
     isConnections: Boolean = false,
@@ -405,13 +497,13 @@ private fun SoundMultiSelectSetting(
             val isSelected = option in values
             val label = select.localizedOptions.getOrElse(index) { option }
             // The protocol supports at most two active multipoint connections.
-            val enabled = !isConnections || isSelected || values.size < 2
+            val optionEnabled = enabled && (!isConnections || isSelected || values.size < 2)
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 64.dp).then(
                     if (isConnections) {
                         Modifier
                     } else {
-                        Modifier.toggleable(isSelected, role = Role.Checkbox) { checked ->
+                        Modifier.toggleable(isSelected, enabled = enabled, role = Role.Checkbox) { checked ->
                             onChange(if (checked) values + option else values - option)
                         }
                     },
@@ -435,16 +527,16 @@ private fun SoundMultiSelectSetting(
                     Switch(
                         modifier = Modifier.semantics { contentDescription = label },
                         checked = isSelected,
-                        enabled = enabled,
+                        enabled = optionEnabled,
                         onCheckedChange = { checked ->
                             onChange(if (checked) values + option else values - option)
                         },
                     )
                 } else {
-                    Checkbox(checked = isSelected, onCheckedChange = null)
+                    Checkbox(checked = isSelected, enabled = enabled, onCheckedChange = null)
                 }
                 if (onRemove != null && !isSelected) {
-                    IconButton(onClick = { removeOption = option }) {
+                    IconButton(enabled = enabled, onClick = { removeOption = option }) {
                         Icon(
                             painterResource(R.drawable.remove_24px),
                             contentDescription = stringResource(R.string.sound_device_forget_device),
@@ -498,10 +590,11 @@ private fun SoundInformationSetting(name: String, value: String) {
 }
 
 @Composable
-private fun SoundActionSetting(name: String, onExecute: () -> Unit) {
+private fun SoundActionSetting(name: String, enabled: Boolean, onExecute: () -> Unit) {
     var isConfirming by rememberSaveable { mutableStateOf(false) }
     TextButton(
         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(8.dp),
+        enabled = enabled,
         onClick = { isConfirming = true },
     ) { Text(name) }
     if (isConfirming) {
@@ -522,12 +615,15 @@ private fun SoundActionSetting(name: String, onExecute: () -> Unit) {
 }
 
 @Composable
-private fun SoundTimeSetting(name: String, time: LocalTime, onChange: (LocalTime) -> Unit) {
+private fun SoundTimeSetting(name: String, time: LocalTime, enabled: Boolean, onChange: (LocalTime) -> Unit) {
     var picker by remember { mutableStateOf<TimePickerState?>(null) }
     val is24Hour = DateFormat.is24HourFormat(LocalContext.current)
     Column(Modifier.padding(20.dp)) {
         Text(name, style = MaterialTheme.typography.titleMedium)
-        TextButton(onClick = { picker = TimePickerState(time.hour, time.minute, is24Hour) }) {
+        TextButton(
+            enabled = enabled,
+            onClick = { picker = TimePickerState(time.hour, time.minute, is24Hour) },
+        ) {
             Text(time.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)))
         }
     }
@@ -548,7 +644,12 @@ private fun SoundTimeSetting(name: String, time: LocalTime, onChange: (LocalTime
 }
 
 @Composable
-private fun SoundImportSetting(name: String, confirmation: String?, onImport: suspend (String) -> Result<Unit>) {
+private fun SoundImportSetting(
+    name: String,
+    confirmation: String?,
+    enabled: Boolean,
+    onImport: suspend (String) -> Result<Unit>,
+) {
     // The text is only cleared once the import succeeded, so a failed import can be fixed instead of retyped. It also
     // has to survive the activity being recreated, since it is usually pasted in from somewhere else.
     var text by rememberSaveable { mutableStateOf("") }
@@ -591,7 +692,7 @@ private fun SoundImportSetting(name: String, confirmation: String?, onImport: su
                     confirming = true
                 }
             },
-            enabled = text.isNotBlank() && !importing,
+            enabled = text.isNotBlank() && !importing && enabled,
         ) { Text(stringResource(R.string.import_)) }
     }
     if (confirming) {

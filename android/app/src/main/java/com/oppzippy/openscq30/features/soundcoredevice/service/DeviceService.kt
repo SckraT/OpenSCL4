@@ -27,6 +27,7 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
+import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
@@ -198,10 +199,28 @@ class DeviceService : LifecycleService() {
                                 if (it is ConnectionStatus.Connected) {
                                     val device = it.deviceManager.device
                                     try {
-                                        device.setSettingValues(listOf(SettingIdValuePair(settingId, value)))
+                                        val outcomes = device.setSettingValues(
+                                            listOf(SettingIdValuePair(settingId, value)),
+                                        )
+                                        if (outcomes.any { outcome -> outcome.outcome !is WriteOutcome.Applied }) {
+                                            Log.w(TAG, "device did not apply $settingId: $outcomes")
+                                            Toast.makeText(
+                                                applicationContext,
+                                                R.string.error_changing_settings,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
                                     } catch (ex: IllegalStateException) {
                                         Log.w(TAG, "device was closed, not setting values", ex)
+                                    } catch (ex: OpenScq30Exception) {
+                                        Log.e(TAG, "error setting $settingId", ex)
+                                        Toast.makeText(
+                                            applicationContext,
+                                            R.string.error_changing_settings,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                     }
+                                    LdacTileService.requestUpdate(applicationContext)
                                 }
                             }
                         } else {
