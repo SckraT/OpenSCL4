@@ -928,7 +928,7 @@ impl DeviceSettingsModel {
                     let device = self.device.clone();
                     Action::Task(
                         Task::future(async move {
-                            device
+                            let outcomes = device
                                 .set_setting_values(vec![(
                                     setting_id,
                                     Value::ModifiableSelectCommand(
@@ -936,6 +936,8 @@ impl DeviceSettingsModel {
                                     ),
                                 )])
                                 .await
+                                .map_err(handle_soft_error!())?;
+                            crate::write_outcome::ensure_applied(outcomes)
                                 .map_err(handle_soft_error!())?;
                             Ok(Message::RefreshSettings)
                         })
@@ -950,7 +952,7 @@ impl DeviceSettingsModel {
                     let device = self.device.clone();
                     Action::Task(
                         Task::future(async move {
-                            device
+                            let outcomes = device
                                 .set_setting_values(vec![(
                                     setting_id,
                                     Value::ModifiableSelectCommand(
@@ -958,6 +960,8 @@ impl DeviceSettingsModel {
                                     ),
                                 )])
                                 .await
+                                .map_err(handle_soft_error!())?;
+                            crate::write_outcome::ensure_applied(outcomes)
                                 .map_err(handle_soft_error!())?;
                             Ok(Message::RefreshSettings)
                         })
@@ -1020,9 +1024,11 @@ impl DeviceSettingsModel {
                     let device = self.device.clone();
                     Action::Task(
                         Task::future(async move {
-                            device
+                            let outcomes = device
                                 .set_setting_values(vec![(setting_id, Cow::from(text).into())])
                                 .await
+                                .map_err(handle_soft_error!())?;
+                            crate::write_outcome::ensure_applied(outcomes)
                                 .map_err(handle_soft_error!())?;
                             Ok(Message::RefreshSettings)
                         })
@@ -1062,10 +1068,11 @@ impl DeviceSettingsModel {
         } else {
             Action::Task(
                 Task::future(async move {
-                    device
+                    let outcomes = device
                         .set_setting_values(vec![(setting_id, value)])
                         .await
                         .map_err(handle_soft_error!())?;
+                    crate::write_outcome::ensure_applied(outcomes).map_err(handle_soft_error!())?;
                     Ok(Message::RefreshSettings)
                 })
                 .map(coalesce_result),

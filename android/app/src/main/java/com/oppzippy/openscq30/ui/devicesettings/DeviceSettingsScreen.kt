@@ -51,15 +51,19 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.lib.bindings.SettingCategory
+import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.PendingSettingWrite
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
 import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
+import com.oppzippy.openscq30.ui.sound.LocalPendingSettingWrites
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
+import com.oppzippy.openscq30.ui.sound.LocalSettingWriteErrors
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.ProfileTransferSection
@@ -101,6 +105,8 @@ fun DeviceSettingsScreen(
     connectionStatus: ConnectionStatus,
     setSettingValues: (List<Pair<String, Value>>) -> Unit,
     setSettingValueForResult: suspend (String, Value) -> Result<Unit>,
+    pendingWritesFlow: Flow<Map<String, PendingSettingWrite>>,
+    settingWriteErrorsFlow: Flow<Map<String, WriteOutcome>>,
     settingsByCategoryFlow: Flow<List<SettingCategory>?>,
     quickPresetSlotsFlow: Flow<List<String?>>,
     onQuickPresetSlotChange: (Int, String?) -> Unit,
@@ -123,6 +129,8 @@ fun DeviceSettingsScreen(
         return
     }
     val loadedSettings by remember(connection.deviceManager) { settingsByCategoryFlow }.collectAsState(initial = null)
+    val pendingWrites by remember(connection.deviceManager) { pendingWritesFlow }.collectAsState(emptyMap())
+    val settingWriteErrors by remember(connection.deviceManager) { settingWriteErrorsFlow }.collectAsState(emptyMap())
     val byCategory = remember(loadedSettings) {
         loadedSettings.orEmpty().associate { category ->
             category.categoryId to category.settings.map { it.settingId to it.setting }
@@ -324,6 +332,10 @@ fun DeviceSettingsScreen(
             }
         },
     ) { padding ->
+        CompositionLocalProvider(
+            LocalPendingSettingWrites provides pendingWrites,
+            LocalSettingWriteErrors provides settingWriteErrors,
+        ) {
         NavHost(
             navController,
             startDestination = HOME,
@@ -548,6 +560,7 @@ fun DeviceSettingsScreen(
             composable("legacy") {
                 MigrateLegacyEqualizerProfilesScreen(legacyProfiles) { onMigrateLegacyEqualizerProfiles(listOf(it)) }
             }
+        }
         }
     }
 }

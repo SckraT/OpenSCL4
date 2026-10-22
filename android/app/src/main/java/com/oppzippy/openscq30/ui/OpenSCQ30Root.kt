@@ -200,6 +200,8 @@ private fun DeviceScreen(
                 setSettingValueForResult = { settingId, value ->
                     settingsManager.setSettingValueForResult(settingId, value)
                 },
+                pendingWritesFlow = settingsManager.pendingWrites,
+                settingWriteErrorsFlow = settingsManager.settingWriteErrors,
                 settingsByCategoryFlow = settingsManager.settingsByCategoryFlow,
                 quickPresetSlotsFlow = settingsManager.quickPresetSlots,
                 onQuickPresetSlotChange = { index, name -> settingsManager.setQuickPresetSlot(index, name) },

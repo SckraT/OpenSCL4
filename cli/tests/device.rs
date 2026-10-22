@@ -6,6 +6,11 @@ use tempfile::tempdir;
 fn cli(dir: &Path) -> Command {
     let mut cmd = Command::new(get_cargo_bin("openscq30"));
     cmd.env("XDG_CONFIG_HOME", dir.to_str().unwrap());
+    // `dirs` ignores XDG_CONFIG_HOME on Windows, so isolate the Windows config/data dirs too.
+    cmd.env("APPDATA", dir.to_str().unwrap());
+    cmd.env("LOCALAPPDATA", dir.to_str().unwrap());
+    // `OPENSCQ30_DATABASE_PATH` is the cross-platform way to keep each test's database separate.
+    cmd.env("OPENSCQ30_DATABASE_PATH", dir.join("database.sqlite"));
     cmd
 }
 
@@ -575,10 +580,11 @@ fn list_settings_json_no_categories_and_no_extended_info() {
 fn setting_toggle() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3959");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "windNoiseSuppression", "true"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "windNoiseSuppression", "true"), @"
     success: true
     exit_code: 0
     ----- stdout -----
+    windNoiseSuppression: applied (Bool(true))
     Setting ID          	Value
     windNoiseSuppression	true 
 
@@ -604,10 +610,11 @@ fn setting_toggle_invalid() {
 fn setting_i32_range() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customNoiseCanceling", "2"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customNoiseCanceling", "2"), @"
     success: true
     exit_code: 0
     ----- stdout -----
+    customNoiseCanceling: applied (I32(2))
     Setting ID          	Value
     customNoiseCanceling	2    
 
@@ -661,15 +668,16 @@ fn setting_i32_range_invalid_step() {
 fn setting_select() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3028");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "ambientSoundMode", "normal"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "ambientSoundMode", "normal"), @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    ambientSoundMode: applied (String("Normal"))
     Setting ID      	Value 
     ambientSoundMode	Normal
 
     ----- stderr -----
-    ");
+    "#);
 }
 
 #[test]
@@ -691,20 +699,22 @@ fn setting_optional_select() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
     // select
-    assert_cmd_snapshot!(set_and_get(dir.path(), "leftSinglePress", "ambientSoundMode"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "leftSinglePress", "ambientSoundMode"), @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    leftSinglePress: applied (OptionalString(Some("AmbientSoundMode")))
     Setting ID     	Value           
     leftSinglePress	AmbientSoundMode
 
     ----- stderr -----
-    ");
+    "#);
     // deselect
-    assert_cmd_snapshot!(set_and_get(dir.path(), "leftSinglePress", ""), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "leftSinglePress", ""), @"
     success: true
     exit_code: 0
     ----- stdout -----
+    leftSinglePress: applied (OptionalString(None))
     Setting ID     	Value
     leftSinglePress	     
 
@@ -730,32 +740,37 @@ fn setting_optional_select_invalid() {
 fn setting_modifiable_select() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "+test profile"), @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "+test profile"), @"
+    success: false
+    exit_code: 1
     ----- stdout -----
+    customEqualizerProfile: rejected (observed: OptionalString(None))
     Setting ID            	Value
     customEqualizerProfile	     
 
     ----- stderr -----
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
     ");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "test profile"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "test profile"), @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    customEqualizerProfile: applied (String("test profile"))
     Setting ID            	Value       
     customEqualizerProfile	test profile
 
     ----- stderr -----
-    ");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "-test profile"), @r"
-    success: true
-    exit_code: 0
+    "#);
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "-test profile"), @"
+    success: false
+    exit_code: 1
     ----- stdout -----
+    customEqualizerProfile: rejected (observed: OptionalString(None))
     Setting ID            	Value
     customEqualizerProfile	     
 
     ----- stderr -----
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
     ");
 }
 
@@ -776,47 +791,54 @@ fn setting_modifiable_select_exact_match() {
         .arg("--set")
         .arg("customEqualizerProfile=+tesT");
 
-    assert_cmd_snapshot!(command, @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(command, @r#"
+    success: false
+    exit_code: 1
     ----- stdout -----
-    OK
+    customEqualizerProfile: rejected (observed: OptionalString(None))
+    volumeAdjustments: applied (I16Vec([1, 0, 0, 0, 0, 0, 0, 0]))
+    customEqualizerProfile: applied (ModifiableSelectCommand(Add("tesT")))
 
     ----- stderr -----
-    ");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "tesT"), @r"
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
+    "#);
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "tesT"), @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    customEqualizerProfile: applied (String("tesT"))
     Setting ID            	Value
     customEqualizerProfile	tesT 
 
     ----- stderr -----
-    ");
+    "#);
 }
 
 #[test]
 fn setting_modifiable_select_case_insensitive_match() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "+Test"), @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "+Test"), @"
+    success: false
+    exit_code: 1
     ----- stdout -----
+    customEqualizerProfile: rejected (observed: OptionalString(None))
     Setting ID            	Value
     customEqualizerProfile	     
 
     ----- stderr -----
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
     ");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "tesT"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "tesT"), @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    customEqualizerProfile: applied (String("Test"))
     Setting ID            	Value
     customEqualizerProfile	Test 
 
     ----- stderr -----
-    ");
+    "#);
 }
 
 #[test]
@@ -836,14 +858,17 @@ fn setting_modifiable_select_ambiguity() {
         .arg("--set")
         .arg("customEqualizerProfile=+tesT");
 
-    assert_cmd_snapshot!(command, @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(command, @r#"
+    success: false
+    exit_code: 1
     ----- stdout -----
-    OK
+    customEqualizerProfile: rejected (observed: OptionalString(None))
+    volumeAdjustments: applied (I16Vec([1, 0, 0, 0, 0, 0, 0, 0]))
+    customEqualizerProfile: applied (ModifiableSelectCommand(Add("tesT")))
 
     ----- stderr -----
-    ");
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
+    "#);
     assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "test"), @r"
     success: false
     exit_code: 1
@@ -872,14 +897,16 @@ fn setting_modifiable_select_invalid() {
 fn setting_modifiable_select_remove_invalid() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "-invalid"), @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(set_and_get(dir.path(), "customEqualizerProfile", "-invalid"), @"
+    success: false
+    exit_code: 1
     ----- stdout -----
+    customEqualizerProfile: rejected (observed: OptionalString(None))
     Setting ID            	Value
     customEqualizerProfile	     
 
     ----- stderr -----
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
     ");
 }
 
@@ -903,14 +930,19 @@ fn setting_multi_select() {
         .arg("volumeAdjustments=2,0,0,0,0,0,0,0")
         .arg("--set")
         .arg("customEqualizerProfile=+other not selected");
-    assert_cmd_snapshot!(command, @r"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(command, @r#"
+    success: false
+    exit_code: 1
     ----- stdout -----
-    OK
+    customEqualizerProfile: rejected (observed: OptionalString(None))
+    volumeAdjustments: applied (I16Vec([1, 0, 0, 0, 0, 0, 0, 0]))
+    customEqualizerProfile: applied (ModifiableSelectCommand(Add("has,comma and\"quote")))
+    volumeAdjustments: applied (I16Vec([2, 0, 0, 0, 0, 0, 0, 0]))
+    customEqualizerProfile: applied (ModifiableSelectCommand(Add("other not selected")))
 
     ----- stderr -----
-    ");
+    Error: customEqualizerProfile: rejected (observed: OptionalString(None))
+    "#);
     assert_cmd_snapshot!(set_and_get(
         dir.path(),
         "exportCustomEqualizerProfiles",
@@ -919,6 +951,7 @@ fn setting_multi_select() {
     success: true
     exit_code: 0
     ----- stdout -----
+    exportCustomEqualizerProfiles: applied (StringVec(["test", "has,comma and\"quote"]))
     Setting ID                   	Value                      
     exportCustomEqualizerProfiles	"has,comma and""quote",test
 
@@ -930,10 +963,11 @@ fn setting_multi_select() {
 fn setting_multi_select_no_selection() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "exportCustomEqualizerProfiles", ""), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "exportCustomEqualizerProfiles", ""), @"
     success: true
     exit_code: 0
     ----- stdout -----
+    exportCustomEqualizerProfiles: applied (StringVec([]))
     Setting ID                   	Value
     exportCustomEqualizerProfiles	     
 
@@ -961,25 +995,28 @@ fn setting_multi_select_with_remove() {
     add_device(dir.path(), "SoundcoreA3936");
     // This is a bad test since we can't verify that it has been removed, but there's not really a
     // workaround that isn't a lot of work
-    assert_cmd_snapshot!(set_and_get(dir.path(), "dualConnectionsDevices", "-00:00:00:00:00:01"), @"
-    success: true
-    exit_code: 0
+    assert_cmd_snapshot!(set_and_get(dir.path(), "dualConnectionsDevices", "-00:00:00:00:00:01"), @r#"
+    success: false
+    exit_code: 1
     ----- stdout -----
+    dualConnectionsDevices: rejected (observed: StringVec(["00:00:00:00:00:00"]))
     Setting ID            	Value            
     dualConnectionsDevices	00:00:00:00:00:00
 
     ----- stderr -----
-    ");
+    Error: dualConnectionsDevices: rejected (observed: StringVec(["00:00:00:00:00:00"]))
+    "#);
 }
 
 #[test]
 fn setting_equalizer() {
     let dir = tempdir().unwrap();
     add_device(dir.path(), "SoundcoreA3951");
-    assert_cmd_snapshot!(set_and_get(dir.path(), "volumeAdjustments", "10,-20,30,-40,50,-60,70,-80"), @r"
+    assert_cmd_snapshot!(set_and_get(dir.path(), "volumeAdjustments", "10,-20,30,-40,50,-60,70,-80"), @"
     success: true
     exit_code: 0
     ----- stdout -----
+    volumeAdjustments: applied (I16Vec([10, -20, 30, -40, 50, -60, 70, -80]))
     Setting ID       	Value                               
     volumeAdjustments	[10, -20, 30, -40, 50, -60, 70, -80]
 
@@ -1051,6 +1088,7 @@ fn setting_hue_color_picker() {
     success: true
     exit_code: 0
     ----- stdout -----
+    lightsColor: applied (F32(270.0))
     Setting ID 	Value    
     lightsColor	270.11765
 
@@ -1119,15 +1157,17 @@ fn setting_import_string_set() {
         .arg("customEqualizerProfile=test profile")
         .arg("--get")
         .arg("customEqualizerProfile");
-    assert_cmd_snapshot!(command, @r"
+    assert_cmd_snapshot!(command, @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    importCustomEqualizerProfiles: applied (String("[{\"name\": \"test profile\", \"volumeAdjustments\": [0,1,2,3,4,5,6,7]}]"))
+    customEqualizerProfile: applied (String("test profile"))
     Setting ID            	Value       
     customEqualizerProfile	test profile
 
     ----- stderr -----
-    ");
+    "#);
 }
 
 #[test]
@@ -1191,15 +1231,17 @@ fn setting_action_set() {
         .arg("resetButtonsToDefault")
         .arg("--get")
         .arg("leftSinglePress");
-    assert_cmd_snapshot!(command, @r"
+    assert_cmd_snapshot!(command, @r#"
     success: true
     exit_code: 0
     ----- stdout -----
+    leftSinglePress: applied (OptionalString(Some("PlayPause")))
+    resetButtonsToDefault: applied (Bool(true))
     Setting ID     	Value   
     leftSinglePress	VolumeUp
 
     ----- stderr -----
-    ");
+    "#);
 }
 
 #[test]
@@ -1245,6 +1287,8 @@ fn setting_time_set() {
     success: true
     exit_code: 0
     ----- stdout -----
+    createAlarm: applied (Bool(true))
+    alarm1Time: applied (I32(930))
     Setting ID	Value
     alarm1Time	15:30
 
@@ -1375,5 +1419,7 @@ fn time_json() {
     ]
 
     ----- stderr -----
+    createAlarm: applied (Bool(true))
+    alarm1Time: applied (I32(930))
     "#);
 }

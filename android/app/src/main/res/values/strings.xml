@@ -77,6 +77,11 @@
     <string name="error_saving_quick_preset">Error saving quick preset</string>
     <string name="error_activating_quick_preset">Error activating quick preset</string>
     <string name="error_changing_settings">Error changing settings</string>
+    <string name="setting_write_rejected">The device did not apply this setting</string>
+    <string name="setting_write_timed_out">The device did not confirm this setting</string>
+    <string name="setting_write_disconnected">The device disconnected</string>
+    <string name="setting_write_unsupported_requires_both_earbuds">Can\'t change this setting with one earbud connected</string>
+    <string name="setting_write_unsupported_no_read_back">The device can\'t confirm this setting</string>
     <string name="error_connecting">Error connecting</string>
     <string name="copy_x_to_clipboard">Copy %s to Clipboard</string>
     <string name="confirm">Confirm</string>
