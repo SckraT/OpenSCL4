@@ -8,7 +8,7 @@ use tokio::sync::watch;
 use crate::{devices::DeviceModel, macros::impl_from_source_error_with_location, storage};
 
 use super::{
-    connection::{self, ConnectionDescriptor, ConnectionStatus},
+    connection::{self, ConnectionDescriptor, ConnectionStatus, SessionStatus},
     settings::{self, CategoryId, Setting, SettingId, Value},
 };
 use crate::client::availability::AvailabilityReason;
@@ -96,6 +96,9 @@ pub trait OpenSCQ30DeviceRegistry {
 pub trait OpenSCQ30Device {
     /// Returns a tokio::sync::watch::Receiver for tracking when the connection disconnects.
     fn connection_status(&self) -> watch::Receiver<ConnectionStatus>;
+
+    /// Returns a tokio::sync::watch::Receiver for the durable session state, including recovery.
+    fn session_status(&self) -> watch::Receiver<SessionStatus>;
 
     /// Returns the model of the device.
     fn model(&self) -> DeviceModel;

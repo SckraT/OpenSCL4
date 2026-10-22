@@ -127,6 +127,11 @@ fun OpenSCQ30Root(
                                         ActiveDeviceState.Connecting,
                                     )
 
+                                    is ConnectionStatus.Recovering -> ActiveDevice(
+                                        current.macAddress,
+                                        ActiveDeviceState.Connecting,
+                                    )
+
                                     else -> null
                                 }
                                 DeviceSelectionScreen(
@@ -167,7 +172,14 @@ private val deviceNavigationSaver = listSaver<DeviceNavigationState, Any?>(
 
 private fun ConnectionStatus.toAppControlSnapshot(): AppControlSnapshot = when (this) {
     is ConnectionStatus.Connected -> AppControlSnapshot(macAddress, AppControl.Controlling)
+
     is ConnectionStatus.Connecting -> AppControlSnapshot(macAddress, AppControl.Connecting)
+
+    is ConnectionStatus.Recovering -> AppControlSnapshot(macAddress, AppControl.Connecting)
+
+    // Keep the device screen open so it can show the lost state with Retry.
+    is ConnectionStatus.Lost -> AppControlSnapshot(macAddress, AppControl.Controlling)
+
     ConnectionStatus.AwaitingConnection, ConnectionStatus.Disconnected -> AppControlSnapshot()
 }
 
@@ -180,16 +192,16 @@ private fun DeviceScreen(
     onDisconnected: () -> Unit,
 ) {
     val deviceSettings by viewModel.deviceSettingsManager.collectAsState()
-    val connected = status as? ConnectionStatus.Connected
-    val isRequestedDevice = connected != null && (
-        requestedMacAddress == null || connected.macAddress == null ||
-            requestedMacAddress.equals(connected.macAddress, ignoreCase = true)
+    val deviceManager = status.deviceManager
+    val isRequestedDevice = deviceManager != null && status !is ConnectionStatus.Lost && (
+        requestedMacAddress == null || status.macAddress == null ||
+            requestedMacAddress.equals(status.macAddress, ignoreCase = true)
         )
     val settingsManager = deviceSettings
     if (isRequestedDevice && settingsManager != null) {
-        key(connected.deviceManager) {
+        key(deviceManager) {
             DeviceSettingsScreen(
-                connectionStatus = connected,
+                connectionStatus = status,
                 onBack = onShowDeviceList,
                 onDisconnect = {
                     viewModel.stopDeviceService()

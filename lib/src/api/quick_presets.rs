@@ -317,6 +317,10 @@ mod tests {
             self.status.subscribe()
         }
 
+        fn session_status(&self) -> watch::Receiver<crate::api::connection::SessionStatus> {
+            self.inner.session_status()
+        }
+
         fn model(&self) -> DeviceModel {
             self.inner.model()
         }

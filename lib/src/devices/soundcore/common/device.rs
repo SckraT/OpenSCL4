@@ -14,7 +14,7 @@ use crate::{
     api::{
         connection::{
             ConnectionDescriptor, ConnectionSession, ConnectionSessionConfig, ConnectionStatus,
-            ReconnectHook, RfcommBackend,
+            ReconnectHook, RfcommBackend, SessionStatus,
         },
         device::{self, OpenSCQ30Device, OpenSCQ30DeviceRegistry},
         settings::{CategoryId, Setting, SettingId, Value},
@@ -822,6 +822,10 @@ where
 {
     fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
         self.packet_io_controller.connection_status()
+    }
+
+    fn session_status(&self) -> watch::Receiver<SessionStatus> {
+        self.packet_io_controller.session_status()
     }
 
     fn model(&self) -> DeviceModel {

@@ -200,7 +200,6 @@ impl PacketIOController {
         self.session.connection_status()
     }
 
-    #[cfg(test)]
     pub fn session_status(&self) -> watch::Receiver<SessionStatus> {
         self.session.status_receiver()
     }

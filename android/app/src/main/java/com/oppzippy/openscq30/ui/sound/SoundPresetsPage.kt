@@ -282,7 +282,10 @@ private fun SoundPresetCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Button(onClick = onActivate, enabled = enabledFields.isNotEmpty() && !applied) {
+                Button(
+                    onClick = onActivate,
+                    enabled = enabledFields.isNotEmpty() && !applied && !LocalSettingsReadOnly.current,
+                ) {
                     Text(stringResource(if (applied) R.string.sound_preset_applied else R.string.sound_preset_apply))
                 }
                 TextButton(onClick = onEdit) { Text(stringResource(R.string.sound_preset_edit)) }

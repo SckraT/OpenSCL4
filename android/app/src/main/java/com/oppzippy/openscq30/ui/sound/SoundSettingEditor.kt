@@ -92,6 +92,9 @@ val LocalPendingSettingWrites = staticCompositionLocalOf<Map<String, PendingSett
 /** The last outcome of a write per setting, when it was not applied. */
 val LocalSettingWriteErrors = staticCompositionLocalOf<Map<String, WriteOutcome>> { emptyMap() }
 
+/** While the connection is recovering, controls show the last known values but cannot change them. */
+val LocalSettingsReadOnly = staticCompositionLocalOf { false }
+
 /** Renders the backend capability directly, including options unknown to this UI version. */
 @Composable
 fun SoundSettingEditor(
@@ -103,7 +106,8 @@ fun SoundSettingEditor(
     val name = translateSettingId(settingId)
     val pending = LocalPendingSettingWrites.current[settingId]
     val requested = pending?.requestedValue
-    val enabled = pending == null
+    val readOnly = LocalSettingsReadOnly.current
+    val enabled = pending == null && !readOnly
     val onChange: (Value) -> Unit = { if (enabled) setSettings(listOf(settingId to it)) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(
@@ -306,8 +310,11 @@ private fun selectValue(requested: Value?, confirmed: String?): String? = when (
 @Composable
 private fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
     is WriteOutcome.Rejected -> stringResource(R.string.setting_write_rejected)
+
     WriteOutcome.TimedOut -> stringResource(R.string.setting_write_timed_out)
+
     WriteOutcome.Disconnected -> stringResource(R.string.setting_write_disconnected)
+
     is WriteOutcome.UnsupportedInState -> when (outcome.reason) {
         AvailabilityReason.REQUIRES_BOTH_EARBUDS ->
             stringResource(R.string.setting_write_unsupported_requires_both_earbuds)

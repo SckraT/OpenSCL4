@@ -36,7 +36,9 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,13 +64,17 @@ class DeviceService : LifecycleService() {
 
         const val ACTION_QUICK_PRESET = BuildConfig.APPLICATION_ID + ".broadcast.QuickPreset"
         const val ACTION_DISCONNECT = BuildConfig.APPLICATION_ID + ".broadcast.Disconnect"
+        const val ACTION_RETRY = BuildConfig.APPLICATION_ID + ".broadcast.Retry"
         const val ACTION_SEND_NOTIFICATION = BuildConfig.APPLICATION_ID + ".broadcast.SendNotification"
         const val ACTION_SET_SETTING_VALUE = BuildConfig.APPLICATION_ID + ".broadcast.SetSettingValue"
         const val ACTION_UPDATE_WIDGET = BuildConfig.APPLICATION_ID + ".broadcast.UPDATE_WIDGET"
 
+        private const val LOST_RETENTION_MILLIS = 5 * 60 * 1000L
+
         private val ACTIONS = listOf(
             ACTION_DISCONNECT,
             ACTION_QUICK_PRESET,
+            ACTION_RETRY,
             ACTION_SEND_NOTIFICATION,
             ACTION_SET_SETTING_VALUE,
             ACTION_UPDATE_WIDGET,
@@ -118,6 +124,7 @@ class DeviceService : LifecycleService() {
         },
     )
     val connectionStatusFlow: MutableStateFlow<ConnectionStatus> = connectionController.connectionStatusFlow
+    private var lostRetentionJob: Job? = null
 
     private var quickPresetNames = connectionStatusFlow.flatMapLatest { connectionStatus ->
         if (connectionStatus is ConnectionStatus.Connected) {
@@ -146,6 +153,12 @@ class DeviceService : LifecycleService() {
                     Log.i(TAG, "got disconnect request, initiating stop service")
                     connectionController.close()
                     stopSelf()
+                }
+
+                ACTION_RETRY -> {
+                    Log.i(TAG, "got retry request")
+                    connectionController.retry()
+                    sendNotification()
                 }
 
                 ACTION_QUICK_PRESET -> {
@@ -265,26 +278,37 @@ class DeviceService : LifecycleService() {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
-        // when we are connected to a device that becomes disconnected, update our connection status to disconnected
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest { connectionStatus ->
-                if (connectionStatus is ConnectionStatus.Connected) {
-                    connectionStatus.deviceManager.connectionStatusFlow.collectLatest { deviceConnectionStatus ->
-                        if (deviceConnectionStatus ==
-                            com.oppzippy.openscq30.lib.bindings.ConnectionStatus.Disconnected
-                        ) {
-                            Log.d(TAG, "device disconnected")
-                            if (connectionStatusFlow.value === connectionStatus) connectionController.close()
+                when (connectionStatus) {
+                    is ConnectionStatus.Recovering -> {
+                        // A retry that starts while lost cancels the pending shutdown.
+                        lostRetentionJob?.cancel()
+                        sendNotification()
+                    }
+
+                    is ConnectionStatus.Lost -> {
+                        sendNotification()
+                        lostRetentionJob?.cancel()
+                        lostRetentionJob = lifecycleScope.launch {
+                            delay(LOST_RETENTION_MILLIS)
+                            if (connectionStatusFlow.value is ConnectionStatus.Lost) {
+                                Log.i(TAG, "lost retention expired, stopping service")
+                                stopForeground(STOP_FOREGROUND_REMOVE)
+                                stopSelf()
+                            }
                         }
                     }
-                }
-            }
-        }
-        lifecycleScope.launch {
-            connectionStatusFlow.collectLatest {
-                if (it == ConnectionStatus.Disconnected) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
+
+                    is ConnectionStatus.Connecting, is ConnectionStatus.Connected -> lostRetentionJob?.cancel()
+
+                    ConnectionStatus.Disconnected -> {
+                        lostRetentionJob?.cancel()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    }
+
+                    ConnectionStatus.AwaitingConnection -> Unit
                 }
             }
         }
@@ -351,6 +375,7 @@ class DeviceService : LifecycleService() {
         Log.i(TAG, "stopping service")
         unregisterReceiver(broadcastReceiver)
         cancelNotification()
+        lostRetentionJob?.cancel()
         connectionController.close()
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)

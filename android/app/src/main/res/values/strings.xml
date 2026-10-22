@@ -41,6 +41,7 @@
     <string name="replace">Replace</string>
     <string name="connected_to">Connected to %s</string>
     <string name="connecting_to">Connecting to %s</string>
+    <string name="reconnecting_to">Reconnecting to %s</string>
     <string name="disconnected">Disconnected</string>
     <string name="disconnect">Disconnect</string>
     <string name="awaiting_connection">Awaiting Connection</string>

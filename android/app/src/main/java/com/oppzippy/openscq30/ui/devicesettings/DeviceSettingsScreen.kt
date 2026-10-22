@@ -6,10 +6,13 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -23,11 +26,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +69,7 @@ import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalPendingSettingWrites
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.LocalSettingWriteErrors
+import com.oppzippy.openscq30.ui.sound.LocalSettingsReadOnly
 import com.oppzippy.openscq30.ui.sound.OverviewBlock
 import com.oppzippy.openscq30.ui.sound.OverviewLayoutEditor
 import com.oppzippy.openscq30.ui.sound.ProfileTransferSection
@@ -90,6 +96,7 @@ import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
 import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.utils.NavTransitions
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 private const val HOME = "overview"
@@ -123,14 +130,15 @@ fun DeviceSettingsScreen(
     onDisconnect: () -> Unit = {},
 ) {
     val fontScale = LocalDensity.current.fontScale
-    val connection = connectionStatus as? ConnectionStatus.Connected
-    if (connection == null) {
+    val deviceManager = connectionStatus.deviceManager
+    if (deviceManager == null || connectionStatus is ConnectionStatus.Lost) {
         SoundConnectionStateScreen(connectionStatus, onBack = onBack)
         return
     }
-    val loadedSettings by remember(connection.deviceManager) { settingsByCategoryFlow }.collectAsState(initial = null)
-    val pendingWrites by remember(connection.deviceManager) { pendingWritesFlow }.collectAsState(emptyMap())
-    val settingWriteErrors by remember(connection.deviceManager) { settingWriteErrorsFlow }.collectAsState(emptyMap())
+    val readOnly = connectionStatus is ConnectionStatus.Recovering
+    val loadedSettings by remember(deviceManager) { settingsByCategoryFlow }.collectAsState(initial = null)
+    val pendingWrites by remember(deviceManager) { pendingWritesFlow }.collectAsState(emptyMap())
+    val settingWriteErrors by remember(deviceManager) { settingWriteErrorsFlow }.collectAsState(emptyMap())
     val byCategory = remember(loadedSettings) {
         loadedSettings.orEmpty().associate { category ->
             category.categoryId to category.settings.map { it.settingId to it.setting }
@@ -139,8 +147,8 @@ fun DeviceSettingsScreen(
     val categories = byCategory.keys.toList()
     val settings = remember(byCategory) { byCategory.values.flatten().distinctBy { it.first } }
     val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
-    val presets by remember(connection.deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
-    val legacyProfiles by remember(connection.deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
+    val presets by remember(deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
+    val legacyProfiles by remember(deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     // every setting has one group, and the group's page is where it is shown
     val grouped = remember(settings, byCategory) { groupSettings(settings, byCategory) }
     fun groupSettingsOf(group: SettingGroup) = grouped[group].orEmpty()
@@ -157,7 +165,7 @@ fun DeviceSettingsScreen(
     val rootRoute = route in setOf(HOME, PRESETS, APP_SETTINGS)
     var showMenu by remember { mutableStateOf(false) }
     var confirmDisconnect by remember { mutableStateOf(false) }
-    val lastAppliedPreset by connection.deviceManager.lastAppliedPreset.collectAsState()
+    val lastAppliedPreset by deviceManager.lastAppliedPreset.collectAsState()
 
     val equalizerPage = equalizerOpensItsPage(byCategory["equalizer"].orEmpty().map { it.first }, oneEarbudOnly)
 
@@ -332,235 +340,283 @@ fun DeviceSettingsScreen(
             }
         },
     ) { padding ->
-        CompositionLocalProvider(
-            LocalPendingSettingWrites provides pendingWrites,
-            LocalSettingWriteErrors provides settingWriteErrors,
-        ) {
-        NavHost(
-            navController,
-            startDestination = HOME,
-            modifier = Modifier.padding(padding),
-            enterTransition = NavTransitions.enter,
-            exitTransition = NavTransitions.exit,
-            popEnterTransition = NavTransitions.popEnter,
-            popExitTransition = NavTransitions.popExit,
-            predictivePopEnterTransition = NavTransitions.predictivePopEnter,
-            predictivePopExitTransition = NavTransitions.predictivePopExit,
-        ) {
-            composable(HOME) {
-                if (loadedSettings == null) {
-                    Column(
-                        Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                    ) {
-                        CircularProgressIndicator()
-                        Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyLarge)
-                    }
-                } else {
-                    SoundOverview(
-                        deviceModel = connection.deviceManager.device.model(),
-                        settings = settings,
-                        hasSound = modeSettings.isNotEmpty(),
-                        hasControls = controlSettings.isNotEmpty(),
-                        hasComfort = comfortSettings.isNotEmpty(),
-                        hasConnections = connectionSettings.isNotEmpty(),
-                        hasCase = caseSettings.isNotEmpty(),
-                        hasEffects = effectSettings.isNotEmpty(),
-                        hasPower = powerSettings.isNotEmpty(),
-                        hasEqualizerCategory = "equalizer" in categories,
-                        macAddress = connection.macAddress,
-                        quickPresets = presets.map { it.name },
-                        activeQuickPreset = lastAppliedPreset,
-                        onActivateQuickPreset = activateQuickPreset,
-                        onEditLayout = { navController.navigate(OVERVIEW_LAYOUT) },
-                        onSound = {
-                            navController.navigate("sound")
-                        }, onEqualizer = { navController.navigate("equalizer") },
-                        onControls = {
-                            navController.navigate("controls")
-                        }, onComfort = { navController.navigate("comfort") },
-                        onConnections = {
-                            navController.navigate("connections")
-                        }, onSpatial = { navController.navigate("spatial") },
-                        onPower = { navController.navigate(POWER) },
-                        onCase = {
-                            navController.navigate("case")
-                        }, onAllSettings = { navController.navigate(ALL_SETTINGS) },
-                        setSettings = setSettingValues,
-                    )
-                }
-            }
-            composable("sound") {
-                SoundModesPage(connection.deviceManager.device.model(), modeSettings, setSettingValues)
-            }
-            composable(OVERVIEW_LAYOUT) {
-                val available = buildSet {
-                    if (modeSettings.isNotEmpty()) add(OverviewBlock.SoundMode)
-                    if ("equalizer" in categories || settings.any { it.first in BOTH_EARBUDS_SETTING_IDS }) {
-                        add(OverviewBlock.Equalizer)
-                    }
-                    // presets can be added later, so the block can be turned on before there are any
-                    add(OverviewBlock.QuickPresets)
-                    if (controlSettings.isNotEmpty()) add(OverviewBlock.Controls)
-                    if (comfortSettings.isNotEmpty()) add(OverviewBlock.Comfort)
-                    if (effectSettings.isNotEmpty()) add(OverviewBlock.Spatial)
-                    if (powerSettings.isNotEmpty()) add(OverviewBlock.Power)
-                    if (connectionSettings.isNotEmpty()) add(OverviewBlock.Connections)
-                    if (caseSettings.isNotEmpty()) add(OverviewBlock.Case)
-                }
-                OverviewLayoutEditor(connection.deviceManager.device.model(), available)
-            }
-            composable("equalizer") {
-                val transferSettings = byCategory["equalizerImportExport"].orEmpty()
-                val importProfiles: suspend (String) -> Result<Unit> = {
-                    setSettingValueForResult("importCustomEqualizerProfiles", it.toValue())
-                }
-                // the earbuds can disconnect from each other while this page is open
-                if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
-                    // profiles are kept on the phone, so they can still be imported and exported
-                    Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        SoundOneEarbudNotice()
-                        if (transferSettings.isNotEmpty()) {
-                            val savedProfiles = rememberSavedProfiles(transferSettings, setSettingValues)
-                            ProfileTransferSection(savedProfiles.keys.toList(), savedProfiles, null, importProfiles)
-                        }
-                    }
-                } else {
-                    SoundEqualizerPage(
-                        settings = settings,
-                        setSettings = setSettingValues,
-                        importExportSettings = transferSettings,
-                        legacyProfiles = legacyProfiles,
-                        onMigrateLegacyProfiles = onMigrateLegacyEqualizerProfiles,
-                        onImport = importProfiles,
-                    )
-                }
-            }
-            composable("controls") { SoundControlsPage(controlSettings, setSettingValues) }
-            composable("comfort") { SoundComfortPage(comfortSettings, setSettingValues) }
-            composable("connections") { SoundConnectionsPage(connectionSettings, setSettingValues) }
-            composable("case") { SoundCasePage(caseSettings, setSettingValues) }
-            composable("spatial") { SoundEffectsPage(effectSettings, setSettingValues) }
-            composable(POWER) { SoundPowerPage(powerSettings, setSettingValues) }
-            composable(PRESETS) {
-                SoundPresetsPage(
-                    presets,
-                    settings,
-                    lastAppliedPreset,
-                    onActivate = activateQuickPreset,
-                    createQuickPreset,
-                    onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
-                    onDelete = deleteQuickPreset,
-                    notice = if (oneEarbudOnly && presetsUseBothEarbudSettings(presets)) {
-                        { SoundOneEarbudNotice(message = stringResource(R.string.sound_overview_one_earbud_presets)) }
-                    } else {
-                        null
-                    },
-                )
-            }
-            composable(
-                "preset/{name}",
-                arguments = listOf(
-                    navArgument("name") {
-                        type = NavType.StringType
-                    },
-                ),
-            ) { current ->
-                val preset = presets.find { it.name == current.arguments?.getString("name") }
-                if (preset != null) {
-                    SoundPresetEditorPage(
-                        preset,
-                        settings.toMap(),
-                        toggleQuickPresetSetting,
-                        onLoadCurrentSettings = { onQuickPresetLoadCurrentSettings(preset.name) },
-                    )
-                } else {
-                    Text(stringResource(R.string.sound_overview_preset_missing), Modifier.padding(20.dp))
-                }
-            }
-            composable(APP_SETTINGS) {
-                SettingsPage(
-                    onBackClick = { navController.popBackStack() },
-                    embedded = true,
-                    onNotificationSettings = { navController.navigate("notifications") },
-                )
-            }
-            composable(ALL_SETTINGS) {
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.sound_overview_all_settings),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    if (oneEarbudOnly) SoundOneEarbudNotice()
-                    // the equalizer page is there with one earbud as well, to say why and to import and export
-                    SettingGroup.entries.filter {
-                        grouped[it].orEmpty().isNotEmpty() || (it == SettingGroup.Equalizer && equalizerPage)
-                    }.forEach { group ->
-                        val needsBothEarbuds = group == SettingGroup.Equalizer && oneEarbudOnly &&
-                            byCategory["equalizer"].isNullOrEmpty()
-                        SoundDashboardLink(
-                            group.title(),
-                            if (needsBothEarbuds) stringResource(R.string.sound_overview_needs_both_earbuds) else null,
-                            group.icon,
-                            onClick = { navController.navigate(groupRoute(group)) },
-                        )
-                    }
-                    // the equalizer page offers to move old profiles over itself
-                    if (!equalizerPage && legacyProfiles.isNotEmpty()) {
-                        SoundDashboardLink(
-                            stringResource(R.string.sound_overview_legacy),
-                            null,
-                            R.drawable.update_24px,
-                            onClick = { navController.navigate("legacy") },
-                        )
-                    }
-                }
-            }
-            composable(
-                "group/{id}",
-                arguments = listOf(
-                    navArgument("id") {
-                        type = NavType.StringType
-                    },
-                ),
-            ) { current ->
-                val group = SettingGroup.entries.firstOrNull { it.id == current.arguments?.getString("id") }
-                val groupSettings = group?.let { groupSettingsOf(it) }.orEmpty()
-                if (groupSettings.isEmpty()) {
-                    Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
-                } else {
-                    CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
-                        SoundSettingsListPage(groupSettings, setSettingValues)
-                    }
-                }
-            }
-            composable("notifications") {
-                val featuredSlots by remember(connection.deviceManager) {
-                    featuredSettingSlotsFlow
-                }.collectAsState(emptyList())
-                val presetSlots by remember(connection.deviceManager) {
-                    quickPresetSlotsFlow
-                }.collectAsState(emptyList())
-                StatusNotificationScreen(
-                    settingIds = settings.map { it.first },
-                    featuredSettingSlots = featuredSlots,
-                    onFeaturedSettingSlotChange = onFeaturedSettingSlotChange,
-                    quickPresets = presets.map { it.name },
-                    quickPresetSlots = presetSlots,
-                    onQuickPresetSlotChange = onQuickPresetSlotChange,
-                )
-            }
-            composable("legacy") {
-                MigrateLegacyEqualizerProfilesScreen(legacyProfiles) { onMigrateLegacyEqualizerProfiles(listOf(it)) }
+        val recovering = connectionStatus is ConnectionStatus.Recovering
+        var showReconnecting by remember { mutableStateOf(false) }
+        LaunchedEffect(recovering) {
+            showReconnecting = false
+            if (recovering) {
+                delay(1_000)
+                showReconnecting = true
             }
         }
+        Column(Modifier.padding(padding)) {
+            if (showReconnecting) ReconnectingBanner()
+            CompositionLocalProvider(
+                LocalPendingSettingWrites provides pendingWrites,
+                LocalSettingWriteErrors provides settingWriteErrors,
+                LocalSettingsReadOnly provides readOnly,
+            ) {
+                NavHost(
+                    navController,
+                    startDestination = HOME,
+                    modifier = Modifier.weight(1f),
+                    enterTransition = NavTransitions.enter,
+                    exitTransition = NavTransitions.exit,
+                    popEnterTransition = NavTransitions.popEnter,
+                    popExitTransition = NavTransitions.popExit,
+                    predictivePopEnterTransition = NavTransitions.predictivePopEnter,
+                    predictivePopExitTransition = NavTransitions.predictivePopExit,
+                ) {
+                    composable(HOME) {
+                        if (loadedSettings == null) {
+                            Column(
+                                Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                            ) {
+                                CircularProgressIndicator()
+                                Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            SoundOverview(
+                                deviceModel = deviceManager.device.model(),
+                                settings = settings,
+                                hasSound = modeSettings.isNotEmpty(),
+                                hasControls = controlSettings.isNotEmpty(),
+                                hasComfort = comfortSettings.isNotEmpty(),
+                                hasConnections = connectionSettings.isNotEmpty(),
+                                hasCase = caseSettings.isNotEmpty(),
+                                hasEffects = effectSettings.isNotEmpty(),
+                                hasPower = powerSettings.isNotEmpty(),
+                                hasEqualizerCategory = "equalizer" in categories,
+                                macAddress = connectionStatus.macAddress,
+                                quickPresets = presets.map { it.name },
+                                activeQuickPreset = lastAppliedPreset,
+                                onActivateQuickPreset = activateQuickPreset,
+                                onEditLayout = { navController.navigate(OVERVIEW_LAYOUT) },
+                                onSound = {
+                                    navController.navigate("sound")
+                                }, onEqualizer = { navController.navigate("equalizer") },
+                                onControls = {
+                                    navController.navigate("controls")
+                                }, onComfort = { navController.navigate("comfort") },
+                                onConnections = {
+                                    navController.navigate("connections")
+                                }, onSpatial = { navController.navigate("spatial") },
+                                onPower = { navController.navigate(POWER) },
+                                onCase = {
+                                    navController.navigate("case")
+                                }, onAllSettings = { navController.navigate(ALL_SETTINGS) },
+                                setSettings = setSettingValues,
+                            )
+                        }
+                    }
+                    composable("sound") {
+                        SoundModesPage(deviceManager.device.model(), modeSettings, setSettingValues)
+                    }
+                    composable(OVERVIEW_LAYOUT) {
+                        val available = buildSet {
+                            if (modeSettings.isNotEmpty()) add(OverviewBlock.SoundMode)
+                            if ("equalizer" in categories || settings.any { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                                add(OverviewBlock.Equalizer)
+                            }
+                            // presets can be added later, so the block can be turned on before there are any
+                            add(OverviewBlock.QuickPresets)
+                            if (controlSettings.isNotEmpty()) add(OverviewBlock.Controls)
+                            if (comfortSettings.isNotEmpty()) add(OverviewBlock.Comfort)
+                            if (effectSettings.isNotEmpty()) add(OverviewBlock.Spatial)
+                            if (powerSettings.isNotEmpty()) add(OverviewBlock.Power)
+                            if (connectionSettings.isNotEmpty()) add(OverviewBlock.Connections)
+                            if (caseSettings.isNotEmpty()) add(OverviewBlock.Case)
+                        }
+                        OverviewLayoutEditor(deviceManager.device.model(), available)
+                    }
+                    composable("equalizer") {
+                        val transferSettings = byCategory["equalizerImportExport"].orEmpty()
+                        val importProfiles: suspend (String) -> Result<Unit> = {
+                            setSettingValueForResult("importCustomEqualizerProfiles", it.toValue())
+                        }
+                        // the earbuds can disconnect from each other while this page is open
+                        if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                            // profiles are kept on the phone, so they can still be imported and exported
+                            Column(
+                                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                SoundOneEarbudNotice()
+                                if (transferSettings.isNotEmpty()) {
+                                    val savedProfiles = rememberSavedProfiles(transferSettings, setSettingValues)
+                                    ProfileTransferSection(
+                                        savedProfiles.keys.toList(),
+                                        savedProfiles,
+                                        null,
+                                        importProfiles,
+                                    )
+                                }
+                            }
+                        } else {
+                            SoundEqualizerPage(
+                                settings = settings,
+                                setSettings = setSettingValues,
+                                importExportSettings = transferSettings,
+                                legacyProfiles = legacyProfiles,
+                                onMigrateLegacyProfiles = onMigrateLegacyEqualizerProfiles,
+                                onImport = importProfiles,
+                            )
+                        }
+                    }
+                    composable("controls") { SoundControlsPage(controlSettings, setSettingValues) }
+                    composable("comfort") { SoundComfortPage(comfortSettings, setSettingValues) }
+                    composable("connections") { SoundConnectionsPage(connectionSettings, setSettingValues) }
+                    composable("case") { SoundCasePage(caseSettings, setSettingValues) }
+                    composable("spatial") { SoundEffectsPage(effectSettings, setSettingValues) }
+                    composable(POWER) { SoundPowerPage(powerSettings, setSettingValues) }
+                    composable(PRESETS) {
+                        SoundPresetsPage(
+                            presets,
+                            settings,
+                            lastAppliedPreset,
+                            onActivate = activateQuickPreset,
+                            createQuickPreset,
+                            onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
+                            onDelete = deleteQuickPreset,
+                            notice = if (oneEarbudOnly && presetsUseBothEarbudSettings(presets)) {
+                                {
+                                    SoundOneEarbudNotice(
+                                        message = stringResource(R.string.sound_overview_one_earbud_presets),
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                    composable(
+                        "preset/{name}",
+                        arguments = listOf(
+                            navArgument("name") {
+                                type = NavType.StringType
+                            },
+                        ),
+                    ) { current ->
+                        val preset = presets.find { it.name == current.arguments?.getString("name") }
+                        if (preset != null) {
+                            SoundPresetEditorPage(
+                                preset,
+                                settings.toMap(),
+                                toggleQuickPresetSetting,
+                                onLoadCurrentSettings = { onQuickPresetLoadCurrentSettings(preset.name) },
+                            )
+                        } else {
+                            Text(stringResource(R.string.sound_overview_preset_missing), Modifier.padding(20.dp))
+                        }
+                    }
+                    composable(APP_SETTINGS) {
+                        SettingsPage(
+                            onBackClick = { navController.popBackStack() },
+                            embedded = true,
+                            onNotificationSettings = { navController.navigate("notifications") },
+                        )
+                    }
+                    composable(ALL_SETTINGS) {
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.sound_overview_all_settings),
+                                style = MaterialTheme.typography.headlineMedium,
+                            )
+                            if (oneEarbudOnly) SoundOneEarbudNotice()
+                            // the equalizer page is there with one earbud as well, to say why and to import and export
+                            SettingGroup.entries.filter {
+                                grouped[it].orEmpty().isNotEmpty() || (it == SettingGroup.Equalizer && equalizerPage)
+                            }.forEach { group ->
+                                val needsBothEarbuds = group == SettingGroup.Equalizer && oneEarbudOnly &&
+                                    byCategory["equalizer"].isNullOrEmpty()
+                                SoundDashboardLink(
+                                    group.title(),
+                                    if (needsBothEarbuds) {
+                                        stringResource(
+                                            R.string.sound_overview_needs_both_earbuds,
+                                        )
+                                    } else {
+                                        null
+                                    },
+                                    group.icon,
+                                    onClick = { navController.navigate(groupRoute(group)) },
+                                )
+                            }
+                            // the equalizer page offers to move old profiles over itself
+                            if (!equalizerPage && legacyProfiles.isNotEmpty()) {
+                                SoundDashboardLink(
+                                    stringResource(R.string.sound_overview_legacy),
+                                    null,
+                                    R.drawable.update_24px,
+                                    onClick = { navController.navigate("legacy") },
+                                )
+                            }
+                        }
+                    }
+                    composable(
+                        "group/{id}",
+                        arguments = listOf(
+                            navArgument("id") {
+                                type = NavType.StringType
+                            },
+                        ),
+                    ) { current ->
+                        val group = SettingGroup.entries.firstOrNull { it.id == current.arguments?.getString("id") }
+                        val groupSettings = group?.let { groupSettingsOf(it) }.orEmpty()
+                        if (groupSettings.isEmpty()) {
+                            Text(stringResource(R.string.sound_overview_no_settings), Modifier.padding(20.dp))
+                        } else {
+                            CompositionLocalProvider(LocalSettingValueSetter provides setSettingValueForResult) {
+                                SoundSettingsListPage(groupSettings, setSettingValues)
+                            }
+                        }
+                    }
+                    composable("notifications") {
+                        val featuredSlots by remember(deviceManager) {
+                            featuredSettingSlotsFlow
+                        }.collectAsState(emptyList())
+                        val presetSlots by remember(deviceManager) {
+                            quickPresetSlotsFlow
+                        }.collectAsState(emptyList())
+                        StatusNotificationScreen(
+                            settingIds = settings.map { it.first },
+                            featuredSettingSlots = featuredSlots,
+                            onFeaturedSettingSlotChange = onFeaturedSettingSlotChange,
+                            quickPresets = presets.map { it.name },
+                            quickPresetSlots = presetSlots,
+                            onQuickPresetSlotChange = onQuickPresetSlotChange,
+                        )
+                    }
+                    composable("legacy") {
+                        MigrateLegacyEqualizerProfilesScreen(legacyProfiles) {
+                            onMigrateLegacyEqualizerProfiles(listOf(it))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReconnectingBanner() {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text(
+                stringResource(R.string.sound_overview_reconnecting),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
         }
     }
 }

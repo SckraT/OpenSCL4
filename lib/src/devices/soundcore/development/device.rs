@@ -6,7 +6,9 @@ use tokio::sync::watch;
 
 use crate::{
     api::{
-        connection::{ConnectionDescriptor, ConnectionStatus, RfcommBackend, RfcommConnection},
+        connection::{
+            ConnectionDescriptor, ConnectionStatus, RfcommBackend, RfcommConnection, SessionStatus,
+        },
         device::{self, OpenSCQ30Device, OpenSCQ30DeviceRegistry},
         settings::{CategoryId, Setting, SettingId, Value},
     },
@@ -92,6 +94,10 @@ impl SoundcoreDevelopmentDevice {
 impl OpenSCQ30Device for SoundcoreDevelopmentDevice {
     fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
         self.backend.connection_status()
+    }
+
+    fn session_status(&self) -> watch::Receiver<SessionStatus> {
+        self.packet_io.session_status()
     }
 
     fn model(&self) -> DeviceModel {
