@@ -78,17 +78,21 @@ export component AppWindow inherits Window {
                         }
                     }
                     if AppState.page == Page.devices: DevicesPage { }
-                    if root.device-page && AppState.connection != Connection.connected: ConnectionState { }
-                    if AppState.page == Page.overview && AppState.connection == Connection.connected: OverviewPage {
+                    if root.device-page && AppState.connection != Connection.connected && AppState.connection != Connection.recovering: ConnectionState { }
+                    if root.device-page && AppState.connection == Connection.recovering: Banner {
+                        icon: Icons.info;
+                        text: @tr("Reconnecting:") + " " + (AppState.connection-reason == "" ? @tr("changes are paused until the device is back.") : AppState.connection-reason);
+                    }
+                    if AppState.page == Page.overview && (AppState.connection == Connection.connected || AppState.connection == Connection.recovering): OverviewPage {
                         wide: root.width - sidebar.width > 900px;
                     }
-                    if AppState.page == Page.equalizer && AppState.connection == Connection.connected: EqualizerPage {
+                    if AppState.page == Page.equalizer && (AppState.connection == Connection.connected || AppState.connection == Connection.recovering): EqualizerPage {
                         wide: root.width - sidebar.width > 900px;
                     }
-                    if AppState.page == Page.presets && AppState.connection == Connection.connected: PresetsPage {
+                    if AppState.page == Page.presets && (AppState.connection == Connection.connected || AppState.connection == Connection.recovering): PresetsPage {
                         wide: root.width - sidebar.width > 900px;
                     }
-                    if root.device-page && AppState.connection == Connection.connected && !root.own-page: SectionPage {
+                    if root.device-page && (AppState.connection == Connection.connected || AppState.connection == Connection.recovering) && !root.own-page: SectionPage {
                         page: AppState.page;
                         wide: root.width - sidebar.width > 860px;
                     }

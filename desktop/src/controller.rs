@@ -7,7 +7,7 @@ use std::{path::PathBuf, sync::Arc};
 use macaddr::MacAddr6;
 use openscq30_lib::{
     DeviceModel, OpenSCQ30Session,
-    connection::{self, ConnectionDescriptor, ConnectionStatus},
+    connection::{self, ConnectionDescriptor, SessionStatus},
     device::{self, OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
     quick_presets::{QuickPresetActivation, QuickPresetsHandler},
     settings::{CategoryId, SettingId, Value},
@@ -89,7 +89,15 @@ pub enum Event {
     /// Disconnected as asked.
     Disconnected(MacAddr6),
     /// The device went away by itself.
-    ConnectionLost(MacAddr6),
+    ConnectionLost {
+        mac_address: MacAddr6,
+        reason: String,
+    },
+    /// The transport dropped but the session is reconnecting; the last snapshot stays on screen.
+    Recovering {
+        mac_address: MacAddr6,
+        reason: String,
+    },
     ConnectFailed {
         mac_address: MacAddr6,
         failure: Failure,
@@ -123,7 +131,8 @@ enum Message {
         failure: Failure,
     },
     DeviceChanged(u64),
-    ConnectionLost(u64),
+    Recovering(u64, String),
+    ConnectionLost(u64, String),
     /// Let go of the device and stop, then say so.
     Shutdown(tokio::sync::oneshot::Sender<()>),
 }
@@ -245,9 +254,20 @@ impl Actor {
                 Message::DeviceChanged(generation) if generation == self.generation => {
                     self.emit_snapshot(false);
                 }
-                Message::ConnectionLost(generation) if generation == self.generation => {
+                Message::Recovering(generation, reason) if generation == self.generation => {
+                    if let Some((mac_address, _)) = self.device.as_ref() {
+                        (self.emit)(Event::Recovering {
+                            mac_address: *mac_address,
+                            reason,
+                        });
+                    }
+                }
+                Message::ConnectionLost(generation, reason) if generation == self.generation => {
                     if let Some((mac_address, _)) = self.drop_device() {
-                        (self.emit)(Event::ConnectionLost(mac_address));
+                        (self.emit)(Event::ConnectionLost {
+                            mac_address,
+                            reason,
+                        });
                     }
                 }
                 // about an earlier connection
@@ -420,12 +440,24 @@ impl Actor {
             }
         }));
         let messages = self.messages.clone();
-        let mut status = device.connection_status();
+        let mut status = device.session_status();
         self.watchers.push(tokio::spawn(async move {
             loop {
-                if *status.borrow_and_update() == ConnectionStatus::Disconnected {
-                    let _ = messages.send(Message::ConnectionLost(generation));
-                    break;
+                match status.borrow_and_update().clone() {
+                    SessionStatus::Recovering { reason, .. } => {
+                        if messages
+                            .send(Message::Recovering(generation, reason))
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    SessionStatus::Lost { reason } => {
+                        let _ = messages.send(Message::ConnectionLost(generation, reason));
+                        break;
+                    }
+                    SessionStatus::Closed => break,
+                    _ => {}
                 }
                 if status.changed().await.is_err() {
                     break;
@@ -535,7 +567,11 @@ fn failure(err: &device::Error) -> Failure {
             ..
         } => Failure::BluetoothOff,
         device::Error::ConnectionError {
-            source: Connection::DeviceNotFound { .. },
+            source:
+                Connection::DeviceNotFound { .. }
+                | Connection::Unpaired { .. }
+                | Connection::PermissionDenied { .. }
+                | Connection::SecurityFailure { .. },
             ..
         }
         | device::Error::DeviceNotFound { .. } => Failure::NotFound,

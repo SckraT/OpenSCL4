@@ -1,6 +1,8 @@
 use serde_json::Value as Json;
 
-use super::{SettingMap, battery, equalizer, groups, presets, quick_toggles, sound_mode};
+use super::{
+    SettingMap, availability, battery, equalizer, groups, presets, quick_toggles, sound_mode,
+};
 use crate::{
     settings::{Equalizer, Setting, SettingId, Value},
     storage::{QuickPreset, QuickPresetField},
@@ -25,6 +27,51 @@ fn shared_client_contract() {
                 groups::setting_group(case["id"].as_str().unwrap(), case["category"].as_str())
             )
         );
+    }
+    for scenario in fixtures["availability"].as_array().unwrap() {
+        let mut settings = SettingMap::new();
+        if let Some(tws_status) = scenario["twsStatus"].as_str() {
+            settings.insert(
+                SettingId::TwsStatus,
+                Setting::Information {
+                    value: tws_status.to_string(),
+                    translated_value: tws_status.to_string(),
+                },
+            );
+        }
+        if scenario["dualConnections"].as_bool().unwrap_or(false) {
+            settings.insert(SettingId::DualConnections, Setting::Toggle { value: true });
+        }
+        for case in scenario["cases"].as_array().unwrap() {
+            let id = case["id"].as_str().unwrap();
+            let reason = match case["reason"].as_str() {
+                Some("RequiresBothEarbuds") => {
+                    availability::AvailabilityReason::RequiresBothEarbuds
+                }
+                Some("NoReadBack") => availability::AvailabilityReason::NoReadBack,
+                None => {
+                    assert_eq!("Available", case["status"].as_str().unwrap());
+                    assert_eq!(
+                        availability::SettingAvailability::Available,
+                        availability::setting_availability(&settings, id),
+                        "{id}"
+                    );
+                    continue;
+                }
+                Some(other) => panic!("unknown reason {other}"),
+            };
+            let expected = match case["status"].as_str().unwrap() {
+                "ReadOnly" => availability::SettingAvailability::ReadOnly { reason },
+                "Unavailable" => availability::SettingAvailability::Unavailable { reason },
+                other => panic!("unknown availability {other}"),
+            };
+            assert_eq!(
+                expected,
+                availability::setting_availability(&settings, id),
+                "{id} with twsStatus {:?}",
+                scenario["twsStatus"],
+            );
+        }
     }
     for case in fixtures["scale"].as_array().unwrap() {
         let values =

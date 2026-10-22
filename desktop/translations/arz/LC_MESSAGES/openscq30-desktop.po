@@ -169,6 +169,18 @@ msgstr "متصل بـ {}"
 msgid "Connecting to {}"
 msgstr "بيتصل بـ {}"
 
+msgid "Reconnecting:"
+msgstr "بيتم إعادة الاتصال:"
+
+msgid "Reconnecting to {}"
+msgstr "بيتم إعادة الاتصال بـ {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "الجهاز لسه قريب. الإعدادات هترجع لما يتصل تاني."
+
+msgid "changes are paused until the device is back."
+msgstr "التغييرات متوقفة لحد ما الجهاز يرجع."
+
 msgid "Connection lost"
 msgstr "الاتصال اتقطع"
 

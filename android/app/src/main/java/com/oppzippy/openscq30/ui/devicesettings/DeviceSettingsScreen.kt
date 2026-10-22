@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -112,6 +114,7 @@ private const val POWER = "power"
 @Composable
 fun DeviceSettingsScreen(
     onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
     connectionStatus: ConnectionStatus,
     setSettingValues: (List<Pair<String, Value>>) -> Unit,
     setSettingValueForResult: suspend (String, Value) -> Result<Unit>,
@@ -134,11 +137,12 @@ fun DeviceSettingsScreen(
 ) {
     val fontScale = LocalDensity.current.fontScale
     val deviceManager = connectionStatus.deviceManager
-    if (deviceManager == null || connectionStatus is ConnectionStatus.Lost) {
-        SoundConnectionStateScreen(connectionStatus, onBack = onBack)
+    if (deviceManager == null) {
+        SoundConnectionStateScreen(connectionStatus, onBack = onBack, onRetry = onRetry)
         return
     }
-    val readOnly = connectionStatus is ConnectionStatus.Recovering
+    val lost = connectionStatus as? ConnectionStatus.Lost
+    val readOnly = connectionStatus is ConnectionStatus.Recovering || lost != null
     val loadedSettings by remember(deviceManager) { settingsByCategoryFlow }.collectAsState(initial = null)
     val pendingWrites by remember(deviceManager) { pendingWritesFlow }.collectAsState(emptyMap())
     val settingWriteErrors by remember(deviceManager) { settingWriteErrorsFlow }.collectAsState(emptyMap())
@@ -359,6 +363,7 @@ fun DeviceSettingsScreen(
         }
         Column(Modifier.padding(padding)) {
             if (showReconnecting) ReconnectingBanner()
+            if (lost != null) LostBanner(lost.reason, onRetry)
             CompositionLocalProvider(
                 LocalPendingSettingWrites provides pendingWrites,
                 LocalSettingWriteErrors provides settingWriteErrors,
@@ -368,7 +373,7 @@ fun DeviceSettingsScreen(
                 NavHost(
                     navController,
                     startDestination = HOME,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).alpha(if (lost != null) 0.55f else 1f),
                     enterTransition = NavTransitions.enter,
                     exitTransition = NavTransitions.exit,
                     popEnterTransition = NavTransitions.popEnter,
@@ -607,6 +612,36 @@ fun DeviceSettingsScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LostBanner(reason: String, onRetry: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                stringResource(R.string.disconnected),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            if (reason.isNotBlank()) {
+                Text(
+                    reason,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.sound_overview_retry))
             }
         }
     }

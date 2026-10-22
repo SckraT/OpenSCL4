@@ -20,7 +20,7 @@ export enum Page {
     settings,
 }
 
-export enum Connection { no-device, off, connecting, connected, lost, bluetooth-off, failed }
+export enum Connection { no-device, off, connecting, connected, recovering, lost, bluetooth-off, failed }
 
 export enum FailureKind { none, not-found, timed-out, other }
 
@@ -196,6 +196,8 @@ export global AppState {
     in property <[Page]> device-pages;
 
     in property <Connection> connection: Connection.no-device;
+    // why the connection is recovering or was lost, empty otherwise
+    in property <string> connection-reason;
     in property <string> device-name;
     in property <string> device-code;
     in property <image> device-art;

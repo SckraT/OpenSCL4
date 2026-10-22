@@ -488,8 +488,17 @@ enum AttemptError {
     BudgetExhausted,
 }
 
+/// Causes that retrying inside the recovery window cannot fix. Android's adapter collapses a
+/// missing permission or an unbonded device into `DeviceNotFound`, so that is terminal too.
 fn is_terminal(error: &Error) -> bool {
-    matches!(error, Error::BluetoothAdapterUnavailable { .. })
+    matches!(
+        error,
+        Error::BluetoothAdapterUnavailable { .. }
+            | Error::DeviceNotFound { .. }
+            | Error::PermissionDenied { .. }
+            | Error::Unpaired { .. }
+            | Error::SecurityFailure { .. }
+    )
 }
 
 fn error_string(error: &Error) -> String {
@@ -750,9 +759,18 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Copy)]
+    enum ScriptedFailure {
+        TimedOut,
+        AdapterUnavailable,
+        DeviceNotFound,
+        PermissionDenied,
+        Unpaired,
+    }
+
     struct ScriptedBackend {
         available: AtomicBool,
-        terminal: AtomicBool,
+        failure: Mutex<ScriptedFailure>,
         attempts: AtomicUsize,
         attempt_times: Mutex<Vec<Instant>>,
         connections: Mutex<Vec<Arc<ScriptedConnection>>>,
@@ -762,7 +780,7 @@ mod tests {
         fn new(available: bool) -> Self {
             Self {
                 available: AtomicBool::new(available),
-                terminal: AtomicBool::new(false),
+                failure: Mutex::new(ScriptedFailure::TimedOut),
                 attempts: AtomicUsize::new(0),
                 attempt_times: Mutex::new(Vec::new()),
                 connections: Mutex::new(Vec::new()),
@@ -771,6 +789,10 @@ mod tests {
 
         fn set_available(&self, available: bool) {
             self.available.store(available, Ordering::SeqCst);
+        }
+
+        fn set_failure(&self, failure: ScriptedFailure) {
+            *self.failure.lock().unwrap() = failure;
         }
 
         fn attempt_times(&self) -> Vec<Instant> {
@@ -801,16 +823,25 @@ mod tests {
             self.attempts.fetch_add(1, Ordering::SeqCst);
             self.attempt_times.lock().unwrap().push(Instant::now());
             if !self.available.load(Ordering::SeqCst) {
-                return Err(if self.terminal.load(Ordering::SeqCst) {
-                    Error::BluetoothAdapterUnavailable {
+                let location = Location::caller();
+                return Err(match *self.failure.lock().unwrap() {
+                    ScriptedFailure::TimedOut => Error::TimedOut { action: "connect" },
+                    ScriptedFailure::AdapterUnavailable => Error::BluetoothAdapterUnavailable {
                         source: None,
-                        location: Location::caller(),
-                    }
-                } else {
-                    Error::DeviceNotFound {
+                        location,
+                    },
+                    ScriptedFailure::DeviceNotFound => Error::DeviceNotFound {
                         source: None,
-                        location: Location::caller(),
-                    }
+                        location,
+                    },
+                    ScriptedFailure::PermissionDenied => Error::PermissionDenied {
+                        source: None,
+                        location,
+                    },
+                    ScriptedFailure::Unpaired => Error::Unpaired {
+                        source: None,
+                        location,
+                    },
                 });
             }
             let connection = Arc::new(ScriptedConnection::new());
@@ -904,7 +935,7 @@ mod tests {
         .expect("recovery budget should expire");
         assert_eq!(
             SessionStatus::Lost {
-                reason: "device not found".to_owned()
+                reason: "connect timed out".to_owned()
             },
             lost
         );
@@ -929,7 +960,7 @@ mod tests {
         let backend = Arc::new(ScriptedBackend::new(true));
         let session = connect_session(backend.clone()).await;
         backend.set_available(false);
-        backend.terminal.store(true, Ordering::SeqCst);
+        backend.set_failure(ScriptedFailure::AdapterUnavailable);
 
         backend.latest_connection().disconnect();
         let lost = tokio::time::timeout(
@@ -947,6 +978,40 @@ mod tests {
             lost
         );
         assert_eq!(2, backend.attempts.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn not_found_permission_and_unpaired_errors_are_terminal() {
+        for (failure, expected) in [
+            (ScriptedFailure::DeviceNotFound, "device not found"),
+            (
+                ScriptedFailure::PermissionDenied,
+                "bluetooth permission denied",
+            ),
+            (ScriptedFailure::Unpaired, "device is not paired"),
+        ] {
+            let backend = Arc::new(ScriptedBackend::new(true));
+            let session = connect_session(backend.clone()).await;
+            backend.set_available(false);
+            backend.set_failure(failure);
+
+            backend.latest_connection().disconnect();
+            let lost = tokio::time::timeout(
+                Duration::from_secs(2),
+                wait_for_status(&session, |status| {
+                    matches!(status, SessionStatus::Lost { .. })
+                }),
+            )
+            .await
+            .expect("terminal errors should be reported immediately");
+            assert_eq!(
+                SessionStatus::Lost {
+                    reason: expected.to_owned()
+                },
+                lost
+            );
+            assert_eq!(2, backend.attempts.load(Ordering::SeqCst));
+        }
     }
 
     #[tokio::test(start_paused = true)]

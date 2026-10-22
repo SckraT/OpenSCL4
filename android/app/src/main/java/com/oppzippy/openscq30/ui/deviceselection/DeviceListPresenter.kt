@@ -110,15 +110,6 @@ object DeviceListPresenter {
         return devices.firstOrNull()
     }
 
-    private fun AppControlSnapshot.phaseOf(macAddress: String): AppControl {
-        val controlledMacAddress = this.macAddress ?: return AppControl.NotControlling
-        return if (canonicalMacAddress(controlledMacAddress) == canonicalMacAddress(macAddress)) {
-            phase
-        } else {
-            AppControl.NotControlling
-        }
-    }
-
     private fun sameMacAddress(left: String, right: String?): Boolean =
         right != null && canonicalMacAddress(left) == canonicalMacAddress(right)
 }

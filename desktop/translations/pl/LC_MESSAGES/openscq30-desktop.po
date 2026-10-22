@@ -169,6 +169,18 @@ msgstr "Połączono z {}"
 msgid "Connecting to {}"
 msgstr "Łączenie z {}"
 
+msgid "Reconnecting:"
+msgstr "Ponowne łączenie:"
+
+msgid "Reconnecting to {}"
+msgstr "Ponowne łączenie z {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Urządzenie jest nadal w pobliżu. Ustawienia wrócą po ponownym połączeniu."
+
+msgid "changes are paused until the device is back."
+msgstr "Zmiany są wstrzymane, dopóki urządzenie nie wróci."
+
 msgid "Connection lost"
 msgstr "Utracono połączenie"
 

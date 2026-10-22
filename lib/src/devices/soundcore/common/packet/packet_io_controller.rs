@@ -300,7 +300,6 @@ impl PacketIOController {
             .write_if_current(&packet.bytes(self.checksum_kind), generation)
             .await?;
 
-        let mut received = 0;
         loop {
             if pending.is_cancelled() {
                 return Err(device::Error::Disconnected);
@@ -314,12 +313,9 @@ impl PacketIOController {
                 .is_err()
             {
                 tracing::debug!("timed out waiting for multi response");
-                if received == 0 {
-                    // Some commands use "no response" to mean an empty list. This is not a
-                    // partial success: nothing was received at all.
-                    pending.cancel_all();
-                    return Ok(());
-                }
+                // A command that returns nothing still has to terminate the exchange; silence is
+                // a timeout, never an empty success. An empty list is a parsed packet whose
+                // handler returns false.
                 return Err(device::Error::ActionTimedOut {
                     action: "multi response",
                 });
@@ -330,7 +326,6 @@ impl PacketIOController {
             let handle = pending.pop_front().expect("front handle must exist");
             tracing::trace!("got multi response packet");
             let packet = handle.wait_for_value().await;
-            received += 1;
             if !on_receive(packet) {
                 pending.cancel_all();
                 return Ok(());
@@ -358,6 +353,7 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
     let session = controller.session.clone();
     let mut status = session.status_receiver();
     loop {
+        let mut reconnected = false;
         while !session.status().is_connected() {
             if matches!(
                 session.status(),
@@ -368,6 +364,15 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
             if status.changed().await.is_err() {
                 return Ok(());
             }
+            reconnected = true;
+        }
+        if reconnected {
+            // Silence before the reconnect says nothing about the new transport; give it a full
+            // watchdog interval before probing again.
+            *controller
+                .last_inbound
+                .lock()
+                .expect("last inbound mutex should not be poisoned") = Instant::now();
         }
 
         let idle = controller
@@ -398,7 +403,7 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
         }
         if failures >= 2 {
             session.report_unhealthy("silence watchdog probe failed");
-            return Ok(());
+            // Keep the watchdog alive: if the session recovers, a second silence must be detected.
         }
     }
 }
@@ -487,16 +492,20 @@ impl Drop for MultiPending {
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::HashSet,
         sync::{Arc, Mutex},
         time::Duration,
     };
 
     use async_trait::async_trait;
+    use macaddr::MacAddr6;
     use tokio::sync::{mpsc, watch};
+    use uuid::Uuid;
 
     use crate::{
         api::connection::{
-            ConnectionSession, ConnectionStatus, RfcommConnection, SessionStatus,
+            ConnectionDescriptor, ConnectionSession, ConnectionSessionConfig, ConnectionStatus,
+            RfcommBackend, RfcommConnection, RfcommServiceSelectionStrategy, SessionStatus,
             test_stub::StubRfcommConnection,
         },
         devices::soundcore::common::packet::{
@@ -530,6 +539,60 @@ mod tests {
 
         fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
             self.status.subscribe()
+        }
+    }
+
+    struct SilentConnection {
+        status: watch::Sender<ConnectionStatus>,
+        inbound: Mutex<Option<mpsc::Receiver<Vec<u8>>>>,
+        outbound: mpsc::Sender<Vec<u8>>,
+    }
+
+    #[async_trait]
+    impl RfcommConnection for SilentConnection {
+        async fn write(&self, data: &[u8]) -> crate::api::connection::Result<()> {
+            let _ = self.outbound.send(data.to_vec()).await;
+            Ok(())
+        }
+
+        fn read_channel(&self) -> mpsc::Receiver<Vec<u8>> {
+            self.inbound
+                .lock()
+                .unwrap()
+                .take()
+                .expect("read_channel should only be called once")
+        }
+
+        fn connection_status(&self) -> watch::Receiver<ConnectionStatus> {
+            self.status.subscribe()
+        }
+    }
+
+    #[derive(Default)]
+    struct SilentBackend;
+
+    #[async_trait]
+    impl RfcommBackend for SilentBackend {
+        async fn devices(&self) -> crate::api::connection::Result<HashSet<ConnectionDescriptor>> {
+            Ok(HashSet::new())
+        }
+
+        async fn connect(
+            &self,
+            _mac_address: MacAddr6,
+            _service_selection_strategy: RfcommServiceSelectionStrategy,
+        ) -> crate::api::connection::Result<Arc<dyn RfcommConnection + Send + Sync>> {
+            // Keep a reconnect observable instead of racing straight back to Connected.
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            let (inbound, inbound_receiver) = mpsc::channel(10);
+            std::mem::forget(inbound);
+            let (outbound, mut outbound_receiver) = mpsc::channel(10);
+            tokio::spawn(async move { while outbound_receiver.recv().await.is_some() {} });
+            Ok(Arc::new(SilentConnection {
+                status: watch::channel(ConnectionStatus::Connected).0,
+                inbound: Mutex::new(Some(inbound_receiver)),
+                outbound,
+            }))
         }
     }
 
@@ -862,6 +925,80 @@ mod tests {
         next.await
             .unwrap()
             .expect("the queue should work after a multi response timeout");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_multi_response_with_no_packets_times_out_instead_of_succeeding() {
+        let (connection, _sender, _receiver) = StubRfcommConnection::new();
+        let packet_io = Arc::new(
+            PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
+                .await
+                .unwrap()
+                .0,
+        );
+
+        let started = Instant::now();
+        let request = packet::outbound::request_dual_connections_devices();
+        let result = packet_io
+            .send_with_multi_response(&request, |_| true, 3)
+            .await;
+
+        assert!(matches!(result, Err(device::Error::ActionTimedOut { .. })));
+        assert!(started.elapsed() >= MULTI_RESPONSE_PACKET_TIMEOUT);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_watchdog_detects_a_second_silence_after_recovery() {
+        let backend = Arc::new(SilentBackend);
+        let session = Arc::new(
+            ConnectionSession::connect(
+                backend,
+                MacAddr6::nil(),
+                RfcommServiceSelectionStrategy::Constant(Uuid::nil()),
+                ConnectionSessionConfig {
+                    jitter_ratio: 0.0,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap(),
+        );
+        let packet_io = Arc::new(
+            PacketIOController::new_with_session(session.clone(), ChecksumKind::Suffix)
+                .await
+                .unwrap()
+                .0,
+        );
+        let observed = Arc::new(Mutex::new(Vec::<SessionStatus>::new()));
+        let collected = observed.clone();
+        let mut status = session.status_receiver();
+        tokio::spawn(async move {
+            loop {
+                collected
+                    .lock()
+                    .unwrap()
+                    .push(status.borrow_and_update().clone());
+                if status.changed().await.is_err() {
+                    break;
+                }
+            }
+        });
+        packet_io.start_watchdog();
+
+        let deadline = Instant::now() + Duration::from_secs(120);
+        loop {
+            let recoveries = observed
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|status| matches!(status, SessionStatus::Recovering { .. }))
+                .count();
+            if recoveries >= 2 {
+                break;
+            }
+            assert!(Instant::now() < deadline, "{:?}", observed.lock().unwrap());
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
     }
 
     #[tokio::test(start_paused = true)]

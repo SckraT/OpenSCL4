@@ -6,7 +6,7 @@ use std::{borrow::Cow, str::FromStr};
 use openscq30_i18n::Translate;
 use openscq30_lib::client::availability::{SettingAvailability, setting_availability};
 use openscq30_lib::settings::{self, MultiSelectWithRemoveCommand, Setting, SettingId, Value};
-use slint::{ModelRc, SharedString, VecModel};
+use slint::{Model, ModelRc, SharedString, VecModel};
 
 use crate::{
     ModeOption, Page, PanelKind, RowKind, SettingRow, SettingsPanel,
@@ -222,6 +222,26 @@ fn panel(kind: PanelKind, rows: Vec<SettingRow>) -> Option<SettingsPanel> {
         kind,
         rows: ModelRc::new(VecModel::from(rows)),
     })
+}
+
+/// Disables every control while the session is recovering; the last values stay on screen.
+pub fn read_only(panels: Vec<SettingsPanel>) -> Vec<SettingsPanel> {
+    panels
+        .into_iter()
+        .map(|panel| SettingsPanel {
+            kind: panel.kind,
+            rows: ModelRc::new(VecModel::from(
+                panel
+                    .rows
+                    .iter()
+                    .map(|mut row| {
+                        row.enabled = false;
+                        row
+                    })
+                    .collect::<Vec<_>>(),
+            )),
+        })
+        .collect()
 }
 
 /// The settings of a page, split into the panels the mockup shows.

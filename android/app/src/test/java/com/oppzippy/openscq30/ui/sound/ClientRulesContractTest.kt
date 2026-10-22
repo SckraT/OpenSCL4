@@ -1,11 +1,14 @@
 package com.oppzippy.openscq30.ui.sound
 
+import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.QuickPresetField
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
@@ -17,6 +20,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+
+private fun reason(value: JsonElement?): AvailabilityReason = when (value?.jsonPrimitive?.content) {
+    "RequiresBothEarbuds" -> AvailabilityReason.REQUIRES_BOTH_EARBUDS
+    "NoReadBack" -> AvailabilityReason.NO_READ_BACK
+    else -> error("unknown availability reason $value")
+}
 
 class ClientRulesContractTest {
     @Test
@@ -39,6 +48,33 @@ class ClientRulesContractTest {
                 case.getValue("group").jsonPrimitive.content,
                 settingGroup(case.getValue("id").jsonPrimitive.content, category).name,
             )
+        }
+        fixtures.getValue("availability").jsonArray.forEach { item ->
+            val scenario = item.jsonObject
+            val values = buildMap {
+                scenario.getValue("twsStatus").takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let {
+                    put("twsStatus", Setting.InformationSetting(it, it))
+                }
+                if (scenario["dualConnections"]?.jsonPrimitive?.boolean == true) {
+                    put("dualConnections", Setting.ToggleSetting(true))
+                }
+            }
+            scenario.getValue("cases").jsonArray.forEach { caseElement ->
+                val case = caseElement.jsonObject
+                val id = case.getValue("id").jsonPrimitive.content
+                val reason = case.getValue("reason").takeUnless { it == JsonNull }
+                val expected = when (case.getValue("status").jsonPrimitive.content) {
+                    "Available" -> {
+                        assertNull(reason)
+                        ClientSettingAvailability.Available
+                    }
+
+                    "ReadOnly" -> ClientSettingAvailability.ReadOnly(reason(reason))
+                    "Unavailable" -> ClientSettingAvailability.Unavailable(reason(reason))
+                    else -> error("unknown availability $case")
+                }
+                assertEquals(id, expected, settingAvailability(values, id))
+            }
         }
         fixtures.getValue("scale").jsonArray.forEach { item ->
             val case = item.jsonObject

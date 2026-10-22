@@ -169,6 +169,18 @@ msgstr "{}-এর সাথে সংযুক্ত"
 msgid "Connecting to {}"
 msgstr "{}-এর সাথে সংযোগ হচ্ছে"
 
+msgid "Reconnecting:"
+msgstr "পুনরায় সংযোগ:"
+
+msgid "Reconnecting to {}"
+msgstr "{} এর সাথে পুনরায় সংযোগ"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "ডিভাইসটি কাছেই আছে। পুনরায় সংযোগ হলে সেটিংস ফিরে আসবে।"
+
+msgid "changes are paused until the device is back."
+msgstr "ডিভাইস ফিরে না আসা পর্যন্ত পরিবর্তনগুলি বিরত আছে।"
+
 msgid "Connection lost"
 msgstr "সংযোগ বিচ্ছিন্ন হয়েছে"
 

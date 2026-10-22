@@ -169,6 +169,18 @@ msgstr "{} cihazına bağlı"
 msgid "Connecting to {}"
 msgstr "{} cihazına bağlanıyor"
 
+msgid "Reconnecting:"
+msgstr "Yeniden bağlanıyor:"
+
+msgid "Reconnecting to {}"
+msgstr "{} cihazına yeniden bağlanıyor"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Cihaz hâlâ yakında. Yeniden bağlandığında ayarlar geri gelecek."
+
+msgid "changes are paused until the device is back."
+msgstr "Cihaz geri gelene kadar değişiklikler duraklatıldı."
+
 msgid "Connection lost"
 msgstr "Bağlantı koptu"
 

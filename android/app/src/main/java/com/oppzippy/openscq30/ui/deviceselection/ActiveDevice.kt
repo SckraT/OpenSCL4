@@ -29,13 +29,12 @@ data class ActiveDevice(
 fun ActiveDevice?.toAppControlSnapshot(): AppControlSnapshot = if (this == null) {
     AppControlSnapshot()
 } else {
-    AppControlSnapshot(
-        macAddress = macAddress,
-        phase = when (state) {
-            ActiveDeviceState.Connecting -> AppControl.Connecting
-            ActiveDeviceState.Connected -> AppControl.Controlling
-        },
-    )
+    AppControlSnapshot(macAddress = macAddress, phase = state.toAppControlPhase())
+}
+
+internal fun ActiveDeviceState.toAppControlPhase(): AppControl = when (this) {
+    ActiveDeviceState.Connecting -> AppControl.Connecting
+    ActiveDeviceState.Connected -> AppControl.Controlling
 }
 
 /**

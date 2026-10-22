@@ -169,6 +169,18 @@ msgstr "{}에 연결됨"
 msgid "Connecting to {}"
 msgstr "{}에 연결 중"
 
+msgid "Reconnecting:"
+msgstr "다시 연결 중:"
+
+msgid "Reconnecting to {}"
+msgstr "{}에 다시 연결 중"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "기기가 근처에 있습니다. 다시 연결되면 설정이 돌아옵니다."
+
+msgid "changes are paused until the device is back."
+msgstr "기기가 돌아올 때까지 변경이 일시 중지됩니다."
+
 msgid "Connection lost"
 msgstr "연결이 끊어졌습니다"
 

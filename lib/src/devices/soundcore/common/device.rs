@@ -980,10 +980,17 @@ pub mod test_utils {
                                     }
                                     inbound_sender.send(response.bytes(config.checksum_kind)).await.unwrap();
                                 },
-                                // default to no response for dual connections. a bit of a hack, but since dual
-                                // connections' correct response is 0 or more packets instead of the normal 1, we want
-                                // to send 0 packets, but lack an api for that.
-                                None if command == Command([0x0b, 0x01]) => {}
+                                // Dual connections answer with zero or more packets. An empty
+                                // list is one packet with no devices, not silence.
+                                None if command == Command([0x0b, 0x01]) => {
+                                    inbound_sender
+                                        .send(
+                                            packet::Inbound::new(command, vec![1, 1])
+                                                .bytes(config.checksum_kind),
+                                        )
+                                        .await
+                                        .unwrap();
+                                }
                                 None => panic!("missing response for {command:?}")
                             }
                         }

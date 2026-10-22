@@ -102,17 +102,34 @@ pub struct ManualRfcommConnectionBackend {
     inner: Arc<dyn AndroidRfcommConnectionBackend>,
 }
 
+fn backend_error(err: AndroidError) -> connection::Error {
+    match err {
+        AndroidError::PermissionDenied => connection::Error::PermissionDenied {
+            source: None,
+            location: Location::caller(),
+        },
+        AndroidError::Unpaired => connection::Error::Unpaired {
+            source: None,
+            location: Location::caller(),
+        },
+        AndroidError::BluetoothAdapterUnavailable => {
+            connection::Error::BluetoothAdapterUnavailable {
+                source: None,
+                location: Location::caller(),
+            }
+        }
+        AndroidError::TimedOut => connection::Error::TimedOut { action: "connect" },
+        AndroidError::Other(message) => connection::Error::Other {
+            source: Box::new(std::io::Error::other(message)),
+            location: Location::caller(),
+        },
+    }
+}
+
 #[async_trait]
 impl RfcommBackend for ManualRfcommConnectionBackend {
     async fn devices(&self) -> connection::Result<HashSet<connection::ConnectionDescriptor>> {
-        let descriptors = self
-            .inner
-            .devices()
-            .await
-            .map_err(|err| connection::Error::Other {
-                source: Box::new(err),
-                location: Location::caller(),
-            })?;
+        let descriptors = self.inner.devices().await.map_err(backend_error)?;
         Ok(descriptors
             .into_iter()
             .map(|descriptor| descriptor.0)
@@ -132,10 +149,7 @@ impl RfcommBackend for ManualRfcommConnectionBackend {
                 output_box.clone(),
             )
             .await
-            .map_err(|err| connection::Error::Other {
-                source: Box::new(err),
-                location: Location::caller(),
-            })?;
+            .map_err(backend_error)?;
         Ok(Arc::new(WrappedManualRfcommConnection(
             output_box
                 .get()

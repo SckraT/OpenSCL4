@@ -9,7 +9,7 @@ use crate::{
     api::{
         connection::ConnectionStatus,
         device::{self, SettingWriteOutcome, WriteOutcome},
-        settings::{SettingId, SettingMode, Value},
+        settings::{Setting, SettingId, SettingMode, Value},
     },
     client::availability::{AvailabilityReason, SettingAvailability, setting_availability},
     devices::soundcore::common::{
@@ -203,9 +203,10 @@ where
         let current_value = current_settings
             .get(&setting_id)
             .map(|s| Value::from(s.clone()));
+        let mut candidate_state = target_state.clone();
         match module_collection
             .setting_manager
-            .set(&mut target_state, &setting_id, requested.clone())
+            .set(&mut candidate_state, &setting_id, requested.clone())
             .await
         {
             None => return Err(local_error(setting_id, SettingHandlerError::DoesNotExist)),
@@ -214,7 +215,7 @@ where
         }
         let Some(target_setting) = module_collection
             .setting_manager
-            .get(&target_state, &setting_id)
+            .get(&candidate_state, &setting_id)
         else {
             entries.push(Entry::unsupported(
                 setting_id,
@@ -230,18 +231,13 @@ where
             SettingMode::WriteOnly => {}
         }
         let target_is_readable = target_setting.mode().is_readable();
-        let target_value = Value::from(target_setting);
-        let target_observed = if target_is_readable {
-            target_value.clone()
-        } else {
-            requested.clone()
-        };
+        let target_value = Value::from(target_setting.clone());
         let is_flag = module_collection.flags.contains_key(&setting_id);
         let flag = module_collection.flags.get(&setting_id).and_then(|access| {
             Some(FlagPlan {
                 set_command: access.set_command(),
                 current_raw: access.raw_value(&current_state)?,
-                target_raw: access.raw_value(&target_state)?,
+                target_raw: access.raw_value(&candidate_state)?,
                 verification: access.verification(),
             })
         });
@@ -252,6 +248,15 @@ where
             ));
             continue;
         }
+        // Actions and imports are commands, not state; they have no value to read back.
+        if !is_flag && !target_is_readable && !is_command_only(&target_setting) {
+            entries.push(Entry::unsupported(
+                setting_id,
+                AvailabilityReason::NoReadBack,
+            ));
+            continue;
+        }
+        target_state = candidate_state;
 
         let readable = current_settings
             .get(&setting_id)
@@ -280,9 +285,8 @@ where
         entries.push(Entry {
             setting_id,
             requested,
-            target_value: Some(target_observed),
             flag,
-            legacy: !is_flag,
+            command_only: !is_flag && !target_is_readable,
             deadline: Instant::now() + timeout,
             last_observed: None,
             outcome: None,
@@ -312,12 +316,19 @@ where
             return Ok(finish(entries));
         }
     }
+    // Modifiers write into a scratch sender: the published state must only ever contain values the
+    // device reported, never the target we asked for. A demo device has no reports, so its branch
+    // below applies the requested values to the scratch state explicitly.
+    let scratch_state = watch::channel(state_sender.borrow().clone());
+    let modifier_state_sender = &scratch_state.0;
     for modifier in &module_collection.state_modifiers {
         if !is_connected(packet_io) {
             mark_pending_disconnected(&mut entries);
             return Ok(finish(entries));
         }
-        let modifier_result = modifier.move_to_state(state_sender, &target_state).await;
+        let modifier_result = modifier
+            .move_to_state(modifier_state_sender, &target_state)
+            .await;
         if let Err(err) = modifier_result {
             if is_disconnection(&err) || !is_connected(packet_io) {
                 mark_pending_disconnected(&mut entries);
@@ -327,22 +338,22 @@ where
         }
     }
     if demo {
-        state_sender.send_if_modified(|state| {
-            let mut modified = false;
-            for entry in &entries {
-                let Some(flag) = &entry.flag else {
-                    continue;
-                };
-                let Some(access) = module_collection.flags.get(&entry.setting_id) else {
-                    continue;
-                };
-                if access.raw_value(state) != Some(flag.target_raw) {
-                    access.set_raw_value(state, flag.target_raw);
-                    modified = true;
-                }
+        // A demo device has no read-back, so the requested values are the demo state. Apply them
+        // on top of what the modifiers changed, preserving side effects such as disabling spatial
+        // audio when the equalizer changes.
+        let mut demo_state = scratch_state.0.borrow().clone();
+        for entry in &entries {
+            // Resolved entries have no requested value to apply, and commands already ran
+            // through their state modifier above.
+            if entry.outcome.is_some() || entry.command_only {
+                continue;
             }
-            modified
-        });
+            let _ = module_collection
+                .setting_manager
+                .set(&mut demo_state, &entry.setting_id, entry.requested.clone())
+                .await;
+        }
+        state_sender.send_modify(|state| *state = demo_state);
         for entry in &mut entries {
             if entry.outcome.is_none() {
                 entry.outcome = Some(WriteOutcome::Applied {
@@ -354,12 +365,11 @@ where
     }
 
     for entry in &mut entries {
-        if entry.outcome.is_none() && entry.legacy {
+        if entry.outcome.is_none() && entry.command_only {
+            // A command has no state to read back. Its acceptance is reported, but it publishes
+            // nothing to the device state.
             entry.outcome = Some(WriteOutcome::Applied {
-                observed: entry
-                    .target_value
-                    .clone()
-                    .unwrap_or_else(|| entry.requested.clone()),
+                observed: entry.requested.clone(),
             });
         }
     }
@@ -397,7 +407,6 @@ where
 
     let has_bulk = entries.iter().any(|entry| {
         entry.outcome.is_none()
-            && !entry.legacy
             && !entry
                 .flag
                 .as_ref()
@@ -419,9 +428,9 @@ where
 struct Entry {
     setting_id: SettingId,
     requested: Value,
-    target_value: Option<Value>,
     flag: Option<FlagPlan>,
-    legacy: bool,
+    /// An action or import: sent to the device, but it has no value to read back.
+    command_only: bool,
     deadline: Instant,
     last_observed: Option<Option<Value>>,
     outcome: Option<WriteOutcome>,
@@ -440,9 +449,8 @@ impl Entry {
         Self {
             setting_id,
             requested: Value::Bool(false),
-            target_value: None,
             flag: None,
-            legacy: false,
+            command_only: false,
             deadline: Instant::now(),
             last_observed: None,
             outcome: Some(outcome),
@@ -479,6 +487,10 @@ fn finish(entries: Vec<Entry>) -> Vec<SettingWriteOutcome> {
             outcome: entry.outcome.unwrap_or(WriteOutcome::TimedOut),
         })
         .collect()
+}
+
+fn is_command_only(setting: &Setting) -> bool {
+    matches!(setting, Setting::Action | Setting::ImportString { .. })
 }
 
 fn local_error(setting_id: SettingId, error: SettingHandlerError) -> device::Error {
@@ -585,7 +597,7 @@ async fn verify_bulk<StateType>(
             let state = state_sender.borrow().clone();
             let mut any_pending = false;
             for entry in entries.iter_mut() {
-                if entry.outcome.is_some() || entry.legacy {
+                if entry.outcome.is_some() {
                     continue;
                 }
                 if entry.flag.as_ref().is_some_and(|flag| {
@@ -640,7 +652,7 @@ async fn verify_bulk<StateType>(
     }
 
     for entry in entries.iter_mut() {
-        if entry.outcome.is_some() || entry.legacy {
+        if entry.outcome.is_some() {
             continue;
         }
         if entry
@@ -667,7 +679,7 @@ async fn verify_bulk<StateType>(
 fn pending_deadline(entries: &[Entry]) -> Option<Instant> {
     entries
         .iter()
-        .filter(|entry| entry.outcome.is_none() && !entry.legacy)
+        .filter(|entry| entry.outcome.is_none())
         .map(|entry| entry.deadline)
         .max()
 }
@@ -688,14 +700,18 @@ mod tests {
         },
         devices::soundcore::common::{
             modules::{
-                ModuleCollection, ModuleCollectionSpawnPacketHandlerExt, flag::FlagConfiguration,
+                ModuleCollection, ModuleCollectionSpawnPacketHandlerExt,
+                auto_power_off::AutoPowerOffDuration, flag::FlagConfiguration,
             },
             packet::{
                 self, ChecksumKind, PacketIOController, inbound::LdacState,
                 outbound::SET_WEARING_DETECTION_COMMAND,
             },
             settings_manager::{SettingHandler, SettingHandlerResult},
-            structures::{Ldac, TouchTone, TwsStatus, WearingDetection, WearingTone},
+            structures::{
+                AutoPowerOff, AutoPowerOffDurationIndex, Ldac, TouchTone, TwsStatus,
+                WearingDetection, WearingTone,
+            },
         },
     };
 
@@ -708,6 +724,8 @@ mod tests {
         wearing_tone: WearingTone,
         touch_tone: TouchTone,
         tws_status: TwsStatus,
+        auto_power_off: AutoPowerOff,
+        unverifiable_after_change: bool,
     }
 
     macro_rules! has {
@@ -729,6 +747,30 @@ mod tests {
     has!(wearing_tone, WearingTone);
     has!(touch_tone, TouchTone);
     has!(tws_status, TwsStatus);
+    has!(auto_power_off, AutoPowerOff);
+
+    struct UnverifiableSettingHandler;
+
+    #[async_trait]
+    impl SettingHandler<TestState> for UnverifiableSettingHandler {
+        fn settings(&self) -> Vec<SettingId> {
+            vec![SettingId::PowerOff]
+        }
+
+        fn get(&self, state: &TestState, _setting_id: &SettingId) -> Option<Setting> {
+            (!state.unverifiable_after_change).then_some(Setting::Toggle { value: false })
+        }
+
+        async fn set(
+            &self,
+            state: &mut TestState,
+            _setting_id: &SettingId,
+            _value: Value,
+        ) -> SettingHandlerResult<()> {
+            state.unverifiable_after_change = true;
+            Ok(())
+        }
+    }
 
     struct TestConnection {
         status: watch::Sender<ConnectionStatus>,
@@ -767,14 +809,26 @@ mod tests {
             state: &watch::Sender<TestState>,
             packet: &packet::Inbound,
         ) -> crate::api::device::Result<()> {
-            let [ldac, wearing_detection, wearing_tone, touch_tone] = packet.body.as_slice() else {
+            let [ldac, wearing_detection, wearing_tone, touch_tone, rest @ ..] =
+                packet.body.as_slice()
+            else {
                 return Ok(());
+            };
+            let auto_power_off = match rest {
+                [enabled, duration] => Some(AutoPowerOff {
+                    is_enabled: *enabled == 1,
+                    duration: AutoPowerOffDurationIndex(*duration),
+                }),
+                _ => None,
             };
             state.send_modify(|state| {
                 state.ldac.0 = *ldac == 1;
                 state.wearing_detection.0 = *wearing_detection == 1;
                 state.wearing_tone.0 = *wearing_tone == 1;
                 state.touch_tone.0 = *touch_tone == 1;
+                if let Some(auto_power_off) = auto_power_off {
+                    state.auto_power_off = auto_power_off;
+                }
             });
             Ok(())
         }
@@ -851,6 +905,13 @@ mod tests {
                     verification: FlagVerification::Bulk,
                 },
             );
+            modules.add_auto_power_off(
+                packet_io.clone(),
+                AutoPowerOffDuration::half_hour_increments(),
+            );
+            modules
+                .setting_manager
+                .add_handler(CategoryId::Miscellaneous, UnverifiableSettingHandler);
             modules
                 .packet_handlers
                 .set_handler(packet::inbound::STATE_COMMAND, Box::new(BulkStateHandler));
@@ -956,7 +1017,7 @@ mod tests {
         })
         .await;
         let changes = harness.state_sender.subscribe();
-        let mut write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
+        let write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
 
         let set = harness.next_packet().await;
         assert_eq!(packet::Command([0x01, 0xFF]), set.command);
@@ -1042,7 +1103,7 @@ mod tests {
         assert!(harness.state_sender.borrow().ldac.0);
         assert!(!changes.has_changed().unwrap());
 
-        let mut write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
+        let write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
         let set = harness.next_packet().await;
         harness.respond(set.command, Vec::new()).await;
         let get = harness.next_packet().await;
@@ -1064,7 +1125,7 @@ mod tests {
         })
         .await;
         let changes = harness.state_sender.subscribe();
-        let mut write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
+        let write = harness.spawn_write(vec![(SettingId::Ldac, false.into())]);
 
         let set = harness.next_packet().await;
         harness.respond(set.command, Vec::new()).await;
@@ -1080,7 +1141,7 @@ mod tests {
     async fn a_bulk_read_back_applies_and_publishes_the_observed_value() {
         let mut harness = Harness::new(TestState::default()).await;
         let changes = harness.state_sender.subscribe();
-        let mut write = harness.spawn_write(vec![(SettingId::WearingDetection, true.into())]);
+        let write = harness.spawn_write(vec![(SettingId::WearingDetection, true.into())]);
 
         let set = harness.next_packet().await;
         assert_eq!(SET_WEARING_DETECTION_COMMAND, set.command);
@@ -1226,7 +1287,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn setting_commands_are_paced_and_read_backs_come_after_all_writes() {
         let mut harness = Harness::new(TestState::default()).await;
-        let mut write = harness.spawn_write(vec![
+        let write = harness.spawn_write(vec![
             (SettingId::WearingDetection, true.into()),
             (SettingId::WearingTone, true.into()),
         ]);
@@ -1250,6 +1311,64 @@ mod tests {
             outcomes
                 .iter()
                 .all(|outcome| matches!(outcome.outcome, WriteOutcome::Applied { .. }))
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_non_flag_setting_is_rejected_when_bulk_state_keeps_the_old_value() {
+        let mut harness = Harness::new(TestState::default()).await;
+        let mut write =
+            harness.spawn_write(vec![(SettingId::AutoPowerOff, Value::String("30m".into()))]);
+
+        let set = harness.next_packet().await;
+        assert_eq!(packet::outbound::SetAutoPowerOff::COMMAND, set.command);
+        harness.respond(set.command, Vec::new()).await;
+
+        let outcomes = loop {
+            tokio::select! {
+                result = &mut write => break result.unwrap().unwrap(),
+                packet = harness.outbound.recv() => {
+                    let bytes = packet.expect("outbound channel");
+                    let get = packet::Outbound::take::<VerboseError<_>>(ChecksumKind::None)(&bytes)
+                        .unwrap()
+                        .1;
+                    assert_eq!(packet::inbound::STATE_COMMAND, get.command);
+                    // The device accepted the command but kept auto power off disabled.
+                    harness.respond(get.command, vec![0, 0, 0, 0, 0, 0]).await;
+                }
+            }
+        };
+
+        assert_eq!(
+            WriteOutcome::Rejected {
+                observed: Some(Value::String("disabled".into()))
+            },
+            outcomes[0].outcome
+        );
+        assert!(!harness.state_sender.borrow().auto_power_off.is_enabled);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_non_flag_setting_without_read_back_is_unsupported_and_not_sent() {
+        let mut harness = Harness::new(TestState::default()).await;
+
+        let outcomes = harness
+            .spawn_write(vec![(SettingId::PowerOff, Value::Bool(false))])
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            WriteOutcome::UnsupportedInState {
+                reason: AvailabilityReason::NoReadBack
+            },
+            outcomes[0].outcome
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+                .await
+                .is_err(),
+            "the write must not reach the device"
         );
     }
 

@@ -36,11 +36,10 @@ import com.oppzippy.openscq30.features.preferences.prefersDynamicColor
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDevice
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
-import com.oppzippy.openscq30.ui.deviceselection.AppControl
-import com.oppzippy.openscq30.ui.deviceselection.AppControlSnapshot
 import com.oppzippy.openscq30.ui.deviceselection.DeviceNavigationState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceSelectionScreen
 import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
+import com.oppzippy.openscq30.ui.deviceselection.toAppControlSnapshot
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
 import com.oppzippy.openscq30.ui.devicesettings.DeviceSettingsScreen
 import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
@@ -170,19 +169,6 @@ private val deviceNavigationSaver = listSaver<DeviceNavigationState, Any?>(
     restore = { DeviceNavigationState(it[0] as Boolean, it[1] as String?, it[2] as String?) },
 )
 
-private fun ConnectionStatus.toAppControlSnapshot(): AppControlSnapshot = when (this) {
-    is ConnectionStatus.Connected -> AppControlSnapshot(macAddress, AppControl.Controlling)
-
-    is ConnectionStatus.Connecting -> AppControlSnapshot(macAddress, AppControl.Connecting)
-
-    is ConnectionStatus.Recovering -> AppControlSnapshot(macAddress, AppControl.Connecting)
-
-    // Keep the device screen open so it can show the lost state with Retry.
-    is ConnectionStatus.Lost -> AppControlSnapshot(macAddress, AppControl.Controlling)
-
-    ConnectionStatus.AwaitingConnection, ConnectionStatus.Disconnected -> AppControlSnapshot()
-}
-
 @Composable
 private fun DeviceScreen(
     viewModel: OpenSCQ30RootViewModel,
@@ -193,7 +179,7 @@ private fun DeviceScreen(
 ) {
     val deviceSettings by viewModel.deviceSettingsManager.collectAsState()
     val deviceManager = status.deviceManager
-    val isRequestedDevice = deviceManager != null && status !is ConnectionStatus.Lost && (
+    val isRequestedDevice = deviceManager != null && (
         requestedMacAddress == null || status.macAddress == null ||
             requestedMacAddress.equals(status.macAddress, ignoreCase = true)
         )
@@ -203,6 +189,7 @@ private fun DeviceScreen(
             DeviceSettingsScreen(
                 connectionStatus = status,
                 onBack = onShowDeviceList,
+                onRetry = { viewModel.retryConnection() },
                 onDisconnect = {
                     viewModel.stopDeviceService()
                     onDisconnected()

@@ -47,9 +47,6 @@ where
                 target_sound_modes.bytes(),
             ))
             .await?;
-        state_sender.send_modify(|v| {
-            *v.get_mut() = target_sound_modes.clone();
-        });
         Ok(())
     }
 }

@@ -169,6 +169,18 @@ msgstr "Terhubung ke {}"
 msgid "Connecting to {}"
 msgstr "Menghubungkan ke {}"
 
+msgid "Reconnecting:"
+msgstr "Menghubungkan ulang:"
+
+msgid "Reconnecting to {}"
+msgstr "Menghubungkan ulang ke {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Perangkat masih di dekat sini. Pengaturan akan kembali setelah tersambung lagi."
+
+msgid "changes are paused until the device is back."
+msgstr "Perubahan dijeda sampai perangkat kembali."
+
 msgid "Connection lost"
 msgstr "Koneksi terputus"
 

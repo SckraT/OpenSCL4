@@ -46,7 +46,6 @@ where
                 .send_with_response(&packet::outbound::SetAutoPowerOff(*target).to_packet())
                 .await?;
         }
-        state_sender.send_modify(|state| state.set_maybe(target.copied()));
         Ok(())
     }
 }

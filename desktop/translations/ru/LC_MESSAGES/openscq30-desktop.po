@@ -169,6 +169,18 @@ msgstr "Подключено к {}"
 msgid "Connecting to {}"
 msgstr "Подключение к {}"
 
+msgid "Reconnecting:"
+msgstr "Переподключение:"
+
+msgid "Reconnecting to {}"
+msgstr "Переподключение к {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Устройство всё ещё рядом. Настройки вернутся, когда оно переподключится."
+
+msgid "changes are paused until the device is back."
+msgstr "Изменения приостановлены, пока устройство не вернётся."
+
 msgid "Connection lost"
 msgstr "Связь потеряна"
 

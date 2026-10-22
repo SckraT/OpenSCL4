@@ -169,6 +169,18 @@ msgstr "מחובר אל {}"
 msgid "Connecting to {}"
 msgstr "מתחבר אל {}"
 
+msgid "Reconnecting:"
+msgstr "מתחבר מחדש:"
+
+msgid "Reconnecting to {}"
+msgstr "מתחבר מחדש ל-{}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "המכשיר עדיין בקרבת מקום. ההגדרות יחזרו כשהוא יתחבר מחדש."
+
+msgid "changes are paused until the device is back."
+msgstr "השינויים מושהים עד שהמכשיר יחזור."
+
 msgid "Connection lost"
 msgstr "החיבור אבד"
 
