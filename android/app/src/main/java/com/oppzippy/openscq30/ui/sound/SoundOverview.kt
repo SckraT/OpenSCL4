@@ -171,6 +171,7 @@ fun SoundOverview(
 
                         block == OverviewBlock.QuickPresets -> {
                             SoundSectionHeading(stringResource(R.string.quick_presets))
+                            val readOnly = LocalSettingsReadOnly.current
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -180,6 +181,7 @@ fun SoundOverview(
                                         selected = name == activeQuickPreset,
                                         onClick = { onActivateQuickPreset(name) },
                                         label = { Text(name) },
+                                        enabled = !readOnly,
                                     )
                                 }
                             }

@@ -20,6 +20,7 @@
     <string name="replace">Заменить</string>
     <string name="connected_to">Подключено к %s</string>
     <string name="connecting_to">Подключение к %s</string>
+    <string name="reconnecting_to">Переподключение к %s</string>
     <string name="disconnected">Отключено</string>
     <string name="disconnect">Отключить</string>
     <string name="awaiting_connection">Ожидание подключения</string>

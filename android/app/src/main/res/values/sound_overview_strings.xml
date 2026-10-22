@@ -29,6 +29,8 @@
     <string name="sound_overview_connecting_hint">Open the case or turn on your headphones. Controls will appear once connected.</string>
     <string name="sound_overview_disconnected">Connection lost</string>
     <string name="sound_overview_disconnected_hint">Check that your headphones are nearby and connected to your phone by Bluetooth.</string>
+    <string name="sound_overview_lost_reason">Reason: %s</string>
+    <string name="sound_overview_reconnecting">Reconnecting…</string>
     <string name="sound_overview_retry">Connect again</string>
     <string name="sound_overview_no_settings">No settings are currently available.</string>
     <string name="sound_overview_preset_missing">This preset is no longer available.</string>

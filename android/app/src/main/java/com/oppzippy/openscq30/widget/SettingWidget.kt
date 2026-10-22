@@ -90,6 +90,12 @@ sealed class SettingWidgetState {
     data class Connecting(val deviceName: String) : SettingWidgetState()
 
     @Serializable
+    data class Recovering(val deviceName: String) : SettingWidgetState()
+
+    @Serializable
+    data class Lost(val deviceName: String, val macAddress: String) : SettingWidgetState()
+
+    @Serializable
     data class ConnectedUnconfigured(val deviceName: String) : SettingWidgetState()
 
     @Serializable
@@ -183,12 +189,19 @@ class SettingWidget : GlanceAppWidget() {
     ) {
         var isChanged = false
         updateAppWidgetState(context, glanceId) { preferences ->
-            val newState = when (connectionStatus) {
+            val recoveryState = recoveryWidgetState(
+                connectionStatus,
+                connectionDeviceName(connectionStatus),
+            )
+            val newState = recoveryState ?: when (connectionStatus) {
                 ConnectionStatus.Disconnected,
                 ConnectionStatus.AwaitingConnection,
                 -> SettingWidgetState.Disconnected(session.pairedDevices())
 
                 is ConnectionStatus.Connecting -> SettingWidgetState.Connecting(connectionStatus.macAddress)
+
+                is ConnectionStatus.Recovering, is ConnectionStatus.Lost ->
+                    error("recovery states are handled above")
 
                 is ConnectionStatus.Connected -> {
                     try {
@@ -249,6 +262,8 @@ private fun Content(
                     is SettingWidgetState.Connected -> state.deviceName
                     is SettingWidgetState.ConnectedUnconfigured -> state.deviceName
                     is SettingWidgetState.Connecting -> state.deviceName
+                    is SettingWidgetState.Recovering -> state.deviceName
+                    is SettingWidgetState.Lost -> state.deviceName
                     is SettingWidgetState.Disconnected, null -> context.getString(R.string.disconnected)
                 }
 
@@ -295,7 +310,9 @@ private fun Content(
                         title = titleText,
                     ) {
                         if (state is SettingWidgetState.Connected ||
-                            state is SettingWidgetState.ConnectedUnconfigured
+                            state is SettingWidgetState.ConnectedUnconfigured ||
+                            state is SettingWidgetState.Recovering ||
+                            state is SettingWidgetState.Lost
                         ) {
                             CircleIconButton(
                                 imageProvider = ImageProvider(R.drawable.arrow_back_24px),
@@ -320,6 +337,10 @@ private fun Content(
                     is SettingWidgetState.Disconnected -> Disconnected(context, state.pairedDevices)
 
                     is SettingWidgetState.Connecting -> Connecting(context, state.deviceName)
+
+                    is SettingWidgetState.Recovering -> Recovering(context)
+
+                    is SettingWidgetState.Lost -> Lost(context)
 
                     is SettingWidgetState.ConnectedUnconfigured -> ConnectedUnconfigured(context)
 
@@ -364,6 +385,34 @@ private fun Disconnected(context: Context, pairedDevices: List<PairedDevice>) {
 private fun Connecting(context: Context, deviceName: String) {
     Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(context.getString(R.string.connecting_to, deviceName))
+    }
+}
+
+@Composable
+private fun Recovering(context: Context) {
+    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(context.getString(R.string.sound_overview_reconnecting))
+    }
+}
+
+@Composable
+private fun Lost(context: Context) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize().padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(context.getString(R.string.sound_overview_disconnected))
+        Spacer(GlanceModifier.height(8.dp))
+        Button(
+            text = context.getString(R.string.sound_overview_retry),
+            onClick = actionSendBroadcast(
+                Intent().apply {
+                    `package` = context.packageName
+                    action = DeviceService.ACTION_RETRY
+                },
+            ),
+        )
     }
 }
 
@@ -643,6 +692,25 @@ private fun ReadOnlySettingValue(settingId: String, value: String) {
 
 @Composable
 private fun defaultTextStyle(): TextStyle = TextStyle(color = GlanceTheme.colors.onSurface)
+
+internal fun recoveryWidgetState(connectionStatus: ConnectionStatus, deviceName: String): SettingWidgetState? =
+    when (connectionStatus) {
+        is ConnectionStatus.Recovering -> SettingWidgetState.Recovering(deviceName)
+        is ConnectionStatus.Lost -> SettingWidgetState.Lost(deviceName, connectionStatus.macAddress)
+        else -> null
+    }
+
+private fun connectionDeviceName(connectionStatus: ConnectionStatus): String {
+    val model = connectionStatus.deviceManager?.let { manager ->
+        try {
+            translateDeviceModel(manager.device.model())
+        } catch (ex: IllegalStateException) {
+            Log.w("SettingWidget", "device was closed, using the address as its name", ex)
+            null
+        }
+    }
+    return model ?: connectionStatus.macAddress.orEmpty()
+}
 
 private fun actionConnectToPairedDevice(context: Context, macAddress: String): Action = actionStartService(
     Intent(context, DeviceService::class.java).apply {

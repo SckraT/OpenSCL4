@@ -33,6 +33,29 @@ uniffi::custom_type!(ConnectionStatus, String, {
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
 
+#[derive(Clone, Debug, uniffi::Enum)]
+pub enum SessionStatus {
+    Connecting,
+    Connected,
+    Recovering { attempt: u32, reason: String },
+    Lost { reason: String },
+    Closed,
+}
+
+impl From<connection::SessionStatus> for SessionStatus {
+    fn from(status: connection::SessionStatus) -> Self {
+        match status {
+            connection::SessionStatus::Connecting => Self::Connecting,
+            connection::SessionStatus::Connected => Self::Connected,
+            connection::SessionStatus::Recovering { attempt, reason } => {
+                Self::Recovering { attempt, reason }
+            }
+            connection::SessionStatus::Lost { reason } => Self::Lost { reason },
+            connection::SessionStatus::Closed => Self::Closed,
+        }
+    }
+}
+
 pub struct DeviceModel(pub openscq30_lib::DeviceModel);
 uniffi::custom_type!(DeviceModel, String, {
     try_lift: |model| Ok(DeviceModel(openscq30_lib::DeviceModel::from_str(&model)?)),

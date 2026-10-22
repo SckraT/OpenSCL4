@@ -101,6 +101,14 @@ class OpenSCQ30RootViewModel @Inject constructor(
                         rememberConnectionAddress(it.macAddress)
                     }
 
+                    is ConnectionStatus.Recovering -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
+                    is ConnectionStatus.Lost -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
                     ConnectionStatus.Disconnected -> {
                         pendingMacAddress = null
                         unbindDeviceService()
@@ -109,21 +117,31 @@ class OpenSCQ30RootViewModel @Inject constructor(
                     ConnectionStatus.AwaitingConnection -> Unit
                 }
                 updateVisibleConnectionStatus()
-                deviceSettingsManager.value?.close()
-                if (it is ConnectionStatus.Connected) {
-                    deviceSettingsManager.value = DeviceSettingsManager(
-                        session = session,
-                        deviceManager = it.deviceManager,
-                        parent = coroutineContext.job,
-                        quickPresetSlotDao = quickPresetSlotDao,
-                        featuredSettingSlotDao = featuredSettingSlotDao,
-                        legacyEqualizerProfileDao = legacyEqualizerProfileDao,
-                        toastHandler = toastHandler,
-                    )
-                } else {
-                    deviceSettingsManager.value = null
-                }
+                keepOrReplaceSettingsManager(it)
             }
+        }
+    }
+
+    /**
+     * Recovering and lost keep the device object, so the settings and the current screen must survive. Only
+     * an explicit close or a different device replaces or clears the settings manager.
+     */
+    private fun keepOrReplaceSettingsManager(status: ConnectionStatus) {
+        val manager = status.deviceManager
+        if (manager == null) {
+            deviceSettingsManager.value?.close()
+            deviceSettingsManager.value = null
+        } else if (deviceSettingsManager.value?.deviceManager !== manager) {
+            deviceSettingsManager.value?.close()
+            deviceSettingsManager.value = DeviceSettingsManager(
+                session = session,
+                deviceManager = manager,
+                parent = viewModelScope.coroutineContext.job,
+                quickPresetSlotDao = quickPresetSlotDao,
+                featuredSettingSlotDao = featuredSettingSlotDao,
+                legacyEqualizerProfileDao = legacyEqualizerProfileDao,
+                toastHandler = toastHandler,
+            )
         }
     }
 
@@ -143,12 +161,15 @@ class OpenSCQ30RootViewModel @Inject constructor(
     }
 
     fun selectDevice(macAddress: String) {
-        val currentAddress = when (val status = connectionStatusFlow.value) {
-            is ConnectionStatus.Connecting -> status.macAddress
-            is ConnectionStatus.Connected -> status.macAddress
-            else -> null
+        val current = connectionStatusFlow.value
+        // A lost session may be retried; a recovering one already has a retry in flight.
+        val sameSession = when (current) {
+            is ConnectionStatus.Connecting -> current.macAddress.equals(macAddress, ignoreCase = true)
+            is ConnectionStatus.Connected -> current.macAddress.equals(macAddress, ignoreCase = true)
+            is ConnectionStatus.Recovering -> current.macAddress.equals(macAddress, ignoreCase = true)
+            else -> false
         }
-        if ((pendingMacAddress == null && currentAddress.equals(macAddress, ignoreCase = true)) ||
+        if ((pendingMacAddress == null && sameSession) ||
             pendingMacAddress.equals(macAddress, ignoreCase = true)
         ) {
             return
@@ -171,11 +192,7 @@ class OpenSCQ30RootViewModel @Inject constructor(
     }
 
     fun onDeviceUnpaired(macAddress: String) {
-        val activeAddress = when (val status = connectionStatusFlow.value) {
-            is ConnectionStatus.Connecting -> status.macAddress
-            is ConnectionStatus.Connected -> status.macAddress
-            else -> null
-        }
+        val activeAddress = connectionStatusFlow.value.macAddress
         if (activeAddress.equals(macAddress, ignoreCase = true)) stopDeviceService()
         if (lastSelectedMacAddress.equals(macAddress, ignoreCase = true)) lastSelectedMacAddress = null
     }
@@ -236,25 +253,23 @@ class OpenSCQ30RootViewModel @Inject constructor(
 }
 
 /** A write that has been sent but whose outcome the device has not reported yet. */
-data class PendingSettingWrite(
-    val requestedValue: Value,
-    val generation: Long,
-)
+data class PendingSettingWrite(val requestedValue: Value, val generation: Long)
 
-class SettingWriteException(val outcome: WriteOutcome) : Exception(
-    when (outcome) {
-        is WriteOutcome.Rejected -> "the device rejected the value"
-        WriteOutcome.TimedOut -> "the device did not confirm the value"
-        WriteOutcome.Disconnected -> "the device disconnected"
-        is WriteOutcome.UnsupportedInState -> "the setting cannot be changed in the current state"
-        is WriteOutcome.Applied -> "the device applied the value"
-    },
-)
+class SettingWriteException(val outcome: WriteOutcome) :
+    Exception(
+        when (outcome) {
+            is WriteOutcome.Rejected -> "the device rejected the value"
+            WriteOutcome.TimedOut -> "the device did not confirm the value"
+            WriteOutcome.Disconnected -> "the device disconnected"
+            is WriteOutcome.UnsupportedInState -> "the setting cannot be changed in the current state"
+            is WriteOutcome.Applied -> "the device applied the value"
+        },
+    )
 
 class DeviceSettingsManager(
     session: OpenScq30Session,
     parent: Job,
-    private val deviceManager: DeviceConnectionManager,
+    val deviceManager: DeviceConnectionManager,
     private val quickPresetSlotDao: QuickPresetSlotDao,
     private val featuredSettingSlotDao: FeaturedSettingSlotDao,
     legacyEqualizerProfileDao: LegacyEqualizerProfileDao,
@@ -506,7 +521,15 @@ class DeviceSettingsManager(
     }
 
     private suspend fun refreshQuickPresets() {
-        _quickPresetsFlow.value = quickPresetHandler.quickPresets(device).sortedBy { it.name }
+        _quickPresetsFlow.value = try {
+            quickPresetHandler.quickPresets(device).sortedBy { it.name }
+        } catch (ex: OpenScq30Exception) {
+            Log.w(TAG, "error fetching quick presets", ex)
+            emptyList()
+        } catch (ex: IllegalStateException) {
+            Log.w(TAG, "device was closed, can't fetch quick presets", ex)
+            emptyList()
+        }
     }
 
     val legacyEqualizerProfilesFlow = legacyEqualizerProfileDao.all()
