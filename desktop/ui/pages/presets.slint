@@ -208,7 +208,7 @@ export component PresetsPage inherits VerticalLayout {
     VerticalLayout {
         spacing: 16px;
         if AppState.presets-need-both-earbuds: Note {
-            text: @tr("The equalizer from presets is applied once both earbuds are connected.");
+            text: @tr("Settings in these presets are unavailable now, so they will not be applied.");
             warm: true;
         }
         if AppState.preset-cards.length == 0: EmptyPresets { }

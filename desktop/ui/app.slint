@@ -127,7 +127,6 @@ export component AppWindow inherits Window {
                 : AppState.toast == ToastKind.imported ? @tr("Imported {n} profile" | "Imported {n} profiles" % AppState.toast-count)
                 : AppState.toast == ToastKind.migrated ? @tr("Moved {n} profile" | "Moved {n} profiles" % AppState.toast-count)
                 : AppState.toast == ToastKind.preset-applied ? @tr("Preset “{}” applied", AppState.toast-name)
-                : AppState.toast == ToastKind.preset-applied-later ? @tr("Preset “{}” applied. Its equalizer is applied once both earbuds are connected.", AppState.toast-name)
                 : AppState.toast == ToastKind.preset-deleted ? @tr("Preset deleted")
                 : AppState.toast == ToastKind.preset-replaced ? @tr("Preset values replaced")
                 : AppState.toast == ToastKind.preset-loaded ? @tr("Current settings loaded into the preset") : "";

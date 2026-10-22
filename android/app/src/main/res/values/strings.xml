@@ -83,6 +83,8 @@
     <string name="setting_write_disconnected">The device disconnected</string>
     <string name="setting_write_unsupported_requires_both_earbuds">Can\'t change this setting with one earbud connected</string>
     <string name="setting_write_unsupported_no_read_back">The device can\'t confirm this setting</string>
+    <string name="setting_availability_requires_both_earbuds">Changing is available when both earbuds are connected</string>
+    <string name="setting_availability_no_read_back">The device cannot confirm changes</string>
     <string name="error_connecting">Error connecting</string>
     <string name="copy_x_to_clipboard">Copy %s to Clipboard</string>
     <string name="confirm">Confirm</string>

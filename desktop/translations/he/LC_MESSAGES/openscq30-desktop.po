@@ -656,8 +656,8 @@ msgstr "עדיין לא נבחרו הגדרות"
 msgid "Edit device screen"
 msgstr "ערוך את מסך המכשיר"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "רק אוזנייה אחת מחוברת. האיקוולייזר וחלק מההגדרות האחרות יהיו זמינים כששתי האוזניות יתחברו."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "רק אוזנייה אחת מחוברת. האקולייזר אינו זמין, לא ניתן להחליף LDAC, ושאר ההגדרות עדיין ניתנות לשינוי."
 
 msgid "Move up"
 msgstr "הזז למעלה"
@@ -907,8 +907,8 @@ msgstr "שמור את ההגדרות הנוכחיות ובחר את אלה שת�
 msgid "Create preset"
 msgstr "צור הגדרה מהירה"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "האיקוולייזר מההגדרות המהירות יוחל כששתי האוזניות יתחברו."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "חלק מההגדרות בפריסטים האלה אינן זמינות כעת ולכן לא יוחלו."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "נשמור את ההגדרות הנוכחיות. אחר כך בחר אילו מהן להחיל."
@@ -955,8 +955,6 @@ msgstr "למחוק את „{}”? ההגדרות הנוכחיות של המכש�
 msgid "Preset “{}” applied"
 msgstr "ההגדרה המהירה „{}” הוחלה"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "ההגדרה המהירה „{}” הוחלה. האיקוולייזר שלה יוחל כששתי האוזניות יתחברו."
 
 msgid "Preset deleted"
 msgstr "ההגדרה המהירה נמחקה"

@@ -87,4 +87,6 @@
     <string name="visible_settings">Видимые настройки</string>
     <string name="appearance">Внешний вид</string>
     <string name="compact_layout">Компактный вид</string>
+    <string name="setting_availability_requires_both_earbuds">Изменение доступно при обоих наушниках</string>
+    <string name="setting_availability_no_read_back">Устройство не подтверждает изменения</string>
 </resources>

@@ -48,7 +48,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.clientIsPresetApplied
 import com.oppzippy.openscq30.lib.bindings.clientPresetFields
 import com.oppzippy.openscq30.lib.bindings.clientPresetStatus
-import com.oppzippy.openscq30.lib.bindings.clientPresetsUseBothEarbudSettings
+import com.oppzippy.openscq30.lib.bindings.clientPresetsUseBlockedSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.bindings.translateValue
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
@@ -60,8 +60,8 @@ internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField>
 internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean =
     clientIsPresetApplied(quickPreset, settings)
 
-internal fun presetsUseBothEarbudSettings(quickPresets: List<QuickPreset>): Boolean =
-    clientPresetsUseBothEarbudSettings(quickPresets)
+internal fun presetsUseBlockedSettings(quickPresets: List<QuickPreset>, settings: Map<String, Setting>): Boolean =
+    clientPresetsUseBlockedSettings(quickPresets, settings)
 
 internal enum class SoundPresetStatus { Applied, MatchesCurrent, NotApplied }
 

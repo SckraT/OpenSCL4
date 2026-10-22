@@ -656,8 +656,8 @@ msgstr "এখনও কোনো সেটিং বেছে নেওয়�
 msgid "Edit device screen"
 msgstr "ডিভাইসের স্ক্রিন সম্পাদনা করুন"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "শুধু একটি ইয়ারবাড সংযুক্ত। দুটি ইয়ারবাড সংযুক্ত হলে ইকুয়ালাইজার এবং আরও কিছু সেটিং পাওয়া যাবে।"
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "শুধু একটি ইয়ারবাড সংযুক্ত। ইকুয়ালাইজার উপলব্ধ নয়, LDAC পরিবর্তন করা যায় না, অন্যান্য সেটিংস এখনও পরিবর্তন করা যায়।"
 
 msgid "Move up"
 msgstr "উপরে সরান"
@@ -907,8 +907,8 @@ msgstr "বর্তমান সেটিংস সংরক্ষণ করু
 msgid "Create preset"
 msgstr "প্রিসেট তৈরি করুন"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "দুটি ইয়ারবাড সংযুক্ত হলে প্রিসেটের ইকুয়ালাইজার প্রয়োগ হয়।"
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "এই প্রিসেটগুলির কিছু সেটিংস এখন উপলব্ধ নয়, তাই প্রয়োগ করা হবে না।"
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "আমরা বর্তমান সেটিংস সংরক্ষণ করব। তারপর কোনগুলো প্রয়োগ হবে বেছে নিন।"
@@ -955,8 +955,6 @@ msgstr "“{}” মুছবেন? ডিভাইসের বর্তমা
 msgid "Preset “{}” applied"
 msgstr "“{}” প্রিসেট প্রয়োগ হয়েছে"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "“{}” প্রিসেট প্রয়োগ হয়েছে। দুটি ইয়ারবাড সংযুক্ত হলে এর ইকুয়ালাইজার প্রয়োগ হবে।"
 
 msgid "Preset deleted"
 msgstr "প্রিসেট মুছে ফেলা হয়েছে"

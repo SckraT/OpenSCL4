@@ -60,6 +60,7 @@ import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
+import com.oppzippy.openscq30.lib.wrapper.isAvailable
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.PendingSettingWrite
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
@@ -67,6 +68,7 @@ import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalPendingSettingWrites
+import com.oppzippy.openscq30.ui.sound.LocalSettingAvailability
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.LocalSettingWriteErrors
 import com.oppzippy.openscq30.ui.sound.LocalSettingsReadOnly
@@ -92,8 +94,9 @@ import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.equalizerOpensItsPage
 import com.oppzippy.openscq30.ui.sound.groupSettings
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
-import com.oppzippy.openscq30.ui.sound.presetsUseBothEarbudSettings
+import com.oppzippy.openscq30.ui.sound.presetsUseBlockedSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
+import com.oppzippy.openscq30.ui.sound.settingAvailability
 import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.delay
@@ -146,7 +149,12 @@ fun DeviceSettingsScreen(
     }
     val categories = byCategory.keys.toList()
     val settings = remember(byCategory) { byCategory.values.flatten().distinctBy { it.first } }
-    val oneEarbudOnly = isOnlyOneEarbudConnected(settings.toMap())
+    val settingsById = remember(settings) { settings.toMap() }
+    val availability = remember(settingsById) { settingAvailability(settingsById) }
+    // the equalizer settings are not reported while one earbud is connected, so ask about the setting that describes it
+    val equalizerAvailability = remember(settingsById) { settingAvailability(settingsById, "volumeAdjustments") }
+    val equalizerAvailable = equalizerAvailability.isAvailable()
+    val oneEarbudOnly = isOnlyOneEarbudConnected(settingsById)
     val presets by remember(deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
     val legacyProfiles by remember(deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     // every setting has one group, and the group's page is where it is shown
@@ -355,6 +363,7 @@ fun DeviceSettingsScreen(
                 LocalPendingSettingWrites provides pendingWrites,
                 LocalSettingWriteErrors provides settingWriteErrors,
                 LocalSettingsReadOnly provides readOnly,
+                LocalSettingAvailability provides availability,
             ) {
                 NavHost(
                     navController,
@@ -437,7 +446,7 @@ fun DeviceSettingsScreen(
                             setSettingValueForResult("importCustomEqualizerProfiles", it.toValue())
                         }
                         // the earbuds can disconnect from each other while this page is open
-                        if (oneEarbudOnly && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
+                        if (!equalizerAvailable && settings.none { it.first in BOTH_EARBUDS_SETTING_IDS }) {
                             // profiles are kept on the phone, so they can still be imported and exported
                             Column(
                                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -480,7 +489,7 @@ fun DeviceSettingsScreen(
                             createQuickPreset,
                             onEdit = { navController.navigate("preset/${Uri.encode(it)}") },
                             onDelete = deleteQuickPreset,
-                            notice = if (oneEarbudOnly && presetsUseBothEarbudSettings(presets)) {
+                            notice = if (presetsUseBlockedSettings(presets, settingsById)) {
                                 {
                                     SoundOneEarbudNotice(
                                         message = stringResource(R.string.sound_overview_one_earbud_presets),
@@ -532,7 +541,7 @@ fun DeviceSettingsScreen(
                             SettingGroup.entries.filter {
                                 grouped[it].orEmpty().isNotEmpty() || (it == SettingGroup.Equalizer && equalizerPage)
                             }.forEach { group ->
-                                val needsBothEarbuds = group == SettingGroup.Equalizer && oneEarbudOnly &&
+                                val needsBothEarbuds = group == SettingGroup.Equalizer && !equalizerAvailable &&
                                     byCategory["equalizer"].isNullOrEmpty()
                                 SoundDashboardLink(
                                     group.title(),

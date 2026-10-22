@@ -325,3 +325,6 @@ alarm-n-repeat = Повтор будильника { $number }
 alarm-n-wake-up-tune = Мелодия будильника { $number }
 alarm-n-volume = Громкость будильника { $number }
 alarm-n-snooze-duration-minutes = Отложить будильник { $number } на (минуты)
+
+setting-availability-requires-both-earbuds = Изменение доступно при обоих наушниках
+setting-availability-no-read-back = Устройство не подтверждает изменения

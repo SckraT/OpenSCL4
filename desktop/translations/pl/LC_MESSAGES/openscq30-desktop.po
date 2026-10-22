@@ -656,8 +656,8 @@ msgstr "Nie wybrano jeszcze ustawień"
 msgid "Edit device screen"
 msgstr "Edytuj ekran urządzenia"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "Połączona jest tylko jedna słuchawka. Korektor i niektóre inne ustawienia będą dostępne po połączeniu obu słuchawek."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "Podlaczona jest tylko jedna sluchawka. Korektor jest niedostepny, nie mozna przelaczyc LDAC, a pozostale ustawienia nadal mozna zmieniac."
 
 msgid "Move up"
 msgstr "W górę"
@@ -910,8 +910,8 @@ msgstr "Zapisz bieżące ustawienia i wybierz te, które chcesz stosować razem.
 msgid "Create preset"
 msgstr "Utwórz ustawienie"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "Korektor z ustawień zostanie zastosowany po połączeniu obu słuchawek."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "Niektóre ustawienia w tych ustawieniach wstępnych są teraz niedostępne i nie zostaną zastosowane."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "Zapiszemy bieżące ustawienia. Potem zaznacz, które z nich stosować."
@@ -958,8 +958,6 @@ msgstr "Usunąć „{}”? Bieżące ustawienia urządzenia zostaną zachowane."
 msgid "Preset “{}” applied"
 msgstr "Zastosowano ustawienie „{}”"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "Zastosowano ustawienie „{}”. Jego korektor zostanie zastosowany po połączeniu obu słuchawek."
 
 msgid "Preset deleted"
 msgstr "Usunięto ustawienie"

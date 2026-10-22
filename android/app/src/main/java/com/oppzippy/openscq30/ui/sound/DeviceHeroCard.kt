@@ -48,9 +48,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
+import com.oppzippy.openscq30.lib.wrapper.blockedReason
+import com.oppzippy.openscq30.lib.wrapper.isAvailable
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.ControlBadge
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
@@ -344,6 +347,7 @@ private fun BatteryTiles(batteries: List<DeviceBattery>) {
 internal fun QuickToggleRow(
     toggles: List<Pair<String, Setting.ToggleSetting>>,
     available: List<String>,
+    availability: Map<String, ClientSettingAvailability>,
     onToggle: (String, Boolean) -> Unit,
     onChoose: (List<String>) -> Unit,
 ) {
@@ -359,35 +363,50 @@ internal fun QuickToggleRow(
             },
         )
     }
-    FlowRow(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // the card is the color a selected chip would have, so an enabled toggle is filled with the primary color
-        val colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-        )
-        toggles.forEach { (id, setting) ->
+    val readOnly = LocalSettingsReadOnly.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // the card is the color a selected chip would have, so an enabled toggle is filled with the primary color
+            val colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+            )
+            toggles.forEach { (id, setting) ->
+                val enabled = availability[id]?.isAvailable() != false && !readOnly
+                FilterChip(
+                    selected = setting.value,
+                    onClick = { if (enabled) onToggle(id, !setting.value) },
+                    enabled = enabled,
+                    label = { Text(translateSettingId(id)) },
+                    leadingIcon = if (setting.value) {
+                        { Icon(painterResource(R.drawable.check_24px), null, Modifier.size(18.dp)) }
+                    } else {
+                        null
+                    },
+                    colors = colors,
+                )
+            }
             FilterChip(
-                selected = setting.value,
-                onClick = { onToggle(id, !setting.value) },
-                label = { Text(translateSettingId(id)) },
-                leadingIcon = if (setting.value) {
-                    { Icon(painterResource(R.drawable.check_24px), null, Modifier.size(18.dp)) }
-                } else {
-                    null
-                },
-                colors = colors,
+                selected = false,
+                onClick = { choosing = true },
+                label = { Text(if (toggles.isEmpty()) stringResource(R.string.sound_quick_toggles_add) else "+") },
             )
         }
-        FilterChip(
-            selected = false,
-            onClick = { choosing = true },
-            label = { Text(if (toggles.isEmpty()) stringResource(R.string.sound_quick_toggles_add) else "+") },
-        )
+        // a disabled toggle keeps its current value and says why it cannot be changed
+        toggles.forEach { (id, _) ->
+            availability[id]?.blockedReason()?.let { reason ->
+                Text(
+                    "${translateSettingId(id)}: ${stringResource(availabilityReasonText(reason))}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
     }
 }
 

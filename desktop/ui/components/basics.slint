@@ -143,6 +143,7 @@ export component Chip inherits Rectangle {
     in property <bool> selected;
     in property <image> icon;
     in property <bool> has-icon: false;
+    in property <bool> enabled: true;
     // on a sage card, a selected chip is filled with the accent
     in property <bool> on-card: false;
     callback clicked();
@@ -150,13 +151,14 @@ export component Chip inherits Rectangle {
         : (on-card ? Theme.on-sage : Theme.text);
     min-height: 31px;
     border-radius: Theme.radius-chip;
-    background: selected ? (on-card ? Theme.primary : Theme.primary-container) : touch.has-hover ? Theme.hover : transparent;
+    background: selected ? (on-card ? Theme.primary : Theme.primary-container) : touch.has-hover && enabled ? Theme.hover : transparent;
     border-width: selected ? 0px : 1px;
     border-color: on-card ? Theme.on-sage.transparentize(80%) : Theme.line;
+    opacity: enabled ? 1 : 0.55;
     accessible-role: button;
     accessible-label: text;
     accessible-checked: selected;
-    accessible-action-default => { clicked(); }
+    accessible-action-default => { if enabled { clicked(); } }
     HorizontalLayout {
         padding-left: 11px;
         padding-right: 11px;
@@ -177,6 +179,7 @@ export component Chip inherits Rectangle {
         }
     }
     touch := TouchArea {
+        enabled: root.enabled;
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
     }

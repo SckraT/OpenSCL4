@@ -324,3 +324,6 @@ alarm-n-volume = Alarm { $number } Volume
 alarm-n-snooze-duration-minutes = Alarm { $number } Snooze Duration (minutes)
 
 both-earbuds-must-be-connected = Both earbuds must be connected.
+
+setting-availability-requires-both-earbuds = Changing is available when both earbuds are connected
+setting-availability-no-read-back = The device cannot confirm changes

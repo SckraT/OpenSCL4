@@ -7,7 +7,11 @@ use i18n_embed::{DesktopLanguageRequester, unic_langid::LanguageIdentifier};
 use macaddr::MacAddr6;
 use openscq30_i18n::Translate;
 use openscq30_lib::{
-    DeviceModel, connection::ConnectionDescriptor, settings::SettingId, storage::PairedDevice,
+    DeviceModel,
+    client::availability::{SettingAvailability, setting_availability},
+    connection::ConnectionDescriptor,
+    settings::SettingId,
+    storage::PairedDevice,
 };
 use slint::{ComponentHandle, ModelRc, VecModel};
 
@@ -439,6 +443,13 @@ impl App {
         let Some(snapshot) = self.snapshot() else {
             return;
         };
+        if !matches!(
+            setting_availability(&snapshot.settings, id),
+            SettingAvailability::Available
+        ) {
+            tracing::debug!("ignored a change to {id}, which cannot be changed in this state");
+            return;
+        }
         // hue and time rows take numbers too; tell them apart by the setting
         let edit = match (
             edit,

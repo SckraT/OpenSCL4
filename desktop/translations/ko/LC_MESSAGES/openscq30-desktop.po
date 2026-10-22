@@ -656,8 +656,8 @@ msgstr "아직 선택한 설정이 없습니다"
 msgid "Edit device screen"
 msgstr "기기 화면 편집"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "이어폰이 하나만 연결되어 있습니다. 이퀄라이저 등 일부 설정은 양쪽 이어폰이 연결되면 사용할 수 있습니다."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "이어버드 한쪽만 연결되어 있습니다. 이퀄라이저는 사용할 수 없고 LDAC는 전환할 수 없으며 다른 설정은 변경할 수 있습니다."
 
 msgid "Move up"
 msgstr "위로 이동"
@@ -904,8 +904,8 @@ msgstr "현재 설정을 저장하고 함께 적용할 설정을 고르세요."
 msgid "Create preset"
 msgstr "프리셋 만들기"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "프리셋의 이퀄라이저는 양쪽 이어폰이 연결되면 적용됩니다."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "이 프리셋의 일부 설정은 현재 사용할 수 없어 적용되지 않습니다."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "현재 설정을 저장합니다. 그런 다음 적용할 설정을 고르세요."
@@ -952,8 +952,6 @@ msgstr "“{}”을(를) 삭제할까요? 기기의 현재 설정은 유지됩�
 msgid "Preset “{}” applied"
 msgstr "“{}” 프리셋을 적용했습니다"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "“{}” 프리셋을 적용했습니다. 이퀄라이저는 양쪽 이어폰이 연결되면 적용됩니다."
 
 msgid "Preset deleted"
 msgstr "프리셋을 삭제했습니다"

@@ -1,5 +1,10 @@
 package com.oppzippy.openscq30.features.soundcoredevice.service
 
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
+
+/** What the LDAC Quick Settings tile shows: the device's current value and whether it can be changed. */
+data class LdacTileState(val enabled: Boolean, val availability: ClientSettingAvailability)
+
 sealed class ConnectionStatus {
     abstract val macAddress: String?
     abstract val deviceManager: DeviceConnectionManager?
