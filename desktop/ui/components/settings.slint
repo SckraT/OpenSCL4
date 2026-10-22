@@ -258,6 +258,12 @@ export component SettingRowView inherits Rectangle {
                 wrap: word-wrap;
                 opacity: root.setting.enabled ? 1 : 0.55;
             }
+            if root.setting.reason != "": Text {
+                text: root.setting.reason;
+                color: Theme.muted;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+            }
         }
         if root.setting.kind == RowKind.toggle: Toggle {
             checked: root.setting.checked;

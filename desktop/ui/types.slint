@@ -25,7 +25,7 @@ export enum Connection { no-device, off, connecting, connected, lost, bluetooth-
 export enum FailureKind { none, not-found, timed-out, other }
 
 // short messages at the bottom of the window; some say how many with AppState.toast-count
-export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated, preset-applied, preset-applied-later, preset-deleted, preset-replaced, preset-loaded }
+export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated, preset-applied, preset-deleted, preset-replaced, preset-loaded }
 
 // what the import and export panel last did
 export enum TransferNote { none, file-saved, file-save-failed, not-profiles, clipboard-empty, too-large, read-failed, imported }
@@ -54,6 +54,8 @@ export struct SettingRow {
     kind: RowKind,
     label: string,
     enabled: bool,
+    // why the row cannot be changed in the device's current state, empty while it can
+    reason: string,
     checked: bool,
     // a select's options, or a list's items
     options: [string],
@@ -91,6 +93,9 @@ export struct QuickToggle {
     id: string,
     label: string,
     on: bool,
+    enabled: bool,
+    // why the toggle cannot be changed in the device's current state, empty while it can
+    reason: string,
 }
 
 // a block of the overview, and what its shortcut says: numbers and names the window puts into words

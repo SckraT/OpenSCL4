@@ -4,6 +4,7 @@
 use std::{borrow::Cow, str::FromStr};
 
 use openscq30_i18n::Translate;
+use openscq30_lib::client::availability::{SettingAvailability, setting_availability};
 use openscq30_lib::settings::{self, MultiSelectWithRemoveCommand, Setting, SettingId, Value};
 use slint::{ModelRc, SharedString, VecModel};
 
@@ -74,11 +75,23 @@ fn is_option(settings: &SettingMap, id: &str, option: &str) -> bool {
 }
 
 /// A row for one setting, or None for settings that only have their own pages, such as the equalizer.
-pub fn row(id: SettingId, whole: &Setting, enabled: bool) -> Option<SettingRow> {
+pub fn row(
+    id: SettingId,
+    whole: &Setting,
+    enabled: bool,
+    availability: SettingAvailability,
+) -> Option<SettingRow> {
+    let reason = match availability {
+        SettingAvailability::Available => String::new(),
+        SettingAvailability::ReadOnly { reason } | SettingAvailability::Unavailable { reason } => {
+            reason.translate()
+        }
+    };
     let mut row = SettingRow {
         id: id_of(id).into(),
         label: id.translate().into(),
-        enabled,
+        enabled: enabled && matches!(availability, SettingAvailability::Available),
+        reason: reason.into(),
         options: strings([]),
         index: -1,
         ..SettingRow::default()
@@ -198,6 +211,7 @@ fn rows_for(snapshot: &DeviceSnapshot, ids: &[&'static str]) -> Vec<SettingRow> 
                 setting_id,
                 snapshot.settings.get(&setting_id)?,
                 enabled(&snapshot.settings, id),
+                setting_availability(&snapshot.settings, id),
             )
         })
         .collect()
@@ -428,4 +442,74 @@ pub fn values(snapshot: &DeviceSnapshot, id: &str, edit: Edit) -> Option<Vec<(Se
         _ => return None,
     };
     Some(vec![(setting_id, value)])
+}
+
+#[cfg(test)]
+mod tests {
+    use macaddr::MacAddr6;
+    use openscq30_lib::DeviceModel;
+
+    use super::*;
+
+    fn snapshot(settings: SettingMap) -> DeviceSnapshot {
+        DeviceSnapshot {
+            mac_address: MacAddr6::nil(),
+            model: DeviceModel::SoundcoreA3954,
+            is_demo: false,
+            categories: Vec::new(),
+            settings,
+            presets: Vec::new(),
+            last_applied_preset: None,
+        }
+    }
+
+    fn information(value: &str) -> Setting {
+        Setting::Information {
+            value: value.to_string(),
+            translated_value: value.to_string(),
+        }
+    }
+
+    fn one_earbud_settings() -> SettingMap {
+        SettingMap::from([
+            (SettingId::TwsStatus, information("Disconnected")),
+            (SettingId::Ldac, Setting::Toggle { value: true }),
+        ])
+    }
+
+    #[test]
+    fn read_only_ldac_keeps_its_value_and_says_why() {
+        let snapshot = snapshot(one_earbud_settings());
+        let row = row(
+            SettingId::Ldac,
+            snapshot.settings.get(&SettingId::Ldac).unwrap(),
+            true,
+            setting_availability(&snapshot.settings, "ldac"),
+        )
+        .unwrap();
+
+        assert!(!row.enabled);
+        assert!(row.checked, "the current value stays visible");
+        assert_eq!(
+            "Changing is available when both earbuds are connected",
+            row.reason.as_str(),
+        );
+    }
+
+    #[test]
+    fn available_settings_stay_enabled_without_a_reason() {
+        let mut settings = one_earbud_settings();
+        settings.insert(SettingId::WearingDetection, Setting::Toggle { value: true });
+        let snapshot = snapshot(settings);
+        let row = row(
+            SettingId::WearingDetection,
+            snapshot.settings.get(&SettingId::WearingDetection).unwrap(),
+            true,
+            setting_availability(&snapshot.settings, "wearingDetection"),
+        )
+        .unwrap();
+
+        assert!(row.enabled);
+        assert_eq!("", row.reason.as_str());
+    }
 }

@@ -656,8 +656,8 @@ msgstr "Aucun réglage choisi pour l’instant"
 msgid "Edit device screen"
 msgstr "Modifier l’écran de l’appareil"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "Un seul écouteur est connecté. L’égaliseur et d’autres réglages seront disponibles quand les deux écouteurs seront connectés."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "Un seul ecouteur est connecte. L'egaliseur n'est pas disponible, LDAC ne peut pas etre change et les autres reglages restent modifiables."
 
 msgid "Move up"
 msgstr "Monter"
@@ -907,8 +907,8 @@ msgstr "Enregistrez vos réglages actuels et choisissez ceux à appliquer ensemb
 msgid "Create preset"
 msgstr "Créer un préréglage"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "L’égaliseur des préréglages s’applique quand les deux écouteurs sont connectés."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "Certains reglages de ces prereglages ne sont pas disponibles actuellement et ne seront pas appliques."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "Nous enregistrons les réglages actuels. Choisissez ensuite lesquels appliquer."
@@ -955,8 +955,6 @@ msgstr "Supprimer « {} » ? Les réglages actuels de l’appareil sont conserv�
 msgid "Preset “{}” applied"
 msgstr "Préréglage « {} » appliqué"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "Préréglage « {} » appliqué. Son égaliseur s’appliquera quand les deux écouteurs seront connectés."
 
 msgid "Preset deleted"
 msgstr "Préréglage supprimé"

@@ -36,7 +36,7 @@
     <string name="sound_overview_preset_missing">Этот пресет больше недоступен.</string>
     <string name="sound_overview_legacy">Устаревшие профили эквалайзера</string>
     <string name="sound_overview_one_earbud_title">Подключён только один наушник</string>
-    <string name="sound_overview_one_earbud_message">Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника.</string>
+    <string name="sound_overview_one_earbud_message">Эквалайзер недоступен, LDAC нельзя переключить. Остальные настройки можно менять.</string>
     <string name="sound_overview_needs_both_earbuds">Доступен, когда подключены оба наушника</string>
-    <string name="sound_overview_one_earbud_presets">Эквалайзер из пресетов применится, когда подключатся оба наушника.</string>
+    <string name="sound_overview_one_earbud_presets">Настройки из пресетов, которые сейчас недоступны, не будут применены.</string>
 </resources>

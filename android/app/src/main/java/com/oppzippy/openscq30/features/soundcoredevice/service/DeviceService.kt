@@ -28,6 +28,7 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
 import com.oppzippy.openscq30.lib.bindings.WriteOutcome
+import com.oppzippy.openscq30.lib.bindings.clientSettingAvailability
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
@@ -87,8 +88,8 @@ class DeviceService : LifecycleService() {
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
 
-        // the connected device's LDAC setting, or null without a device that has one, for the Quick Settings tile
-        private val _ldacState = MutableStateFlow<Boolean?>(null)
+        // the connected device's LDAC setting and whether it can be changed, or null without a device that has one
+        private val _ldacState = MutableStateFlow<LdacTileState?>(null)
         val ldacState = _ldacState.asStateFlow()
     }
 
@@ -339,7 +340,12 @@ class DeviceService : LifecycleService() {
                     val device = connectionStatus.deviceManager.device
                     connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
                         _ldacState.value = try {
-                            (device.setting("ldac") as? Setting.ToggleSetting)?.value
+                            val settings = device.settingsByCategory()
+                                .flatMap { it.settings }
+                                .associate { it.settingId to it.setting }
+                            (settings["ldac"] as? Setting.ToggleSetting)?.let { ldac ->
+                                LdacTileState(ldac.value, clientSettingAvailability(settings, "ldac"))
+                            }
                         } catch (ex: IllegalStateException) {
                             Log.w(TAG, "device was closed, LDAC unknown", ex)
                             null

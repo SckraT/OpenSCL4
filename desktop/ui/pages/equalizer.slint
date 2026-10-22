@@ -688,7 +688,7 @@ export component EqualizerPage inherits VerticalLayout {
         if AppState.eq-legacy.length > 0: LegacyBanner { }
         if !AppState.eq-available && AppState.one-earbud: Banner {
             icon: Icons.ear;
-            text: @tr("Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected.");
+            text: @tr("Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed.");
         }
         // set widths: the chips wrap, and need to know their width to know their height
         if root.wide: HorizontalLayout {

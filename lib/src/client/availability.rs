@@ -1,15 +1,19 @@
 //! Whether a setting can be changed in the device's current state, as the device reports it.
 
+use openscq30_i18n_macros::Translate;
+
 use super::{
     SettingMap,
     battery::{BOTH_EARBUDS_SETTING_IDS, is_only_one_earbud_connected},
 };
 
 /// Why a setting cannot be changed in the current state.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Translate)]
 #[serde(rename_all = "camelCase")]
 pub enum AvailabilityReason {
+    #[translate("setting-availability-requires-both-earbuds")]
     RequiresBothEarbuds,
+    #[translate("setting-availability-no-read-back")]
     NoReadBack,
 }
 

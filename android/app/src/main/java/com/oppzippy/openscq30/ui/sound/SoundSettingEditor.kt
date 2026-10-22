@@ -68,6 +68,8 @@ import com.oppzippy.openscq30.lib.wrapper.Range
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
+import com.oppzippy.openscq30.lib.wrapper.blockedReason
+import com.oppzippy.openscq30.lib.wrapper.isAvailable
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.PendingSettingWrite
 import com.oppzippy.openscq30.ui.devicesettings.composables.Equalizer
@@ -107,7 +109,8 @@ fun SoundSettingEditor(
     val pending = LocalPendingSettingWrites.current[settingId]
     val requested = pending?.requestedValue
     val readOnly = LocalSettingsReadOnly.current
-    val enabled = pending == null && !readOnly
+    val availability = LocalSettingAvailability.current[settingId]
+    val enabled = pending == null && !readOnly && availability?.isAvailable() != false
     val onChange: (Value) -> Unit = { if (enabled) setSettings(listOf(settingId to it)) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(
@@ -286,6 +289,14 @@ fun SoundSettingEditor(
                     }
                 }
             }
+        }
+        availability?.blockedReason()?.let { reason ->
+            Text(
+                stringResource(availabilityReasonText(reason)),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 20.dp).testTag("sound_setting_reason_$settingId"),
+            )
         }
         if (pending != null) {
             LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp))

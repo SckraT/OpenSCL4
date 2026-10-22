@@ -44,6 +44,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.SoundModesView
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.clientBatteryProgress
 import com.oppzippy.openscq30.lib.bindings.clientBothEarbudsSettingIds
 import com.oppzippy.openscq30.lib.bindings.clientCategoryNeedsBothEarbuds
@@ -51,6 +52,8 @@ import com.oppzippy.openscq30.lib.bindings.clientIsOnlyOneEarbudConnected
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
+import com.oppzippy.openscq30.lib.wrapper.blockedReason
+import com.oppzippy.openscq30.lib.wrapper.isAvailable
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
@@ -88,7 +91,10 @@ fun SoundOverview(
     setSettings: (List<Pair<String, Value>>) -> Unit,
     preferences: DeviceUiPreferencesViewModel = hiltViewModel(),
 ) {
-    val values = settings.toMap()
+    val values = remember(settings) { settings.toMap() }
+    val availability = remember(values) { settingAvailability(values) }
+    val equalizerAvailability = remember(values) { settingAvailability(values, "volumeAdjustments") }
+    val equalizerAvailable = equalizerAvailability.isAvailable()
     val oneEarbudOnly = isOnlyOneEarbudConnected(values)
     val showOneEarbudBadge by preferences.oneEarbudBadgeFlow.collectAsState()
     val soundModesView by preferences.soundModesViewFlow.collectAsState()
@@ -122,6 +128,7 @@ fun SoundOverview(
                     QuickToggleRow(
                         toggles = quickToggles,
                         available = availableToggles,
+                        availability = availability,
                         onToggle = { id, on -> setSettings(listOf(id to on.toValue())) },
                         onChoose = { preferences.setQuickToggles(deviceModel, it.joinToString(",")) },
                     )
@@ -131,7 +138,7 @@ fun SoundOverview(
                 val blocks = layout.visibleBlocks.filter { block ->
                     when (block) {
                         OverviewBlock.SoundMode -> hasSound
-                        OverviewBlock.Equalizer -> hasEqualizerBlock(values, hasEqualizerCategory, oneEarbudOnly)
+                        OverviewBlock.Equalizer -> hasEqualizerBlock(values, hasEqualizerCategory, !equalizerAvailable)
                         OverviewBlock.QuickPresets -> quickPresets.isNotEmpty()
                         OverviewBlock.Controls -> hasControls
                         OverviewBlock.Comfort -> hasComfort
@@ -167,7 +174,8 @@ fun SoundOverview(
                             }
                         }
 
-                        block == OverviewBlock.Equalizer -> OverviewEqualizer(values, oneEarbudOnly, onEqualizer)
+                        block == OverviewBlock.Equalizer ->
+                            OverviewEqualizer(values, equalizerAvailability, onEqualizer)
 
                         block == OverviewBlock.QuickPresets -> {
                             SoundSectionHeading(stringResource(R.string.quick_presets))
@@ -251,12 +259,19 @@ fun SoundOverview(
     }
 }
 
-private fun hasEqualizerBlock(values: Map<String, Setting>, hasEqualizerCategory: Boolean, oneEarbudOnly: Boolean) =
-    values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile") ||
-        (hasEqualizerCategory && oneEarbudOnly)
+private fun hasEqualizerBlock(
+    values: Map<String, Setting>,
+    hasEqualizerCategory: Boolean,
+    equalizerUnavailable: Boolean,
+) = values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile") ||
+    (hasEqualizerCategory && equalizerUnavailable)
 
 @Composable
-private fun OverviewEqualizer(values: Map<String, Setting>, oneEarbudOnly: Boolean, onEqualizer: () -> Unit) {
+private fun OverviewEqualizer(
+    values: Map<String, Setting>,
+    availability: ClientSettingAvailability,
+    onEqualizer: () -> Unit,
+) {
     SoundSectionHeading(stringResource(R.string.sound_overview_your_sound))
     if (values["volumeAdjustments"] is Setting.EqualizerSetting || values.containsKey("presetEqualizerProfile")) {
         val profileName = (values["customEqualizerProfile"] as? Setting.ModifiableSelectSetting)?.value
@@ -272,12 +287,12 @@ private fun OverviewEqualizer(values: Map<String, Setting>, oneEarbudOnly: Boole
             R.drawable.equalizer_24px,
             onEqualizer,
         )
-    } else if (oneEarbudOnly) {
+    } else if (!availability.isAvailable()) {
         // The equalizer can not be read or changed until both earbuds are connected. Keep it in place with the reason
         // instead of letting it disappear.
         SoundDashboardLink(
             stringResource(R.string.equalizer),
-            stringResource(R.string.sound_overview_needs_both_earbuds),
+            stringResource(availabilityReasonText(requireNotNull(availability.blockedReason()))),
             R.drawable.equalizer_24px,
             onClick = {},
             enabled = false,
