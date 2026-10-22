@@ -13,6 +13,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.AndroidException
 import com.oppzippy.openscq30.lib.bindings.AndroidRfcommConnectionBackend
 import com.oppzippy.openscq30.lib.bindings.AndroidRfcommConnectionWriter
+import com.oppzippy.openscq30.lib.bindings.ConnectionException
 import com.oppzippy.openscq30.lib.bindings.MacAddr6
 import com.oppzippy.openscq30.lib.bindings.ManualConnectionBackends
 import com.oppzippy.openscq30.lib.bindings.ManualRfcommConnection
@@ -24,8 +25,10 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 fun connectionBackends(context: Context, coroutineScope: CoroutineScope): ManualConnectionBackends =
     ManualConnectionBackends(
@@ -36,6 +39,7 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
     AndroidRfcommConnectionBackend {
     companion object {
         private const val TAG = "AndroidRfcommConnectionBackendImpl"
+        private const val CONNECT_TIMEOUT_MS = 5_000L
     }
 
     override suspend fun devices(): List<ConnectionDescriptor> {
@@ -158,9 +162,19 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
         }
 
         try {
-            withContext(Dispatchers.IO) {
-                socket.connect()
+            withTimeout(CONNECT_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    socket.connect()
+                }
             }
+        } catch (ex: TimeoutCancellationException) {
+            Log.w(TAG, "timed out connecting to device", ex)
+            try {
+                socket.close()
+            } catch (closeEx: IOException) {
+                Log.d(TAG, "error closing socket after connect timeout", closeEx)
+            }
+            throw AndroidException.Other("timed out connecting to device")
         } catch (_: CancellationException) {
             try {
                 Log.d(TAG, "connection canceled, closing socket")
@@ -225,13 +239,14 @@ class AndroidRfcommConnectionWriterImpl(
     }
 
     override suspend fun write(data: ByteArray) {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 socket.outputStream.write(data)
-            } catch (ex: IOException) {
-                Log.d(TAG, "disconnected", ex)
-                setConnectionStatus(ConnectionStatus.Disconnected)
             }
+        } catch (ex: IOException) {
+            Log.d(TAG, "disconnected", ex)
+            setConnectionStatus(ConnectionStatus.Disconnected)
+            throw ConnectionException.WriteException(reason = ex.stackTraceToString())
         }
     }
 

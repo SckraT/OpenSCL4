@@ -165,6 +165,15 @@ where
     if setting_values.is_empty() {
         return Ok(Vec::new());
     }
+    if !is_connected(packet_io) {
+        return Ok(setting_values
+            .into_iter()
+            .map(|(setting_id, _)| SettingWriteOutcome {
+                setting_id,
+                outcome: WriteOutcome::Disconnected,
+            })
+            .collect());
+    }
 
     let mut throttle = module_collection.write_lock.lock().await;
     let current_state = state_sender.borrow().clone();
@@ -1309,6 +1318,34 @@ mod tests {
             tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
                 .await
                 .is_err()
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn writes_while_recovering_are_disconnected_without_queueing() {
+        let mut harness = Harness::new(TestState {
+            ldac: Ldac(true),
+            ..Default::default()
+        })
+        .await;
+        let mut status = harness.packet_io.connection_status();
+        harness.status.send_replace(ConnectionStatus::Disconnected);
+        while *status.borrow() == ConnectionStatus::Connected {
+            status.changed().await.unwrap();
+        }
+
+        let outcomes = harness
+            .spawn_write(vec![(SettingId::WearingDetection, true.into())])
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(WriteOutcome::Disconnected, outcomes[0].outcome);
+        assert!(
+            !matches!(
+                tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv()).await,
+                Ok(Some(_))
+            ),
+            "no packet should be written while recovering"
         );
     }
 

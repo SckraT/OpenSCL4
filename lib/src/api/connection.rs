@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
+pub mod session;
+
+pub use session::{
+    CONNECT_DEADLINE, ConnectionSession, ConnectionSessionConfig, RECOVERY_WINDOW, ReconnectHook,
+    SessionStatus, WRITE_DEADLINE,
+};
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("bluetooth adapter unavailable")]
