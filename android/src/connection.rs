@@ -150,7 +150,7 @@ impl RfcommBackend for ManualRfcommConnectionBackend {
 #[uniffi::export(with_foreign)]
 #[async_trait]
 pub trait AndroidRfcommConnectionWriter: Send + Sync {
-    async fn write(&self, data: Vec<u8>);
+    async fn write(&self, data: Vec<u8>) -> Result<(), ConnectionError>;
     fn close_socket(&self);
 }
 
@@ -158,6 +158,8 @@ pub trait AndroidRfcommConnectionWriter: Send + Sync {
 pub enum ConnectionError {
     #[error("the device connection write queue is full")]
     WriteQueueFullError,
+    #[error("write failed: {reason}")]
+    WriteError { reason: String },
 }
 pub struct WrappedManualRfcommConnection(Arc<ManualRfcommConnection>);
 
@@ -176,8 +178,14 @@ impl RfcommConnection for WrappedManualRfcommConnection {
     }
 
     async fn write(&self, data: &[u8]) -> connection::Result<()> {
-        self.0.connection_writer.write(data.to_owned()).await;
-        Ok(())
+        self.0
+            .connection_writer
+            .write(data.to_owned())
+            .await
+            .map_err(|err| connection::Error::WriteError {
+                source: Some(Box::new(err)),
+                location: Location::caller(),
+            })
     }
 
     fn read_channel(&self) -> mpsc::Receiver<Vec<u8>> {

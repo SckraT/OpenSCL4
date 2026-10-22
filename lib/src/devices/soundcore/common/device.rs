@@ -12,7 +12,10 @@ use tokio::{
 
 use crate::{
     api::{
-        connection::{ConnectionDescriptor, ConnectionStatus, RfcommBackend, RfcommConnection},
+        connection::{
+            ConnectionDescriptor, ConnectionSession, ConnectionSessionConfig, ConnectionStatus,
+            ReconnectHook, RfcommBackend,
+        },
         device::{self, OpenSCQ30Device, OpenSCQ30DeviceRegistry},
         settings::{CategoryId, Setting, SettingId, Value},
     },
@@ -56,7 +59,7 @@ use super::{
     },
 };
 
-type FetchStateFn<StateType> = Box<
+type FetchStateFn<StateType> = Arc<
     dyn Fn(
             Arc<PacketIOController>,
         ) -> Pin<Box<dyn Future<Output = device::Result<StateType>> + Send>>
@@ -179,15 +182,18 @@ where
         &self,
         mac_address: macaddr::MacAddr6,
     ) -> device::Result<Arc<dyn OpenSCQ30Device + Send + Sync>> {
-        let connection = self
-            .backend
-            .connect(mac_address, self.config.rfcomm_service_selection_strategy)
-            .await?;
+        let session = ConnectionSession::connect(
+            self.backend.clone(),
+            mac_address,
+            self.config.rfcomm_service_selection_strategy,
+            ConnectionSessionConfig::default(),
+        )
+        .await?;
         let mut builder = SoundcoreDeviceBuilder::new(
             self.database.clone(),
-            connection,
+            Arc::new(session),
             self.device_model,
-            &self.fetch_state,
+            self.fetch_state.clone(),
             self.config,
             self.is_demo,
         )
@@ -237,17 +243,43 @@ where
 {
     pub async fn new(
         database: Arc<OpenSCQ30Database>,
-        connection: Arc<dyn RfcommConnection + Send + Sync>,
+        session: Arc<ConnectionSession>,
         device_model: DeviceModel,
-        fetch_state: &FetchStateFn<StateType>,
+        fetch_state: FetchStateFn<StateType>,
         config: SoundcoreDeviceConfig,
         is_demo: bool,
     ) -> device::Result<Self> {
         let (packet_io_controller, packet_receiver) =
-            PacketIOController::new(connection, config.checksum_kind).await?;
+            PacketIOController::new_with_session(session.clone(), config.checksum_kind).await?;
         let packet_io_controller = Arc::new(packet_io_controller);
         let state = fetch_state(packet_io_controller.clone()).await?;
         let (state_sender, _) = watch::channel::<StateType>(state);
+
+        let reconnect_fetch_state = fetch_state.clone();
+        let reconnect_packet_io = Arc::downgrade(&packet_io_controller);
+        let reconnect_state_sender = state_sender.clone();
+        let hook: ReconnectHook = Arc::new(move || {
+            let fetch_state = reconnect_fetch_state.clone();
+            let packet_io = reconnect_packet_io.clone();
+            let state_sender = reconnect_state_sender.clone();
+            Box::pin(async move {
+                let packet_io = packet_io
+                    .upgrade()
+                    .ok_or_else(|| "device was dropped".to_owned())?;
+                let state = fetch_state(packet_io)
+                    .await
+                    .map_err(|err| format!("state refresh failed: {err}"))?;
+                state_sender.send_replace(state);
+                Ok(())
+            })
+        });
+        session.set_reconnect_hook(hook);
+        // The watchdog is covered directly by PacketIOController tests. It is not started in
+        // crate unit tests because paused-time harnesses jump straight to its timer.
+        #[cfg(not(test))]
+        if !is_demo {
+            packet_io_controller.start_watchdog();
+        }
 
         let module_collection = ModuleCollection::<StateType>::default();
 

@@ -41,7 +41,7 @@ macro_rules! soundcore_device {
                 backend,
                 database,
                 device_model,
-                Box::new(|$packet_io_controller| Box::pin(async move { $fetch_state })),
+                std::sync::Arc::new(|$packet_io_controller| Box::pin(async move { $fetch_state })),
                 $config,
             )
         }
@@ -60,7 +60,7 @@ macro_rules! soundcore_device {
                 ),
                 database,
                 device_model,
-                Box::new(|$packet_io_controller| Box::pin(async move { $fetch_state })),
+                std::sync::Arc::new(|$packet_io_controller| Box::pin(async move { $fetch_state })),
                 $config,
             )
         }
