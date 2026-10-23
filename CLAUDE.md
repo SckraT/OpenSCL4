@@ -6,6 +6,10 @@ OpenSCL4 uses Compose in `android/` and Slint in `desktop/`, with shared device 
 
 `gui/` is the legacy libcosmic client, not the current desktop release. See `docs/history/upstream.md` when changing inherited identities, attribution or historical assets.
 
+## Coding standards
+
+Reviews and implementation follow `docs/agents/review-standards.md`; tooling covers formatting and lints, the document covers the rules tooling cannot check.
+
 ## Agent skills
 
 ### Issue tracker
