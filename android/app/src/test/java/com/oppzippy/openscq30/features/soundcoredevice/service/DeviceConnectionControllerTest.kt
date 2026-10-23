@@ -30,7 +30,7 @@ class DeviceConnectionControllerTest {
 
     @Test
     fun reconcileThenBroadcastForTheSameDeviceConnectsOnce() = runTest {
-        val manager = mockk<DeviceConnectionManager>(relaxed = true)
+        val manager = mockManager()
         var attempts = 0
         val controller = DeviceConnectionController(this, {
             attempts += 1
@@ -58,7 +58,7 @@ class DeviceConnectionControllerTest {
 
     @Test
     fun restartedServiceConnectsTheSameDeviceAgain() = runTest {
-        val manager = mockk<DeviceConnectionManager>(relaxed = true)
+        val manager = mockManager()
         var attempts = 0
         val beforeRestart = DeviceConnectionController(this, {
             attempts += 1
