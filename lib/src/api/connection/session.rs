@@ -10,6 +10,7 @@ use std::{
 };
 
 use macaddr::MacAddr6;
+use openscq30_i18n_macros::Translate;
 use tokio::{
     sync::{Notify, mpsc, watch},
     task::JoinHandle,
@@ -55,12 +56,67 @@ impl Default for ConnectionSessionConfig {
     }
 }
 
+/// Why a connection attempt or an established session failed.
+///
+/// Clients translate this instead of rendering a raw transport or platform error, so the UI text
+/// stays localizable and stable across backends.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Translate)]
+pub enum SessionFailureReason {
+    #[translate("session-reason-transport-lost")]
+    TransportLost,
+    #[translate("session-reason-connection-status-disconnected")]
+    ConnectionStatusDisconnected,
+    #[translate("session-reason-read-channel-closed")]
+    ReadChannelClosed,
+    #[translate("session-reason-write-failed")]
+    WriteFailed,
+    #[translate("session-reason-write-timed-out")]
+    WriteTimedOut,
+    #[translate("session-reason-silence-watchdog-failed")]
+    SilenceWatchdogFailed,
+    #[translate("session-reason-connect-timed-out")]
+    ConnectTimedOut,
+    #[translate("session-reason-state-refresh-failed")]
+    StateRefreshFailed,
+    #[translate("session-reason-bluetooth-adapter-unavailable")]
+    BluetoothAdapterUnavailable,
+    #[translate("session-reason-device-not-found")]
+    DeviceNotFound,
+    #[translate("session-reason-permission-denied")]
+    PermissionDenied,
+    #[translate("session-reason-unpaired")]
+    Unpaired,
+    #[translate("session-reason-security-failure")]
+    SecurityFailure,
+    #[translate("session-reason-connection-failed")]
+    ConnectionFailed,
+}
+
+impl SessionFailureReason {
+    fn from_error(error: &Error) -> Self {
+        match error {
+            Error::BluetoothAdapterUnavailable { .. } => Self::BluetoothAdapterUnavailable,
+            Error::DeviceNotFound { .. } => Self::DeviceNotFound,
+            Error::PermissionDenied { .. } => Self::PermissionDenied,
+            Error::Unpaired { .. } => Self::Unpaired,
+            Error::SecurityFailure { .. } => Self::SecurityFailure,
+            Error::TimedOut { .. } => Self::ConnectTimedOut,
+            _ => Self::ConnectionFailed,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SessionStatus {
     Connecting,
     Connected,
-    Recovering { attempt: u32, reason: String },
-    Lost { reason: String },
+    Recovering {
+        attempt: u32,
+        reason: SessionFailureReason,
+    },
+    Lost {
+        reason: SessionFailureReason,
+    },
     Closed,
 }
 
@@ -69,9 +125,9 @@ impl SessionStatus {
         matches!(self, Self::Connected)
     }
 
-    pub fn reason(&self) -> Option<&str> {
+    pub fn reason(&self) -> Option<SessionFailureReason> {
         match self {
-            Self::Recovering { reason, .. } | Self::Lost { reason } => Some(reason),
+            Self::Recovering { reason, .. } | Self::Lost { reason } => Some(*reason),
             _ => None,
         }
     }
@@ -208,7 +264,10 @@ impl SessionInner {
         let mut inbound = connection.read_channel();
         let mut status = connection.connection_status();
         if *status.borrow() == ConnectionStatus::Disconnected {
-            self.on_transport_lost(generation, "connection status disconnected");
+            self.on_transport_lost(
+                generation,
+                SessionFailureReason::ConnectionStatusDisconnected,
+            );
             return;
         }
         loop {
@@ -226,14 +285,17 @@ impl SessionInner {
                             }
                         }
                         None => {
-                            self.on_transport_lost(generation, "read channel closed");
+                            self.on_transport_lost(generation, SessionFailureReason::ReadChannelClosed);
                             return;
                         }
                     }
                 }
                 result = status.changed() => {
                     if result.is_err() || *status.borrow() == ConnectionStatus::Disconnected {
-                        self.on_transport_lost(generation, "connection status disconnected");
+                        self.on_transport_lost(
+                            generation,
+                            SessionFailureReason::ConnectionStatusDisconnected,
+                        );
                         return;
                     }
                 }
@@ -241,19 +303,18 @@ impl SessionInner {
         }
     }
 
-    fn on_transport_lost(&self, generation: u64, reason: &str) {
+    fn on_transport_lost(&self, generation: u64, reason: SessionFailureReason) {
         if self.generation.load(Ordering::SeqCst) != generation {
             return;
         }
-        warn!(reason, "transport lost");
+        warn!(?reason, "transport lost");
         self.report_unhealthy(reason);
     }
 
-    fn report_unhealthy(&self, reason: impl Into<String>) {
+    fn report_unhealthy(&self, reason: SessionFailureReason) {
         if self.is_closed() {
             return;
         }
-        let reason = reason.into();
         let status = self.status();
         if matches!(status, SessionStatus::Lost { .. } | SessionStatus::Closed) {
             return;
@@ -269,7 +330,7 @@ impl SessionInner {
     async fn connect_until(&self, deadline: Instant, initial: bool) -> Result<(), Error> {
         let mut attempt = 0_u32;
         let mut last_error: Option<Error> = None;
-        let mut last_reason = "connection lost".to_owned();
+        let mut last_reason = SessionFailureReason::TransportLost;
         loop {
             if self.is_closed() {
                 self.set_status(SessionStatus::Closed);
@@ -285,7 +346,7 @@ impl SessionInner {
             if !initial {
                 self.set_status(SessionStatus::Recovering {
                     attempt,
-                    reason: last_reason.clone(),
+                    reason: last_reason,
                 });
             }
             match self.connect_once(deadline).await {
@@ -299,25 +360,27 @@ impl SessionInner {
                         }
                         Ok(()) => {
                             self.drop_transport();
-                            last_reason =
-                                "transport was lost while verifying the connection".to_owned();
+                            last_reason = SessionFailureReason::TransportLost;
                             last_error = Some(Error::Other {
-                                source: Box::new(std::io::Error::other(last_reason.clone())),
+                                source: Box::new(std::io::Error::other(
+                                    "transport was lost while verifying the connection",
+                                )),
                                 location: Location::caller(),
                             });
                         }
                         Err(message) => {
                             self.drop_transport();
-                            last_reason = message;
+                            debug!(message, "state refresh failed after reconnect");
+                            last_reason = SessionFailureReason::StateRefreshFailed;
                             last_error = Some(Error::Other {
-                                source: Box::new(std::io::Error::other(last_reason.clone())),
+                                source: Box::new(std::io::Error::other(message)),
                                 location: Location::caller(),
                             });
                         }
                     }
                 }
                 Err(AttemptError::Terminal(error)) => {
-                    self.lose(error_string(&error));
+                    self.lose(SessionFailureReason::from_error(&error));
                     return Err(error);
                 }
                 Err(AttemptError::BudgetExhausted) => {
@@ -328,7 +391,7 @@ impl SessionInner {
                     return Err(error);
                 }
                 Err(AttemptError::Transient(error)) => {
-                    last_reason = error_string(&error);
+                    last_reason = SessionFailureReason::from_error(&error);
                     last_error = Some(error);
                 }
             }
@@ -350,7 +413,7 @@ impl SessionInner {
             if !initial {
                 self.set_status(SessionStatus::Recovering {
                     attempt,
-                    reason: last_reason.clone(),
+                    reason: last_reason,
                 });
             }
             if next_attempt_at >= deadline {
@@ -435,7 +498,7 @@ impl SessionInner {
         }
     }
 
-    fn lose(&self, reason: String) {
+    fn lose(&self, reason: SessionFailureReason) {
         self.drop_transport();
         self.set_status(SessionStatus::Lost { reason });
     }
@@ -488,21 +551,17 @@ enum AttemptError {
     BudgetExhausted,
 }
 
-/// Causes that retrying inside the recovery window cannot fix. Android's adapter collapses a
-/// missing permission or an unbonded device into `DeviceNotFound`, so that is terminal too.
+/// Causes that retrying inside the recovery window cannot fix. `DeviceNotFound` is deliberately
+/// transient: platforms report it while a device is still coming back, so only the recovery budget
+/// may turn it into `Lost`.
 fn is_terminal(error: &Error) -> bool {
     matches!(
         error,
         Error::BluetoothAdapterUnavailable { .. }
-            | Error::DeviceNotFound { .. }
             | Error::PermissionDenied { .. }
             | Error::Unpaired { .. }
             | Error::SecurityFailure { .. }
     )
-}
-
-fn error_string(error: &Error) -> String {
-    error.to_string()
 }
 
 fn connection_closed_error() -> Error {
@@ -648,11 +707,12 @@ impl ConnectionSession {
             Ok(Ok(())) => Ok(()),
             Ok(Err(error)) => {
                 self.inner
-                    .report_unhealthy(format!("write failed: {error}"));
+                    .report_unhealthy(SessionFailureReason::WriteFailed);
                 Err(error)
             }
             Err(_) => {
-                self.inner.report_unhealthy("write timed out");
+                self.inner
+                    .report_unhealthy(SessionFailureReason::WriteTimedOut);
                 Err(Error::TimedOut { action: "write" })
             }
         }
@@ -667,7 +727,7 @@ impl ConnectionSession {
     }
 
     /// Marks the transport unhealthy, entering `Recovering` if this session can recover.
-    pub fn report_unhealthy(&self, reason: impl Into<String>) {
+    pub fn report_unhealthy(&self, reason: SessionFailureReason) {
         self.inner.report_unhealthy(reason);
     }
 
@@ -935,7 +995,7 @@ mod tests {
         .expect("recovery budget should expire");
         assert_eq!(
             SessionStatus::Lost {
-                reason: "connect timed out".to_owned()
+                reason: SessionFailureReason::ConnectTimedOut
             },
             lost
         );
@@ -973,7 +1033,7 @@ mod tests {
         .expect("terminal errors should be reported immediately");
         assert_eq!(
             SessionStatus::Lost {
-                reason: "bluetooth adapter unavailable".to_owned()
+                reason: SessionFailureReason::BluetoothAdapterUnavailable
             },
             lost
         );
@@ -981,14 +1041,13 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn not_found_permission_and_unpaired_errors_are_terminal() {
+    async fn permission_and_unpaired_errors_are_terminal() {
         for (failure, expected) in [
-            (ScriptedFailure::DeviceNotFound, "device not found"),
             (
                 ScriptedFailure::PermissionDenied,
-                "bluetooth permission denied",
+                SessionFailureReason::PermissionDenied,
             ),
-            (ScriptedFailure::Unpaired, "device is not paired"),
+            (ScriptedFailure::Unpaired, SessionFailureReason::Unpaired),
         ] {
             let backend = Arc::new(ScriptedBackend::new(true));
             let session = connect_session(backend.clone()).await;
@@ -1004,14 +1063,39 @@ mod tests {
             )
             .await
             .expect("terminal errors should be reported immediately");
-            assert_eq!(
-                SessionStatus::Lost {
-                    reason: expected.to_owned()
-                },
-                lost
-            );
+            assert_eq!(SessionStatus::Lost { reason: expected }, lost);
             assert_eq!(2, backend.attempts.load(Ordering::SeqCst));
         }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn device_not_found_is_transient_during_recovery() {
+        let backend = Arc::new(ScriptedBackend::new(true));
+        let session = connect_session(backend.clone()).await;
+        backend.set_available(false);
+        backend.set_failure(ScriptedFailure::DeviceNotFound);
+
+        backend.latest_connection().disconnect();
+        wait_for_status(&session, |status| {
+            matches!(status, SessionStatus::Recovering { .. })
+        })
+        .await;
+
+        let lost = tokio::time::timeout(
+            Duration::from_secs(35),
+            wait_for_status(&session, |status| {
+                matches!(status, SessionStatus::Lost { .. })
+            }),
+        )
+        .await
+        .expect("the recovery budget, not the error, should end recovery");
+        assert_eq!(
+            SessionStatus::Lost {
+                reason: SessionFailureReason::DeviceNotFound
+            },
+            lost
+        );
+        assert!(backend.attempts.load(Ordering::SeqCst) > 2);
     }
 
     #[tokio::test(start_paused = true)]
@@ -1094,7 +1178,7 @@ mod tests {
         .expect("recovery budget should expire");
         assert_eq!(
             SessionStatus::Lost {
-                reason: "state refresh failed".to_owned()
+                reason: SessionFailureReason::StateRefreshFailed
             },
             lost
         );

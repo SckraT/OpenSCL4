@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.appwidget.AppWidgetManager
+import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -35,6 +36,7 @@ import com.oppzippy.openscq30.widget.SettingWidget
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -50,6 +52,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @AndroidEntryPoint
@@ -265,6 +268,26 @@ class DeviceService : LifecycleService() {
         }
     }
 
+    /**
+     * A lost session starts a new recovery budget when the device becomes reachable again, without waiting for
+     * the user to tap Retry.
+     */
+    private val linkReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
+            val address = try {
+                IntentCompat.getParcelableExtra(
+                    intent,
+                    BluetoothDevice.EXTRA_DEVICE,
+                    BluetoothDevice::class.java,
+                )?.address
+            } catch (_: SecurityException) {
+                null
+            } ?: return
+            connectionController.retryIfLostFor(address)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -276,6 +299,12 @@ class DeviceService : LifecycleService() {
             this,
             broadcastReceiver,
             IntentFilter().apply { ACTIONS.forEach { addAction(it) } },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        ContextCompat.registerReceiver(
+            this,
+            linkReceiver,
+            IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
@@ -339,16 +368,18 @@ class DeviceService : LifecycleService() {
                 if (connectionStatus is ConnectionStatus.Connected) {
                     val device = connectionStatus.deviceManager.device
                     connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
-                        _ldacState.value = try {
-                            val settings = device.settingsByCategory()
-                                .flatMap { it.settings }
-                                .associate { it.settingId to it.setting }
-                            (settings["ldac"] as? Setting.ToggleSetting)?.let { ldac ->
-                                LdacTileState(ldac.value, clientSettingAvailability(settings, "ldac"))
+                        _ldacState.value = withContext(Dispatchers.Default) {
+                            try {
+                                val settings = device.settingsByCategory()
+                                    .flatMap { it.settings }
+                                    .associate { it.settingId to it.setting }
+                                (settings["ldac"] as? Setting.ToggleSetting)?.let { ldac ->
+                                    LdacTileState(ldac.value, clientSettingAvailability(settings, "ldac"))
+                                }
+                            } catch (ex: IllegalStateException) {
+                                Log.w(TAG, "device was closed, LDAC unknown", ex)
+                                null
                             }
-                        } catch (ex: IllegalStateException) {
-                            Log.w(TAG, "device was closed, LDAC unknown", ex)
-                            null
                         }
                         LdacTileService.requestUpdate(applicationContext)
                     }
@@ -368,8 +399,13 @@ class DeviceService : LifecycleService() {
         val notification = buildNotification()
         startForeground(NOTIFICATION_ID, notification)
 
-        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
+        val macAddress = intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)
+        if (macAddress != null) {
             connectionController.connect(macAddress)
+            sendNotification()
+        } else if (connectionStatusFlow.value is ConnectionStatus.Lost) {
+            // Bringing the app or service back to the foreground starts a fresh recovery budget.
+            connectionController.retry()
             sendNotification()
         }
 
@@ -380,6 +416,7 @@ class DeviceService : LifecycleService() {
         super.onDestroy()
         Log.i(TAG, "stopping service")
         unregisterReceiver(broadcastReceiver)
+        unregisterReceiver(linkReceiver)
         cancelNotification()
         lostRetentionJob?.cancel()
         connectionController.close()

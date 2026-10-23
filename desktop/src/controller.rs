@@ -7,7 +7,7 @@ use std::{path::PathBuf, sync::Arc};
 use macaddr::MacAddr6;
 use openscq30_lib::{
     DeviceModel, OpenSCQ30Session,
-    connection::{self, ConnectionDescriptor, SessionStatus},
+    connection::{self, ConnectionDescriptor, SessionFailureReason, SessionStatus},
     device::{self, OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
     quick_presets::{QuickPresetActivation, QuickPresetsHandler},
     settings::{CategoryId, SettingId, Value},
@@ -91,12 +91,12 @@ pub enum Event {
     /// The device went away by itself.
     ConnectionLost {
         mac_address: MacAddr6,
-        reason: String,
+        reason: SessionFailureReason,
     },
     /// The transport dropped but the session is reconnecting; the last snapshot stays on screen.
     Recovering {
         mac_address: MacAddr6,
-        reason: String,
+        reason: SessionFailureReason,
     },
     ConnectFailed {
         mac_address: MacAddr6,
@@ -131,8 +131,8 @@ enum Message {
         failure: Failure,
     },
     DeviceChanged(u64),
-    Recovering(u64, String),
-    ConnectionLost(u64, String),
+    Recovering(u64, SessionFailureReason),
+    ConnectionLost(u64, SessionFailureReason),
     /// Let go of the device and stop, then say so.
     Shutdown(tokio::sync::oneshot::Sender<()>),
 }

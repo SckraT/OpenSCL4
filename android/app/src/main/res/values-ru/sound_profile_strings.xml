@@ -8,6 +8,7 @@
     <string name="sound_profile_high_frequencies">Высокие частоты</string>
     <string name="sound_profile_scroll_bands">Прокрутите полосы, чтобы увидеть остальные частоты</string>
     <string name="sound_profile_read_only">Эта модель поддерживает только встроенные профили эквалайзера.</string>
+    <string name="sound_profile_connection_read_only">Эквалайзер нельзя изменить, пока устройство переподключается.</string>
     <string name="sound_profile_enter_values">Ввести значения</string>
     <string name="sound_profile_reset">Сбросить</string>
     <string name="sound_profile_spatial_warning">Изменение эквалайзера отключает пространственный звук.</string>

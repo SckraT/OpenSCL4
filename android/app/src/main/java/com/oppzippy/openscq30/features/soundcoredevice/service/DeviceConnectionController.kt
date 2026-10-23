@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.soundcoredevice.service
 
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -32,6 +33,14 @@ internal class DeviceConnectionController(
         if (current is ConnectionStatus.Lost) connect(current.macAddress, replaceLost = true)
     }
 
+    /** Starts a new recovery budget when the lost device becomes reachable again. */
+    fun retryIfLostFor(macAddress: String) {
+        val current = connectionStatusFlow.value
+        if (current is ConnectionStatus.Lost && current.macAddress.equals(macAddress, ignoreCase = true)) {
+            connect(current.macAddress, replaceLost = true)
+        }
+    }
+
     private fun connect(macAddress: String, replaceLost: Boolean) {
         val current = connectionStatusFlow.value
         if (!replaceLost && current.isSameSession(macAddress)) return
@@ -62,7 +71,7 @@ internal class DeviceConnectionController(
                 connectionStatusFlow.value = ConnectionStatus.Lost(
                     deviceManager = null,
                     macAddress = macAddress,
-                    reason = ex.message ?: "connection failed",
+                    reason = SessionFailureReason.CONNECTION_FAILED,
                 )
                 onConnectionFailure(ex)
             } finally {
@@ -105,11 +114,4 @@ internal class DeviceConnectionController(
         connectionStatusFlow.value = ConnectionStatus.Disconnected
         current.deviceManager?.close()
     }
-}
-
-private fun ConnectionStatus.isSameSession(macAddress: String): Boolean = when (this) {
-    is ConnectionStatus.Connecting -> this.macAddress.equals(macAddress, ignoreCase = true)
-    is ConnectionStatus.Connected -> this.macAddress.equals(macAddress, ignoreCase = true)
-    is ConnectionStatus.Recovering -> this.macAddress.equals(macAddress, ignoreCase = true)
-    else -> false
 }

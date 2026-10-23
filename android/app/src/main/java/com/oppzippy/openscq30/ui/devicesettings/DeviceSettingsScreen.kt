@@ -57,6 +57,8 @@ import androidx.navigation.navArgument
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.features.soundcoredevice.service.textResource
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
@@ -618,7 +620,7 @@ fun DeviceSettingsScreen(
 }
 
 @Composable
-private fun LostBanner(reason: String, onRetry: () -> Unit) {
+private fun LostBanner(reason: SessionFailureReason, onRetry: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -630,16 +632,12 @@ private fun LostBanner(reason: String, onRetry: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
-            if (reason.isNotBlank()) {
-                Text(
-                    reason,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
+            Text(
+                stringResource(reason.textResource()),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
             TextButton(onClick = onRetry) {
                 Text(stringResource(R.string.sound_overview_retry))
             }

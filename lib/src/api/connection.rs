@@ -10,7 +10,7 @@ pub mod session;
 
 pub use session::{
     CONNECT_DEADLINE, ConnectionSession, ConnectionSessionConfig, RECOVERY_WINDOW, ReconnectHook,
-    SessionStatus, WRITE_DEADLINE,
+    SessionFailureReason, SessionStatus, WRITE_DEADLINE,
 };
 
 #[derive(thiserror::Error, Debug)]

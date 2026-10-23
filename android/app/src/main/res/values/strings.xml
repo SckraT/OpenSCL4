@@ -125,4 +125,18 @@
     <string name="visible_settings">Visible Settings</string>
     <string name="appearance">Appearance</string>
     <string name="compact_layout">Compact Layout</string>
+    <string name="session_reason_transport_lost">The connection was lost</string>
+    <string name="session_reason_connection_status_disconnected">The connection was closed</string>
+    <string name="session_reason_read_channel_closed">The device stopped sending data</string>
+    <string name="session_reason_write_failed">A command could not be sent</string>
+    <string name="session_reason_write_timed_out">A command timed out</string>
+    <string name="session_reason_silence_watchdog_failed">The device stopped responding</string>
+    <string name="session_reason_connect_timed_out">The device did not connect in time</string>
+    <string name="session_reason_state_refresh_failed">The device state could not be read</string>
+    <string name="session_reason_bluetooth_adapter_unavailable">Bluetooth is not available</string>
+    <string name="session_reason_device_not_found">The device was not found</string>
+    <string name="session_reason_permission_denied">Bluetooth permission was denied</string>
+    <string name="session_reason_unpaired">The device is no longer paired</string>
+    <string name="session_reason_security_failure">Bluetooth security check failed</string>
+    <string name="session_reason_connection_failed">The device could not be connected</string>
 </resources>

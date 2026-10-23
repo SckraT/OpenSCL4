@@ -33,12 +33,60 @@ uniffi::custom_type!(ConnectionStatus, String, {
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
 
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum SessionFailureReason {
+    TransportLost,
+    ConnectionStatusDisconnected,
+    ReadChannelClosed,
+    WriteFailed,
+    WriteTimedOut,
+    SilenceWatchdogFailed,
+    ConnectTimedOut,
+    StateRefreshFailed,
+    BluetoothAdapterUnavailable,
+    DeviceNotFound,
+    PermissionDenied,
+    Unpaired,
+    SecurityFailure,
+    ConnectionFailed,
+}
+
+impl From<connection::SessionFailureReason> for SessionFailureReason {
+    fn from(reason: connection::SessionFailureReason) -> Self {
+        match reason {
+            connection::SessionFailureReason::TransportLost => Self::TransportLost,
+            connection::SessionFailureReason::ConnectionStatusDisconnected => {
+                Self::ConnectionStatusDisconnected
+            }
+            connection::SessionFailureReason::ReadChannelClosed => Self::ReadChannelClosed,
+            connection::SessionFailureReason::WriteFailed => Self::WriteFailed,
+            connection::SessionFailureReason::WriteTimedOut => Self::WriteTimedOut,
+            connection::SessionFailureReason::SilenceWatchdogFailed => Self::SilenceWatchdogFailed,
+            connection::SessionFailureReason::ConnectTimedOut => Self::ConnectTimedOut,
+            connection::SessionFailureReason::StateRefreshFailed => Self::StateRefreshFailed,
+            connection::SessionFailureReason::BluetoothAdapterUnavailable => {
+                Self::BluetoothAdapterUnavailable
+            }
+            connection::SessionFailureReason::DeviceNotFound => Self::DeviceNotFound,
+            connection::SessionFailureReason::PermissionDenied => Self::PermissionDenied,
+            connection::SessionFailureReason::Unpaired => Self::Unpaired,
+            connection::SessionFailureReason::SecurityFailure => Self::SecurityFailure,
+            connection::SessionFailureReason::ConnectionFailed => Self::ConnectionFailed,
+        }
+    }
+}
+
 #[derive(Clone, Debug, uniffi::Enum)]
 pub enum SessionStatus {
     Connecting,
     Connected,
-    Recovering { attempt: u32, reason: String },
-    Lost { reason: String },
+    Recovering {
+        attempt: u32,
+        reason: SessionFailureReason,
+    },
+    Lost {
+        reason: SessionFailureReason,
+    },
     Closed,
 }
 
@@ -47,10 +95,13 @@ impl From<connection::SessionStatus> for SessionStatus {
         match status {
             connection::SessionStatus::Connecting => Self::Connecting,
             connection::SessionStatus::Connected => Self::Connected,
-            connection::SessionStatus::Recovering { attempt, reason } => {
-                Self::Recovering { attempt, reason }
-            }
-            connection::SessionStatus::Lost { reason } => Self::Lost { reason },
+            connection::SessionStatus::Recovering { attempt, reason } => Self::Recovering {
+                attempt,
+                reason: reason.into(),
+            },
+            connection::SessionStatus::Lost { reason } => Self::Lost {
+                reason: reason.into(),
+            },
             connection::SessionStatus::Closed => Self::Closed,
         }
     }

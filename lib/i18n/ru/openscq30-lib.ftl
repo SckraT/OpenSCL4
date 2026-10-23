@@ -328,3 +328,18 @@ alarm-n-snooze-duration-minutes = Отложить будильник { $number 
 
 setting-availability-requires-both-earbuds = Изменение доступно при обоих наушниках
 setting-availability-no-read-back = Устройство не подтверждает изменения
+
+session-reason-transport-lost = Связь потеряна
+session-reason-connection-status-disconnected = Соединение закрыто
+session-reason-read-channel-closed = Устройство перестало отправлять данные
+session-reason-write-failed = Не удалось отправить команду
+session-reason-write-timed-out = Команда не была отправлена вовремя
+session-reason-silence-watchdog-failed = Устройство перестало отвечать
+session-reason-connect-timed-out = Не удалось подключиться вовремя
+session-reason-state-refresh-failed = Не удалось прочитать состояние устройства
+session-reason-bluetooth-adapter-unavailable = Bluetooth недоступен
+session-reason-device-not-found = Устройство не найдено
+session-reason-permission-denied = Нет разрешения на Bluetooth
+session-reason-unpaired = Устройство больше не сопряжено
+session-reason-security-failure = Ошибка безопасности Bluetooth
+session-reason-connection-failed = Не удалось подключиться к устройству

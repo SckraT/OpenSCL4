@@ -10,6 +10,7 @@ import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import com.oppzippy.openscq30.test.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
@@ -141,14 +142,15 @@ class OpenSCQ30RootViewModelTest {
         val settingsManager = viewModel.deviceSettingsManager.value
         assertNotNull(settingsManager)
 
-        status.value = ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = "transport lost")
+        status.value =
+            ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
         assertSame(settingsManager, viewModel.deviceSettingsManager.value)
         assertEquals(
             "device",
             (viewModel.connectionStatusFlow.value as ConnectionStatus.Recovering).macAddress,
         )
 
-        status.value = ConnectionStatus.Lost(manager, "device", "recovery budget exhausted")
+        status.value = ConnectionStatus.Lost(manager, "device", SessionFailureReason.CONNECT_TIMED_OUT)
         assertSame(settingsManager, viewModel.deviceSettingsManager.value)
         verify(exactly = 0) { application.unbindService(any()) }
         store.clear()
@@ -160,7 +162,8 @@ class OpenSCQ30RootViewModelTest {
         val status = MutableStateFlow<ConnectionStatus>(ConnectionStatus.Connected(manager, "device"))
         viewModel.selectDevice("device")
         attachService(status)
-        status.value = ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = "transport lost")
+        status.value =
+            ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
 
         viewModel.selectDevice("device")
 
@@ -172,7 +175,9 @@ class OpenSCQ30RootViewModelTest {
     fun retryFromLostStartsTheServiceAgainForTheSameDevice() {
         val manager = mockDeviceManager()
         viewModel.selectDevice("device")
-        attachService(MutableStateFlow(ConnectionStatus.Lost(manager, "device", "recovery budget exhausted")))
+        attachService(
+            MutableStateFlow(ConnectionStatus.Lost(manager, "device", SessionFailureReason.CONNECT_TIMED_OUT)),
+        )
 
         viewModel.retryConnection()
 

@@ -44,8 +44,11 @@ pub struct ModuleCollection<StateType> {
     pub setting_manager: SettingsManager<StateType>,
     pub packet_handlers: PacketManager<StateType>,
     pub state_modifiers: Vec<Box<dyn StateModifier<StateType> + Send + Sync>>,
-    pub flags: std::collections::HashMap<SettingId, Box<dyn FlagAccess<StateType> + Send + Sync>>,
+    pub flags: std::collections::HashMap<SettingId, Box<FlagAccess<StateType>>>,
     pub write_lock: tokio::sync::Mutex<write::WriteThrottle>,
+    /// The command of the latest packet that changed the device state. Write confirmation uses it
+    /// to distinguish a bulk state report from unrelated updates such as the battery level.
+    pub last_state_update: watch::Sender<Option<packet::Command>>,
 }
 
 impl<T> Default for ModuleCollection<T> {
@@ -56,6 +59,7 @@ impl<T> Default for ModuleCollection<T> {
             state_modifiers: Default::default(),
             flags: Default::default(),
             write_lock: Default::default(),
+            last_state_update: watch::channel(None).0,
         }
     }
 }
@@ -112,7 +116,11 @@ impl<T> ModuleCollectionSpawnPacketHandlerExt<T> for Arc<ModuleCollection<T>> {
                 .handle(&state_sender, &packet)
                 .await
             {
-                Ok(()) => (),
+                Ok(()) => {
+                    module_collection
+                        .last_state_update
+                        .send_replace(Some(packet.command));
+                }
                 Err(err) => {
                     tracing::warn!("error handling packet: {packet:?}, error: {err:?}");
                 }
@@ -130,7 +138,11 @@ impl<T> ModuleCollectionSpawnPacketHandlerExt<T> for Arc<ModuleCollection<T>> {
                                     .handle(&state_sender, &packet)
                                     .await
                                 {
-                                    Ok(()) => (),
+                                    Ok(()) => {
+                                        module_collection
+                                            .last_state_update
+                                            .send_replace(Some(packet.command));
+                                    }
                                     Err(err) => {
                                         tracing::warn!("error handling packet: {packet:?}, error: {err:?}");
                                     }

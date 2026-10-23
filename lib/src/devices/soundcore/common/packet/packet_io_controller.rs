@@ -14,7 +14,10 @@ use tracing::{Instrument, info_span, trace};
 
 use crate::{
     api::{
-        connection::{ConnectionSession, ConnectionStatus, RfcommConnection, SessionStatus},
+        connection::{
+            ConnectionSession, ConnectionStatus, RfcommConnection, SessionFailureReason,
+            SessionStatus,
+        },
         device,
     },
     devices::soundcore::common::packet::{self, ChecksumKind, Command, outbound::ToPacket},
@@ -402,7 +405,7 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
             }
         }
         if failures >= 2 {
-            session.report_unhealthy("silence watchdog probe failed");
+            session.report_unhealthy(SessionFailureReason::SilenceWatchdogFailed);
             // Keep the watchdog alive: if the session recovers, a second silence must be detected.
         }
     }

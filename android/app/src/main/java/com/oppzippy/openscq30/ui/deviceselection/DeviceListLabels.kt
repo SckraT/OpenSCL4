@@ -31,29 +31,45 @@ object DeviceListLabels {
         ControlBadge.Unavailable -> R.string.sound_device_control_unavailable
     }
 
-    @StringRes
-    fun accessTitle(access: BluetoothAccess): Int? = when (access) {
-        BluetoothAccess.Ready -> null
-        BluetoothAccess.Off -> R.string.sound_permission_bluetooth_disabled
-        BluetoothAccess.PermissionDenied -> R.string.bluetooth_permission_is_required
-        BluetoothAccess.Unsupported -> R.string.sound_device_bluetooth_unsupported
-        BluetoothAccess.Unknown -> R.string.sound_device_bluetooth_unknown
+    fun accessPresentation(access: BluetoothAccess): BluetoothAccessPresentation = when (access) {
+        BluetoothAccess.Ready -> BluetoothAccessPresentation()
+
+        BluetoothAccess.Off -> BluetoothAccessPresentation(
+            title = R.string.sound_permission_bluetooth_disabled,
+            hint = R.string.sound_permission_bluetooth_disabled_hint,
+            action = R.string.sound_permission_open_bluetooth_settings,
+        )
+
+        BluetoothAccess.PermissionDenied -> BluetoothAccessPresentation(
+            title = R.string.bluetooth_permission_is_required,
+            hint = R.string.sound_permission_bluetooth_purpose,
+            action = R.string.request_permission,
+        )
+
+        BluetoothAccess.Unsupported -> BluetoothAccessPresentation(
+            title = R.string.sound_device_bluetooth_unsupported,
+            hint = R.string.sound_device_bluetooth_unsupported_hint,
+        )
+
+        BluetoothAccess.Unknown -> BluetoothAccessPresentation(
+            title = R.string.sound_device_bluetooth_unknown,
+            hint = R.string.sound_device_bluetooth_unknown_hint,
+            action = R.string.sound_device_bluetooth_retry,
+        )
     }
 
     @StringRes
-    fun accessHint(access: BluetoothAccess): Int? = when (access) {
-        BluetoothAccess.Ready -> null
-        BluetoothAccess.Off -> R.string.sound_permission_bluetooth_disabled_hint
-        BluetoothAccess.PermissionDenied -> R.string.sound_permission_bluetooth_purpose
-        BluetoothAccess.Unsupported -> R.string.sound_device_bluetooth_unsupported_hint
-        BluetoothAccess.Unknown -> R.string.sound_device_bluetooth_unknown_hint
-    }
+    fun accessTitle(access: BluetoothAccess): Int? = accessPresentation(access).title
 
     @StringRes
-    fun accessAction(access: BluetoothAccess): Int? = when (access) {
-        BluetoothAccess.Ready, BluetoothAccess.Unsupported -> null
-        BluetoothAccess.Off -> R.string.sound_permission_open_bluetooth_settings
-        BluetoothAccess.PermissionDenied -> R.string.request_permission
-        BluetoothAccess.Unknown -> R.string.sound_device_bluetooth_retry
-    }
+    fun accessHint(access: BluetoothAccess): Int? = accessPresentation(access).hint
+
+    @StringRes
+    fun accessAction(access: BluetoothAccess): Int? = accessPresentation(access).action
 }
+
+data class BluetoothAccessPresentation(
+    @StringRes val title: Int? = null,
+    @StringRes val hint: Int? = null,
+    @StringRes val action: Int? = null,
+)

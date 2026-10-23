@@ -2,6 +2,7 @@ package com.oppzippy.openscq30.widget
 
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import io.mockk.mockk
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -16,7 +17,12 @@ class SettingWidgetStateTest {
         assertEquals(
             SettingWidgetState.Recovering("Liberty 4 Pro"),
             recoveryWidgetState(
-                ConnectionStatus.Recovering(manager, "AA:BB", attempt = 1, reason = "transport lost"),
+                ConnectionStatus.Recovering(
+                    manager,
+                    "AA:BB",
+                    attempt = 1,
+                    reason = SessionFailureReason.TRANSPORT_LOST,
+                ),
                 "Liberty 4 Pro",
             ),
         )
@@ -27,7 +33,7 @@ class SettingWidgetStateTest {
         assertEquals(
             SettingWidgetState.Lost("Liberty 4 Pro", "AA:BB"),
             recoveryWidgetState(
-                ConnectionStatus.Lost(manager, "AA:BB", reason = "recovery budget exhausted"),
+                ConnectionStatus.Lost(manager, "AA:BB", reason = SessionFailureReason.CONNECT_TIMED_OUT),
                 "Liberty 4 Pro",
             ),
         )
