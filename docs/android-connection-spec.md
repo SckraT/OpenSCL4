@@ -64,8 +64,11 @@ provides a snapshot plus a flow of updates, and performs no presentation decisio
 
 The effective link set is the union of:
 
-1. a profile scan seed on start/resume: `BluetoothManager.getConnectedDevices(GATT,
-   GATT_SERVER, A2DP, HEADSET)`, lowercased MAC addresses, unsupported profiles skipped;
+1. a profile scan seed on start/resume. Classic profiles are read through
+   `BluetoothAdapter.getProfileProxy` (A2DP, HEADSET): on Android 16
+   `BluetoothManager.getConnectedDevices` throws `IllegalArgumentException: Profile not
+   supported` for them. `BluetoothManager.getConnectedDevices` is used only for
+   GATT/GATT_SERVER. Lowercased MAC addresses; unsupported profiles skipped;
 2. live `ACTION_ACL_CONNECTED` / `ACTION_ACL_DISCONNECTED` broadcasts;
 3. evidence from an active app session (`AppControl.Controlling` implies a link).
 
@@ -330,6 +333,9 @@ Frontier: A, C, G. Hardware QA is last. The spec is the source for all issue bod
 
 ## 8. Open risks
 
+- Android 16: `BluetoothManager.getConnectedDevices` is not supported for classic A2DP/HEADSET;
+  the monitor uses `getProfileProxy`. Verified on Pixel 8 Pro. `AutoConnectService` still uses
+  the unsupported call and is tracked separately in #38.
 - ACL broadcast delivery is OEM/Android-version dependent; verify on Pixel 8 Pro and keep the
   profile/resume fallback.
 - EQ device acceptance at one earbud is inferred from the core tests, not measured directly; the
