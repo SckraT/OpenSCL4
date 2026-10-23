@@ -1,7 +1,10 @@
 use std::{
     collections::{HashMap, VecDeque},
     hash::Hash,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use tokio::sync::Semaphore;
@@ -13,7 +16,15 @@ const LOCK_HELD_ERROR: &str =
 #[derive(Debug)]
 struct SemaphoreWithValue<T> {
     semaphore: Semaphore,
+    cancelled: AtomicBool,
     value: std::sync::Mutex<Option<T>>,
+}
+
+impl<T> SemaphoreWithValue<T> {
+    fn cancel(&self) {
+        self.cancelled.store(true, Ordering::SeqCst);
+        self.semaphore.close();
+    }
 }
 
 /// For each key, maintains a queue of pending tasks. The idea is each key can have its own sequence of
@@ -39,6 +50,7 @@ impl<K: Hash + Eq, V> MultiQueue<K, V> {
 
         let current = Arc::new(SemaphoreWithValue {
             semaphore: Semaphore::new(0),
+            cancelled: AtomicBool::new(false),
             value: std::sync::Mutex::new(None),
         });
         queue.push_back(current.clone());
@@ -60,6 +72,7 @@ impl<K: Hash + Eq, V> MultiQueue<K, V> {
         for _ in 0..num {
             let current = Arc::new(SemaphoreWithValue {
                 semaphore: Semaphore::new(0),
+                cancelled: AtomicBool::new(false),
                 value: std::sync::Mutex::new(None),
             });
             queue.push_back(current.clone());
@@ -89,14 +102,32 @@ impl<K: Hash + Eq, V> MultiQueue<K, V> {
     /// Removes a task from a queue without returning a result
     pub fn cancel(&self, key: &K, handle: MultiQueueHandle<V>) {
         let mut queues = self.queues.lock().expect(LOCK_HELD_ERROR);
+        let mut remove_queue = false;
         if let Some(queue) = queues.get_mut(key)
             && let Some(index) = queue
                 .iter()
                 .position(|entry| Arc::ptr_eq(entry, &handle.current))
         {
-            // No need to close the semaphore since we were given ownership of the only outside reference to it
+            // Release anyone waiting on this handle before it disappears from the queue.
+            handle.current.cancel();
             queue.remove(index);
+            remove_queue = queue.is_empty();
         }
+        if remove_queue {
+            queues.remove(key);
+        }
+    }
+
+    /// Cancels every queued task. Used when the transport is lost so that no stale command can
+    /// be written after a reconnect.
+    pub fn cancel_all(&self) {
+        let mut queues = self.queues.lock().expect(LOCK_HELD_ERROR);
+        for queue in queues.values_mut() {
+            for entry in queue.drain(..) {
+                entry.cancel();
+            }
+        }
+        queues.clear();
     }
 }
 
@@ -124,6 +155,11 @@ impl<T> MultiQueueHandle<T> {
             .acquire()
             .await
             .expect_err(PERMIT_ACQUIRED_ERROR);
+    }
+
+    /// Returns true if the queue cancelled this handle. A cancelled handle must not be written.
+    pub fn is_cancelled(&self) -> bool {
+        self.current.cancelled.load(Ordering::SeqCst)
     }
 
     pub async fn wait_for_value(self) -> T {
@@ -187,5 +223,44 @@ mod tests {
             tokio::time::timeout(Duration::from_millis(1), third.wait_for_value()).await,
             Ok(3)
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_cancel_does_not_block_the_next_handle() {
+        let queues = MultiQueue::<i8, i8>::new();
+        let first = queues.add(0);
+        let second = queues.add(0);
+        queues.cancel(&0, first);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(1), second.wait_for_start()).await,
+            Ok(())
+        );
+        queues.pop(&0, 2);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(1), second.wait_for_value()).await,
+            Ok(2)
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancel_marks_the_handle_so_it_is_not_written() {
+        let queues = MultiQueue::<i8, i8>::new();
+        let handle = queues.add(0);
+        assert!(!handle.is_cancelled());
+        queues.cancel(&0, handle);
+        assert!(queues.queues.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancel_all_releases_every_waiter() {
+        let queues = MultiQueue::<i8, i8>::new();
+        let first = queues.add(0);
+        let second = queues.add(0);
+        let other = queues.add(1);
+        queues.cancel_all();
+        assert!(first.is_cancelled());
+        assert!(second.is_cancelled());
+        assert!(other.is_cancelled());
+        assert!(queues.queues.lock().unwrap().is_empty());
     }
 }

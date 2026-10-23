@@ -16,7 +16,8 @@ use crate::{
 };
 
 use super::{
-    packet_manager::PacketManager, settings_manager::SettingsManager, state_modifier::StateModifier,
+    packet_manager::PacketManager, settings_manager::SettingsManager,
+    state_modifier::StateModifier, write, write::FlagAccess,
 };
 
 pub mod ambient_sound_mode_cycle;
@@ -43,6 +44,11 @@ pub struct ModuleCollection<StateType> {
     pub setting_manager: SettingsManager<StateType>,
     pub packet_handlers: PacketManager<StateType>,
     pub state_modifiers: Vec<Box<dyn StateModifier<StateType> + Send + Sync>>,
+    pub flags: std::collections::HashMap<SettingId, Box<FlagAccess<StateType>>>,
+    pub write_lock: tokio::sync::Mutex<write::WriteThrottle>,
+    /// The command of the latest packet that changed the device state. Write confirmation uses it
+    /// to distinguish a bulk state report from unrelated updates such as the battery level.
+    pub last_state_update: watch::Sender<Option<packet::Command>>,
 }
 
 impl<T> Default for ModuleCollection<T> {
@@ -51,6 +57,9 @@ impl<T> Default for ModuleCollection<T> {
             setting_manager: Default::default(),
             packet_handlers: Default::default(),
             state_modifiers: Default::default(),
+            flags: Default::default(),
+            write_lock: Default::default(),
+            last_state_update: watch::channel(None).0,
         }
     }
 }
@@ -62,20 +71,19 @@ where
     pub async fn set_setting_values(
         &self,
         state_sender: &watch::Sender<StateType>,
+        packet_io: &packet::PacketIOController,
         setting_values: impl IntoIterator<Item = (SettingId, Value)>,
-    ) -> device::Result<()> {
-        let mut target_state = state_sender.borrow().clone();
-        for (setting_id, value) in setting_values {
-            self.setting_manager
-                .set(&mut target_state, &setting_id, value)
-                .await
-                .unwrap()
-                .map_err(|err| err.into_settings_error(setting_id))?;
-        }
-        for modifier in &self.state_modifiers {
-            modifier.move_to_state(state_sender, &target_state).await?;
-        }
-        Ok(())
+    ) -> device::Result<Vec<device::SettingWriteOutcome>> {
+        write::set_setting_values(self, state_sender, packet_io, setting_values, false).await
+    }
+
+    pub async fn set_setting_values_demo(
+        &self,
+        state_sender: &watch::Sender<StateType>,
+        packet_io: &packet::PacketIOController,
+        setting_values: impl IntoIterator<Item = (SettingId, Value)>,
+    ) -> device::Result<Vec<device::SettingWriteOutcome>> {
+        write::set_setting_values(self, state_sender, packet_io, setting_values, true).await
     }
 }
 
@@ -108,7 +116,11 @@ impl<T> ModuleCollectionSpawnPacketHandlerExt<T> for Arc<ModuleCollection<T>> {
                 .handle(&state_sender, &packet)
                 .await
             {
-                Ok(()) => (),
+                Ok(()) => {
+                    module_collection
+                        .last_state_update
+                        .send_replace(Some(packet.command));
+                }
                 Err(err) => {
                     tracing::warn!("error handling packet: {packet:?}, error: {err:?}");
                 }
@@ -126,7 +138,11 @@ impl<T> ModuleCollectionSpawnPacketHandlerExt<T> for Arc<ModuleCollection<T>> {
                                     .handle(&state_sender, &packet)
                                     .await
                                 {
-                                    Ok(()) => (),
+                                    Ok(()) => {
+                                        module_collection
+                                            .last_state_update
+                                            .send_replace(Some(packet.command));
+                                    }
                                     Err(err) => {
                                         tracing::warn!("error handling packet: {packet:?}, error: {err:?}");
                                     }

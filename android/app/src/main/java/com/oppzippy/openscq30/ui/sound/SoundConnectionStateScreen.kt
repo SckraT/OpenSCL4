@@ -48,12 +48,16 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.features.soundcoredevice.service.textResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SoundConnectionStateScreen(status: ConnectionStatus, onBack: () -> Unit, onRetry: () -> Unit = {}) {
-    val connecting = status is ConnectionStatus.Connecting || status == ConnectionStatus.AwaitingConnection
-    val bluetoothDisabled = !connecting && rememberBluetoothDisabled()
+    val connecting = status is ConnectionStatus.Connecting ||
+        status is ConnectionStatus.Recovering ||
+        status == ConnectionStatus.AwaitingConnection
+    val lost = status as? ConnectionStatus.Lost
+    val bluetoothDisabled = !connecting && lost == null && rememberBluetoothDisabled()
     val context = LocalContext.current
     Scaffold(topBar = {
         TopAppBar(title = {
@@ -101,6 +105,12 @@ fun SoundConnectionStateScreen(status: ConnectionStatus, onBack: () -> Unit, onR
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (lost != null) {
+                Text(
+                    stringResource(R.string.sound_overview_lost_reason, stringResource(lost.reason.textResource())),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (bluetoothDisabled) {
                 OutlinedButton(onClick = {
                     try {

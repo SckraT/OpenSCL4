@@ -20,6 +20,7 @@
     <string name="replace">Заменить</string>
     <string name="connected_to">Подключено к %s</string>
     <string name="connecting_to">Подключение к %s</string>
+    <string name="reconnecting_to">Переподключение к %s</string>
     <string name="disconnected">Отключено</string>
     <string name="disconnect">Отключить</string>
     <string name="awaiting_connection">Ожидание подключения</string>
@@ -86,4 +87,25 @@
     <string name="visible_settings">Видимые настройки</string>
     <string name="appearance">Внешний вид</string>
     <string name="compact_layout">Компактный вид</string>
+    <string name="setting_availability_requires_both_earbuds">Изменение доступно при обоих наушниках</string>
+    <string name="setting_availability_no_read_back">Устройство не подтверждает изменения</string>
+    <string name="setting_write_rejected">Устройство не применило настройку</string>
+    <string name="setting_write_timed_out">Устройство не подтвердило настройку</string>
+    <string name="setting_write_disconnected">Устройство отключилось</string>
+    <string name="setting_write_unsupported_requires_both_earbuds">Настройку нельзя изменить при одном наушнике</string>
+    <string name="setting_write_unsupported_no_read_back">Устройство не может подтвердить настройку</string>
+    <string name="session_reason_transport_lost">Связь потеряна</string>
+    <string name="session_reason_connection_status_disconnected">Соединение закрыто</string>
+    <string name="session_reason_read_channel_closed">Устройство перестало отправлять данные</string>
+    <string name="session_reason_write_failed">Не удалось отправить команду</string>
+    <string name="session_reason_write_timed_out">Команда не была отправлена вовремя</string>
+    <string name="session_reason_silence_watchdog_failed">Устройство перестало отвечать</string>
+    <string name="session_reason_connect_timed_out">Не удалось подключиться вовремя</string>
+    <string name="session_reason_state_refresh_failed">Не удалось прочитать состояние устройства</string>
+    <string name="session_reason_bluetooth_adapter_unavailable">Bluetooth недоступен</string>
+    <string name="session_reason_device_not_found">Устройство не найдено</string>
+    <string name="session_reason_permission_denied">Нет разрешения на Bluetooth</string>
+    <string name="session_reason_unpaired">Устройство больше не сопряжено</string>
+    <string name="session_reason_security_failure">Ошибка безопасности Bluetooth</string>
+    <string name="session_reason_connection_failed">Не удалось подключиться к устройству</string>
 </resources>

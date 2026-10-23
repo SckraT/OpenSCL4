@@ -43,15 +43,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
+import com.oppzippy.openscq30.lib.wrapper.blockedReason
+import com.oppzippy.openscq30.lib.wrapper.isAvailable
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.ControlBadge
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
+import com.oppzippy.openscq30.ui.deviceselection.DeviceListLabels
+import com.oppzippy.openscq30.ui.deviceselection.LinkBadge
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.utils.sharedDeviceCard
 import com.oppzippy.openscq30.ui.utils.sharedDevicePart
@@ -71,6 +78,8 @@ fun DeviceHeroCard(
     modifier: Modifier = Modifier,
     macAddress: String? = null,
     oneEarbudBadge: Boolean = false,
+    linkBadge: LinkBadge? = null,
+    controlBadge: ControlBadge? = null,
     hint: String? = null,
     onClick: (() -> Unit)? = null,
     topEnd: @Composable () -> Unit = {},
@@ -98,7 +107,11 @@ fun DeviceHeroCard(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             itemVerticalAlignment = Alignment.CenterVertically,
                         ) {
-                            DeviceStatusPill(state)
+                            if (linkBadge != null && controlBadge != null) {
+                                DeviceAxisBadges(linkBadge, controlBadge)
+                            } else {
+                                DeviceStatusPill(state, isDemo)
+                            }
                             if (oneEarbudBadge) OneEarbudBadge()
                         }
                     }
@@ -161,7 +174,53 @@ private fun DeviceBrand(brand: String?, isDemo: Boolean) {
 }
 
 @Composable
-internal fun DeviceStatusPill(state: ActiveDeviceState?) {
+internal fun DeviceStatusPill(state: ActiveDeviceState?, isDemo: Boolean = false) {
+    val text = when {
+        isDemo && state == null -> R.string.demo
+        state == ActiveDeviceState.Connected -> R.string.connected
+        state == ActiveDeviceState.Connecting -> R.string.sound_device_connecting
+        else -> R.string.sound_device_not_connected
+    }
+    DeviceBadge(state = state, text = stringResource(text))
+}
+
+/** The featured card's two independent facts: the phone's Bluetooth link and the app's control session. */
+@Composable
+private fun DeviceAxisBadges(linkBadge: LinkBadge, controlBadge: ControlBadge) {
+    val linkLabel = stringResource(DeviceListLabels.linkBadge(linkBadge))
+    val controlLabel = stringResource(DeviceListLabels.controlBadge(controlBadge))
+    val linkDescription = stringResource(R.string.sound_device_link_state_description, linkLabel)
+    val controlDescription = stringResource(R.string.sound_device_control_state_description, controlLabel)
+    Row(
+        Modifier.semantics(mergeDescendants = true) {
+            contentDescription = linkDescription
+        }.background(
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+            RoundedCornerShape(14.dp),
+        ).padding(horizontal = 11.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        LinkDot(linkBadge)
+        Text(linkLabel, style = MaterialTheme.typography.labelMedium)
+    }
+    Row(
+        Modifier.semantics(mergeDescendants = true) {
+            contentDescription = controlDescription
+        }.background(
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
+            RoundedCornerShape(14.dp),
+        ).padding(horizontal = 11.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        ControlDot(controlBadge)
+        Text(controlLabel, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun DeviceBadge(state: ActiveDeviceState?, text: String) {
     Row(
         Modifier.background(
             MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
@@ -179,25 +238,44 @@ internal fun DeviceStatusPill(state: ActiveDeviceState?) {
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
 
-            null -> Box(
-                Modifier.size(9.dp).border(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    CircleShape,
-                ),
-            )
+            null -> EmptyDot()
         }
-        Text(
-            stringResource(
-                when (state) {
-                    ActiveDeviceState.Connected -> R.string.connected
-                    ActiveDeviceState.Connecting -> R.string.sound_device_connecting
-                    null -> R.string.sound_device_not_connected
-                },
-            ),
-            style = MaterialTheme.typography.labelMedium,
-        )
+        Text(text, style = MaterialTheme.typography.labelMedium)
     }
+}
+
+@Composable
+private fun LinkDot(badge: LinkBadge) {
+    when (badge) {
+        LinkBadge.Linked -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
+        LinkBadge.NotLinked, LinkBadge.Unknown, LinkBadge.Unconfirmed -> EmptyDot()
+    }
+}
+
+@Composable
+private fun ControlDot(badge: ControlBadge) {
+    when (badge) {
+        ControlBadge.Active -> Box(Modifier.size(8.dp).background(ConnectedDot, CircleShape))
+
+        ControlBadge.Connecting -> CircularProgressIndicator(
+            modifier = Modifier.size(11.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        ControlBadge.Unavailable -> EmptyDot()
+    }
+}
+
+@Composable
+private fun EmptyDot() {
+    Box(
+        Modifier.size(9.dp).border(
+            1.5.dp,
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            CircleShape,
+        ),
+    )
 }
 
 /** "1 earbud" next to the connection state; tapping it explains what is unavailable. */
@@ -269,6 +347,7 @@ private fun BatteryTiles(batteries: List<DeviceBattery>) {
 internal fun QuickToggleRow(
     toggles: List<Pair<String, Setting.ToggleSetting>>,
     available: List<String>,
+    availability: Map<String, ClientSettingAvailability>,
     onToggle: (String, Boolean) -> Unit,
     onChoose: (List<String>) -> Unit,
 ) {
@@ -284,35 +363,50 @@ internal fun QuickToggleRow(
             },
         )
     }
-    FlowRow(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // the card is the color a selected chip would have, so an enabled toggle is filled with the primary color
-        val colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-        )
-        toggles.forEach { (id, setting) ->
+    val readOnly = LocalSettingsReadOnly.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // the card is the color a selected chip would have, so an enabled toggle is filled with the primary color
+            val colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+            )
+            toggles.forEach { (id, setting) ->
+                val enabled = availability[id]?.isAvailable() != false && !readOnly
+                FilterChip(
+                    selected = setting.value,
+                    onClick = { if (enabled) onToggle(id, !setting.value) },
+                    enabled = enabled,
+                    label = { Text(translateSettingId(id)) },
+                    leadingIcon = if (setting.value) {
+                        { Icon(painterResource(R.drawable.check_24px), null, Modifier.size(18.dp)) }
+                    } else {
+                        null
+                    },
+                    colors = colors,
+                )
+            }
             FilterChip(
-                selected = setting.value,
-                onClick = { onToggle(id, !setting.value) },
-                label = { Text(translateSettingId(id)) },
-                leadingIcon = if (setting.value) {
-                    { Icon(painterResource(R.drawable.check_24px), null, Modifier.size(18.dp)) }
-                } else {
-                    null
-                },
-                colors = colors,
+                selected = false,
+                onClick = { choosing = true },
+                label = { Text(if (toggles.isEmpty()) stringResource(R.string.sound_quick_toggles_add) else "+") },
             )
         }
-        FilterChip(
-            selected = false,
-            onClick = { choosing = true },
-            label = { Text(if (toggles.isEmpty()) stringResource(R.string.sound_quick_toggles_add) else "+") },
-        )
+        // a disabled toggle keeps its current value and says why it cannot be changed
+        toggles.forEach { (id, _) ->
+            availability[id]?.blockedReason()?.let { reason ->
+                Text(
+                    "${translateSettingId(id)}: ${stringResource(availabilityReasonText(reason))}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
     }
 }
 

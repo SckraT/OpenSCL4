@@ -3,7 +3,7 @@ use clap::ArgMatches;
 use indexmap::IndexMap;
 use macaddr::MacAddr6;
 use openscq30_lib::{
-    device::OpenSCQ30Device,
+    device::{OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
     settings::{self, CategoryId, Setting, SettingId},
 };
 use serde::Serialize;
@@ -217,7 +217,9 @@ async fn handle_setting(matches: &ArgMatches, device: &dyn OpenSCQ30Device) -> a
     // Whether this fails at any point or not, we still want to print the table, so make sure to
     // do that before returning the error.
     let mut command_results = Vec::new();
-    let result = execute_commands(device, commands, &mut command_results).await;
+    let mut write_outcomes = Vec::new();
+    let result =
+        execute_commands(device, commands, &mut command_results, &mut write_outcomes).await;
 
     if json {
         let table_items = command_results
@@ -228,19 +230,56 @@ async fn handle_setting(matches: &ArgMatches, device: &dyn OpenSCQ30Device) -> a
             })
             .collect::<Vec<_>>();
         println!("{}", serde_json::to_string_pretty(&table_items)?);
-    } else if !command_results.is_empty() {
-        let mut table = Table::new(
-            command_results
-                .into_iter()
-                .map(|(setting_id, setting)| SettingIdValueTableItem::new(setting_id, setting)),
-        );
-        crate::fmt::apply_tabled_settings(&mut table);
-        println!("{table}");
-    } else if result.is_ok() {
-        println!("OK");
+        // Keep stdout valid json; the outcomes are still shown, but on stderr.
+        for outcome in &write_outcomes {
+            eprintln!("{}", format_write_outcome(outcome));
+        }
+    } else {
+        for outcome in &write_outcomes {
+            println!("{}", format_write_outcome(outcome));
+        }
+        if !command_results.is_empty() {
+            let mut table =
+                Table::new(command_results.into_iter().map(|(setting_id, setting)| {
+                    SettingIdValueTableItem::new(setting_id, setting)
+                }));
+            crate::fmt::apply_tabled_settings(&mut table);
+            println!("{table}");
+        } else if result.is_ok() && write_outcomes.is_empty() {
+            println!("OK");
+        }
     }
 
-    result
+    result?;
+    check_all_applied(&write_outcomes)
+}
+
+fn check_all_applied(outcomes: &[SettingWriteOutcome]) -> anyhow::Result<()> {
+    if let Some(outcome) = outcomes
+        .iter()
+        .find(|outcome| !matches!(outcome.outcome, WriteOutcome::Applied { .. }))
+    {
+        anyhow::bail!("{}", format_write_outcome(outcome));
+    }
+    Ok(())
+}
+
+fn format_write_outcome(outcome: &SettingWriteOutcome) -> String {
+    let result = match &outcome.outcome {
+        WriteOutcome::Applied { observed } => format!("applied ({observed:?})"),
+        WriteOutcome::Rejected {
+            observed: Some(observed),
+        } => {
+            format!("rejected (observed: {observed:?})")
+        }
+        WriteOutcome::Rejected { observed: None } => "rejected".to_string(),
+        WriteOutcome::UnsupportedInState { reason } => {
+            format!("unsupported in the current state ({reason:?})")
+        }
+        WriteOutcome::TimedOut => "timed out".to_string(),
+        WriteOutcome::Disconnected => "disconnected".to_string(),
+    };
+    format!("{}: {result}", outcome.setting_id)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -306,6 +345,7 @@ async fn execute_commands(
     device: &dyn OpenSCQ30Device,
     commands: Vec<ExecCommand>,
     table_items: &mut Vec<(SettingId, settings::Setting)>,
+    write_outcomes: &mut Vec<SettingWriteOutcome>,
 ) -> anyhow::Result<()> {
     for command in commands {
         match command {
@@ -321,13 +361,14 @@ async fn execute_commands(
                     "{} does not use setting id {setting_id}.",
                     device.model(),
                 ))?;
-                device
+                let outcomes = device
                     .set_setting_values(vec![(
                         setting_id,
                         crate::parse::setting_value(&setting, unparsed_value)
                             .context(setting_id)?,
                     )])
                     .await?;
+                write_outcomes.extend(outcomes);
             }
         }
     }
@@ -361,5 +402,51 @@ impl SettingIdValueTableItem {
             setting_id,
             value: displayable_value,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openscq30_lib::settings::Value;
+
+    #[test]
+    fn a_rejected_setting_fails_the_command() {
+        let outcomes = vec![SettingWriteOutcome {
+            setting_id: SettingId::WearingDetection,
+            outcome: WriteOutcome::Rejected {
+                observed: Some(Value::Bool(false)),
+            },
+        }];
+
+        let error = check_all_applied(&outcomes).unwrap_err();
+
+        assert!(error.to_string().contains("wearingDetection"));
+        assert!(error.to_string().contains("rejected"));
+    }
+
+    #[test]
+    fn a_timed_out_setting_fails_the_command() {
+        let outcomes = vec![SettingWriteOutcome {
+            setting_id: SettingId::Ldac,
+            outcome: WriteOutcome::TimedOut,
+        }];
+
+        let error = check_all_applied(&outcomes).unwrap_err();
+
+        assert!(error.to_string().contains("ldac"));
+        assert!(error.to_string().contains("timed out"));
+    }
+
+    #[test]
+    fn applied_settings_succeed() {
+        let outcomes = vec![SettingWriteOutcome {
+            setting_id: SettingId::Ldac,
+            outcome: WriteOutcome::Applied {
+                observed: Value::Bool(true),
+            },
+        }];
+
+        assert!(check_all_applied(&outcomes).is_ok());
     }
 }

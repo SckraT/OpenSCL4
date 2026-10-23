@@ -58,7 +58,6 @@ where
             self.packet_io
                 .send_with_response(&packet::outbound::SetSoundModes(new_sound_modes).to_packet())
                 .await?;
-            state_sender.send_modify(|state| *state.get_mut() = new_sound_modes);
         }
 
         {
@@ -77,7 +76,6 @@ where
             self.packet_io
                 .send_with_response(&packet::outbound::SetSoundModes(new_sound_modes).to_packet())
                 .await?;
-            state_sender.send_modify(|state| *state.get_mut() = new_sound_modes);
         }
 
         // Switch to the target sound mode if we didn't do it in the previous step.
@@ -88,7 +86,6 @@ where
                     &packet::outbound::SetSoundModes(*target_sound_modes).to_packet(),
                 )
                 .await?;
-            state_sender.send_modify(|state| *state.get_mut() = *target_sound_modes);
         }
         Ok(())
     }

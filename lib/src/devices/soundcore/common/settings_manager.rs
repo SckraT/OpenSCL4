@@ -69,6 +69,20 @@ impl<StateType> SettingsManager<StateType> {
         handler.get(state, setting_id)
     }
 
+    pub fn has_handler(&self, setting_id: &SettingId) -> bool {
+        self.settings_to_handlers.contains_key(setting_id)
+    }
+
+    pub fn settings_map(&self, state: &StateType) -> HashMap<SettingId, Setting> {
+        self.settings_to_handlers
+            .keys()
+            .filter_map(|setting_id| {
+                self.get(state, setting_id)
+                    .map(|setting| (*setting_id, setting))
+            })
+            .collect()
+    }
+
     pub async fn set(
         &self,
         state: &mut StateType,

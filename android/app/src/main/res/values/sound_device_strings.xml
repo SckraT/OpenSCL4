@@ -28,4 +28,20 @@
     <string name="sound_device_power_description">When the device turns off and what it tells you.</string>
     <string name="sound_device_spatial_note">On Liberty 4 Pro, changing the equalizer turns off spatial audio. You can turn it on again here.</string>
     <string name="sound_import_failed">Import failed: %1$s</string>
+    <string name="sound_device_phone_link_connected">Bluetooth connected</string>
+    <string name="sound_device_phone_link_not_connected">Bluetooth not connected</string>
+    <string name="sound_device_phone_link_unknown">Bluetooth status unknown</string>
+    <string name="sound_device_phone_link_unconfirmed">Bluetooth not confirmed</string>
+    <string name="sound_device_control_active">App control active</string>
+    <string name="sound_device_control_unavailable">No app control</string>
+    <string name="sound_device_row_linked_without_control">Bluetooth connected · no app control</string>
+    <string name="sound_device_row_bluetooth_unknown">Bluetooth status unknown</string>
+    <string name="sound_device_bluetooth_unsupported">Bluetooth is not supported</string>
+    <string name="sound_device_bluetooth_unsupported_hint">This device has no Bluetooth adapter. Demo devices still work.</string>
+    <string name="sound_device_bluetooth_unknown">Bluetooth status unavailable</string>
+    <string name="sound_device_bluetooth_unknown_hint">Saved devices stay in the list, but their state cannot be checked right now.</string>
+    <string name="sound_device_bluetooth_retry">Retry</string>
+    <string name="sound_device_link_state_description">Bluetooth state: %1$s</string>
+    <string name="sound_device_control_state_description">App control: %1$s</string>
+    <string name="sound_device_row_state_description">Status: %1$s</string>
 </resources>

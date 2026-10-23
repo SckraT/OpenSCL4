@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.appwidget.AppWidgetManager
+import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -27,15 +28,20 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
+import com.oppzippy.openscq30.lib.bindings.WriteOutcome
+import com.oppzippy.openscq30.lib.bindings.clientSettingAvailability
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +52,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @AndroidEntryPoint
@@ -61,13 +68,17 @@ class DeviceService : LifecycleService() {
 
         const val ACTION_QUICK_PRESET = BuildConfig.APPLICATION_ID + ".broadcast.QuickPreset"
         const val ACTION_DISCONNECT = BuildConfig.APPLICATION_ID + ".broadcast.Disconnect"
+        const val ACTION_RETRY = BuildConfig.APPLICATION_ID + ".broadcast.Retry"
         const val ACTION_SEND_NOTIFICATION = BuildConfig.APPLICATION_ID + ".broadcast.SendNotification"
         const val ACTION_SET_SETTING_VALUE = BuildConfig.APPLICATION_ID + ".broadcast.SetSettingValue"
         const val ACTION_UPDATE_WIDGET = BuildConfig.APPLICATION_ID + ".broadcast.UPDATE_WIDGET"
 
+        private const val LOST_RETENTION_MILLIS = 5 * 60 * 1000L
+
         private val ACTIONS = listOf(
             ACTION_DISCONNECT,
             ACTION_QUICK_PRESET,
+            ACTION_RETRY,
             ACTION_SEND_NOTIFICATION,
             ACTION_SET_SETTING_VALUE,
             ACTION_UPDATE_WIDGET,
@@ -80,8 +91,8 @@ class DeviceService : LifecycleService() {
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
 
-        // the connected device's LDAC setting, or null without a device that has one, for the Quick Settings tile
-        private val _ldacState = MutableStateFlow<Boolean?>(null)
+        // the connected device's LDAC setting and whether it can be changed, or null without a device that has one
+        private val _ldacState = MutableStateFlow<LdacTileState?>(null)
         val ldacState = _ldacState.asStateFlow()
     }
 
@@ -117,6 +128,7 @@ class DeviceService : LifecycleService() {
         },
     )
     val connectionStatusFlow: MutableStateFlow<ConnectionStatus> = connectionController.connectionStatusFlow
+    private var lostRetentionJob: Job? = null
 
     private var quickPresetNames = connectionStatusFlow.flatMapLatest { connectionStatus ->
         if (connectionStatus is ConnectionStatus.Connected) {
@@ -145,6 +157,12 @@ class DeviceService : LifecycleService() {
                     Log.i(TAG, "got disconnect request, initiating stop service")
                     connectionController.close()
                     stopSelf()
+                }
+
+                ACTION_RETRY -> {
+                    Log.i(TAG, "got retry request")
+                    connectionController.retry()
+                    sendNotification()
                 }
 
                 ACTION_QUICK_PRESET -> {
@@ -198,10 +216,28 @@ class DeviceService : LifecycleService() {
                                 if (it is ConnectionStatus.Connected) {
                                     val device = it.deviceManager.device
                                     try {
-                                        device.setSettingValues(listOf(SettingIdValuePair(settingId, value)))
+                                        val outcomes = device.setSettingValues(
+                                            listOf(SettingIdValuePair(settingId, value)),
+                                        )
+                                        if (outcomes.any { outcome -> outcome.outcome !is WriteOutcome.Applied }) {
+                                            Log.w(TAG, "device did not apply $settingId: $outcomes")
+                                            Toast.makeText(
+                                                applicationContext,
+                                                R.string.error_changing_settings,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
                                     } catch (ex: IllegalStateException) {
                                         Log.w(TAG, "device was closed, not setting values", ex)
+                                    } catch (ex: OpenScq30Exception) {
+                                        Log.e(TAG, "error setting $settingId", ex)
+                                        Toast.makeText(
+                                            applicationContext,
+                                            R.string.error_changing_settings,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                     }
+                                    LdacTileService.requestUpdate(applicationContext)
                                 }
                             }
                         } else {
@@ -232,6 +268,26 @@ class DeviceService : LifecycleService() {
         }
     }
 
+    /**
+     * A lost session starts a new recovery budget when the device becomes reachable again, without waiting for
+     * the user to tap Retry.
+     */
+    private val linkReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
+            val address = try {
+                IntentCompat.getParcelableExtra(
+                    intent,
+                    BluetoothDevice.EXTRA_DEVICE,
+                    BluetoothDevice::class.java,
+                )?.address
+            } catch (_: SecurityException) {
+                null
+            } ?: return
+            connectionController.retryIfLostFor(address)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -245,27 +301,44 @@ class DeviceService : LifecycleService() {
             IntentFilter().apply { ACTIONS.forEach { addAction(it) } },
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        ContextCompat.registerReceiver(
+            this,
+            linkReceiver,
+            IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
 
-        // when we are connected to a device that becomes disconnected, update our connection status to disconnected
         lifecycleScope.launch {
             connectionStatusFlow.collectLatest { connectionStatus ->
-                if (connectionStatus is ConnectionStatus.Connected) {
-                    connectionStatus.deviceManager.connectionStatusFlow.collectLatest { deviceConnectionStatus ->
-                        if (deviceConnectionStatus ==
-                            com.oppzippy.openscq30.lib.bindings.ConnectionStatus.Disconnected
-                        ) {
-                            Log.d(TAG, "device disconnected")
-                            if (connectionStatusFlow.value === connectionStatus) connectionController.close()
+                when (connectionStatus) {
+                    is ConnectionStatus.Recovering -> {
+                        // A retry that starts while lost cancels the pending shutdown.
+                        lostRetentionJob?.cancel()
+                        sendNotification()
+                    }
+
+                    is ConnectionStatus.Lost -> {
+                        sendNotification()
+                        lostRetentionJob?.cancel()
+                        lostRetentionJob = lifecycleScope.launch {
+                            delay(LOST_RETENTION_MILLIS)
+                            if (connectionStatusFlow.value is ConnectionStatus.Lost) {
+                                Log.i(TAG, "lost retention expired, stopping service")
+                                stopForeground(STOP_FOREGROUND_REMOVE)
+                                stopSelf()
+                            }
                         }
                     }
-                }
-            }
-        }
-        lifecycleScope.launch {
-            connectionStatusFlow.collectLatest {
-                if (it == ConnectionStatus.Disconnected) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
+
+                    is ConnectionStatus.Connecting, is ConnectionStatus.Connected -> lostRetentionJob?.cancel()
+
+                    ConnectionStatus.Disconnected -> {
+                        lostRetentionJob?.cancel()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    }
+
+                    ConnectionStatus.AwaitingConnection -> Unit
                 }
             }
         }
@@ -295,11 +368,18 @@ class DeviceService : LifecycleService() {
                 if (connectionStatus is ConnectionStatus.Connected) {
                     val device = connectionStatus.deviceManager.device
                     connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
-                        _ldacState.value = try {
-                            (device.setting("ldac") as? Setting.ToggleSetting)?.value
-                        } catch (ex: IllegalStateException) {
-                            Log.w(TAG, "device was closed, LDAC unknown", ex)
-                            null
+                        _ldacState.value = withContext(Dispatchers.Default) {
+                            try {
+                                val settings = device.settingsByCategory()
+                                    .flatMap { it.settings }
+                                    .associate { it.settingId to it.setting }
+                                (settings["ldac"] as? Setting.ToggleSetting)?.let { ldac ->
+                                    LdacTileState(ldac.value, clientSettingAvailability(settings, "ldac"))
+                                }
+                            } catch (ex: IllegalStateException) {
+                                Log.w(TAG, "device was closed, LDAC unknown", ex)
+                                null
+                            }
                         }
                         LdacTileService.requestUpdate(applicationContext)
                     }
@@ -319,8 +399,13 @@ class DeviceService : LifecycleService() {
         val notification = buildNotification()
         startForeground(NOTIFICATION_ID, notification)
 
-        intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)?.let { macAddress ->
+        val macAddress = intent?.getStringExtra(INTENT_EXTRA_MAC_ADDRESS)
+        if (macAddress != null) {
             connectionController.connect(macAddress)
+            sendNotification()
+        } else if (connectionStatusFlow.value is ConnectionStatus.Lost) {
+            // Bringing the app or service back to the foreground starts a fresh recovery budget.
+            connectionController.retry()
             sendNotification()
         }
 
@@ -331,7 +416,9 @@ class DeviceService : LifecycleService() {
         super.onDestroy()
         Log.i(TAG, "stopping service")
         unregisterReceiver(broadcastReceiver)
+        unregisterReceiver(linkReceiver)
         cancelNotification()
+        lostRetentionJob?.cancel()
         connectionController.close()
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)

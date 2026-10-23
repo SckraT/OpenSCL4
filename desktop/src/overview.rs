@@ -3,6 +3,7 @@
 use std::str::FromStr;
 
 use openscq30_i18n::Translate;
+use openscq30_lib::client::availability::{SettingAvailability, setting_availability};
 use openscq30_lib::settings::{Setting, SettingId, Value};
 use slint::{ModelRc, VecModel};
 
@@ -56,10 +57,18 @@ fn toggle(snapshot: &DeviceSnapshot, id: &str) -> Option<QuickToggle> {
     let Some(Setting::Toggle { value }) = snapshot.settings.get(&setting_id) else {
         return None;
     };
+    let (enabled, reason) = match setting_availability(&snapshot.settings, id) {
+        SettingAvailability::Available => (true, String::new()),
+        SettingAvailability::ReadOnly { reason } | SettingAvailability::Unavailable { reason } => {
+            (false, reason.translate())
+        }
+    };
     Some(QuickToggle {
         id: id.into(),
         label: setting_id.translate().into(),
         on: *value,
+        enabled,
+        reason: reason.into(),
     })
 }
 
@@ -320,7 +329,23 @@ pub fn curve(values: &[i16], min: i16, max: i16, width: f32, height: f32) -> Str
 
 #[cfg(test)]
 mod tests {
+    use macaddr::MacAddr6;
+    use openscq30_lib::DeviceModel;
+    use openscq30_lib::settings::CategoryId;
+
     use super::*;
+
+    fn snapshot(settings: openscq30_lib::client::SettingMap) -> DeviceSnapshot {
+        DeviceSnapshot {
+            mac_address: MacAddr6::nil(),
+            model: DeviceModel::SoundcoreA3954,
+            is_demo: false,
+            categories: vec![(CategoryId::Miscellaneous, vec![SettingId::Ldac])],
+            settings,
+            presets: Vec::new(),
+            last_applied_preset: None,
+        }
+    }
 
     #[test]
     fn the_curve_runs_through_every_band_inside_the_box() {
@@ -329,5 +354,55 @@ mod tests {
         assert!(path.ends_with("576.0 4.0"), "{path}");
         assert_eq!(2, path.matches(" C ").count());
         assert_eq!("", curve(&[], -6, 6, 600.0, 100.0));
+    }
+
+    #[test]
+    fn a_read_only_quick_toggle_keeps_its_value_and_says_why() {
+        let settings = openscq30_lib::client::SettingMap::from([
+            (
+                SettingId::TwsStatus,
+                Setting::Information {
+                    value: "Disconnected".to_string(),
+                    translated_value: "Disconnected".to_string(),
+                },
+            ),
+            (SettingId::Ldac, Setting::Toggle { value: true }),
+        ]);
+        let snapshot = snapshot(settings);
+        let chosen = ["ldac".to_string()];
+        let (shown, all) = quick_toggles(&snapshot, Some(&chosen));
+
+        let ldac = shown.iter().find(|toggle| toggle.id == "ldac").unwrap();
+        assert!(ldac.on, "the current value stays visible");
+        assert!(!ldac.enabled);
+        assert_eq!(
+            "Changing is available when both earbuds are connected",
+            ldac.reason.as_str(),
+        );
+        assert!(
+            all.iter()
+                .all(|toggle| toggle.id != "ldac" || !toggle.enabled)
+        );
+    }
+
+    #[test]
+    fn an_available_quick_toggle_stays_enabled_without_a_reason() {
+        let settings = openscq30_lib::client::SettingMap::from([
+            (
+                SettingId::TwsStatus,
+                Setting::Information {
+                    value: "Connected".to_string(),
+                    translated_value: "Connected".to_string(),
+                },
+            ),
+            (SettingId::Ldac, Setting::Toggle { value: true }),
+        ]);
+        let snapshot = snapshot(settings);
+        let chosen = ["ldac".to_string()];
+        let (shown, _) = quick_toggles(&snapshot, Some(&chosen));
+
+        let ldac = shown.iter().find(|toggle| toggle.id == "ldac").unwrap();
+        assert!(ldac.enabled);
+        assert_eq!("", ldac.reason.as_str());
     }
 }

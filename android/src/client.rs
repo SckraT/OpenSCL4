@@ -1,7 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use openscq30_lib::{
-    client::{self, battery, equalizer, groups, presets, quick_toggles, sound_mode},
+    client::{self, availability, battery, equalizer, groups, presets, quick_toggles, sound_mode},
     settings::SettingId,
 };
 
@@ -99,6 +99,53 @@ pub fn client_battery_progress(raw: String) -> Option<f32> {
 #[uniffi::export]
 pub fn client_is_only_one_earbud_connected(values: HashMap<String, serializable::Setting>) -> bool {
     battery::is_only_one_earbud_connected(&settings(values))
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum ClientSettingAvailability {
+    Available,
+    ReadOnly {
+        reason: serializable::AvailabilityReason,
+    },
+    Unavailable {
+        reason: serializable::AvailabilityReason,
+    },
+}
+
+impl From<availability::SettingAvailability> for ClientSettingAvailability {
+    fn from(availability: availability::SettingAvailability) -> Self {
+        match availability {
+            availability::SettingAvailability::Available => Self::Available,
+            availability::SettingAvailability::ReadOnly { reason } => Self::ReadOnly {
+                reason: reason.into(),
+            },
+            availability::SettingAvailability::Unavailable { reason } => Self::Unavailable {
+                reason: reason.into(),
+            },
+        }
+    }
+}
+
+#[uniffi::export]
+pub fn client_setting_availability(
+    values: HashMap<String, serializable::Setting>,
+    setting_id: String,
+) -> ClientSettingAvailability {
+    availability::setting_availability(&settings(values), &setting_id).into()
+}
+
+#[uniffi::export]
+pub fn client_presets_use_blocked_settings(
+    values: Vec<serializable::QuickPreset>,
+    settings_by_id: HashMap<String, serializable::Setting>,
+) -> bool {
+    presets::presets_use_blocked_settings(
+        &values
+            .into_iter()
+            .map(|preset| preset.0)
+            .collect::<Vec<_>>(),
+        &settings(settings_by_id),
+    )
 }
 
 #[uniffi::export]

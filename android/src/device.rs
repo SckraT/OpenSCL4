@@ -12,6 +12,8 @@ pub struct OpenSCQ30Device {
     pub preset_activation: QuickPresetActivation,
     connection_status_callback: Arc<Mutex<Option<Arc<dyn ConnectionStatusCallback>>>>,
     connection_status_handle: JoinHandle<()>,
+    session_status_callback: Arc<Mutex<Option<Arc<dyn SessionStatusCallback>>>>,
+    session_status_handle: JoinHandle<()>,
     watch_for_changes_callback: Arc<Mutex<Option<Arc<dyn NotificationCallback>>>>,
     watch_for_changes_handle: JoinHandle<()>,
 }
@@ -19,6 +21,7 @@ pub struct OpenSCQ30Device {
 impl Drop for OpenSCQ30Device {
     fn drop(&mut self) {
         self.connection_status_handle.abort();
+        self.session_status_handle.abort();
         self.watch_for_changes_handle.abort();
     }
 }
@@ -38,6 +41,24 @@ impl OpenSCQ30Device {
                     }
                     if let Some(callback) = connection_status_callback.lock().unwrap().as_ref() {
                         callback.on_change(serializable::ConnectionStatus(
+                            status.borrow_and_update().to_owned(),
+                        ));
+                    }
+                }
+            })
+        };
+        let session_status_callback: Arc<Mutex<Option<Arc<dyn SessionStatusCallback>>>> =
+            Default::default();
+        let session_status_handle = {
+            let session_status_callback = session_status_callback.clone();
+            let mut status = inner.session_status();
+            tokio::spawn(async move {
+                loop {
+                    if status.changed().await.is_err() {
+                        break;
+                    }
+                    if let Some(callback) = session_status_callback.lock().unwrap().as_ref() {
+                        callback.on_change(serializable::SessionStatus::from(
                             status.borrow_and_update().to_owned(),
                         ));
                     }
@@ -68,6 +89,8 @@ impl OpenSCQ30Device {
             preset_activation,
             connection_status_callback,
             connection_status_handle,
+            session_status_callback,
+            session_status_handle,
             watch_for_changes_callback,
             watch_for_changes_handle,
         }
@@ -82,6 +105,10 @@ impl OpenSCQ30Device {
 
     pub fn set_connection_status_callback(&self, callback: Arc<dyn ConnectionStatusCallback>) {
         *self.connection_status_callback.lock().unwrap() = Some(callback);
+    }
+
+    pub fn set_session_status_callback(&self, callback: Arc<dyn SessionStatusCallback>) {
+        *self.session_status_callback.lock().unwrap() = Some(callback);
     }
 
     fn set_watch_for_changes_callback(&self, callback: Arc<dyn NotificationCallback>) {
@@ -135,7 +162,7 @@ impl OpenSCQ30Device {
     pub async fn set_setting_values(
         &self,
         setting_values: Vec<SettingIdValuePair>,
-    ) -> Result<(), crate::OpenSCQ30Error> {
+    ) -> Result<Vec<serializable::SettingWriteOutcome>, crate::OpenSCQ30Error> {
         self.inner
             .set_setting_values(
                 setting_values
@@ -144,6 +171,12 @@ impl OpenSCQ30Device {
                     .collect(),
             )
             .await
+            .map(|outcomes| {
+                outcomes
+                    .into_iter()
+                    .map(serializable::SettingWriteOutcome::from)
+                    .collect()
+            })
             .map_err(Into::into)
     }
 }
@@ -169,6 +202,11 @@ pub struct SettingIdValuePair {
 #[uniffi::export(with_foreign)]
 pub trait ConnectionStatusCallback: Send + Sync {
     fn on_change(&self, connection_status: serializable::ConnectionStatus);
+}
+
+#[uniffi::export(with_foreign)]
+pub trait SessionStatusCallback: Send + Sync {
+    fn on_change(&self, session_status: serializable::SessionStatus);
 }
 
 #[uniffi::export(with_foreign)]

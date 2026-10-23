@@ -124,7 +124,10 @@ impl App {
                 .unwrap_or_default()
                 .into(),
         );
-        tray.set_connecting(matches!(self.connection, Connection::Connecting));
+        tray.set_connecting(matches!(
+            self.connection,
+            Connection::Connecting | Connection::Recovering(_, _)
+        ));
         tray.set_show_battery(settings.tray_items.battery);
         tray.set_show_modes(settings.tray_items.modes);
         tray.set_show_presets(settings.tray_items.presets);
@@ -134,7 +137,7 @@ impl App {
             tray.set_connected(false);
             return;
         };
-        tray.set_connected(true);
+        tray.set_connected(matches!(self.connection, Connection::Connected(_)));
         tray.set_battery(self.battery_line().into());
         let scale_preferred = settings.sound_mode_view == crate::config::SoundModeView::Scale;
         match rows::mode_view(snapshot, scale_preferred) {

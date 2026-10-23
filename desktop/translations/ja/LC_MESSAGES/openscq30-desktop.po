@@ -169,6 +169,18 @@ msgstr "{} に接続済み"
 msgid "Connecting to {}"
 msgstr "{} に接続中"
 
+msgid "Reconnecting:"
+msgstr "再接続中:"
+
+msgid "Reconnecting to {}"
+msgstr "{} に再接続中"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "デバイスは近くにあります。再接続すると設定が戻ります。"
+
+msgid "changes are paused until the device is back."
+msgstr "デバイスが戻るまで変更は一時停止されます。"
+
 msgid "Connection lost"
 msgstr "接続が切れました"
 
@@ -656,8 +668,8 @@ msgstr "まだ設定が選ばれていません"
 msgid "Edit device screen"
 msgstr "デバイス画面を編集"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "イヤホンが1つだけ接続されています。イコライザーなど一部の設定は、両方のイヤホンを接続すると利用できます。"
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "イヤホンが片側だけ接続されています。イコライザーは使用できず、LDAC は切り替えられません。その他の設定は変更できます。"
 
 msgid "Move up"
 msgstr "上へ移動"
@@ -904,8 +916,8 @@ msgstr "今の設定を保存し、まとめて適用したい設定を選びま
 msgid "Create preset"
 msgstr "プリセットを作成"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "プリセットのイコライザーは、両方のイヤホンが接続されると適用されます。"
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "これらのプリセットの一部の設定は現在使用できないため、適用されません。"
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "今の設定を保存します。そのあと適用する設定を選んでください。"
@@ -952,8 +964,6 @@ msgstr "「{}」を削除しますか？デバイスの現在の設定はその�
 msgid "Preset “{}” applied"
 msgstr "プリセット「{}」を適用しました"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "プリセット「{}」を適用しました。イコライザーは両方のイヤホンが接続されると適用されます。"
 
 msgid "Preset deleted"
 msgstr "プリセットを削除しました"

@@ -18,6 +18,7 @@ component DeviceCardView inherits Rectangle {
     in property <DeviceCard> card;
     private property <bool> live: card.current && AppState.connection == Connection.connected;
     private property <bool> connecting: card.current && AppState.connection == Connection.connecting;
+    private property <bool> recovering: card.current && AppState.connection == Connection.recovering;
     border-radius: Theme.radius-panel;
     background: live ? Theme.sage : Theme.surface;
     VerticalLayout {
@@ -196,7 +197,7 @@ export component ConnectionState inherits VerticalLayout {
     spacing: 14px;
     padding: 60px;
     private property <bool> speaker: AppState.device-is-speaker;
-    if AppState.connection == Connection.connecting: Rectangle {
+    if AppState.connection == Connection.connecting || AppState.connection == Connection.recovering: Rectangle {
         height: 44px;
         Rectangle {
             width: 44px;
@@ -207,7 +208,7 @@ export component ConnectionState inherits VerticalLayout {
             opacity: 0.6;
         }
     }
-    if AppState.connection != Connection.connecting: HorizontalLayout {
+    if AppState.connection != Connection.connecting && AppState.connection != Connection.recovering: HorizontalLayout {
         alignment: center;
         Icon {
             source: AppState.connection == Connection.bluetooth-off ? Icons.bluetooth : Icons.disconnect;
@@ -222,7 +223,8 @@ export component ConnectionState inherits VerticalLayout {
         font-size: 28px;
         font-weight: 650;
         wrap: word-wrap;
-        text: AppState.connection == Connection.connecting ? (root.speaker ? @tr("Connecting to your speaker") : @tr("Connecting to your headphones"))
+        text: AppState.connection == Connection.recovering ? @tr("Reconnecting:")
+            : AppState.connection == Connection.connecting ? (root.speaker ? @tr("Connecting to your speaker") : @tr("Connecting to your headphones"))
             : AppState.connection == Connection.lost ? @tr("Connection lost")
             : AppState.connection == Connection.bluetooth-off ? @tr("Bluetooth is off")
             : AppState.connection == Connection.failed ? @tr("Could not connect")
@@ -232,16 +234,24 @@ export component ConnectionState inherits VerticalLayout {
         horizontal-alignment: center;
         color: Theme.muted;
         wrap: word-wrap;
-        text: AppState.connection == Connection.connecting ? (root.speaker ? @tr("Turn on your speaker. Controls will appear once connected.") : @tr("Open the case or turn on your headphones. Controls will appear once connected."))
+        text: AppState.connection == Connection.recovering ? (AppState.connection-reason == "" ? @tr("The device is still nearby. Settings will return when it reconnects.") : AppState.connection-reason)
+            : AppState.connection == Connection.connecting ? (root.speaker ? @tr("Turn on your speaker. Controls will appear once connected.") : @tr("Open the case or turn on your headphones. Controls will appear once connected."))
             : AppState.connection == Connection.lost ? (root.speaker ? @tr("Check that your speaker is nearby and connected to this computer by Bluetooth.") : @tr("Check that your headphones are nearby and connected to this computer by Bluetooth."))
             : AppState.connection == Connection.bluetooth-off ? @tr("Turn on Bluetooth in Windows settings, then try connecting again.")
             : AppState.connection == Connection.failed ? FailureText.describe(AppState.failure-kind, AppState.failure-text)
             : @tr("Connect to see battery levels and change settings.");
     }
+    if AppState.connection == Connection.lost && AppState.connection-reason != "": Text {
+        horizontal-alignment: center;
+        color: Theme.muted;
+        font-size: Theme.font-small;
+        wrap: word-wrap;
+        text: AppState.connection-reason;
+    }
     HorizontalLayout {
         alignment: center;
         spacing: 8px;
-        if AppState.connection == Connection.connecting: Button {
+        if AppState.connection == Connection.connecting || AppState.connection == Connection.recovering: Button {
             text: @tr("Cancel");
             clicked => { Actions.cancel-connect(); }
         }
@@ -252,14 +262,14 @@ export component ConnectionState inherits VerticalLayout {
             icon: Icons.external;
             clicked => { Actions.open-uri("ms-settings:bluetooth"); }
         }
-        if AppState.connection != Connection.connecting && AppState.connection != Connection.bluetooth-off: Button {
+        if AppState.connection != Connection.connecting && AppState.connection != Connection.recovering && AppState.connection != Connection.bluetooth-off: Button {
             text: AppState.connection == Connection.lost ? @tr("Connect again") : @tr("Connect");
             kind: ButtonKind.primary;
             has-icon: true;
             icon: Icons.bluetooth;
             clicked => { Actions.retry(); }
         }
-        if AppState.connection != Connection.connecting: Button {
+        if AppState.connection != Connection.connecting && AppState.connection != Connection.recovering: Button {
             text: @tr("My devices");
             has-icon: true;
             icon: Icons.devices;

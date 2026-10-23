@@ -96,10 +96,12 @@ impl Throttle {
         let queue = mem::take(&mut self.queue);
         let device = self.device.clone();
         Task::future(async move {
-            if let Err(err) = device.set_setting_values(queue.into_iter().collect()).await {
-                Message::Error(Arc::new(err))
-            } else {
-                Message::None
+            match device.set_setting_values(queue.into_iter().collect()).await {
+                Ok(outcomes) => match crate::write_outcome::ensure_applied(outcomes) {
+                    Ok(()) => Message::None,
+                    Err(err) => Message::Error(Arc::new(err)),
+                },
+                Err(err) => Message::Error(Arc::new(err)),
             }
         })
     }

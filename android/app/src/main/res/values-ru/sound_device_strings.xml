@@ -28,4 +28,20 @@
     <string name="sound_device_power_description">Когда устройство выключается и что оно вам подсказывает.</string>
     <string name="sound_device_spatial_note">На Liberty 4 Pro настройка эквалайзера отключит пространственный звук. Выбранный режим можно включить снова здесь.</string>
     <string name="sound_import_failed">Не удалось импортировать: %1$s</string>
+    <string name="sound_device_phone_link_connected">По Bluetooth подключено</string>
+    <string name="sound_device_phone_link_not_connected">По Bluetooth не подключено</string>
+    <string name="sound_device_phone_link_unknown">Bluetooth: состояние неизвестно</string>
+    <string name="sound_device_phone_link_unconfirmed">Bluetooth не подтверждён</string>
+    <string name="sound_device_control_active">Управление активно</string>
+    <string name="sound_device_control_unavailable">Управление недоступно</string>
+    <string name="sound_device_row_linked_without_control">По Bluetooth · без управления</string>
+    <string name="sound_device_row_bluetooth_unknown">Bluetooth-статус неизвестен</string>
+    <string name="sound_device_bluetooth_unsupported">Bluetooth не поддерживается</string>
+    <string name="sound_device_bluetooth_unsupported_hint">На этом устройстве нет Bluetooth-адаптера. Демо-устройства по-прежнему доступны.</string>
+    <string name="sound_device_bluetooth_unknown">Не удалось проверить Bluetooth</string>
+    <string name="sound_device_bluetooth_unknown_hint">Сохранённые устройства остаются в списке, но их состояние сейчас неизвестно.</string>
+    <string name="sound_device_bluetooth_retry">Повторить</string>
+    <string name="sound_device_link_state_description">Состояние Bluetooth: %1$s</string>
+    <string name="sound_device_control_state_description">Управление приложением: %1$s</string>
+    <string name="sound_device_row_state_description">Состояние: %1$s</string>
 </resources>

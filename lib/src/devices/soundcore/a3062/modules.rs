@@ -57,9 +57,7 @@ where
     StateType: Has<a3062::structures::DolbyAudio> + Send + Sync + Clone + 'static,
 {
     pub fn a3062_dolby_audio(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
-        self.module_collection()
-            .add_a3062_dolby_audio(packet_io_controller);
+        self.module_collection().add_a3062_dolby_audio();
     }
 }
 
@@ -68,9 +66,7 @@ where
     StateType: Has<a3062::structures::SideTone> + Send + Sync + Clone + 'static,
 {
     pub fn a3062_side_tone(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
-        self.module_collection()
-            .add_a3062_side_tone(packet_io_controller);
+        self.module_collection().add_a3062_side_tone();
     }
 }
 
@@ -79,8 +75,7 @@ where
     StateType: Has<a3062::structures::AmbientSoundModeVoicePrompt> + Send + Sync + Clone + 'static,
 {
     pub fn a3062_ambient_sound_mode_voice_prompt(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
         self.module_collection()
-            .add_a3062_ambient_sound_mode_voice_prompt(packet_io_controller);
+            .add_a3062_ambient_sound_mode_voice_prompt();
     }
 }

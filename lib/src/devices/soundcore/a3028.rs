@@ -59,7 +59,7 @@ mod tests {
 
     use crate::{
         api::{
-            device::OpenSCQ30DeviceRegistry,
+            device::{OpenSCQ30Device, OpenSCQ30DeviceRegistry, SettingWriteOutcome, WriteOutcome},
             settings::{SettingId, Value},
         },
         connection_backend::mock::rfcomm::MockRfcommBackend,
@@ -81,6 +81,40 @@ mod tests {
             0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x30, 0x32, 0x2e, 0x33, 0x30, 0x33, 0x30, 0x32,
             0x39, 0x30, 0x38, 0x36, 0x45, 0x43, 0x38, 0x32, 0x46, 0x31, 0x32, 0x41, 0x43, 0x30,
         ]
+    }
+
+    async fn set_settings_with_acks(
+        device: Arc<dyn OpenSCQ30Device + Send + Sync>,
+        settings: Vec<(SettingId, Value)>,
+        inbound_sender: mpsc::Sender<Vec<u8>>,
+        outbound_receiver: &mut mpsc::Receiver<Vec<u8>>,
+    ) -> (Vec<SettingWriteOutcome>, usize) {
+        let mut join =
+            tokio::spawn(async move { device.set_setting_values(settings).await.unwrap() });
+        let mut set_commands = 0;
+        loop {
+            tokio::select! {
+                result = &mut join => return (result.unwrap(), set_commands),
+                bytes = outbound_receiver.recv() => {
+                    let Some(bytes) = bytes else { break };
+                    let packet = packet::Outbound::take::<nom_language::error::VerboseError<_>>(
+                        packet::ChecksumKind::Suffix,
+                    )(&bytes)
+                    .unwrap()
+                    .1;
+                    if packet.command == packet::outbound::SetSoundModes::COMMAND
+                        || packet.command == packet::outbound::SET_EQUALIZER_COMMAND
+                    {
+                        set_commands += 1;
+                    }
+                    inbound_sender
+                        .send(packet.command.ack::<packet::InboundMarker>().bytes_with_checksum())
+                        .await
+                        .unwrap();
+                }
+            }
+        }
+        (join.await.unwrap(), set_commands)
     }
 
     async fn create_test_connection() -> (
@@ -200,7 +234,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_sound_mode_doesnt_resend_if_nothing_changed() {
+    async fn test_set_sound_mode_resends_when_the_device_does_not_confirm() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())
@@ -212,46 +246,37 @@ mod tests {
             .await
             .expect("state update packet request");
 
-        let f = tokio::spawn(async move {
-            outbound_receiver.recv().await.expect("sound mode update");
-            inbound_sender
-                .send(
-                    packet::outbound::SetSoundModes::COMMAND
-                        .ack::<packet::InboundMarker>()
-                        .bytes_with_checksum(),
-                )
-                .await
-                .unwrap();
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            if !outbound_receiver.is_empty() {
-                let packet = outbound_receiver.recv().await.unwrap();
-                panic!(
-                    "another packet should not be sent since nothing has changed, but got {packet:?}"
-                );
-            }
-        });
+        let (first, sets) = set_settings_with_acks(
+            device.clone(),
+            vec![(
+                SettingId::AmbientSoundMode,
+                Cow::from("Transparency").into(),
+            )],
+            inbound_sender.clone(),
+            &mut outbound_receiver,
+        )
+        .await;
+        assert_eq!(1, sets);
+        assert!(matches!(first[0].outcome, WriteOutcome::TimedOut));
 
-        // Changed sound mode
-        device
-            .set_setting_values(vec![(
+        // Without a state read-back the write is not Applied, so asking for the same value
+        // again is a new write, not a no-op.
+        let (second, sets) = set_settings_with_acks(
+            device,
+            vec![(
                 SettingId::AmbientSoundMode,
                 Cow::from("Transparency").into(),
-            )])
-            .await
-            .unwrap();
-        // Unchanged sound mode
-        device
-            .set_setting_values(vec![(
-                SettingId::AmbientSoundMode,
-                Cow::from("Transparency").into(),
-            )])
-            .await
-            .unwrap();
-        f.await.unwrap();
+            )],
+            inbound_sender,
+            &mut outbound_receiver,
+        )
+        .await;
+        assert_eq!(1, sets);
+        assert!(matches!(second[0].outcome, WriteOutcome::TimedOut));
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_equalizer_configuration_called_twice() {
+    async fn test_set_equalizer_configuration_resends_when_the_device_does_not_confirm() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())
@@ -263,41 +288,30 @@ mod tests {
             .await
             .expect("state update packet request");
 
-        let f = tokio::spawn(async move {
-            outbound_receiver.recv().await.expect("equalizer update");
-            inbound_sender
-                .send(
-                    packet::outbound::SET_EQUALIZER_COMMAND
-                        .ack::<packet::InboundMarker>()
-                        .bytes_with_checksum(),
-                )
-                .await
-                .unwrap();
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            if !outbound_receiver.is_empty() {
-                let packet = outbound_receiver.recv().await.unwrap();
-                panic!(
-                    "another packet should not be sent since nothing has changed, but got {packet:?}"
-                );
-            }
-        });
-        // Changed equalizer
-        device
-            .set_setting_values(vec![(
+        let (first, sets) = set_settings_with_acks(
+            device.clone(),
+            vec![(
                 SettingId::PresetEqualizerProfile,
                 Cow::from("Acoustic").into(),
-            )])
-            .await
-            .unwrap();
+            )],
+            inbound_sender.clone(),
+            &mut outbound_receiver,
+        )
+        .await;
+        assert_eq!(1, sets);
+        assert!(matches!(first[0].outcome, WriteOutcome::TimedOut));
 
-        // Unchanged equaalizer
-        device
-            .set_setting_values(vec![(
+        let (second, sets) = set_settings_with_acks(
+            device,
+            vec![(
                 SettingId::PresetEqualizerProfile,
                 Cow::from("Acoustic").into(),
-            )])
-            .await
-            .unwrap();
-        f.await.unwrap();
+            )],
+            inbound_sender,
+            &mut outbound_receiver,
+        )
+        .await;
+        assert_eq!(1, sets);
+        assert!(matches!(second[0].outcome, WriteOutcome::TimedOut));
     }
 }

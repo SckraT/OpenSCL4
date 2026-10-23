@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
+pub mod session;
+
+pub use session::{
+    CONNECT_DEADLINE, ConnectionSession, ConnectionSessionConfig, RECOVERY_WINDOW, ReconnectHook,
+    SessionFailureReason, SessionStatus, WRITE_DEADLINE,
+};
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("bluetooth adapter unavailable")]
@@ -15,6 +22,24 @@ pub enum Error {
     },
     #[error("device not found")]
     DeviceNotFound {
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+        location: &'static Location<'static>,
+    },
+    /// The platform refused Bluetooth access, for example because a runtime permission was revoked.
+    #[error("bluetooth permission denied")]
+    PermissionDenied {
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+        location: &'static Location<'static>,
+    },
+    /// The device is no longer paired; reconnecting cannot succeed until the user pairs it again.
+    #[error("device is not paired")]
+    Unpaired {
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+        location: &'static Location<'static>,
+    },
+    /// The platform rejected the connection for security reasons (pairing, encryption or bonding).
+    #[error("bluetooth security failure")]
+    SecurityFailure {
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
         location: &'static Location<'static>,
     },
