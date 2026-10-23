@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.phonelink
 
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -15,6 +16,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +29,24 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
     PhoneLinkMonitor {
     private val bluetoothManager: BluetoothManager? = context.getSystemService(BluetoothManager::class.java)
     private val state = MutableStateFlow(PhoneLinkSignals())
+    @Volatile
     private var started = false
+    private val classicDevices = ConcurrentHashMap<Int, Set<String>>()
+    private val classicProxies = ConcurrentHashMap<Int, BluetoothProfile>()
+
+    private val serviceListener = object : BluetoothProfile.ServiceListener {
+        override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+            if (proxy == null) return
+            classicProxies[profile] = proxy
+            updateClassicDeviceAddresses(profile, proxy)
+        }
+
+        override fun onServiceDisconnected(profile: Int) {
+            classicProxies.remove(profile)
+            classicDevices.remove(profile)
+            refresh()
+        }
+    }
 
     override val snapshot: StateFlow<PhoneLinkSignals> = state.asStateFlow()
 
@@ -49,6 +68,7 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
         }
     }
 
+    @SuppressLint("MissingPermission")
     override fun start() {
         if (started) return
         state.value = PhoneLinkSignals()
@@ -63,6 +83,7 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         started = true
+        openClassicProxies()
         refresh()
     }
 
@@ -73,7 +94,39 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
             context.unregisterReceiver(receiver)
         } catch (_: IllegalArgumentException) {
         }
+        val adapter = bluetoothManager?.adapter
+        for ((profile, proxy) in classicProxies) {
+            try {
+                adapter?.closeProfileProxy(profile, proxy)
+            } catch (_: SecurityException) {
+            }
+        }
+        classicProxies.clear()
+        classicDevices.clear()
         state.update { it.copy(aclAddresses = emptySet()) }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun openClassicProxies() {
+        val adapter = bluetoothManager?.adapter ?: return
+        for (profile in CLASSIC_PROFILES) {
+            try {
+                adapter.getProfileProxy(context, serviceListener, profile)
+            } catch (_: SecurityException) {
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateClassicDeviceAddresses(profile: Int, proxy: BluetoothProfile) {
+        if (!started) return
+        val addresses = try {
+            proxy.connectedDevices.map { canonicalMacAddress(it.address) }.toSet()
+        } catch (_: SecurityException) {
+            return
+        }
+        classicDevices[profile] = addresses
+        refresh()
     }
 
     override fun refresh() {
@@ -100,10 +153,12 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
         if (!enabled) return PhoneLinkSignals(BluetoothAccess.Off)
 
         val addresses = mutableSetOf<String>()
+        classicDevices.values.forEach { addresses += it }
         var readableProfiles = 0
         for (profile in PROFILES) {
             try {
-                manager.getConnectedDevices(profile).forEach { addresses += canonicalMacAddress(it.address) }
+                val devices = manager.getConnectedDevices(profile)
+                devices.forEach { addresses += canonicalMacAddress(it.address) }
                 readableProfiles++
             } catch (_: IllegalArgumentException) {
             } catch (_: SecurityException) {
@@ -134,6 +189,8 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
         val PROFILES = listOf(
             BluetoothProfile.GATT,
             BluetoothProfile.GATT_SERVER,
+        )
+        val CLASSIC_PROFILES = listOf(
             BluetoothProfile.A2DP,
             BluetoothProfile.HEADSET,
         )
