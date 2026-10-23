@@ -1,6 +1,5 @@
 package com.oppzippy.openscq30.features.phonelink
 
-
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -29,6 +28,7 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
     PhoneLinkMonitor {
     private val bluetoothManager: BluetoothManager? = context.getSystemService(BluetoothManager::class.java)
     private val state = MutableStateFlow(PhoneLinkSignals())
+
     @Volatile
     private var started = false
     private val classicDevices = ConcurrentHashMap<Int, Set<String>>()

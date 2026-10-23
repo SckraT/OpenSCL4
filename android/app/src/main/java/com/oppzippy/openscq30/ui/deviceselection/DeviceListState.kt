@@ -15,10 +15,14 @@ data class AppControlSnapshot(val macAddress: String? = null, val phase: AppCont
 /** The single mapping from the service's connection state to the app-control axis. */
 fun ConnectionStatus.toAppControlSnapshot(): AppControlSnapshot = when (this) {
     is ConnectionStatus.Connected -> AppControlSnapshot(macAddress, AppControl.Controlling)
+
     is ConnectionStatus.Connecting -> AppControlSnapshot(macAddress, AppControl.Connecting)
+
     is ConnectionStatus.Recovering -> AppControlSnapshot(macAddress, AppControl.Connecting)
+
     // Keep the device screen open so it can show the lost state with Retry.
     is ConnectionStatus.Lost -> AppControlSnapshot(macAddress, AppControl.Controlling)
+
     ConnectionStatus.AwaitingConnection, ConnectionStatus.Disconnected -> AppControlSnapshot()
 }
 

@@ -70,7 +70,9 @@ class ClientRulesContractTest {
                     }
 
                     "ReadOnly" -> ClientSettingAvailability.ReadOnly(reason(reason))
+
                     "Unavailable" -> ClientSettingAvailability.Unavailable(reason(reason))
+
                     else -> error("unknown availability $case")
                 }
                 assertEquals(id, expected, settingAvailability(values, id))
