@@ -230,8 +230,7 @@ macro_rules! flag {
             where
                 StateType: MaybeHas<$struct_name>,
             {
-                self.module_collection
-                    .[< add_ $struct_name:snake >](self.packet_io_controller.clone());
+                self.module_collection.[< add_ $struct_name:snake >]();
             }
         }
     };
@@ -756,8 +755,7 @@ where
     where
         StateType: MaybeHas<VoicePrompt> + Send + Sync,
     {
-        self.module_collection
-            .add_voice_prompt_targeted(self.packet_io_controller.clone());
+        self.module_collection.add_voice_prompt_targeted();
     }
 }
 

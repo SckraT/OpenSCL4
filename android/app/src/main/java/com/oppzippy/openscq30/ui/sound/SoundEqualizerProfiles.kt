@@ -179,6 +179,7 @@ internal fun SavedProfileRow(
     inEffect: Boolean,
     curve: List<Short>?,
     equalizer: Equalizer?,
+    enabled: Boolean = true,
     onSelect: () -> Unit,
     onShare: (() -> Unit)?,
     onDelete: () -> Unit,
@@ -189,7 +190,11 @@ internal fun SavedProfileRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TextButton(modifier = Modifier.weight(1f).heightIn(min = 48.dp), onClick = onSelect) {
+        TextButton(
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+            enabled = enabled,
+            onClick = onSelect,
+        ) {
             if (inEffect) {
                 Icon(painterResource(R.drawable.check_24px), contentDescription = stringResource(R.string.in_effect))
             }
@@ -197,7 +202,7 @@ internal fun SavedProfileRow(
         }
         if (curve != null && equalizer != null) ProfileCurve(curve, equalizer)
         Box {
-            IconButton(onClick = { menu = true }) {
+            IconButton(enabled = enabled, onClick = { menu = true }) {
                 Icon(
                     painterResource(R.drawable.sound_more),
                     contentDescription = stringResource(R.string.sound_profile_more_named, label),

@@ -13,8 +13,7 @@ import com.oppzippy.openscq30.lib.bindings.translateValue
 import dagger.hilt.android.scopes.ServiceScoped
 import javax.inject.Inject
 
-internal fun ConnectionStatus.offersRetryAction(): Boolean =
-    this is ConnectionStatus.Recovering || this is ConnectionStatus.Lost
+internal fun ConnectionStatus.offersRetryAction(): Boolean = this is ConnectionStatus.Lost
 
 @ServiceScoped
 class NotificationBuilder @Inject constructor(private val context: Service) {
@@ -55,9 +54,9 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
                 },
             ).setContentText(
                 when (status) {
-                    is ConnectionStatus.Recovering -> status.reason
+                    is ConnectionStatus.Recovering -> context.getString(status.reason.textResource())
 
-                    is ConnectionStatus.Lost -> status.reason
+                    is ConnectionStatus.Lost -> context.getString(status.reason.textResource())
 
                     else -> featuredSettingIds.takeIf { device != null }?.let { featuredSettingIds ->
                         featuredSettingIds.filterNotNull()

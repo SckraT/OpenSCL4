@@ -48,6 +48,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.features.soundcoredevice.service.textResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,9 +105,9 @@ fun SoundConnectionStateScreen(status: ConnectionStatus, onBack: () -> Unit, onR
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (lost != null && lost.reason.isNotBlank()) {
+            if (lost != null) {
                 Text(
-                    stringResource(R.string.sound_overview_lost_reason, lost.reason),
+                    stringResource(R.string.sound_overview_lost_reason, stringResource(lost.reason.textResource())),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

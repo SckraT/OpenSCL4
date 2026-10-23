@@ -18,20 +18,16 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 @Singleton
 class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private val context: Context) :
     PhoneLinkMonitor {
     private val bluetoothManager: BluetoothManager? = context.getSystemService(BluetoothManager::class.java)
-    private val state = MutableStateFlow(PhoneLinkSignals())
+    private val core = PhoneLinkMonitorCore()
 
     @Volatile
     private var started = false
-    private val classicDevices = ConcurrentHashMap<Int, Set<String>>()
     private val classicProxies = ConcurrentHashMap<Int, BluetoothProfile>()
 
     private val serviceListener = object : BluetoothProfile.ServiceListener {
@@ -43,24 +39,25 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
 
         override fun onServiceDisconnected(profile: Int) {
             classicProxies.remove(profile)
-            classicDevices.remove(profile)
-            refresh()
+            core.onProfileDisconnected(profile)
+            // Android drops the proxy with the adapter; re-read the profile when it is available again.
+            if (started) openClassicProxies()
         }
     }
 
-    override val snapshot: StateFlow<PhoneLinkSignals> = state.asStateFlow()
+    override val snapshot: StateFlow<PhoneLinkSignals> = core.snapshot
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     val address = intent.deviceAddress() ?: return
-                    state.update { it.copy(aclAddresses = it.aclAddresses + address) }
+                    core.onAclConnected(address)
                 }
 
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                     val address = intent.deviceAddress() ?: return
-                    state.update { it.copy(aclAddresses = it.aclAddresses - address) }
+                    core.onAclDisconnected(address)
                 }
 
                 BluetoothAdapter.ACTION_STATE_CHANGED -> onAdapterStateChanged(intent)
@@ -71,7 +68,7 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
     @SuppressLint("MissingPermission")
     override fun start() {
         if (started) return
-        state.value = PhoneLinkSignals()
+        core.start()
         ContextCompat.registerReceiver(
             context,
             receiver,
@@ -102,8 +99,7 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
             }
         }
         classicProxies.clear()
-        classicDevices.clear()
-        state.update { it.copy(aclAddresses = emptySet()) }
+        core.stop()
     }
 
     @SuppressLint("MissingPermission")
@@ -121,52 +117,66 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
     private fun updateClassicDeviceAddresses(profile: Int, proxy: BluetoothProfile) {
         if (!started) return
         val addresses = try {
-            proxy.connectedDevices.map { canonicalMacAddress(it.address) }.toSet()
+            proxy.connectedDevices.map { it.address }
         } catch (_: SecurityException) {
             return
         }
-        classicDevices[profile] = addresses
-        refresh()
+        core.onProfileDevices(profile, addresses)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun rereadClassicDeviceAddresses() {
+        for ((profile, proxy) in classicProxies) {
+            updateClassicDeviceAddresses(profile, proxy)
+        }
     }
 
     override fun refresh() {
-        state.value = scan(state.value.aclAddresses)
+        if (!started) return
+        rereadClassicDeviceAddresses()
+        val scan = scan()
+        core.applyScan(scan.access, scan.profileAddresses)
     }
 
     private fun onAdapterStateChanged(intent: Intent) {
         when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
-            BluetoothAdapter.STATE_OFF -> state.value = PhoneLinkSignals(BluetoothAccess.Off)
-            BluetoothAdapter.STATE_ON -> refresh()
+            BluetoothAdapter.STATE_OFF -> core.onAdapterOff()
+
+            BluetoothAdapter.STATE_ON -> {
+                // The adapter closed its profile proxies when it turned off; open and re-read them before scanning.
+                core.onAdapterOn()
+                openClassicProxies()
+                refresh()
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun scan(aclAddresses: Set<String>): PhoneLinkSignals {
-        val manager = bluetoothManager ?: return PhoneLinkSignals(BluetoothAccess.Unsupported)
-        val adapter = manager.adapter ?: return PhoneLinkSignals(BluetoothAccess.Unsupported)
-        if (!hasBluetoothPermission()) return PhoneLinkSignals(BluetoothAccess.PermissionDenied)
+    private fun scan(): PhoneLinkScan {
+        val manager = bluetoothManager ?: return PhoneLinkScan(BluetoothAccess.Unsupported, emptySet())
+        val adapter = manager.adapter ?: return PhoneLinkScan(BluetoothAccess.Unsupported, emptySet())
+        if (!hasBluetoothPermission()) return PhoneLinkScan(BluetoothAccess.PermissionDenied, emptySet())
         val enabled = try {
             adapter.isEnabled
         } catch (_: SecurityException) {
-            return PhoneLinkSignals(BluetoothAccess.PermissionDenied)
+            return PhoneLinkScan(BluetoothAccess.PermissionDenied, emptySet())
         }
-        if (!enabled) return PhoneLinkSignals(BluetoothAccess.Off)
+        if (!enabled) return PhoneLinkScan(BluetoothAccess.Off, emptySet())
 
         val addresses = mutableSetOf<String>()
-        classicDevices.values.forEach { addresses += it }
         var readableProfiles = 0
         for (profile in PROFILES) {
             try {
                 val devices = manager.getConnectedDevices(profile)
-                devices.forEach { addresses += canonicalMacAddress(it.address) }
+                devices.mapTo(addresses) { canonicalMacAddress(it.address) }
                 readableProfiles++
             } catch (_: IllegalArgumentException) {
             } catch (_: SecurityException) {
-                return PhoneLinkSignals(BluetoothAccess.PermissionDenied)
+                return PhoneLinkScan(BluetoothAccess.PermissionDenied, emptySet())
             }
         }
         val access = if (readableProfiles == 0) BluetoothAccess.Unknown else BluetoothAccess.Ready
-        return PhoneLinkSignals(access, profileAddresses = addresses, aclAddresses = aclAddresses)
+        return PhoneLinkScan(access, addresses)
     }
 
     private fun hasBluetoothPermission(): Boolean {
@@ -196,3 +206,5 @@ class AndroidPhoneLinkMonitor @Inject constructor(@ApplicationContext private va
         )
     }
 }
+
+private data class PhoneLinkScan(val access: BluetoothAccess, val profileAddresses: Set<String>)

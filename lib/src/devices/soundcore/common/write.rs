@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use async_trait::async_trait;
 use openscq30_lib_has::MaybeHas;
 use tokio::sync::watch;
 use tokio::time::Instant;
@@ -52,66 +51,52 @@ pub enum TargetedRead {
     Disconnected,
 }
 
-#[async_trait]
-pub trait FlagAccess<StateType>: Send + Sync {
-    fn set_command(&self) -> packet::Command;
-    fn raw_value(&self, state: &StateType) -> Option<bool>;
-    fn set_raw_value(&self, state: &mut StateType, value: bool);
-    fn verification(&self) -> FlagVerification;
-    async fn verify_targeted(
-        &self,
-        packet_io: &PacketIOController,
-        state_sender: &watch::Sender<StateType>,
-    ) -> TargetedRead;
-}
-
-pub struct FlagAccessor<FlagT> {
+/// Type-erased access to one flag in a device state. The function pointers are monomorphized by
+/// [`FlagAccess::new`], so a collection can hold flags with different types.
+pub struct FlagAccess<StateType> {
     set_command: packet::Command,
     is_inverted: bool,
     verification: FlagVerification,
-    _flag: std::marker::PhantomData<FlagT>,
+    raw_value: fn(&StateType) -> Option<bool>,
+    set_raw_value: fn(&mut StateType, bool),
 }
 
-impl<FlagT> FlagAccessor<FlagT> {
-    pub fn new(
+impl<StateType> FlagAccess<StateType> {
+    pub fn new<FlagT>(
         set_command: packet::Command,
         is_inverted: bool,
         verification: FlagVerification,
-    ) -> Self {
+    ) -> Self
+    where
+        StateType: MaybeHas<FlagT>,
+        FlagT: Flag + Send + Sync,
+    {
         Self {
             set_command,
             is_inverted,
             verification,
-            _flag: std::marker::PhantomData,
+            raw_value: raw_flag_value::<FlagT, StateType>,
+            set_raw_value: set_raw_flag_value::<FlagT, StateType>,
         }
     }
-}
 
-#[async_trait]
-impl<FlagT, StateType> FlagAccess<StateType> for FlagAccessor<FlagT>
-where
-    StateType: MaybeHas<FlagT> + Send + Sync,
-    FlagT: Flag + Send + Sync,
-{
-    fn set_command(&self) -> packet::Command {
+    pub fn set_command(&self) -> packet::Command {
         self.set_command
     }
 
-    fn raw_value(&self, state: &StateType) -> Option<bool> {
-        state.maybe_get().map(Flag::get_bool)
+    pub fn raw_value(&self, state: &StateType) -> Option<bool> {
+        (self.raw_value)(state)
     }
 
-    fn set_raw_value(&self, state: &mut StateType, value: bool) {
-        if let Some(flag) = state.maybe_get_mut() {
-            flag.set_bool(value);
-        }
+    pub fn set_raw_value(&self, state: &mut StateType, value: bool) {
+        (self.set_raw_value)(state, value);
     }
 
-    fn verification(&self) -> FlagVerification {
+    pub fn verification(&self) -> FlagVerification {
         self.verification
     }
 
-    async fn verify_targeted(
+    pub async fn verify_targeted(
         &self,
         packet_io: &PacketIOController,
         state_sender: &watch::Sender<StateType>,
@@ -141,6 +126,24 @@ where
             }
         });
         TargetedRead::Observed(Some(Value::Bool(value)))
+    }
+}
+
+fn raw_flag_value<FlagT, StateType>(state: &StateType) -> Option<bool>
+where
+    StateType: MaybeHas<FlagT>,
+    FlagT: Flag,
+{
+    state.maybe_get().map(Flag::get_bool)
+}
+
+fn set_raw_flag_value<FlagT, StateType>(state: &mut StateType, value: bool)
+where
+    StateType: MaybeHas<FlagT>,
+    FlagT: Flag,
+{
+    if let Some(flag) = state.maybe_get_mut() {
+        flag.set_bool(value);
     }
 }
 
@@ -525,7 +528,7 @@ fn is_disconnection(error: &device::Error) -> bool {
 }
 
 async fn verify_targeted<StateType>(
-    access: &(dyn FlagAccess<StateType> + Send + Sync),
+    access: &FlagAccess<StateType>,
     packet_io: &PacketIOController,
     state_sender: &watch::Sender<StateType>,
     throttle: &mut WriteThrottle,
@@ -580,6 +583,7 @@ async fn verify_bulk<StateType>(
     StateType: Clone,
 {
     let mut receiver = state_sender.subscribe();
+    let mut state_updates = module_collection.last_state_update.subscribe();
     let mut saw_response = false;
     let mut next_request = Instant::now();
     loop {
@@ -644,7 +648,13 @@ async fn verify_bulk<StateType>(
         tokio::select! {
             result = receiver.changed() => {
                 if result.is_ok() {
-                    saw_response = true;
+                    // Only a bulk state response reports the setting's value. An unrelated update,
+                    // such as a battery level packet, must not turn an unconfirmed write into
+                    // `Rejected`; without a read-back it is `TimedOut`.
+                    let command = *state_updates.borrow_and_update();
+                    if command == Some(packet::inbound::STATE_COMMAND) {
+                        saw_response = true;
+                    }
                 }
             }
             () = tokio::time::sleep(wait) => ()
@@ -717,6 +727,8 @@ mod tests {
 
     use super::*;
 
+    const BATTERY_UPDATE_COMMAND: packet::Command = packet::Command([0x01, 0x08]);
+
     #[derive(Clone, Default)]
     struct TestState {
         ldac: Ldac,
@@ -726,6 +738,7 @@ mod tests {
         tws_status: TwsStatus,
         auto_power_off: AutoPowerOff,
         unverifiable_after_change: bool,
+        battery_level: u8,
     }
 
     macro_rules! has {
@@ -798,6 +811,24 @@ mod tests {
         }
     }
 
+    struct BatteryStateHandler;
+
+    #[async_trait]
+    impl crate::devices::soundcore::common::packet_manager::PacketHandler<TestState>
+        for BatteryStateHandler
+    {
+        async fn handle_packet(
+            &self,
+            state: &watch::Sender<TestState>,
+            packet: &packet::Inbound,
+        ) -> crate::api::device::Result<()> {
+            if let [level] = packet.body.as_slice() {
+                state.send_modify(|state| state.battery_level = *level);
+            }
+            Ok(())
+        }
+    }
+
     struct BulkStateHandler;
 
     #[async_trait]
@@ -859,52 +890,40 @@ mod tests {
                     .unwrap();
             let packet_io = Arc::new(packet_io);
             let mut modules = ModuleCollection::<TestState>::default();
-            modules.add_flag::<Ldac>(
-                packet_io.clone(),
-                FlagConfiguration {
-                    category_id: CategoryId::Miscellaneous,
-                    setting_id: SettingId::Ldac,
-                    set_command: packet::Command([0x01, 0xFF]),
-                    update_command: Some(LdacState::COMMAND),
-                    is_inverted: false,
-                    verification: FlagVerification::Targeted {
-                        command: LdacState::COMMAND,
-                    },
+            modules.add_flag::<Ldac>(FlagConfiguration {
+                category_id: CategoryId::Miscellaneous,
+                setting_id: SettingId::Ldac,
+                set_command: packet::Command([0x01, 0xFF]),
+                update_command: Some(LdacState::COMMAND),
+                is_inverted: false,
+                verification: FlagVerification::Targeted {
+                    command: LdacState::COMMAND,
                 },
-            );
-            modules.add_flag::<WearingDetection>(
-                packet_io.clone(),
-                FlagConfiguration {
-                    category_id: CategoryId::Miscellaneous,
-                    setting_id: SettingId::WearingDetection,
-                    set_command: SET_WEARING_DETECTION_COMMAND,
-                    update_command: None,
-                    is_inverted: false,
-                    verification: FlagVerification::Bulk,
-                },
-            );
-            modules.add_flag::<WearingTone>(
-                packet_io.clone(),
-                FlagConfiguration {
-                    category_id: CategoryId::Miscellaneous,
-                    setting_id: SettingId::WearingTone,
-                    set_command: packet::outbound::SET_WEARING_TONE_COMMAND,
-                    update_command: None,
-                    is_inverted: false,
-                    verification: FlagVerification::Bulk,
-                },
-            );
-            modules.add_flag::<TouchTone>(
-                packet_io.clone(),
-                FlagConfiguration {
-                    category_id: CategoryId::Miscellaneous,
-                    setting_id: SettingId::TouchTone,
-                    set_command: packet::outbound::SET_TOUCH_TONE_COMMAND,
-                    update_command: None,
-                    is_inverted: false,
-                    verification: FlagVerification::Bulk,
-                },
-            );
+            });
+            modules.add_flag::<WearingDetection>(FlagConfiguration {
+                category_id: CategoryId::Miscellaneous,
+                setting_id: SettingId::WearingDetection,
+                set_command: SET_WEARING_DETECTION_COMMAND,
+                update_command: None,
+                is_inverted: false,
+                verification: FlagVerification::Bulk,
+            });
+            modules.add_flag::<WearingTone>(FlagConfiguration {
+                category_id: CategoryId::Miscellaneous,
+                setting_id: SettingId::WearingTone,
+                set_command: packet::outbound::SET_WEARING_TONE_COMMAND,
+                update_command: None,
+                is_inverted: false,
+                verification: FlagVerification::Bulk,
+            });
+            modules.add_flag::<TouchTone>(FlagConfiguration {
+                category_id: CategoryId::Miscellaneous,
+                setting_id: SettingId::TouchTone,
+                set_command: packet::outbound::SET_TOUCH_TONE_COMMAND,
+                update_command: None,
+                is_inverted: false,
+                verification: FlagVerification::Bulk,
+            });
             modules.add_auto_power_off(
                 packet_io.clone(),
                 AutoPowerOffDuration::half_hour_increments(),
@@ -915,6 +934,9 @@ mod tests {
             modules
                 .packet_handlers
                 .set_handler(packet::inbound::STATE_COMMAND, Box::new(BulkStateHandler));
+            modules
+                .packet_handlers
+                .set_handler(BATTERY_UPDATE_COMMAND, Box::new(BatteryStateHandler));
             modules.add_tws_status();
             let modules = Arc::new(modules);
             let state_sender = watch::channel(state).0;
@@ -1212,6 +1234,33 @@ mod tests {
         assert_eq!(WriteOutcome::TimedOut, outcomes[0].outcome);
         assert!(!harness.state_sender.borrow().wearing_detection.0);
         assert!(!changes.has_changed().unwrap());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_unrelated_state_update_does_not_reject_an_unconfirmed_setting() {
+        let mut harness = Harness::new(TestState::default()).await;
+        let changes = harness.state_sender.subscribe();
+        let mut write = harness.spawn_write(vec![(SettingId::WearingDetection, true.into())]);
+
+        let set = harness.next_packet().await;
+        assert_eq!(SET_WEARING_DETECTION_COMMAND, set.command);
+        harness.respond(set.command, Vec::new()).await;
+        harness.respond(BATTERY_UPDATE_COMMAND, vec![42]).await;
+
+        let outcomes = loop {
+            tokio::select! {
+                result = &mut write => break result.unwrap().unwrap(),
+                _ = harness.outbound.recv() => {}
+            }
+        };
+
+        assert_eq!(WriteOutcome::TimedOut, outcomes[0].outcome);
+        assert!(!harness.state_sender.borrow().wearing_detection.0);
+        assert_eq!(42, harness.state_sender.borrow().battery_level);
+        assert!(
+            changes.has_changed().unwrap(),
+            "the battery update reached the state"
+        );
     }
 
     #[tokio::test(start_paused = true)]

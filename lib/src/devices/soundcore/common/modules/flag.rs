@@ -1,14 +1,12 @@
 mod packet_handler;
 mod setting_handler;
 
-use std::sync::Arc;
-
 use openscq30_lib_has::MaybeHas;
 
 use crate::{
     api::settings::CategoryId,
     devices::soundcore::common::{
-        packet::{self, PacketIOController},
+        packet,
         structures::{
             AutoPlayPause, DisableAllButtons, Flag, GamingMode, Ldac, LowBatteryPrompt,
             SoundLeakCompensation, SurroundSound, TouchLock, TouchTone, VoicePrompt,
@@ -23,7 +21,7 @@ use paste::paste;
 pub use crate::devices::soundcore::common::write::FlagVerification;
 
 use super::ModuleCollection;
-use crate::devices::soundcore::common::write::FlagAccessor;
+use crate::devices::soundcore::common::write::FlagAccess;
 
 macro_rules! flag {
     ($flag_struct:ident, $flag_configuration:expr $(,)?) => {
@@ -32,8 +30,8 @@ macro_rules! flag {
             T: MaybeHas<$flag_struct> + Send + Sync,
         {
             paste! {
-                pub fn [<add_ $flag_struct:snake>](&mut self, packet_io: Arc<PacketIOController>) {
-                    self.add_flag(packet_io, $flag_configuration);
+                pub fn [<add_ $flag_struct:snake>](&mut self) {
+                    self.add_flag::<$flag_struct>($flag_configuration);
                 }
             }
         }
@@ -187,11 +185,8 @@ flag!(
 );
 
 impl<T> ModuleCollection<T> {
-    pub fn add_flag<FlagT>(
-        &mut self,
-        _packet_io: Arc<PacketIOController>,
-        flag_configuration: FlagConfiguration,
-    ) where
+    pub fn add_flag<FlagT>(&mut self, flag_configuration: FlagConfiguration)
+    where
         T: MaybeHas<FlagT> + Send + Sync,
         FlagT: Flag + Send + Sync + PartialEq + Copy + 'static,
     {
@@ -210,7 +205,7 @@ impl<T> ModuleCollection<T> {
         );
         self.flags.insert(
             flag_configuration.setting_id,
-            Box::new(FlagAccessor::<FlagT>::new(
+            Box::new(FlagAccess::<T>::new::<FlagT>(
                 flag_configuration.set_command,
                 flag_configuration.is_inverted,
                 flag_configuration.verification,
@@ -223,20 +218,17 @@ impl<T> ModuleCollection<T>
 where
     T: MaybeHas<VoicePrompt> + Send + Sync,
 {
-    pub fn add_voice_prompt_targeted(&mut self, packet_io: Arc<PacketIOController>) {
-        self.add_flag::<VoicePrompt>(
-            packet_io,
-            FlagConfiguration {
-                category_id: CategoryId::Miscellaneous,
-                setting_id: SettingId::VoicePrompt,
-                set_command: packet::Command([0x01, 0x90]),
-                update_command: Some(packet::Command([0x01, 0x10])),
-                is_inverted: false,
-                verification: FlagVerification::Targeted {
-                    command: packet::Command([0x01, 0x10]),
-                },
+    pub fn add_voice_prompt_targeted(&mut self) {
+        self.add_flag::<VoicePrompt>(FlagConfiguration {
+            category_id: CategoryId::Miscellaneous,
+            setting_id: SettingId::VoicePrompt,
+            set_command: packet::Command([0x01, 0x90]),
+            update_command: Some(packet::Command([0x01, 0x10])),
+            is_inverted: false,
+            verification: FlagVerification::Targeted {
+                command: packet::Command([0x01, 0x10]),
             },
-        );
+        });
     }
 }
 

@@ -30,6 +30,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -114,6 +115,22 @@ fun SoundEqualizerPage(
     val savedProfiles = rememberSavedProfiles(importExportSettings, setSettings)
     val profileNames = custom?.setting?.options.orEmpty()
     val unmigrated = unmigratedLegacyProfiles(legacyProfiles, profileNames)
+    val readOnly = LocalSettingsReadOnly.current
+    val pendingWrites = LocalPendingSettingWrites.current
+    val writeErrors = LocalSettingWriteErrors.current
+    val pendingVolume = (pendingWrites[VOLUME_ADJUSTMENTS]?.requestedValue as? Value.I16VecValue)?.value
+    val pendingPreset = when (val value = pendingWrites[PRESET_PROFILE]?.requestedValue) {
+        is Value.StringValue -> value.value
+        is Value.OptionalStringValue -> value.value
+        else -> null
+    }
+    val presetLocked = readOnly || pendingWrites[PRESET_PROFILE] != null
+    val volumeLocked = readOnly || pendingVolume != null
+    val profileLocked = readOnly || pendingWrites[CUSTOM_PROFILE] != null
+    val displayedPreset = pendingPreset ?: presetValue
+    val anyPending = pendingVolume != null ||
+        pendingWrites[PRESET_PROFILE] != null ||
+        pendingWrites[CUSTOM_PROFILE] != null
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
@@ -137,10 +154,13 @@ fun SoundEqualizerPage(
             ) {
                 presetSelect.options.forEachIndexed { index, option ->
                     FilterChip(
-                        selected = presetValue == option,
-                        onClick = { setSettings(listOf(PRESET_PROFILE to option.toValue())) },
+                        selected = displayedPreset == option,
+                        onClick = {
+                            if (!presetLocked) setSettings(listOf(PRESET_PROFILE to option.toValue()))
+                        },
+                        enabled = !presetLocked,
                         label = { Text(presetSelect.localizedLabel(index)) },
-                        leadingIcon = if (presetValue == option) {
+                        leadingIcon = if (displayedPreset == option) {
                             { Icon(painterResource(R.drawable.check_24px), contentDescription = null) }
                         } else {
                             null
@@ -154,13 +174,15 @@ fun SoundEqualizerPage(
             equalizer.setting.bandHz.size == equalizer.value.size && equalizer.setting.min < equalizer.setting.max
         ) {
             val bandScrollState = rememberScrollState()
-            val displayedValues = equalizer.value.mapIndexed { index, value ->
+            val equalizerValues = displayedEqualizerValues(equalizer.value, pendingVolume)
+            val displayedValues = equalizerValues.mapIndexed { index, value ->
                 editedBands[index] ?: value
             }
+            val canEditVolume = !volumeLocked && !equalizer.readOnly
             val commitEdit: () -> Unit = {
-                if (editedBands.isNotEmpty()) {
+                if (editedBands.isNotEmpty() && canEditVolume) {
                     // Merge with the latest device vector, preserving concurrent changes to untouched bands.
-                    val values = equalizer.value.mapIndexed { index, old -> editedBands[index] ?: old }
+                    val values = equalizerValues.mapIndexed { index, old -> editedBands[index] ?: old }
                     setSettings(listOf(VOLUME_ADJUSTMENTS to values.toValue()))
                 }
                 editedBands = emptyMap()
@@ -182,7 +204,7 @@ fun SoundEqualizerPage(
                     EqualizerChart(
                         values = displayedValues,
                         equalizer = equalizer.setting,
-                        enabled = !equalizer.readOnly,
+                        enabled = canEditVolume,
                         onEdit = { index, value -> editedBands = editedBands + (index to value) },
                         onCommit = commitEdit,
                         onCancel = { editedBands = emptyMap() },
@@ -206,7 +228,7 @@ fun SoundEqualizerPage(
                                 BandSlider(
                                     value = displayedValues[index],
                                     equalizer = equalizer.setting,
-                                    enabled = !equalizer.readOnly,
+                                    enabled = canEditVolume,
                                     label = frequency,
                                     onValueChange = { editedBands = editedBands + (index to it) },
                                     onValueChangeFinished = commitEdit,
@@ -242,22 +264,29 @@ fun SoundEqualizerPage(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            } else if (readOnly) {
+                Text(
+                    stringResource(R.string.sound_profile_connection_read_only),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             } else {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedButton(onClick = { showNumericEntry = true }) {
+                    OutlinedButton(enabled = !volumeLocked, onClick = { showNumericEntry = true }) {
                         Text(stringResource(R.string.sound_profile_enter_values))
                     }
                     OutlinedButton(
+                        enabled = !volumeLocked,
                         onClick = {
                             val zero = 0.coerceIn(
                                 equalizer.setting.min.toInt(),
                                 equalizer.setting.max.toInt(),
                             ).toShort()
-                            setSettings(listOf(VOLUME_ADJUSTMENTS to List(equalizer.value.size) { zero }.toValue()))
+                            setSettings(listOf(VOLUME_ADJUSTMENTS to List(equalizerValues.size) { zero }.toValue()))
                         },
                     ) { Text(stringResource(R.string.sound_profile_reset)) }
                 }
@@ -278,7 +307,7 @@ fun SoundEqualizerPage(
                 }
             }
 
-            if (custom != null) {
+            if (custom != null && !profileLocked) {
                 Button(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     onClick = { showSaveDialog = true },
@@ -296,9 +325,10 @@ fun SoundEqualizerPage(
                         val saved = savedProfiles[option]
                         SavedProfileRow(
                             label = custom.setting.localizedLabel(index),
-                            inEffect = custom.value == option && presetValue == null,
+                            inEffect = custom.value == option && displayedPreset == null,
                             curve = equalizer?.let { saved?.deviceValues(it.setting.fractionDigits) },
                             equalizer = equalizer?.setting,
+                            enabled = !profileLocked,
                             onSelect = { setSettings(listOf(CUSTOM_PROFILE to option.toValue())) },
                             onShare = saved?.let { { shareProfiles(context, listOf(it)) } },
                             onDelete = { deleteProfile = option },
@@ -307,12 +337,24 @@ fun SoundEqualizerPage(
                 }
             }
         }
+        if (anyPending) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
+        listOf(VOLUME_ADJUSTMENTS, PRESET_PROFILE, CUSTOM_PROFILE).forEach { settingId ->
+            writeErrors[settingId]?.let { outcome ->
+                Text(
+                    writeErrorText(outcome),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
         if (importExportSettings.isNotEmpty()) {
             ProfileTransferSection(profileNames, savedProfiles, equalizer?.setting, onImport)
         }
     }
 
-    if (showNumericEntry && equalizer != null && !equalizer.readOnly) {
+    if (showNumericEntry && equalizer != null && !equalizer.readOnly && !volumeLocked) {
         NumericEqualizerSheet(
             equalizer = equalizer,
             onDismiss = { showNumericEntry = false },
@@ -322,7 +364,7 @@ fun SoundEqualizerPage(
             },
         )
     }
-    if (showSaveDialog && custom != null) {
+    if (showSaveDialog && custom != null && !profileLocked) {
         SaveEqualizerDialog(
             existingNames = custom.setting.options,
             onDismiss = { showSaveDialog = false },

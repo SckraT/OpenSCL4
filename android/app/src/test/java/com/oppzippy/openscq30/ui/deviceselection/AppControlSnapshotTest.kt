@@ -2,6 +2,7 @@ package com.oppzippy.openscq30.ui.deviceselection
 
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -44,11 +45,16 @@ class AppControlSnapshotTest {
         )
         assertEquals(
             AppControlSnapshot(mac, AppControl.Connecting),
-            ConnectionStatus.Recovering(manager, mac, attempt = 2, reason = "transport lost").toAppControlSnapshot(),
+            ConnectionStatus.Recovering(
+                manager,
+                mac,
+                attempt = 2,
+                reason = SessionFailureReason.TRANSPORT_LOST,
+            ).toAppControlSnapshot(),
         )
         assertEquals(
             AppControlSnapshot(mac, AppControl.Controlling),
-            ConnectionStatus.Lost(manager, mac, "recovery budget exhausted").toAppControlSnapshot(),
+            ConnectionStatus.Lost(manager, mac, SessionFailureReason.CONNECT_TIMED_OUT).toAppControlSnapshot(),
         )
         assertEquals(AppControlSnapshot(), ConnectionStatus.Disconnected.toAppControlSnapshot())
     }

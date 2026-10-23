@@ -9,7 +9,7 @@ use openscq30_i18n::Translate;
 use openscq30_lib::{
     DeviceModel,
     client::availability::{SettingAvailability, setting_availability},
-    connection::ConnectionDescriptor,
+    connection::{ConnectionDescriptor, SessionFailureReason},
     settings::SettingId,
     storage::PairedDevice,
 };
@@ -45,8 +45,8 @@ enum Connection {
     Off,
     Connecting,
     Connected(Box<DeviceSnapshot>),
-    Recovering(Box<DeviceSnapshot>, String),
-    Lost(String),
+    Recovering(Box<DeviceSnapshot>, SessionFailureReason),
+    Lost(SessionFailureReason),
     Failed(Failure),
 }
 
@@ -761,7 +761,7 @@ impl App {
         state.set_connection(connection_view(&self.connection, self.paired.is_empty()));
         state.set_connection_reason(
             match &self.connection {
-                Connection::Recovering(_, reason) | Connection::Lost(reason) => reason.clone(),
+                Connection::Recovering(_, reason) | Connection::Lost(reason) => reason.translate(),
                 _ => String::new(),
             }
             .into(),
@@ -1072,7 +1072,7 @@ mod tests {
 
     #[test]
     fn recovering_keeps_the_snapshot_and_shows_a_banner() {
-        let connection = Connection::Recovering(snapshot(), "transport lost".into());
+        let connection = Connection::Recovering(snapshot(), SessionFailureReason::TransportLost);
 
         assert!(snapshot_of(&connection).is_some());
         assert_eq!(
@@ -1083,7 +1083,7 @@ mod tests {
 
     #[test]
     fn lost_drops_the_snapshot_and_uses_the_lost_screen() {
-        let connection = Connection::Lost("recovery budget exhausted".into());
+        let connection = Connection::Lost(SessionFailureReason::ConnectTimedOut);
 
         assert!(snapshot_of(&connection).is_none());
         assert_eq!(ConnectionView::Lost, connection_view(&connection, false));

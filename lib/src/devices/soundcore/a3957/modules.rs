@@ -29,8 +29,6 @@ impl SoundcoreDeviceBuilder<A3957State> {
     }
 
     pub fn a3957_gaming_mode(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
-        self.module_collection()
-            .add_a3957_gaming_mode(packet_io_controller);
+        self.module_collection().add_a3957_gaming_mode();
     }
 }

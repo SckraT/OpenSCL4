@@ -51,8 +51,6 @@ where
     StateType: Has<GamingMode> + Send + Sync + Clone + 'static,
 {
     pub fn a3947_gaming_mode(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
-        self.module_collection()
-            .add_a3947_gaming_mode(packet_io_controller);
+        self.module_collection().add_a3947_gaming_mode();
     }
 }

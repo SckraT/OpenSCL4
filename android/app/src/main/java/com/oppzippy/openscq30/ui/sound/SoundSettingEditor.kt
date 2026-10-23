@@ -319,7 +319,7 @@ private fun selectValue(requested: Value?, confirmed: String?): String? = when (
 }
 
 @Composable
-private fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
+internal fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
     is WriteOutcome.Rejected -> stringResource(R.string.setting_write_rejected)
 
     WriteOutcome.TimedOut -> stringResource(R.string.setting_write_timed_out)

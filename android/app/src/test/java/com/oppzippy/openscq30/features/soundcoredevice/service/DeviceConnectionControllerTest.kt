@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.soundcoredevice.service
 
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -37,13 +38,13 @@ class DeviceConnectionControllerTest {
 
         controller.connect("device")
         runCurrent()
-        session.value = SessionConnectionState.Recovering(attempt = 1, reason = "transport lost")
+        session.value = SessionConnectionState.Recovering(attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
         runCurrent()
 
         val recovering = controller.connectionStatusFlow.value as ConnectionStatus.Recovering
         assertSame(manager, recovering.deviceManager)
         assertEquals(1, recovering.attempt)
-        assertEquals("transport lost", recovering.reason)
+        assertEquals(SessionFailureReason.TRANSPORT_LOST, recovering.reason)
 
         controller.connect("device")
         runCurrent()
@@ -64,7 +65,7 @@ class DeviceConnectionControllerTest {
 
         controller.connect("device")
         runCurrent()
-        session.value = SessionConnectionState.Recovering(attempt = 1, reason = "transport lost")
+        session.value = SessionConnectionState.Recovering(attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
         runCurrent()
         controller.retry()
         runCurrent()
@@ -88,12 +89,12 @@ class DeviceConnectionControllerTest {
 
         controller.connect("device")
         runCurrent()
-        firstSession.value = SessionConnectionState.Lost("recovery budget exhausted")
+        firstSession.value = SessionConnectionState.Lost(SessionFailureReason.CONNECT_TIMED_OUT)
         runCurrent()
 
         val lost = controller.connectionStatusFlow.value as ConnectionStatus.Lost
         assertSame(first, lost.deviceManager)
-        assertEquals("recovery budget exhausted", lost.reason)
+        assertEquals(SessionFailureReason.CONNECT_TIMED_OUT, lost.reason)
 
         controller.retry()
         runCurrent()
@@ -101,6 +102,33 @@ class DeviceConnectionControllerTest {
         assertEquals(2, attempts)
         verify(exactly = 1) { first.close() }
         verify(exactly = 0) { second.close() }
+        assertSame(second, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
+        controller.close()
+    }
+
+    @Test
+    fun aLinkEventStartsANewBudgetOnlyForTheMatchingLostDevice() = runTest {
+        val firstSession = MutableStateFlow<SessionConnectionState>(SessionConnectionState.Connected)
+        val first = mockManager(firstSession)
+        val second = mockManager()
+        var attempts = 0
+        val controller = DeviceConnectionController(this, {
+            attempts += 1
+            if (attempts == 1) first else second
+        }, { throw AssertionError(it) })
+
+        controller.connect("AA:BB:CC:DD:EE:FF")
+        runCurrent()
+        firstSession.value = SessionConnectionState.Lost(SessionFailureReason.CONNECT_TIMED_OUT)
+        runCurrent()
+
+        controller.retryIfLostFor("00:11:22:33:44:55")
+        runCurrent()
+        assertEquals(1, attempts)
+
+        controller.retryIfLostFor("aa:bb:cc:dd:ee:ff")
+        runCurrent()
+        assertEquals(2, attempts)
         assertSame(second, (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager)
         controller.close()
     }

@@ -10,9 +10,8 @@ macro_rules! flag {
     ($name: ident) => {
         paste::paste! {
             pub fn [< d1301_ $name >](&mut self) {
-                let packet_io = self.packet_io_controller().clone();
                 self.module_collection()
-                    .[< add_d1301_ $name >](packet_io);
+                    .[< add_d1301_ $name >]();
             }
         }
     };

@@ -83,8 +83,7 @@ soundcore_device!(
         builder.low_battery_prompt();
         builder.a3954_spatial_audio();
         builder.a3954_easy_chat();
-        let packet_io = builder.packet_io_controller().clone();
-        add_sound_leak_compensation(builder.module_collection(), packet_io);
+        add_sound_leak_compensation(builder.module_collection());
         builder.wearing_detection();
 
         builder.a3954_air_pressure();
@@ -203,21 +202,15 @@ pub const SLIDE_DOWN_ACTIONS: &[ButtonAction] = &[ButtonAction {
 
 /// Adaptive sound leak compensation. The A3954 takes its own command for it, as the Soundcore app sends it; the
 /// A3947's command is answered with a different packet and changes nothing.
-fn add_sound_leak_compensation(
-    module_collection: &mut ModuleCollection<A3954State>,
-    packet_io: std::sync::Arc<common::packet::PacketIOController>,
-) {
-    module_collection.add_flag::<SoundLeakCompensation>(
-        packet_io,
-        FlagConfiguration {
-            category_id: CategoryId::Miscellaneous,
-            setting_id: SettingId::SoundLeakCompensation,
-            set_command: packet::Command([0x10, 0x9A]),
-            update_command: None,
-            is_inverted: false,
-            verification: FlagVerification::Bulk,
-        },
-    );
+fn add_sound_leak_compensation(module_collection: &mut ModuleCollection<A3954State>) {
+    module_collection.add_flag::<SoundLeakCompensation>(FlagConfiguration {
+        category_id: CategoryId::Miscellaneous,
+        setting_id: SettingId::SoundLeakCompensation,
+        set_command: packet::Command([0x10, 0x9A]),
+        update_command: None,
+        is_inverted: false,
+        verification: FlagVerification::Bulk,
+    });
 }
 
 #[cfg(test)]
