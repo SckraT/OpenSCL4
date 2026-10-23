@@ -13,6 +13,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.oppzippy.openscq30.MainActivity
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.phonelink.AndroidPhoneLinkMonitor
+import com.oppzippy.openscq30.features.phonelink.BluetoothAccess
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.soundcoredevice.connectionBackends
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
@@ -24,8 +26,12 @@ import com.oppzippy.openscq30.widget.SettingWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -34,6 +40,7 @@ class DeviceSelectionViewModel @Inject constructor(
     private val session: OpenScq30Session,
     private val toastHandler: ToastHandler,
     private val preferences: Preferences,
+    private val phoneLinkMonitor: AndroidPhoneLinkMonitor,
 ) : AndroidViewModel(application) {
     companion object {
         const val TAG = "DeviceSelectionViewModel"
@@ -42,11 +49,64 @@ class DeviceSelectionViewModel @Inject constructor(
     private val _pairedDevices = MutableStateFlow<List<PairedDevice>?>(null)
     val pairedDevices = _pairedDevices.asStateFlow()
 
+    private val activeDeviceState = MutableStateFlow<ActiveDevice?>(null)
+    private val featuredDevicePinner = FeaturedDevicePinner()
+
     /** The device the user opened most recently, featured at the top of the list while nothing is connected. */
     val lastDeviceMacAddress = preferences.lastDeviceMacAddressFlow
 
+    /** Everything "My devices" draws: the two status axes, the ordered rows and the global Bluetooth access. */
+    val deviceListState: StateFlow<DeviceListState> = combine(
+        pairedDevices,
+        phoneLinkMonitor.snapshot,
+        activeDeviceState,
+        lastDeviceMacAddress,
+    ) { devices, signals, activeDevice, lastDeviceMacAddress ->
+        val deviceList = devices.orEmpty()
+        val appControl = activeDevice.toAppControlSnapshot()
+        val pinned = featuredDevicePinner.pinnedFeaturedMacAddress(deviceList, appControl, lastDeviceMacAddress)
+        val state = DeviceListPresenter.present(
+            devices = deviceList,
+            phoneLink = signals,
+            appControl = appControl,
+            lastDeviceMacAddress = lastDeviceMacAddress,
+            isLoading = devices == null,
+            featuredMacAddress = pinned,
+        )
+        if (pinned == null || !state.featured?.device?.macAddress.equals(pinned, ignoreCase = true)) {
+            featuredDevicePinner.remember(state, deviceList, appControl, lastDeviceMacAddress)
+        }
+        state
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        DeviceListState(
+            access = BluetoothAccess.Unknown,
+            featured = null,
+            others = emptyList(),
+            isLoading = true,
+        ),
+    )
+
     fun rememberLastDevice(macAddress: String) {
         preferences.lastDeviceMacAddress = macAddress
+    }
+
+    fun setActiveDevice(device: ActiveDevice?) {
+        activeDeviceState.value = device
+    }
+
+    fun startPhoneLinkMonitor() {
+        featuredDevicePinner.reset()
+        phoneLinkMonitor.start()
+    }
+
+    fun stopPhoneLinkMonitor() {
+        phoneLinkMonitor.stop()
+    }
+
+    fun refreshPhoneLink() {
+        phoneLinkMonitor.refresh()
     }
 
     init {

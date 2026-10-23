@@ -5,7 +5,11 @@ use crate::{
     storage::{QuickPreset, QuickPresetField},
 };
 
-use super::{SettingMap, battery::BOTH_EARBUDS_SETTING_IDS};
+use super::{
+    SettingMap,
+    availability::{SettingAvailability, setting_availability},
+    battery::BOTH_EARBUDS_SETTING_IDS,
+};
 
 /// One field per setting. Old presets can repeat ids shared by categories; activation applies the last enabled
 /// value, so that is the one that counts.
@@ -56,6 +60,28 @@ pub fn presets_use_both_earbud_settings(presets: &[QuickPreset]) -> bool {
             field.is_enabled && BOTH_EARBUDS_SETTING_IDS.contains(&id)
         })
     })
+}
+
+/// Whether a preset has enabled fields that cannot be changed in the device's current state, and so would not be
+/// applied.
+pub fn preset_uses_blocked_settings(preset: &QuickPreset, settings: &SettingMap) -> bool {
+    preset_fields(preset)
+        .into_iter()
+        .filter(|field| field.is_enabled)
+        .any(|field| {
+            let id: &'static str = field.setting_id.into();
+            !matches!(
+                setting_availability(settings, id),
+                SettingAvailability::Available
+            )
+        })
+}
+
+/// Whether any preset has enabled fields that cannot be changed in the device's current state.
+pub fn presets_use_blocked_settings(presets: &[QuickPreset], settings: &SettingMap) -> bool {
+    presets
+        .iter()
+        .any(|preset| preset_uses_blocked_settings(preset, settings))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -262,5 +288,44 @@ mod tests {
         };
         assert!(presets_use_both_earbud_settings(&[anc(), eq]));
         assert!(!presets_use_both_earbud_settings(&[anc()]));
+    }
+
+    fn one_earbud() -> SettingMap {
+        SettingMap::from([(
+            SettingId::TwsStatus,
+            Setting::Information {
+                value: "Disconnected".to_string(),
+                translated_value: "Disconnected".to_string(),
+            },
+        )])
+    }
+
+    #[test]
+    fn presets_with_blocked_fields_are_reported_from_their_availability() {
+        let ldac = QuickPreset {
+            name: "LDAC".to_string(),
+            fields: vec![field(SettingId::Ldac, true.into(), true)],
+        };
+        let eq = QuickPreset {
+            name: "EQ".to_string(),
+            fields: vec![QuickPresetField {
+                setting_id: SettingId::VolumeAdjustments,
+                value: vec![0i16; 8].into(),
+                is_enabled: true,
+            }],
+        };
+        assert!(presets_use_blocked_settings(
+            &[anc(), ldac.clone(), eq.clone()],
+            &one_earbud()
+        ));
+        assert!(!presets_use_blocked_settings(&[anc()], &one_earbud()));
+        // disabled fields are not applied, so they do not block the preset
+        let disabled = QuickPreset {
+            name: "Disabled".to_string(),
+            fields: vec![field(SettingId::Ldac, true.into(), false)],
+        };
+        assert!(!presets_use_blocked_settings(&[disabled], &one_earbud()));
+        let both = toggles(&[(WEAR, true)]);
+        assert!(!presets_use_blocked_settings(&[ldac, eq], &both));
     }
 }

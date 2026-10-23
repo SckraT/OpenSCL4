@@ -7,8 +7,8 @@ use std::{path::PathBuf, sync::Arc};
 use macaddr::MacAddr6;
 use openscq30_lib::{
     DeviceModel, OpenSCQ30Session,
-    connection::{self, ConnectionDescriptor, ConnectionStatus},
-    device::{self, OpenSCQ30Device},
+    connection::{self, ConnectionDescriptor, SessionFailureReason, SessionStatus},
+    device::{self, OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
     quick_presets::{QuickPresetActivation, QuickPresetsHandler},
     settings::{CategoryId, SettingId, Value},
     storage::{PairedDevice, QuickPreset},
@@ -89,7 +89,15 @@ pub enum Event {
     /// Disconnected as asked.
     Disconnected(MacAddr6),
     /// The device went away by itself.
-    ConnectionLost(MacAddr6),
+    ConnectionLost {
+        mac_address: MacAddr6,
+        reason: SessionFailureReason,
+    },
+    /// The transport dropped but the session is reconnecting; the last snapshot stays on screen.
+    Recovering {
+        mac_address: MacAddr6,
+        reason: SessionFailureReason,
+    },
     ConnectFailed {
         mac_address: MacAddr6,
         failure: Failure,
@@ -98,6 +106,11 @@ pub enum Event {
     CommandFailed {
         command: Command,
         failure: Failure,
+    },
+    /// The write was sent, but the device did not confirm every requested setting.
+    SettingsNotApplied {
+        command: Command,
+        outcomes: Vec<SettingWriteOutcome>,
     },
     PresetApplied {
         mac_address: MacAddr6,
@@ -118,7 +131,8 @@ enum Message {
         failure: Failure,
     },
     DeviceChanged(u64),
-    ConnectionLost(u64),
+    Recovering(u64, SessionFailureReason),
+    ConnectionLost(u64, SessionFailureReason),
     /// Let go of the device and stop, then say so.
     Shutdown(tokio::sync::oneshot::Sender<()>),
 }
@@ -240,9 +254,20 @@ impl Actor {
                 Message::DeviceChanged(generation) if generation == self.generation => {
                     self.emit_snapshot(false);
                 }
-                Message::ConnectionLost(generation) if generation == self.generation => {
+                Message::Recovering(generation, reason) if generation == self.generation => {
+                    if let Some((mac_address, _)) = self.device.as_ref() {
+                        (self.emit)(Event::Recovering {
+                            mac_address: *mac_address,
+                            reason,
+                        });
+                    }
+                }
+                Message::ConnectionLost(generation, reason) if generation == self.generation => {
                     if let Some((mac_address, _)) = self.drop_device() {
-                        (self.emit)(Event::ConnectionLost(mac_address));
+                        (self.emit)(Event::ConnectionLost {
+                            mac_address,
+                            reason,
+                        });
                     }
                 }
                 // about an earlier connection
@@ -302,7 +327,17 @@ impl Actor {
             Command::SetSettings(values) => {
                 let Some(device) = self.current() else { return };
                 match device.set_setting_values(values).await {
-                    Ok(()) => self.emit_snapshot(false),
+                    Ok(outcomes) => {
+                        // The device is the source of truth for what it applied, even when it applied nothing.
+                        self.emit_snapshot(false);
+                        let outcomes = not_applied(outcomes);
+                        if !outcomes.is_empty() {
+                            (self.emit)(Event::SettingsNotApplied {
+                                command: command.clone(),
+                                outcomes,
+                            });
+                        }
+                    }
                     Err(err) => self.failed(command, &err),
                 }
             }
@@ -405,12 +440,24 @@ impl Actor {
             }
         }));
         let messages = self.messages.clone();
-        let mut status = device.connection_status();
+        let mut status = device.session_status();
         self.watchers.push(tokio::spawn(async move {
             loop {
-                if *status.borrow_and_update() == ConnectionStatus::Disconnected {
-                    let _ = messages.send(Message::ConnectionLost(generation));
-                    break;
+                match status.borrow_and_update().clone() {
+                    SessionStatus::Recovering { reason, .. } => {
+                        if messages
+                            .send(Message::Recovering(generation, reason))
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    SessionStatus::Lost { reason } => {
+                        let _ = messages.send(Message::ConnectionLost(generation, reason));
+                        break;
+                    }
+                    SessionStatus::Closed => break,
+                    _ => {}
                 }
                 if status.changed().await.is_err() {
                     break;
@@ -504,6 +551,14 @@ impl Actor {
     }
 }
 
+/// Only the outcomes that must be reported to the user, in request order.
+fn not_applied(outcomes: Vec<SettingWriteOutcome>) -> Vec<SettingWriteOutcome> {
+    outcomes
+        .into_iter()
+        .filter(|outcome| !matches!(outcome.outcome, WriteOutcome::Applied { .. }))
+        .collect()
+}
+
 fn failure(err: &device::Error) -> Failure {
     use connection::Error as Connection;
     match err {
@@ -512,7 +567,11 @@ fn failure(err: &device::Error) -> Failure {
             ..
         } => Failure::BluetoothOff,
         device::Error::ConnectionError {
-            source: Connection::DeviceNotFound { .. },
+            source:
+                Connection::DeviceNotFound { .. }
+                | Connection::Unpaired { .. }
+                | Connection::PermissionDenied { .. }
+                | Connection::SecurityFailure { .. },
             ..
         }
         | device::Error::DeviceNotFound { .. } => Failure::NotFound,
@@ -596,6 +655,96 @@ mod tests {
         let reconnected = next_snapshot(&|s| s.last_applied_preset.is_none());
         assert_eq!(reconnected.presets.len(), 1);
         assert_eq!(reconnected.presets[0].name, "First");
+        controller.shutdown();
+    }
+
+    #[test]
+    fn only_outcomes_that_were_not_applied_are_reported() {
+        let outcomes = vec![
+            SettingWriteOutcome {
+                setting_id: SettingId::WearingDetection,
+                outcome: WriteOutcome::Applied {
+                    observed: Value::Bool(true),
+                },
+            },
+            SettingWriteOutcome {
+                setting_id: SettingId::WearingTone,
+                outcome: WriteOutcome::Rejected {
+                    observed: Some(Value::Bool(false)),
+                },
+            },
+            SettingWriteOutcome {
+                setting_id: SettingId::TouchTone,
+                outcome: WriteOutcome::TimedOut,
+            },
+            SettingWriteOutcome {
+                setting_id: SettingId::Ldac,
+                outcome: WriteOutcome::Disconnected,
+            },
+        ];
+
+        let reported = not_applied(outcomes);
+
+        assert_eq!(
+            vec![
+                SettingId::WearingTone,
+                SettingId::TouchTone,
+                SettingId::Ldac
+            ],
+            reported
+                .into_iter()
+                .map(|outcome| outcome.setting_id)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn setting_write_emits_the_confirmed_snapshot() {
+        let dir = tempfile::tempdir().unwrap();
+        let (emit, events) = sync_channel::channel();
+        let controller = Controller::start(
+            dir.path().join("database.sqlite"),
+            dir.path().to_path_buf(),
+            move |event| {
+                let _ = emit.send(event);
+            },
+        )
+        .unwrap();
+        let model = DeviceModel::SoundcoreA3954;
+        let address = model.demo_mac_address();
+        controller.send(Command::Pair(PairedDevice {
+            mac_address: address,
+            model,
+            is_demo: true,
+        }));
+        controller.send(Command::Connect(address));
+        let next_snapshot = || {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                match events
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                    .unwrap()
+                {
+                    Event::Connected(snapshot) | Event::Changed(snapshot) => break snapshot,
+                    Event::SettingsNotApplied { outcomes, .. } => {
+                        panic!("the demo device did not apply {outcomes:?}")
+                    }
+                    Event::CommandFailed { command, failure } => panic!("{command:?}: {failure:?}"),
+                    _ => (),
+                }
+            }
+        };
+        next_snapshot();
+
+        controller.send(Command::SetSettings(vec![(
+            SettingId::WearingDetection,
+            Value::Bool(true),
+        )]));
+        let snapshot = next_snapshot();
+        assert!(matches!(
+            snapshot.settings.get(&SettingId::WearingDetection),
+            Some(openscq30_lib::settings::Setting::Toggle { value: true, .. })
+        ));
         controller.shutdown();
     }
 

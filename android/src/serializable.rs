@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use i18n_embed::unic_langid::subtags;
-use openscq30_lib::{connection, settings, storage};
+use openscq30_lib::{client, connection, device, settings, storage};
 
 pub struct MacAddr6(pub macaddr::MacAddr6);
 uniffi::custom_type!(MacAddr6, String, {
@@ -33,6 +33,80 @@ uniffi::custom_type!(ConnectionStatus, String, {
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
 
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum SessionFailureReason {
+    TransportLost,
+    ConnectionStatusDisconnected,
+    ReadChannelClosed,
+    WriteFailed,
+    WriteTimedOut,
+    SilenceWatchdogFailed,
+    ConnectTimedOut,
+    StateRefreshFailed,
+    BluetoothAdapterUnavailable,
+    DeviceNotFound,
+    PermissionDenied,
+    Unpaired,
+    SecurityFailure,
+    ConnectionFailed,
+}
+
+impl From<connection::SessionFailureReason> for SessionFailureReason {
+    fn from(reason: connection::SessionFailureReason) -> Self {
+        match reason {
+            connection::SessionFailureReason::TransportLost => Self::TransportLost,
+            connection::SessionFailureReason::ConnectionStatusDisconnected => {
+                Self::ConnectionStatusDisconnected
+            }
+            connection::SessionFailureReason::ReadChannelClosed => Self::ReadChannelClosed,
+            connection::SessionFailureReason::WriteFailed => Self::WriteFailed,
+            connection::SessionFailureReason::WriteTimedOut => Self::WriteTimedOut,
+            connection::SessionFailureReason::SilenceWatchdogFailed => Self::SilenceWatchdogFailed,
+            connection::SessionFailureReason::ConnectTimedOut => Self::ConnectTimedOut,
+            connection::SessionFailureReason::StateRefreshFailed => Self::StateRefreshFailed,
+            connection::SessionFailureReason::BluetoothAdapterUnavailable => {
+                Self::BluetoothAdapterUnavailable
+            }
+            connection::SessionFailureReason::DeviceNotFound => Self::DeviceNotFound,
+            connection::SessionFailureReason::PermissionDenied => Self::PermissionDenied,
+            connection::SessionFailureReason::Unpaired => Self::Unpaired,
+            connection::SessionFailureReason::SecurityFailure => Self::SecurityFailure,
+            connection::SessionFailureReason::ConnectionFailed => Self::ConnectionFailed,
+        }
+    }
+}
+
+#[derive(Clone, Debug, uniffi::Enum)]
+pub enum SessionStatus {
+    Connecting,
+    Connected,
+    Recovering {
+        attempt: u32,
+        reason: SessionFailureReason,
+    },
+    Lost {
+        reason: SessionFailureReason,
+    },
+    Closed,
+}
+
+impl From<connection::SessionStatus> for SessionStatus {
+    fn from(status: connection::SessionStatus) -> Self {
+        match status {
+            connection::SessionStatus::Connecting => Self::Connecting,
+            connection::SessionStatus::Connected => Self::Connected,
+            connection::SessionStatus::Recovering { attempt, reason } => Self::Recovering {
+                attempt,
+                reason: reason.into(),
+            },
+            connection::SessionStatus::Lost { reason } => Self::Lost {
+                reason: reason.into(),
+            },
+            connection::SessionStatus::Closed => Self::Closed,
+        }
+    }
+}
+
 pub struct DeviceModel(pub openscq30_lib::DeviceModel);
 uniffi::custom_type!(DeviceModel, String, {
     try_lift: |model| Ok(DeviceModel(openscq30_lib::DeviceModel::from_str(&model)?)),
@@ -63,6 +137,65 @@ uniffi::custom_type!(Value, String, {
     try_lift: |json| Ok(Value(serde_json::from_str(&json)?)),
     lower: |val| serde_json::to_string(&val.0).expect("json serialization shouldn't fail"),
 });
+
+#[derive(uniffi::Record)]
+pub struct SettingWriteOutcome {
+    pub setting_id: SettingId,
+    pub outcome: WriteOutcome,
+}
+
+#[derive(uniffi::Enum)]
+pub enum WriteOutcome {
+    Applied { observed: Value },
+    UnsupportedInState { reason: AvailabilityReason },
+    Rejected { observed: Option<Value> },
+    TimedOut,
+    Disconnected,
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum AvailabilityReason {
+    RequiresBothEarbuds,
+    NoReadBack,
+}
+
+impl From<device::SettingWriteOutcome> for SettingWriteOutcome {
+    fn from(outcome: device::SettingWriteOutcome) -> Self {
+        Self {
+            setting_id: SettingId(outcome.setting_id),
+            outcome: outcome.outcome.into(),
+        }
+    }
+}
+
+impl From<device::WriteOutcome> for WriteOutcome {
+    fn from(outcome: device::WriteOutcome) -> Self {
+        match outcome {
+            device::WriteOutcome::Applied { observed } => Self::Applied {
+                observed: Value(observed),
+            },
+            device::WriteOutcome::UnsupportedInState { reason } => Self::UnsupportedInState {
+                reason: reason.into(),
+            },
+            device::WriteOutcome::Rejected { observed } => Self::Rejected {
+                observed: observed.map(Value),
+            },
+            device::WriteOutcome::TimedOut => Self::TimedOut,
+            device::WriteOutcome::Disconnected => Self::Disconnected,
+        }
+    }
+}
+
+impl From<client::availability::AvailabilityReason> for AvailabilityReason {
+    fn from(reason: client::availability::AvailabilityReason) -> Self {
+        match reason {
+            client::availability::AvailabilityReason::RequiresBothEarbuds => {
+                Self::RequiresBothEarbuds
+            }
+            client::availability::AvailabilityReason::NoReadBack => Self::NoReadBack,
+        }
+    }
+}
 
 pub struct QuickPreset(pub openscq30_lib::storage::QuickPreset);
 uniffi::custom_type!(QuickPreset, String, {

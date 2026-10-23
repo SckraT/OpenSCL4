@@ -57,9 +57,7 @@ where
     StateType: Has<a3035::structures::BatteryAlert> + Send + Sync + Clone + 'static,
 {
     pub fn a3035_battery_alert(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
-        self.module_collection()
-            .add_a3035_battery_alert(packet_io_controller);
+        self.module_collection().add_a3035_battery_alert();
     }
 }
 
@@ -68,8 +66,7 @@ where
     StateType: Has<a3035::structures::AmbientSoundModeVoicePrompt> + Send + Sync + Clone + 'static,
 {
     pub fn a3035_ambient_sound_mode_voice_prompt(&mut self) {
-        let packet_io_controller = self.packet_io_controller().clone();
         self.module_collection()
-            .add_a3035_ambient_sound_mode_voice_prompt(packet_io_controller);
+            .add_a3035_ambient_sound_mode_voice_prompt();
     }
 }

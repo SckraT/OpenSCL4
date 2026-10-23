@@ -169,6 +169,18 @@ msgstr "Conectado a {}"
 msgid "Connecting to {}"
 msgstr "Conectando a {}"
 
+msgid "Reconnecting:"
+msgstr "Reconectando:"
+
+msgid "Reconnecting to {}"
+msgstr "Reconectando a {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "O dispositivo ainda está por perto. As configurações voltarão quando ele se reconectar."
+
+msgid "changes are paused until the device is back."
+msgstr "As alterações ficam pausadas até o dispositivo voltar."
+
 msgid "Connection lost"
 msgstr "Conexão perdida"
 
@@ -656,8 +668,8 @@ msgstr "Nenhuma configuração escolhida ainda"
 msgid "Edit device screen"
 msgstr "Editar a tela do dispositivo"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "Só um fone está conectado. O equalizador e outras configurações ficam disponíveis quando os dois fones estiverem conectados."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "Apenas um fone esta conectado. O equalizador nao esta disponivel, o LDAC nao pode ser alternado e as outras configuracoes ainda podem ser alteradas."
 
 msgid "Move up"
 msgstr "Mover para cima"
@@ -907,8 +919,8 @@ msgstr "Salve suas configurações atuais e escolha as que quer aplicar juntas."
 msgid "Create preset"
 msgstr "Criar predefinição"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "O equalizador das predefinições é aplicado quando os dois fones estão conectados."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "Algumas configuracoes destes predefinicoes nao estao disponiveis agora e nao serao aplicadas."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "Vamos salvar as configurações atuais. Depois escolha quais aplicar."
@@ -955,8 +967,6 @@ msgstr "Excluir “{}”? As configurações atuais do dispositivo serão mantid
 msgid "Preset “{}” applied"
 msgstr "Predefinição “{}” aplicada"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "Predefinição “{}” aplicada. O equalizador dela será aplicado quando os dois fones estiverem conectados."
 
 msgid "Preset deleted"
 msgstr "Predefinição excluída"

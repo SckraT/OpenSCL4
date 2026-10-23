@@ -63,6 +63,7 @@ component GroupLabel inherits Text {
 component DeviceSwitch inherits Rectangle {
     in property <bool> compact;
     private property <bool> live: AppState.connection == Connection.connected;
+    private property <bool> recovering: AppState.connection == Connection.recovering;
     border-radius: 16px;
     border-width: 1px;
     border-color: Theme.line;
@@ -133,28 +134,28 @@ export component Sidebar inherits Rectangle {
         spacing: 3px;
         DeviceSwitch { compact: root.compact; }
         Rectangle { height: 8px; }
-        if AppState.connection == Connection.connected: NavItem {
+        if AppState.connection == Connection.connected || AppState.connection == Connection.recovering: NavItem {
             page: Page.overview;
             compact: root.compact;
         }
-        if AppState.connection == Connection.connected && AppState.sound-pages.length > 0 && !root.compact: GroupLabel {
+        if (AppState.connection == Connection.connected || AppState.connection == Connection.recovering) && AppState.sound-pages.length > 0 && !root.compact: GroupLabel {
             text: @tr("SOUND");
             height: 28px;
             vertical-alignment: bottom;
         }
-        if AppState.connection == Connection.connected: VerticalLayout {
+        if AppState.connection == Connection.connected || AppState.connection == Connection.recovering: VerticalLayout {
             spacing: 3px;
             for page in AppState.sound-pages: NavItem {
                 page: page;
                 compact: root.compact;
             }
         }
-        if AppState.connection == Connection.connected && AppState.device-pages.length > 0 && !root.compact: GroupLabel {
+        if (AppState.connection == Connection.connected || AppState.connection == Connection.recovering) && AppState.device-pages.length > 0 && !root.compact: GroupLabel {
             text: @tr("DEVICE");
             height: 28px;
             vertical-alignment: bottom;
         }
-        if AppState.connection == Connection.connected: VerticalLayout {
+        if AppState.connection == Connection.connected || AppState.connection == Connection.recovering: VerticalLayout {
             spacing: 3px;
             for page in AppState.device-pages: NavItem {
                 page: page;
@@ -185,7 +186,7 @@ export component PageHeading inherits HorizontalLayout {
     VerticalLayout {
         horizontal-stretch: 1;
         alignment: start;
-        if Strings.section(root.page) != "" && AppState.connection == Connection.connected: HorizontalLayout {
+        if Strings.section(root.page) != "" && (AppState.connection == Connection.connected || AppState.connection == Connection.recovering): HorizontalLayout {
             spacing: 8px;
             padding-bottom: 8px;
             alignment: start;
@@ -263,6 +264,7 @@ export component StatusBar inherits Rectangle {
             color: Theme.muted;
             font-size: 11px;
             text: AppState.connection == Connection.connected ? @tr("Connected to {}", AppState.device-name)
+                : AppState.connection == Connection.recovering ? @tr("Reconnecting to {}", AppState.device-name)
                 : AppState.connection == Connection.connecting ? @tr("Connecting to {}", AppState.device-name)
                 : AppState.connection == Connection.lost ? @tr("Connection lost")
                 : AppState.connection == Connection.bluetooth-off ? @tr("Bluetooth is off")

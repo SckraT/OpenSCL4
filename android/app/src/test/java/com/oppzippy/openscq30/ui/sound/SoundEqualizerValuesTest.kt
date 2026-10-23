@@ -30,4 +30,14 @@ class SoundEqualizerValuesTest {
         assertEquals("0.25", formatEqualizerValue(25, 2))
         assertEquals("0", formatEqualizerValue(0, 1))
     }
+
+    @Test
+    fun aPendingWriteIsShownUntilTheDeviceConfirmsIt() {
+        assertEquals(listOf(5.toShort()), displayedEqualizerValues(listOf(0.toShort()), listOf(5.toShort())))
+        assertEquals(listOf(0.toShort()), displayedEqualizerValues(listOf(0.toShort()), null))
+        assertEquals(
+            listOf(0.toShort()),
+            displayedEqualizerValues(listOf(0.toShort()), listOf(5.toShort(), 6.toShort())),
+        )
+    }
 }

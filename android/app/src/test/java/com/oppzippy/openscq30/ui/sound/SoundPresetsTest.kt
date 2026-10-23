@@ -155,7 +155,7 @@ class SoundPresetsTest {
     }
 
     @Test
-    fun presetsWithAnEnabledEqualizerFieldNeedBothEarbuds() {
+    fun presetsWithBlockedFieldsAreReported() {
         val equalizerPreset = QuickPreset(
             "Bass",
             listOf(QuickPresetField("presetEqualizerProfile", "BassBooster".toValue(), true)),
@@ -164,8 +164,12 @@ class SoundPresetsTest {
             "Off",
             listOf(QuickPresetField("volumeAdjustments", "x".toValue(), false)),
         )
-        assertTrue(presetsUseBothEarbudSettings(listOf(anc, equalizerPreset)))
-        assertFalse(presetsUseBothEarbudSettings(listOf(anc, disabledEqualizer)))
-        assertFalse(presetsUseBothEarbudSettings(emptyList()))
+        val oneEarbud = mapOf(
+            "twsStatus" to Setting.InformationSetting("Disconnected", "Disconnected"),
+        )
+        assertTrue(presetsUseBlockedSettings(listOf(anc, equalizerPreset), oneEarbud))
+        assertFalse(presetsUseBlockedSettings(listOf(anc, disabledEqualizer), oneEarbud))
+        assertFalse(presetsUseBlockedSettings(emptyList(), oneEarbud))
+        assertFalse(presetsUseBlockedSettings(listOf(equalizerPreset), emptyMap()))
     }
 }

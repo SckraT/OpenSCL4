@@ -7,7 +7,11 @@ use i18n_embed::{DesktopLanguageRequester, unic_langid::LanguageIdentifier};
 use macaddr::MacAddr6;
 use openscq30_i18n::Translate;
 use openscq30_lib::{
-    DeviceModel, connection::ConnectionDescriptor, settings::SettingId, storage::PairedDevice,
+    DeviceModel,
+    client::availability::{SettingAvailability, setting_availability},
+    connection::{ConnectionDescriptor, SessionFailureReason},
+    settings::SettingId,
+    storage::PairedDevice,
 };
 use slint::{ComponentHandle, ModelRc, VecModel};
 
@@ -41,7 +45,8 @@ enum Connection {
     Off,
     Connecting,
     Connected(Box<DeviceSnapshot>),
-    Lost,
+    Recovering(Box<DeviceSnapshot>, SessionFailureReason),
+    Lost(SessionFailureReason),
     Failed(Failure),
 }
 
@@ -395,11 +400,31 @@ impl App {
                     self.connection = Connection::Off;
                 }
             }
-            Event::ConnectionLost(mac) => {
-                if self.current == Some(mac) {
+            Event::Recovering {
+                mac_address,
+                reason,
+            } => {
+                if self.current == Some(mac_address) {
+                    let snapshot = match std::mem::replace(&mut self.connection, Connection::Off) {
+                        Connection::Connected(snapshot) | Connection::Recovering(snapshot, _) => {
+                            snapshot
+                        }
+                        other => {
+                            self.connection = other;
+                            return;
+                        }
+                    };
+                    self.connection = Connection::Recovering(snapshot, reason);
+                }
+            }
+            Event::ConnectionLost {
+                mac_address,
+                reason,
+            } => {
+                if self.current == Some(mac_address) {
                     self.equalizer_disconnected();
                     self.editing_preset = None;
-                    self.connection = Connection::Lost;
+                    self.connection = Connection::Lost(reason);
                 }
             }
             Event::ConnectFailed {
@@ -419,6 +444,11 @@ impl App {
                     self.failed_command = Some(command);
                 }
             },
+            Event::SettingsNotApplied { command, outcomes } => {
+                tracing::warn!("{command:?} was not confirmed by the device: {outcomes:?}");
+                self.equalizer_failed();
+                self.failed_command = Some(command);
+            }
             Event::PresetApplied { mac_address, name } => {
                 if self.current == Some(mac_address) {
                     self.preset_applied(&name);
@@ -431,9 +461,20 @@ impl App {
 
     /// A change to a row of a section page.
     fn edit(&mut self, id: &str, edit: Edit) {
+        if !matches!(self.connection, Connection::Connected(_)) {
+            tracing::debug!("ignored a change to {id} while the device is not connected");
+            return;
+        }
         let Some(snapshot) = self.snapshot() else {
             return;
         };
+        if !matches!(
+            setting_availability(&snapshot.settings, id),
+            SettingAvailability::Available
+        ) {
+            tracing::debug!("ignored a change to {id}, which cannot be changed in this state");
+            return;
+        }
         // hue and time rows take numbers too; tell them apart by the setting
         let edit = match (
             edit,
@@ -457,6 +498,19 @@ impl App {
     }
 
     fn send(&mut self, command: Command) {
+        if !matches!(self.connection, Connection::Connected(_))
+            && matches!(
+                command,
+                Command::SetSettings(_)
+                    | Command::ActivatePreset(_)
+                    | Command::SavePreset(_)
+                    | Command::TogglePresetField { .. }
+                    | Command::MigrateLegacyProfiles(_)
+            )
+        {
+            tracing::debug!("ignored {command:?} while the device is not connected");
+            return;
+        }
         self.failed_command = None;
         self.controller.send(command);
         self.render();
@@ -671,10 +725,7 @@ impl App {
     }
 
     fn snapshot(&self) -> Option<&DeviceSnapshot> {
-        match &self.connection {
-            Connection::Connected(snapshot) => Some(snapshot),
-            _ => None,
-        }
+        snapshot_of(&self.connection)
     }
 
     fn render(&self) {
@@ -707,15 +758,14 @@ impl App {
             .snapshot()
             .is_some_and(|s| is_only_one_earbud_connected(&s.settings));
         state.set_one_earbud(one_earbud);
-        state.set_connection(match (&self.connection, current) {
-            (_, None) if self.paired.is_empty() => ConnectionView::NoDevice,
-            (Connection::Connected(_), _) => ConnectionView::Connected,
-            (Connection::Connecting, _) => ConnectionView::Connecting,
-            (Connection::Lost, _) => ConnectionView::Lost,
-            (Connection::Failed(Failure::BluetoothOff), _) => ConnectionView::BluetoothOff,
-            (Connection::Failed(_), _) => ConnectionView::Failed,
-            (Connection::Off, _) => ConnectionView::Off,
-        });
+        state.set_connection(connection_view(&self.connection, self.paired.is_empty()));
+        state.set_connection_reason(
+            match &self.connection {
+                Connection::Recovering(_, reason) | Connection::Lost(reason) => reason.translate(),
+                _ => String::new(),
+            }
+            .into(),
+        );
         if let Connection::Failed(failure) = &self.connection {
             state.set_failure_kind(failure_kind(failure));
             state.set_failure_text(failure_details(failure).into());
@@ -807,6 +857,11 @@ impl App {
         state.set_has_sides(snapshot.settings.contains_key(&SettingId::LeftSinglePress));
         let side = state.get_controls_side().to_string();
         let panels = rows::panels(page, snapshot, &side);
+        let panels = if matches!(self.connection, Connection::Recovering(_, _)) {
+            rows::read_only(panels)
+        } else {
+            panels
+        };
         if let Some(panels) = crate::models::updated_panels(&state.get_panels(), panels) {
             state.set_panels(panels);
         }
@@ -828,7 +883,7 @@ impl App {
             snapshot, one_earbud,
         ))));
         let model: &'static str = snapshot.model.into();
-        let (shown, all) = overview::quick_toggles(
+        let (mut shown, mut all) = overview::quick_toggles(
             snapshot,
             self.config
                 .settings
@@ -836,6 +891,11 @@ impl App {
                 .get(model)
                 .map(Vec::as_slice),
         );
+        if matches!(self.connection, Connection::Recovering(_, _)) {
+            for toggle in shown.iter_mut().chain(all.iter_mut()) {
+                toggle.enabled = false;
+            }
+        }
         state.set_quick_toggles(ModelRc::new(VecModel::from(shown)));
         state.set_all_toggles(ModelRc::new(VecModel::from(all)));
         state.set_overview_rows(ModelRc::new(VecModel::from(overview::rows(
@@ -970,6 +1030,63 @@ fn command_label(command: &Command) -> String {
         Command::TogglePresetField { setting_id, .. } => setting_id.translate(),
         Command::MigrateLegacyProfiles(_) => SettingId::CustomEqualizerProfile.translate(),
         _ => String::new(),
+    }
+}
+
+fn snapshot_of(connection: &Connection) -> Option<&DeviceSnapshot> {
+    match connection {
+        Connection::Connected(snapshot) | Connection::Recovering(snapshot, _) => Some(snapshot),
+        _ => None,
+    }
+}
+
+fn connection_view(connection: &Connection, no_paired_devices: bool) -> ConnectionView {
+    match connection {
+        _ if no_paired_devices => ConnectionView::NoDevice,
+        Connection::Connected(_) => ConnectionView::Connected,
+        Connection::Recovering(_, _) => ConnectionView::Recovering,
+        Connection::Connecting => ConnectionView::Connecting,
+        Connection::Lost(_) => ConnectionView::Lost,
+        Connection::Failed(Failure::BluetoothOff) => ConnectionView::BluetoothOff,
+        Connection::Failed(_) => ConnectionView::Failed,
+        Connection::Off => ConnectionView::Off,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::SettingMap;
+
+    fn snapshot() -> Box<DeviceSnapshot> {
+        Box::new(DeviceSnapshot {
+            mac_address: MacAddr6::nil(),
+            model: DeviceModel::SoundcoreA3954,
+            is_demo: true,
+            categories: Vec::new(),
+            settings: SettingMap::new(),
+            presets: Vec::new(),
+            last_applied_preset: None,
+        })
+    }
+
+    #[test]
+    fn recovering_keeps_the_snapshot_and_shows_a_banner() {
+        let connection = Connection::Recovering(snapshot(), SessionFailureReason::TransportLost);
+
+        assert!(snapshot_of(&connection).is_some());
+        assert_eq!(
+            ConnectionView::Recovering,
+            connection_view(&connection, false)
+        );
+    }
+
+    #[test]
+    fn lost_drops_the_snapshot_and_uses_the_lost_screen() {
+        let connection = Connection::Lost(SessionFailureReason::ConnectTimedOut);
+
+        assert!(snapshot_of(&connection).is_none());
+        assert_eq!(ConnectionView::Lost, connection_view(&connection, false));
     }
 }
 

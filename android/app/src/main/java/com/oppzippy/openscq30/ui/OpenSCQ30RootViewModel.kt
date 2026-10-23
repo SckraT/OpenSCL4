@@ -2,50 +2,23 @@ package com.oppzippy.openscq30.ui
 
 import android.app.Application
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.android.IntentFactory
-import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfileDao
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
-import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
-import com.oppzippy.openscq30.features.statusnotification.storage.FeaturedSettingSlot
+import com.oppzippy.openscq30.features.soundcoredevice.service.isSameSession
 import com.oppzippy.openscq30.features.statusnotification.storage.FeaturedSettingSlotDao
-import com.oppzippy.openscq30.features.statusnotification.storage.QuickPresetSlot
 import com.oppzippy.openscq30.features.statusnotification.storage.QuickPresetSlotDao
 import com.oppzippy.openscq30.features.whatsnew.Version2BreakingChangesMessage
-import com.oppzippy.openscq30.lib.bindings.OpenScq30Exception
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
-import com.oppzippy.openscq30.lib.bindings.SettingCategory
-import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
-import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
-import com.oppzippy.openscq30.lib.wrapper.QuickPreset
-import com.oppzippy.openscq30.lib.wrapper.Setting
-import com.oppzippy.openscq30.lib.wrapper.Value
-import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.utils.ToastHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.math.roundToInt
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
@@ -96,6 +69,14 @@ class OpenSCQ30RootViewModel @Inject constructor(
                         rememberConnectionAddress(it.macAddress)
                     }
 
+                    is ConnectionStatus.Recovering -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
+                    is ConnectionStatus.Lost -> {
+                        rememberConnectionAddress(it.macAddress)
+                    }
+
                     ConnectionStatus.Disconnected -> {
                         pendingMacAddress = null
                         unbindDeviceService()
@@ -104,21 +85,31 @@ class OpenSCQ30RootViewModel @Inject constructor(
                     ConnectionStatus.AwaitingConnection -> Unit
                 }
                 updateVisibleConnectionStatus()
-                deviceSettingsManager.value?.close()
-                if (it is ConnectionStatus.Connected) {
-                    deviceSettingsManager.value = DeviceSettingsManager(
-                        session = session,
-                        deviceManager = it.deviceManager,
-                        parent = coroutineContext.job,
-                        quickPresetSlotDao = quickPresetSlotDao,
-                        featuredSettingSlotDao = featuredSettingSlotDao,
-                        legacyEqualizerProfileDao = legacyEqualizerProfileDao,
-                        toastHandler = toastHandler,
-                    )
-                } else {
-                    deviceSettingsManager.value = null
-                }
+                keepOrReplaceSettingsManager(it)
             }
+        }
+    }
+
+    /**
+     * Recovering and lost keep the device object, so the settings and the current screen must survive. Only
+     * an explicit close or a different device replaces or clears the settings manager.
+     */
+    private fun keepOrReplaceSettingsManager(status: ConnectionStatus) {
+        val manager = status.deviceManager
+        if (manager == null) {
+            deviceSettingsManager.value?.close()
+            deviceSettingsManager.value = null
+        } else if (deviceSettingsManager.value?.deviceManager !== manager) {
+            deviceSettingsManager.value?.close()
+            deviceSettingsManager.value = DeviceSettingsManager(
+                session = session,
+                deviceManager = manager,
+                parent = viewModelScope.coroutineContext.job,
+                quickPresetSlotDao = quickPresetSlotDao,
+                featuredSettingSlotDao = featuredSettingSlotDao,
+                legacyEqualizerProfileDao = legacyEqualizerProfileDao,
+                toastHandler = toastHandler,
+            )
         }
     }
 
@@ -138,12 +129,9 @@ class OpenSCQ30RootViewModel @Inject constructor(
     }
 
     fun selectDevice(macAddress: String) {
-        val currentAddress = when (val status = connectionStatusFlow.value) {
-            is ConnectionStatus.Connecting -> status.macAddress
-            is ConnectionStatus.Connected -> status.macAddress
-            else -> null
-        }
-        if ((pendingMacAddress == null && currentAddress.equals(macAddress, ignoreCase = true)) ||
+        val current = connectionStatusFlow.value
+        // A lost session may be retried; a recovering one already has a retry in flight.
+        if ((pendingMacAddress == null && current.isSameSession(macAddress)) ||
             pendingMacAddress.equals(macAddress, ignoreCase = true)
         ) {
             return
@@ -166,11 +154,7 @@ class OpenSCQ30RootViewModel @Inject constructor(
     }
 
     fun onDeviceUnpaired(macAddress: String) {
-        val activeAddress = when (val status = connectionStatusFlow.value) {
-            is ConnectionStatus.Connecting -> status.macAddress
-            is ConnectionStatus.Connected -> status.macAddress
-            else -> null
-        }
+        val activeAddress = connectionStatusFlow.value.macAddress
         if (activeAddress.equals(macAddress, ignoreCase = true)) stopDeviceService()
         if (lastSelectedMacAddress.equals(macAddress, ignoreCase = true)) lastSelectedMacAddress = null
     }
@@ -227,207 +211,5 @@ class OpenSCQ30RootViewModel @Inject constructor(
         application.sendBroadcast(disconnectIntent)
         unbindDeviceService()
         application.stopService(intentFactory(application, DeviceService::class.java))
-    }
-}
-
-class DeviceSettingsManager(
-    session: OpenScq30Session,
-    parent: Job,
-    private val deviceManager: DeviceConnectionManager,
-    private val quickPresetSlotDao: QuickPresetSlotDao,
-    private val featuredSettingSlotDao: FeaturedSettingSlotDao,
-    legacyEqualizerProfileDao: LegacyEqualizerProfileDao,
-    private val toastHandler: ToastHandler,
-) : AutoCloseable {
-    private val coroutineScope = CoroutineScope(Job(parent))
-    private val quickPresetHandler = session.quickPresetHandler()
-    private val device = deviceManager.device
-
-    private val _quickPresetsFlow = MutableStateFlow(emptyList<QuickPreset>())
-    val quickPresetsFlow = _quickPresetsFlow.asStateFlow()
-
-    companion object {
-        const val TAG = "DeviceSettingsManager"
-    }
-
-    init {
-        coroutineScope.launch { refreshQuickPresets() }
-    }
-
-    override fun close() {
-        coroutineScope.cancel()
-        quickPresetHandler.close()
-    }
-
-    fun setSettingValues(settingValues: List<Pair<String, Value>>) {
-        Log.v(TAG, "Setting settings: $settingValues")
-        coroutineScope.launch {
-            try {
-                device.setSettingValues(
-                    settingValues.map { (settingId, value) ->
-                        SettingIdValuePair(settingId, value)
-                    },
-                )
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error setting values of settings", ex)
-                toastHandler.add(R.string.error_changing_settings, Toast.LENGTH_SHORT)
-            } catch (ex: IllegalStateException) {
-                Log.w(TAG, "device was closed, not setting values", ex)
-            }
-        }
-    }
-
-    /**
-     * Sets a single setting like [setSettingValues], but waits for the device and reports the failure to the caller
-     * instead of only showing a generic toast, so that the UI can show what went wrong next to what the user entered.
-     */
-    suspend fun setSettingValueForResult(settingId: String, value: Value): Result<Unit> = try {
-        device.setSettingValues(listOf(SettingIdValuePair(settingId, value)))
-        Result.success(Unit)
-    } catch (ex: OpenScq30Exception) {
-        Log.e(TAG, "error setting value of $settingId", ex)
-        Result.failure(ex)
-    } catch (ex: IllegalStateException) {
-        Log.w(TAG, "device was closed, not setting value of $settingId", ex)
-        Result.failure(ex)
-    }
-
-    val settingsByCategoryFlow: StateFlow<List<SettingCategory>?> = deviceManager.watchForChangeNotification.map {
-        val settings = try {
-            device.settingsByCategory()
-        } catch (ex: IllegalStateException) {
-            Log.w(TAG, "device was closed, can't read settings", ex)
-            emptyList()
-        }
-        currentCoroutineContext().ensureActive()
-        settings
-    }.flowOn(Dispatchers.Default).stateIn(coroutineScope, SharingStarted.WhileSubscribed(), null)
-
-    val allSettingsFlow: Flow<List<Pair<String, Setting>>> = settingsByCategoryFlow.filterNotNull().map { categories ->
-        categories.flatMap { it.settings }.distinctBy { it.settingId }.map { it.settingId to it.setting }
-    }
-
-    val featuredSettingSlots = featuredSettingSlotDao.allSettingIds(device.model()).map { slots ->
-        // Show a fixed number of slots
-        List(2) { slots.getOrNull(it) }
-    }
-
-    fun setFeaturedSettingSlot(index: Int, settingId: String?) {
-        coroutineScope.launch {
-            if (settingId != null) {
-                featuredSettingSlotDao.upsert(FeaturedSettingSlot(device.model(), index, settingId))
-            } else {
-                featuredSettingSlotDao.delete(device.model(), index)
-            }
-        }
-    }
-
-    val quickPresetSlots = quickPresetSlotDao.allNames(device.model()).map { slots ->
-        // Show a fixed number of slots
-        List(2) { slots.getOrNull(it) }
-    }
-
-    fun setQuickPresetSlot(index: Int, name: String?) {
-        coroutineScope.launch {
-            if (name != null) {
-                quickPresetSlotDao.upsert(QuickPresetSlot(device.model(), index, name))
-            } else {
-                quickPresetSlotDao.delete(device.model(), index)
-            }
-        }
-    }
-
-    fun activateQuickPreset(name: String) {
-        coroutineScope.launch {
-            try {
-                quickPresetHandler.activate(device, name)
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error activating quick preset", ex)
-                toastHandler.add(R.string.error_activating_quick_preset, Toast.LENGTH_SHORT)
-            }
-            refreshQuickPresets()
-        }
-    }
-
-    fun createQuickPreset(name: String) {
-        coroutineScope.launch {
-            try {
-                quickPresetHandler.save(device, name)
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error saving quick preset", ex)
-                toastHandler.add(R.string.error_saving_quick_preset, Toast.LENGTH_SHORT)
-            }
-            refreshQuickPresets()
-        }
-    }
-
-    fun deleteQuickPreset(name: String) {
-        coroutineScope.launch {
-            try {
-                quickPresetHandler.delete(device, name)
-                // The notification builds its buttons from these slots, so they must not outlive the preset
-                quickPresetSlotDao.deleteByName(device.model(), name)
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error deleting quick preset", ex)
-                toastHandler.add(R.string.error_deleting_quick_preset, Toast.LENGTH_SHORT)
-            }
-            refreshQuickPresets()
-        }
-    }
-
-    fun toggleQuickPresetSetting(name: String, settingId: String, enabled: Boolean) {
-        coroutineScope.launch {
-            try {
-                quickPresetHandler.toggleField(device, name, settingId, enabled)
-                // TODO either modify in place instead of re-fetching all presets, or fetch only the modified preset
-                refreshQuickPresets()
-            } catch (ex: OpenScq30Exception) {
-                Log.e(TAG, "error changing quick preset setting", ex)
-                toastHandler.add(R.string.error_changing_settings, Toast.LENGTH_SHORT)
-            } catch (ex: IllegalStateException) {
-                Log.w(TAG, "device was closed, not changing quick preset setting", ex)
-            }
-        }
-    }
-
-    private suspend fun refreshQuickPresets() {
-        _quickPresetsFlow.value = quickPresetHandler.quickPresets(device).sortedBy { it.name }
-    }
-
-    val legacyEqualizerProfilesFlow = legacyEqualizerProfileDao.all()
-
-    /**
-     * Saves old profiles as custom profiles of this device. They are moved one after another, since each one briefly
-     * puts its values on the device and then the old values back.
-     */
-    fun migrateLegacyEqualizerProfiles(legacyEqualizerProfiles: List<LegacyEqualizerProfile>) {
-        coroutineScope.launch {
-            for (legacyEqualizerProfile in legacyEqualizerProfiles) {
-                val oldVolumeAdjustments = device.setting("volumeAdjustments")
-                if (oldVolumeAdjustments !is Setting.EqualizerSetting) return@launch
-                try {
-                    device.setSettingValues(
-                        listOf(
-                            SettingIdValuePair(
-                                "volumeAdjustments",
-                                legacyEqualizerProfile.getVolumeAdjustments().map { (it * 10.0).roundToInt().toShort() }
-                                    .toValue(),
-                            ),
-                            SettingIdValuePair(
-                                "customEqualizerProfile",
-                                Value.ModifiableSelectCommand(
-                                    ModifiableSelectCommandInner.Add(legacyEqualizerProfile.name),
-                                ),
-                            ),
-                            SettingIdValuePair("volumeAdjustments", oldVolumeAdjustments.toValue()),
-                        ),
-                    )
-                } catch (ex: OpenScq30Exception) {
-                    Log.e(TAG, "error migrating legacy equalizer profile", ex)
-                    toastHandler.add(R.string.error_migrating_legacy_profile, Toast.LENGTH_SHORT)
-                    return@launch
-                }
-            }
-        }
     }
 }

@@ -324,3 +324,21 @@ alarm-n-volume = Alarm { $number } Volume
 alarm-n-snooze-duration-minutes = Alarm { $number } Snooze Duration (minutes)
 
 both-earbuds-must-be-connected = Both earbuds must be connected.
+
+setting-availability-requires-both-earbuds = Changing is available when both earbuds are connected
+setting-availability-no-read-back = The device cannot confirm changes
+
+session-reason-transport-lost = The connection was lost
+session-reason-connection-status-disconnected = The connection was closed
+session-reason-read-channel-closed = The device stopped sending data
+session-reason-write-failed = A command could not be sent
+session-reason-write-timed-out = A command timed out
+session-reason-silence-watchdog-failed = The device stopped responding
+session-reason-connect-timed-out = The device did not connect in time
+session-reason-state-refresh-failed = The device state could not be read
+session-reason-bluetooth-adapter-unavailable = Bluetooth is not available
+session-reason-device-not-found = The device was not found
+session-reason-permission-denied = Bluetooth permission was denied
+session-reason-unpaired = The device is no longer paired
+session-reason-security-failure = Bluetooth security check failed
+session-reason-connection-failed = The device could not be connected

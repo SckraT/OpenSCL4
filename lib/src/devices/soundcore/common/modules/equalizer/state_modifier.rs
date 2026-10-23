@@ -77,7 +77,6 @@ where
                 packet::outbound::set_equalizer(target_equalizer_configuration)
             })
             .await?;
-        state_sender.send_modify(|state| *state.get_mut() = *target_equalizer_configuration);
         Ok(())
     }
 }
@@ -172,10 +171,6 @@ where
                 .to_packet(),
             )
             .await?;
-        state_sender.send_modify(|state| {
-            *state.get_mut() = *target_equalizer_configuration;
-            *state.get_mut() = target_hear_id;
-        });
         Ok(())
     }
 }
@@ -280,10 +275,6 @@ where
                 .to_packet(),
             )
             .await?;
-        state_sender.send_modify(|state| {
-            *state.get_mut() = *target_equalizer_configuration;
-            *state.get_mut() = target_hear_id;
-        });
         Ok(())
     }
 }

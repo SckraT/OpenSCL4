@@ -75,6 +75,46 @@
     {"hz": 12800, "value": "12.8", "khz": true},
     {"hz": 65535, "value": "65.535", "khz": true}
   ],
+  "availability": [
+    {
+      "twsStatus": "Disconnected",
+      "cases": [
+        {"id": "ldac", "status": "ReadOnly", "reason": "RequiresBothEarbuds"},
+        {"id": "presetEqualizerProfile", "status": "Unavailable", "reason": "RequiresBothEarbuds"},
+        {"id": "customEqualizerProfile", "status": "Unavailable", "reason": "RequiresBothEarbuds"},
+        {"id": "volumeAdjustments", "status": "Unavailable", "reason": "RequiresBothEarbuds"},
+        {"id": "wearingDetection", "status": "Available", "reason": null},
+        {"id": "dualConnections", "status": "Available", "reason": null},
+        {"id": "leftSinglePress", "status": "Available", "reason": null}
+      ]
+    },
+    {
+      "twsStatus": "Disconnected",
+      "dualConnections": true,
+      "cases": [
+        {"id": "ldac", "status": "ReadOnly", "reason": "RequiresBothEarbuds"},
+        {"id": "volumeAdjustments", "status": "Unavailable", "reason": "RequiresBothEarbuds"},
+        {"id": "dualConnections", "status": "Available", "reason": null}
+      ]
+    },
+    {
+      "twsStatus": "Connected",
+      "cases": [
+        {"id": "ldac", "status": "Available", "reason": null},
+        {"id": "presetEqualizerProfile", "status": "Available", "reason": null},
+        {"id": "customEqualizerProfile", "status": "Available", "reason": null},
+        {"id": "volumeAdjustments", "status": "Available", "reason": null}
+      ]
+    },
+    {
+      "twsStatus": null,
+      "cases": [
+        {"id": "ldac", "status": "Available", "reason": null},
+        {"id": "presetEqualizerProfile", "status": "Available", "reason": null},
+        {"id": "volumeAdjustments", "status": "Available", "reason": null}
+      ]
+    }
+  ],
   "quickToggles": [
     {"stored": null, "available": ["wearingDetection", "ldac"], "expected": ["ldac"]},
     {"stored": null, "available": ["wearingDetection"], "expected": []},

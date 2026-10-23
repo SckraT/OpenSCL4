@@ -7,7 +7,10 @@ import androidx.lifecycle.ViewModelStore
 import com.oppzippy.openscq30.OpenSCQ30Application
 import com.oppzippy.openscq30.android.IntentFactory
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
+import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceConnectionManager
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
+import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
+import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
 import com.oppzippy.openscq30.test.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
@@ -18,6 +21,8 @@ import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -60,6 +65,12 @@ class OpenSCQ30RootViewModelTest {
         every { service.connectionStatusFlow } returns status
         every { binder.getService() } returns service
         binding.captured.onServiceConnected(null, binder)
+    }
+
+    private fun mockDeviceManager(): DeviceConnectionManager {
+        val manager = mockk<DeviceConnectionManager>(relaxed = true)
+        every { manager.device } returns mockk<OpenScq30Device>(relaxed = true)
+        return manager
     }
 
     @After
@@ -119,6 +130,59 @@ class OpenSCQ30RootViewModelTest {
 
         verify(exactly = 1) { intent.putExtra(DeviceService.INTENT_EXTRA_MAC_ADDRESS, "first") }
         verify(exactly = 2) { intent.putExtra(DeviceService.INTENT_EXTRA_MAC_ADDRESS, "second") }
+        store.clear()
+    }
+
+    @Test
+    fun recoveringAndLostKeepTheSettingsManagerAndTheBinding() {
+        val manager = mockDeviceManager()
+        val status = MutableStateFlow<ConnectionStatus>(ConnectionStatus.Connected(manager, "device"))
+        viewModel.selectDevice("device")
+        attachService(status)
+        val settingsManager = viewModel.deviceSettingsManager.value
+        assertNotNull(settingsManager)
+
+        status.value =
+            ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
+        assertSame(settingsManager, viewModel.deviceSettingsManager.value)
+        assertEquals(
+            "device",
+            (viewModel.connectionStatusFlow.value as ConnectionStatus.Recovering).macAddress,
+        )
+
+        status.value = ConnectionStatus.Lost(manager, "device", SessionFailureReason.CONNECT_TIMED_OUT)
+        assertSame(settingsManager, viewModel.deviceSettingsManager.value)
+        verify(exactly = 0) { application.unbindService(any()) }
+        store.clear()
+    }
+
+    @Test
+    fun selectingTheDeviceWhileRecoveringDoesNotRestartTheService() {
+        val manager = mockDeviceManager()
+        val status = MutableStateFlow<ConnectionStatus>(ConnectionStatus.Connected(manager, "device"))
+        viewModel.selectDevice("device")
+        attachService(status)
+        status.value =
+            ConnectionStatus.Recovering(manager, "device", attempt = 1, reason = SessionFailureReason.TRANSPORT_LOST)
+
+        viewModel.selectDevice("device")
+
+        verify(exactly = 1) { application.startForegroundService(any()) }
+        store.clear()
+    }
+
+    @Test
+    fun retryFromLostStartsTheServiceAgainForTheSameDevice() {
+        val manager = mockDeviceManager()
+        viewModel.selectDevice("device")
+        attachService(
+            MutableStateFlow(ConnectionStatus.Lost(manager, "device", SessionFailureReason.CONNECT_TIMED_OUT)),
+        )
+
+        viewModel.retryConnection()
+
+        verify(exactly = 2) { application.startForegroundService(any()) }
+        verify(exactly = 2) { intent.putExtra(DeviceService.INTENT_EXTRA_MAC_ADDRESS, "device") }
         store.clear()
     }
 

@@ -59,6 +59,14 @@ pub enum OpenSCQ30Error {
 pub enum AndroidError {
     #[error("{0}")]
     Other(String),
+    #[error("bluetooth permission denied")]
+    PermissionDenied,
+    #[error("device is not paired")]
+    Unpaired,
+    #[error("bluetooth adapter unavailable")]
+    BluetoothAdapterUnavailable,
+    #[error("connection timed out")]
+    TimedOut,
 }
 
 #[uniffi::export]

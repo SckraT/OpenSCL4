@@ -8,6 +8,7 @@
     <string name="sound_profile_high_frequencies">High frequencies</string>
     <string name="sound_profile_scroll_bands">Scroll the bands to see more frequencies</string>
     <string name="sound_profile_read_only">This device only supports the built-in equalizer profiles.</string>
+    <string name="sound_profile_connection_read_only">The equalizer cannot be changed while the device is reconnecting.</string>
     <string name="sound_profile_enter_values">Enter values</string>
     <string name="sound_profile_reset">Reset</string>
     <string name="sound_profile_spatial_warning">Changing the equalizer disables spatial audio.</string>

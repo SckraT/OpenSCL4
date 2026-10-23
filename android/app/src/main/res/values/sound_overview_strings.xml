@@ -29,12 +29,14 @@
     <string name="sound_overview_connecting_hint">Open the case or turn on your headphones. Controls will appear once connected.</string>
     <string name="sound_overview_disconnected">Connection lost</string>
     <string name="sound_overview_disconnected_hint">Check that your headphones are nearby and connected to your phone by Bluetooth.</string>
+    <string name="sound_overview_lost_reason">Reason: %s</string>
+    <string name="sound_overview_reconnecting">Reconnecting…</string>
     <string name="sound_overview_retry">Connect again</string>
     <string name="sound_overview_no_settings">No settings are currently available.</string>
     <string name="sound_overview_preset_missing">This preset is no longer available.</string>
     <string name="sound_overview_legacy">Legacy equalizer profiles</string>
     <string name="sound_overview_one_earbud_title">Only one earbud is connected</string>
-    <string name="sound_overview_one_earbud_message">The equalizer and some other settings become available when both earbuds are connected.</string>
+    <string name="sound_overview_one_earbud_message">The equalizer is unavailable and LDAC cannot be switched. Other settings can still be changed.</string>
     <string name="sound_overview_needs_both_earbuds">Available when both earbuds are connected</string>
-    <string name="sound_overview_one_earbud_presets">The equalizer in presets is applied once both earbuds are connected.</string>
+    <string name="sound_overview_one_earbud_presets">Settings in presets that are unavailable now will not be applied.</string>
 </resources>

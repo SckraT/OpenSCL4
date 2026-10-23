@@ -42,7 +42,7 @@ soundcore_device!(
         builder.module_collection().add_state_update();
         builder.a3116_equalizer().await;
         builder.a3116_volume(16);
-        builder.voice_prompt();
+        builder.voice_prompt_targeted();
         builder.a3116_auto_power_off();
         builder.a3116_power_off();
         builder.single_battery(5);

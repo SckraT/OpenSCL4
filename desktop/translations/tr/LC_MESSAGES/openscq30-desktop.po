@@ -169,6 +169,18 @@ msgstr "{} cihazına bağlı"
 msgid "Connecting to {}"
 msgstr "{} cihazına bağlanıyor"
 
+msgid "Reconnecting:"
+msgstr "Yeniden bağlanıyor:"
+
+msgid "Reconnecting to {}"
+msgstr "{} cihazına yeniden bağlanıyor"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Cihaz hâlâ yakında. Yeniden bağlandığında ayarlar geri gelecek."
+
+msgid "changes are paused until the device is back."
+msgstr "Cihaz geri gelene kadar değişiklikler duraklatıldı."
+
 msgid "Connection lost"
 msgstr "Bağlantı koptu"
 
@@ -656,8 +668,8 @@ msgstr "Henüz ayar seçilmedi"
 msgid "Edit device screen"
 msgstr "Cihaz ekranını düzenle"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "Yalnızca bir kulaklık bağlı. Ekolayzer ve bazı diğer ayarlar iki kulaklık da bağlandığında kullanılabilir."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "Yalnizca bir kulaklik bagli. Ekolayzer kullanilamiyor, LDAC degistirilemiyor; diger ayarlar degistirilebilir."
 
 msgid "Move up"
 msgstr "Yukarı taşı"
@@ -907,8 +919,8 @@ msgstr "Geçerli ayarlarınızı kaydedin ve birlikte uygulamak istediklerinizi 
 msgid "Create preset"
 msgstr "Ön ayar oluştur"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "Ön ayarlardaki ekolayzer iki kulaklık da bağlandığında uygulanır."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "Bu ön ayarlardaki bazı ayarlar şu anda kullanılamıyor ve uygulanmayacak."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "Geçerli ayarları kaydedeceğiz. Ardından hangilerinin uygulanacağını seçin."
@@ -955,8 +967,6 @@ msgstr "“{}” silinsin mi? Cihazın geçerli ayarları korunur."
 msgid "Preset “{}” applied"
 msgstr "“{}” ön ayarı uygulandı"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "“{}” ön ayarı uygulandı. Ekolayzeri iki kulaklık da bağlandığında uygulanacak."
 
 msgid "Preset deleted"
 msgstr "Ön ayar silindi"

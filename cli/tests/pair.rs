@@ -6,6 +6,11 @@ use tempfile::tempdir;
 fn cli(dir: &Path) -> Command {
     let mut cmd = Command::new(get_cargo_bin("openscq30"));
     cmd.env("XDG_CONFIG_HOME", dir.to_str().unwrap());
+    // `dirs` ignores XDG_CONFIG_HOME on Windows, so isolate the Windows config/data dirs too.
+    cmd.env("APPDATA", dir.to_str().unwrap());
+    cmd.env("LOCALAPPDATA", dir.to_str().unwrap());
+    // Keep each test's database separate on every platform.
+    cmd.env("OPENSCQ30_DATABASE_PATH", dir.join("database.sqlite"));
     cmd
 }
 

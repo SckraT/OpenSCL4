@@ -3,12 +3,15 @@ package com.oppzippy.openscq30.features.soundcoredevice.service
 import com.oppzippy.openscq30.lib.bindings.ConnectionStatusCallback
 import com.oppzippy.openscq30.lib.bindings.NotificationCallback
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
+import com.oppzippy.openscq30.lib.bindings.SessionStatus
+import com.oppzippy.openscq30.lib.bindings.SessionStatusCallback
 import com.oppzippy.openscq30.lib.wrapper.ConnectionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
 class DeviceConnectionManager(val device: OpenScq30Device) : AutoCloseable {
     val connectionStatusFlow = MutableStateFlow(ConnectionStatus.Connected)
+    val sessionStatusFlow = MutableStateFlow<SessionConnectionState>(SessionConnectionState.Connected)
 
     val watchForChangeNotification = MutableStateFlow(0)
     val lastAppliedPreset = MutableStateFlow(device.lastAppliedPreset())
@@ -19,6 +22,13 @@ class DeviceConnectionManager(val device: OpenScq30Device) : AutoCloseable {
                 override fun onChange(connectionStatus: ConnectionStatus) {
                     lastAppliedPreset.value = device.lastAppliedPreset()
                     connectionStatusFlow.value = connectionStatus
+                }
+            },
+        )
+        device.setSessionStatusCallback(
+            object : SessionStatusCallback {
+                override fun onChange(sessionStatus: SessionStatus) {
+                    sessionStatusFlow.value = sessionStatus.toSessionConnectionState()
                 }
             },
         )
@@ -37,4 +47,19 @@ class DeviceConnectionManager(val device: OpenScq30Device) : AutoCloseable {
         device.close()
         lastAppliedPreset.value = null
     }
+}
+
+internal fun SessionStatus.toSessionConnectionState(): SessionConnectionState = when (this) {
+    SessionStatus.Connecting -> SessionConnectionState.Connecting
+
+    SessionStatus.Connected -> SessionConnectionState.Connected
+
+    is SessionStatus.Recovering -> SessionConnectionState.Recovering(
+        attempt = attempt.toInt(),
+        reason = reason,
+    )
+
+    is SessionStatus.Lost -> SessionConnectionState.Lost(reason)
+
+    SessionStatus.Closed -> SessionConnectionState.Closed
 }

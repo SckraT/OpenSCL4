@@ -7,7 +7,7 @@ use super::{App, with_app};
 use crate::{
     Actions, AppState, AppWindow, Strings, ToastKind,
     controller::{Command, DeviceSnapshot},
-    model::{battery::is_only_one_earbud_connected, presets::presets_use_both_earbud_settings},
+    model::presets::presets_use_blocked_settings,
     presets,
 };
 
@@ -86,22 +86,12 @@ impl App {
         }
     }
 
-    /// The device applied a preset; with one earbud its equalizer waits for the other one.
+    /// The device applied every enabled field of a preset, so it is now the applied one.
     pub(super) fn preset_applied(&self, name: &str) {
-        let later = self.snapshot().is_some_and(|snapshot| {
-            is_only_one_earbud_connected(&snapshot.settings)
-                && presets::find(snapshot, name).is_some_and(|preset| {
-                    presets_use_both_earbud_settings(std::slice::from_ref(preset))
-                })
-        });
         if let Some(window) = self.window() {
             window.global::<AppState>().set_toast_name(name.into());
         }
-        self.toast(if later {
-            ToastKind::PresetAppliedLater
-        } else {
-            ToastKind::PresetApplied
-        });
+        self.toast(ToastKind::PresetApplied);
     }
 
     pub(super) fn render_presets(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
@@ -113,10 +103,10 @@ impl App {
             last_applied,
             words,
         ))));
-        state.set_presets_need_both_earbuds(
-            is_only_one_earbud_connected(&snapshot.settings)
-                && presets_use_both_earbud_settings(&snapshot.presets),
-        );
+        state.set_presets_need_both_earbuds(presets_use_blocked_settings(
+            &snapshot.presets,
+            &snapshot.settings,
+        ));
         let editing = self.editing_preset.as_deref().unwrap_or_default();
         state.set_editing_preset(editing.into());
         let groups = presets::find(snapshot, editing)

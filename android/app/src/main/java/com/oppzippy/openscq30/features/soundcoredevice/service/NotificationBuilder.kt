@@ -13,6 +13,8 @@ import com.oppzippy.openscq30.lib.bindings.translateValue
 import dagger.hilt.android.scopes.ServiceScoped
 import javax.inject.Inject
 
+internal fun ConnectionStatus.offersRetryAction(): Boolean = this is ConnectionStatus.Lost
+
 @ServiceScoped
 class NotificationBuilder @Inject constructor(private val context: Service) {
     operator fun invoke(
@@ -41,19 +43,34 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
 
                     is ConnectionStatus.Connecting -> context.getString(R.string.connecting_to, status.macAddress)
 
+                    is ConnectionStatus.Recovering -> context.getString(
+                        R.string.reconnecting_to,
+                        translateDeviceModel(status.deviceManager.device.model()),
+                    )
+
+                    is ConnectionStatus.Lost -> context.getString(R.string.sound_overview_disconnected)
+
                     ConnectionStatus.Disconnected -> context.getString(R.string.disconnected)
                 },
             ).setContentText(
-                device?.let {
-                    featuredSettingIds.filterNotNull()
-                        .mapNotNull { device.setting(it)?.let { setting -> Pair(it, setting) } }
-                        .joinToString(separator = "\n") { (settingId, setting) ->
-                            context.getString(
-                                R.string.setting_id_with_value,
-                                translateSettingId(settingId),
-                                translateValue(setting, setting.toValue()),
-                            )
-                        }
+                when (status) {
+                    is ConnectionStatus.Recovering -> context.getString(status.reason.textResource())
+
+                    is ConnectionStatus.Lost -> context.getString(status.reason.textResource())
+
+                    else -> featuredSettingIds.takeIf { device != null }?.let { featuredSettingIds ->
+                        featuredSettingIds.filterNotNull()
+                            .mapNotNull { settingId ->
+                                device?.setting(settingId)?.let { setting -> Pair(settingId, setting) }
+                            }
+                            .joinToString(separator = "\n") { (settingId, setting) ->
+                                context.getString(
+                                    R.string.setting_id_with_value,
+                                    translateSettingId(settingId),
+                                    translateValue(setting, setting.toValue()),
+                                )
+                            }
+                    }
                 },
             ).setContentIntent(
                 PendingIntent.getActivity(
@@ -62,21 +79,41 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
                     openAppIntent,
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 ),
-            ).addAction(
+            )
+
+        if (status.offersRetryAction()) {
+            builder.addAction(
                 Notification.Action.Builder(
-                    Icon.createWithResource(context, R.drawable.baseline_headset_off_24),
-                    context.getString(R.string.disconnect),
+                    Icon.createWithResource(context, R.drawable.update_24px),
+                    context.getString(R.string.sound_overview_retry),
                     PendingIntent.getBroadcast(
                         context,
-                        1,
+                        3,
                         Intent().apply {
-                            action = DeviceService.ACTION_DISCONNECT
+                            action = DeviceService.ACTION_RETRY
                             `package` = context.packageName
                         },
                         PendingIntent.FLAG_IMMUTABLE,
                     ),
                 ).build(),
             )
+        }
+
+        builder.addAction(
+            Notification.Action.Builder(
+                Icon.createWithResource(context, R.drawable.baseline_headset_off_24),
+                context.getString(R.string.disconnect),
+                PendingIntent.getBroadcast(
+                    context,
+                    1,
+                    Intent().apply {
+                        action = DeviceService.ACTION_DISCONNECT
+                        `package` = context.packageName
+                    },
+                    PendingIntent.FLAG_IMMUTABLE,
+                ),
+            ).build(),
+        )
 
         quickPresetNotificationSlots(quickPresetNames).forEach { (slotIndex, name) ->
             builder.addAction(

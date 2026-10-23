@@ -41,6 +41,7 @@
     <string name="replace">Replace</string>
     <string name="connected_to">Connected to %s</string>
     <string name="connecting_to">Connecting to %s</string>
+    <string name="reconnecting_to">Reconnecting to %s</string>
     <string name="disconnected">Disconnected</string>
     <string name="disconnect">Disconnect</string>
     <string name="awaiting_connection">Awaiting Connection</string>
@@ -77,6 +78,13 @@
     <string name="error_saving_quick_preset">Error saving quick preset</string>
     <string name="error_activating_quick_preset">Error activating quick preset</string>
     <string name="error_changing_settings">Error changing settings</string>
+    <string name="setting_write_rejected">The device did not apply this setting</string>
+    <string name="setting_write_timed_out">The device did not confirm this setting</string>
+    <string name="setting_write_disconnected">The device disconnected</string>
+    <string name="setting_write_unsupported_requires_both_earbuds">Can\'t change this setting with one earbud connected</string>
+    <string name="setting_write_unsupported_no_read_back">The device can\'t confirm this setting</string>
+    <string name="setting_availability_requires_both_earbuds">Changing is available when both earbuds are connected</string>
+    <string name="setting_availability_no_read_back">The device cannot confirm changes</string>
     <string name="error_connecting">Error connecting</string>
     <string name="copy_x_to_clipboard">Copy %s to Clipboard</string>
     <string name="confirm">Confirm</string>
@@ -117,4 +125,18 @@
     <string name="visible_settings">Visible Settings</string>
     <string name="appearance">Appearance</string>
     <string name="compact_layout">Compact Layout</string>
+    <string name="session_reason_transport_lost">The connection was lost</string>
+    <string name="session_reason_connection_status_disconnected">The connection was closed</string>
+    <string name="session_reason_read_channel_closed">The device stopped sending data</string>
+    <string name="session_reason_write_failed">A command could not be sent</string>
+    <string name="session_reason_write_timed_out">A command timed out</string>
+    <string name="session_reason_silence_watchdog_failed">The device stopped responding</string>
+    <string name="session_reason_connect_timed_out">The device did not connect in time</string>
+    <string name="session_reason_state_refresh_failed">The device state could not be read</string>
+    <string name="session_reason_bluetooth_adapter_unavailable">Bluetooth is not available</string>
+    <string name="session_reason_device_not_found">The device was not found</string>
+    <string name="session_reason_permission_denied">Bluetooth permission was denied</string>
+    <string name="session_reason_unpaired">The device is no longer paired</string>
+    <string name="session_reason_security_failure">Bluetooth security check failed</string>
+    <string name="session_reason_connection_failed">The device could not be connected</string>
 </resources>

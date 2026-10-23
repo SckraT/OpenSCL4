@@ -169,6 +169,18 @@ msgstr "Підключено до {}"
 msgid "Connecting to {}"
 msgstr "Підключення до {}"
 
+msgid "Reconnecting:"
+msgstr "Перепідключення:"
+
+msgid "Reconnecting to {}"
+msgstr "Перепідключення до {}"
+
+msgid "The device is still nearby. Settings will return when it reconnects."
+msgstr "Пристрій усе ще поруч. Налаштування повернуться, коли він перепідключиться."
+
+msgid "changes are paused until the device is back."
+msgstr "Зміни призупинено, доки пристрій не повернеться."
+
 msgid "Connection lost"
 msgstr "Зв’язок втрачено"
 
@@ -656,8 +668,8 @@ msgstr "Налаштування ще не вибрано"
 msgid "Edit device screen"
 msgstr "Змінити екран пристрою"
 
-msgid "Only one earbud is connected. The equalizer and some other settings become available when both earbuds are connected."
-msgstr "Підключено лише один навушник. Еквалайзер та деякі інші налаштування стануть доступні, коли підключаться обидва навушники."
+msgid "Only one earbud is connected. The equalizer is unavailable, LDAC cannot be switched, and other settings can still be changed."
+msgstr "Підключено лише один навушник. Еквалайзер недоступний, LDAC не можна перемкнути, інші налаштування можна змінювати."
 
 msgid "Move up"
 msgstr "Вище"
@@ -910,8 +922,8 @@ msgstr "Збережіть поточні налаштування й вибер
 msgid "Create preset"
 msgstr "Створити пресет"
 
-msgid "The equalizer from presets is applied once both earbuds are connected."
-msgstr "Еквалайзер із пресетів застосується, коли підключаться обидва навушники."
+msgid "Settings in these presets are unavailable now, so they will not be applied."
+msgstr "Деякі налаштування в цих пресетах зараз недоступні й не будуть застосовані."
 
 msgid "We'll save the current settings. Then choose which of them to apply."
 msgstr "Збережемо поточні налаштування. Потім позначте, які з них застосовувати."
@@ -958,8 +970,6 @@ msgstr "Видалити «{}»? Поточні налаштування при�
 msgid "Preset “{}” applied"
 msgstr "Пресет «{}» застосовано"
 
-msgid "Preset “{}” applied. Its equalizer is applied once both earbuds are connected."
-msgstr "Пресет «{}» застосовано. Еквалайзер застосується, коли підключаться обидва навушники."
 
 msgid "Preset deleted"
 msgstr "Пресет видалено"

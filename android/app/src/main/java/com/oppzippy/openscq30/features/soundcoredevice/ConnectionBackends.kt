@@ -13,6 +13,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.AndroidException
 import com.oppzippy.openscq30.lib.bindings.AndroidRfcommConnectionBackend
 import com.oppzippy.openscq30.lib.bindings.AndroidRfcommConnectionWriter
+import com.oppzippy.openscq30.lib.bindings.ConnectionException
 import com.oppzippy.openscq30.lib.bindings.MacAddr6
 import com.oppzippy.openscq30.lib.bindings.ManualConnectionBackends
 import com.oppzippy.openscq30.lib.bindings.ManualRfcommConnection
@@ -24,8 +25,10 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 fun connectionBackends(context: Context, coroutineScope: CoroutineScope): ManualConnectionBackends =
     ManualConnectionBackends(
@@ -36,6 +39,7 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
     AndroidRfcommConnectionBackend {
     companion object {
         private const val TAG = "AndroidRfcommConnectionBackendImpl"
+        private const val CONNECT_TIMEOUT_MS = 5_000L
     }
 
     override suspend fun devices(): List<ConnectionDescriptor> {
@@ -103,7 +107,7 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             Log.e(TAG, "Missing BLUETOOTH_CONNECT permission")
-            return
+            throw AndroidException.PermissionDenied()
         }
 
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.Q..Build.VERSION_CODES.R &&
@@ -113,24 +117,24 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             Log.e(TAG, "Missing ACCESS_FINE_LOCATION permission on Android 10-11")
-            return
+            throw AndroidException.PermissionDenied()
         }
 
         val bluetoothManager: BluetoothManager? = context.getSystemService(BluetoothManager::class.java)
         if (bluetoothManager == null) {
             Log.e(TAG, "BluetoothManager is null. Does the system not support bluetooth?")
-            return
+            throw AndroidException.BluetoothAdapterUnavailable()
         }
 
         val bondedDevices: Set<BluetoothDevice>? = bluetoothManager.adapter.bondedDevices
         if (bondedDevices == null) {
             Log.e(TAG, "bondedDevices is null, see preceding error message from bluetooth adapter")
-            return
+            throw AndroidException.BluetoothAdapterUnavailable()
         }
         val device = bondedDevices.find { it.address == macAddress }
         if (device == null) {
             Log.w(TAG, "device with mac address $macAddress not found")
-            return
+            throw AndroidException.Unpaired()
         }
 
         Log.d(TAG, "found device $macAddress")
@@ -141,7 +145,7 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
                 val uuids = device.uuids?.map { it.uuid }
                 if (uuids == null) {
                     Log.e(TAG, "error getting device service uuids")
-                    return
+                    throw AndroidException.Other("device has no discoverable services")
                 }
                 Log.d(TAG, "found uuids: $uuids")
                 serviceSelectionStrategy.selectService.select(uuids)
@@ -154,13 +158,26 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
             device.createRfcommSocketToServiceRecord(uuid)
         } catch (ex: IOException) {
             Log.e(TAG, "error creating rfcomm socket", ex)
-            return
+            throw AndroidException.Other("error creating rfcomm socket")
+        } catch (ex: SecurityException) {
+            Log.e(TAG, "security failure creating rfcomm socket", ex)
+            throw AndroidException.PermissionDenied()
         }
 
         try {
-            withContext(Dispatchers.IO) {
-                socket.connect()
+            withTimeout(CONNECT_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    socket.connect()
+                }
             }
+        } catch (ex: TimeoutCancellationException) {
+            Log.w(TAG, "timed out connecting to device", ex)
+            try {
+                socket.close()
+            } catch (closeEx: IOException) {
+                Log.d(TAG, "error closing socket after connect timeout", closeEx)
+            }
+            throw AndroidException.TimedOut()
         } catch (_: CancellationException) {
             try {
                 Log.d(TAG, "connection canceled, closing socket")
@@ -172,6 +189,9 @@ class AndroidRfcommConnectionBackendImpl(private val context: Context, private v
         } catch (ex: IOException) {
             Log.w(TAG, "error connecting to device", ex)
             throw AndroidException.Other("error connecting to device")
+        } catch (ex: SecurityException) {
+            Log.e(TAG, "security failure connecting to device", ex)
+            throw AndroidException.PermissionDenied()
         }
 
         var manualRfcommConnection: ManualRfcommConnection? = null
@@ -225,13 +245,14 @@ class AndroidRfcommConnectionWriterImpl(
     }
 
     override suspend fun write(data: ByteArray) {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 socket.outputStream.write(data)
-            } catch (ex: IOException) {
-                Log.d(TAG, "disconnected", ex)
-                setConnectionStatus(ConnectionStatus.Disconnected)
             }
+        } catch (ex: IOException) {
+            Log.d(TAG, "disconnected", ex)
+            setConnectionStatus(ConnectionStatus.Disconnected)
+            throw ConnectionException.WriteException(reason = ex.stackTraceToString())
         }
     }
 

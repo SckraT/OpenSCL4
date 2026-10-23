@@ -50,17 +50,26 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.phonelink.BluetoothAccess
+import com.oppzippy.openscq30.features.phonelink.PhoneLinkSignals
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDevice
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
+import com.oppzippy.openscq30.ui.deviceselection.AppControl
+import com.oppzippy.openscq30.ui.deviceselection.AppControlSnapshot
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
-import com.oppzippy.openscq30.ui.deviceselection.featuredDevice
+import com.oppzippy.openscq30.ui.deviceselection.DeviceListLabels
+import com.oppzippy.openscq30.ui.deviceselection.DeviceListPresenter
+import com.oppzippy.openscq30.ui.deviceselection.DeviceListState
+import com.oppzippy.openscq30.ui.deviceselection.DeviceRowState
+import com.oppzippy.openscq30.ui.deviceselection.TapAction
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
 import com.oppzippy.openscq30.ui.sound.DeviceHeroCard
@@ -70,12 +79,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceListingScreen(
-    devices: List<PairedDevice>?,
+    state: DeviceListState,
     activeDevice: ActiveDevice? = null,
-    lastDeviceMacAddress: String? = null,
     onRefreshClick: () -> Unit = {},
     onInfoClick: () -> Unit = {},
-    onDeviceClick: (PairedDevice) -> Unit = {},
+    onDeviceTap: (DeviceRowState) -> Unit = {},
+    onBannerAction: (BluetoothAccess) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUnpair: (PairedDevice) -> Unit = {},
     onAddDeviceClick: () -> Unit = {},
@@ -135,8 +144,13 @@ fun DeviceListingScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                val featured = devices?.let { featuredDevice(it, activeDevice?.macAddress, lastDeviceMacAddress) }
-                if (devices == null) {
+                if (!state.isLoading && state.access != BluetoothAccess.Ready) {
+                    item(key = "bluetooth-access") {
+                        BluetoothAccessBanner(state.access, onBannerAction)
+                    }
+                }
+                val featured = state.featured
+                if (state.isLoading) {
                     item {
                         Column(
                             Modifier.fillMaxWidth().padding(20.dp),
@@ -150,20 +164,15 @@ fun DeviceListingScreen(
                 } else if (featured == null) {
                     item { NoDevicesCard(onAddDeviceClick) }
                 } else {
-                    val featuredState = activeDevice
-                        ?.takeIf { it.macAddress.equals(featured.macAddress, ignoreCase = true) }
                     item(key = "featured") {
                         FeaturedDeviceCard(
-                            device = featured,
-                            state = featuredState?.state,
-                            batteries = featuredState?.batteries.orEmpty(),
-                            oneEarbudOnly = featuredState?.oneEarbudOnly == true,
-                            onOpen = { onDeviceClick(featured) },
-                            onUnpair = { deviceToUnpair = featured },
+                            row = featured,
+                            activeDevice = activeDevice,
+                            onTap = { onDeviceTap(featured) },
+                            onUnpair = { deviceToUnpair = featured.device },
                         )
                     }
-                    val others = devices.filter { it != featured }
-                    if (others.isNotEmpty()) {
+                    if (state.others.isNotEmpty()) {
                         item {
                             Text(
                                 stringResource(R.string.sound_other_devices),
@@ -172,11 +181,13 @@ fun DeviceListingScreen(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        items(others, key = { "${it.model}:${it.macAddress}:${it.isDemo}" }) { device ->
+                        items(state.others, key = {
+                            "${it.device.model}:${it.device.macAddress}:${it.device.isDemo}"
+                        }) { row ->
                             DeviceRow(
-                                device = device,
-                                onClick = { onDeviceClick(device) },
-                                onUnpair = { deviceToUnpair = device },
+                                row = row,
+                                onTap = { onDeviceTap(row) },
+                                onUnpair = { deviceToUnpair = row.device },
                             )
                         }
                     }
@@ -196,39 +207,53 @@ fun DeviceListingScreen(
     }
 }
 
-/** The device the app is connected to, or otherwise the one used last, with its state and what to do next. */
+/** The featured device with both status axes, its batteries while controlled and the next action. */
 @Composable
 private fun FeaturedDeviceCard(
-    device: PairedDevice,
-    state: ActiveDeviceState?,
-    batteries: List<DeviceBattery>,
-    oneEarbudOnly: Boolean,
-    onOpen: () -> Unit,
+    row: DeviceRowState,
+    activeDevice: ActiveDevice?,
+    onTap: () -> Unit,
     onUnpair: () -> Unit,
 ) {
-    // Tapping anywhere on the card does what its button does, as on the rows below it.
+    val controlling = row.control == AppControl.Controlling
+    val active = activeDevice?.takeIf {
+        it.macAddress.equals(row.device.macAddress, ignoreCase = true) && it.state == ActiveDeviceState.Connected
+    }
+    val showBatteries = controlling || row.device.isDemo
+    val state = when {
+        row.device.isDemo -> null
+        row.control == AppControl.Controlling -> ActiveDeviceState.Connected
+        row.control == AppControl.Connecting -> ActiveDeviceState.Connecting
+        else -> null
+    }
     DeviceHeroCard(
-        model = device.model,
-        isDemo = device.isDemo,
+        model = row.device.model,
+        isDemo = row.device.isDemo,
         state = state,
-        batteries = if (state == ActiveDeviceState.Connected) batteries else emptyList(),
-        macAddress = device.macAddress,
-        oneEarbudBadge = state == ActiveDeviceState.Connected && oneEarbudOnly,
-        hint = if (state == null) stringResource(R.string.sound_device_not_connected_hint) else null,
-        onClick = onOpen,
-        topEnd = { DeviceMenu(device, onUnpair) },
+        batteries = if (showBatteries) active?.batteries.orEmpty() else emptyList(),
+        macAddress = row.device.macAddress,
+        oneEarbudBadge = showBatteries && active?.oneEarbudOnly == true,
+        linkBadge = row.linkBadge.takeUnless { row.device.isDemo },
+        controlBadge = row.controlBadge.takeUnless { row.device.isDemo },
+        hint = if (!controlling && !row.device.isDemo) {
+            stringResource(R.string.sound_device_not_connected_hint)
+        } else {
+            null
+        },
+        onClick = if (row.tapAction != TapAction.None) onTap else null,
+        topEnd = { DeviceMenu(row.device, onUnpair) },
     ) {
         Button(
-            onClick = onOpen,
-            enabled = state != ActiveDeviceState.Connecting,
+            onClick = onTap,
+            enabled = row.tapAction != TapAction.None,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         ) {
             Text(
                 stringResource(
-                    when (state) {
-                        ActiveDeviceState.Connected -> R.string.sound_open_device
-                        ActiveDeviceState.Connecting -> R.string.sound_device_connecting
-                        null -> R.string.sound_device_connect
+                    when (row.tapAction) {
+                        TapAction.Open -> R.string.sound_open_device
+                        TapAction.None -> R.string.sound_device_connecting
+                        TapAction.Connect, TapAction.ResolveBluetoothAccess -> R.string.sound_device_connect
                     },
                 ),
             )
@@ -237,13 +262,16 @@ private fun FeaturedDeviceCard(
 }
 
 @Composable
-private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () -> Unit) {
-    val (_, name) = splitBrand(translateDeviceModel(device.model))
+private fun DeviceRow(row: DeviceRowState, onTap: () -> Unit, onUnpair: () -> Unit) {
+    val (_, name) = splitBrand(translateDeviceModel(row.device.model))
+    val status = stringResource(DeviceListLabels.rowStatus(row.status))
     val unpairLabel = stringResource(R.string.unpair_device)
+    val enabled = row.tapAction != TapAction.None
     Surface(
         modifier = Modifier.fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onUnpair)
-            .semantics {
+            .combinedClickable(enabled = enabled, onClick = onTap, onLongClick = onUnpair)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$name, $status"
                 customActions = listOf(
                     CustomAccessibilityAction(unpairLabel) {
                         onUnpair()
@@ -265,17 +293,53 @@ private fun DeviceRow(device: PairedDevice, onClick: () -> Unit, onUnpair: () ->
                 ).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                DeviceArtOrIcon(device.model, Modifier.size(44.dp))
+                DeviceArtOrIcon(row.device.model, Modifier.size(44.dp))
             }
             Column(Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(if (device.isDemo) R.string.demo else R.string.sound_device_not_connected),
+                    status,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            DeviceMenu(device, onUnpair)
+            DeviceMenu(row.device, onUnpair)
+        }
+    }
+}
+
+/** Global Bluetooth access state: the saved list stays visible and every row says "unknown", never "not linked". */
+@Composable
+private fun BluetoothAccessBanner(access: BluetoothAccess, onAction: (BluetoothAccess) -> Unit) {
+    val title = DeviceListLabels.accessTitle(access) ?: return
+    val hint = DeviceListLabels.accessHint(access)
+    val action = DeviceListLabels.accessAction(access)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Row(
+            Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    stringResource(title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                hint?.let {
+                    Text(stringResource(it), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            action?.let {
+                TextButton(onClick = { onAction(access) }) {
+                    Text(stringResource(it))
+                }
+            }
         }
     }
 }
@@ -344,13 +408,16 @@ private fun NoDevicesCard(onAddDeviceClick: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 private fun PreviewDeviceListingScreen() {
+    val first = PairedDevice("AC:12:2F:C8:6E:08", "SoundcoreA3028", false)
+    val second = PairedDevice("AC:12:2F:C8:6E:09", "SoundcoreA3027", false)
     OpenSCQ30Theme(dynamicColor = false) {
         DeviceListingScreen(
-            listOf(
-                PairedDevice("AC:12:2F:C8:6E:08", "SoundcoreA3028", false),
-                PairedDevice("AC:12:2F:C8:6E:09", "SoundcoreA3027", false),
+            state = DeviceListPresenter.present(
+                devices = listOf(first, second),
+                phoneLink = PhoneLinkSignals(BluetoothAccess.Ready, profileAddresses = setOf(first.macAddress)),
+                appControl = AppControlSnapshot(first.macAddress, AppControl.Controlling),
             ),
-            activeDevice = ActiveDevice("AC:12:2F:C8:6E:08", ActiveDeviceState.Connected),
+            activeDevice = ActiveDevice(first.macAddress, ActiveDeviceState.Connected),
         )
     }
 }
@@ -358,5 +425,13 @@ private fun PreviewDeviceListingScreen() {
 @Preview(showBackground = true)
 @Composable
 private fun PreviewEmptyListingScreen() {
-    OpenSCQ30Theme(dynamicColor = false) { DeviceListingScreen(emptyList()) }
+    OpenSCQ30Theme(dynamicColor = false) {
+        DeviceListingScreen(
+            state = DeviceListPresenter.present(
+                devices = emptyList(),
+                phoneLink = PhoneLinkSignals(BluetoothAccess.Ready),
+                appControl = AppControlSnapshot(),
+            ),
+        )
+    }
 }

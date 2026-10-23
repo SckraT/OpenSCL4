@@ -29,12 +29,14 @@
     <string name="sound_overview_connecting_hint">Откройте кейс или включите наушники. Управление станет доступно после подключения.</string>
     <string name="sound_overview_disconnected">Связь потеряна</string>
     <string name="sound_overview_disconnected_hint">Проверьте, что наушники рядом и подключены к телефону по Bluetooth.</string>
+    <string name="sound_overview_lost_reason">Причина: %s</string>
+    <string name="sound_overview_reconnecting">Переподключение…</string>
     <string name="sound_overview_retry">Подключить снова</string>
     <string name="sound_overview_no_settings">Сейчас нет доступных настроек.</string>
     <string name="sound_overview_preset_missing">Этот пресет больше недоступен.</string>
     <string name="sound_overview_legacy">Устаревшие профили эквалайзера</string>
     <string name="sound_overview_one_earbud_title">Подключён только один наушник</string>
-    <string name="sound_overview_one_earbud_message">Эквалайзер и некоторые другие настройки станут доступны, когда подключатся оба наушника.</string>
+    <string name="sound_overview_one_earbud_message">Эквалайзер недоступен, LDAC нельзя переключить. Остальные настройки можно менять.</string>
     <string name="sound_overview_needs_both_earbuds">Доступен, когда подключены оба наушника</string>
-    <string name="sound_overview_one_earbud_presets">Эквалайзер из пресетов применится, когда подключатся оба наушника.</string>
+    <string name="sound_overview_one_earbud_presets">Настройки из пресетов, которые сейчас недоступны, не будут применены.</string>
 </resources>
