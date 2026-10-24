@@ -2,6 +2,7 @@ name: test android
 
 on:
   push:
+    branches: ["**"]
     paths: &push_paths
       - Cargo.lock
       - Cargo.toml
@@ -17,6 +18,10 @@ on:
   pull_request:
     paths: *push_paths
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

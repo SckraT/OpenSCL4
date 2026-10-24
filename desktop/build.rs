@@ -1,3 +1,7 @@
+#[cfg(windows)]
+#[path = "build_support.rs"]
+mod build_support;
+
 fn main() {
     // translations are plain msgids, without the component as their context
     let config = slint_build::CompilerConfiguration::new()
@@ -18,35 +22,28 @@ fn main() {
 /// The icon and version information of the exe, as gui/build.rs does it.
 #[cfg(windows)]
 fn windows() {
+    use std::env;
     use std::fs;
-    use std::io::Write;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     let version = env!("CARGO_PKG_VERSION");
-    let (major, minor, patch) = parse_version(version);
 
     let resource_dir = Path::new("resources");
-    let resources = fs::read_to_string(resource_dir.join("resources.rc")).unwrap();
-    let resources_with_version = resources
-        .replace("${VERSION}", version)
-        .replace("${VERSION_MAJOR}", major)
-        .replace("${VERSION_MINOR}", minor)
-        .replace("${VERSION_PATCH}", patch);
+    let template = fs::read_to_string(resource_dir.join("resources.rc")).unwrap();
+    let icon_path = std::path::absolute(resource_dir.join("com.oppzippy.OpenSCQ30.ico")).unwrap();
+    let resources_with_version =
+        build_support::render_resource_script(&template, version, &icon_path);
 
-    // The file with text replacements needs to be in the same directory so relative path references work
-    let mut temp_resource_file = tempfile::Builder::new().tempfile_in(resource_dir).unwrap();
-    write!(temp_resource_file, "{resources_with_version}").unwrap();
-    temp_resource_file.flush().unwrap();
+    // OUT_DIR keeps a fixed path, so the generated resource and its link argument are stable
+    // across builds. The icon is referenced by absolute path because the script no longer lives
+    // next to it.
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let resource_script = out_dir.join("resources.rc");
+    fs::write(&resource_script, resources_with_version).unwrap();
 
-    embed_resource::compile(temp_resource_file.path(), embed_resource::NONE)
+    embed_resource::compile(&resource_script, embed_resource::NONE)
         .manifest_required()
         .unwrap();
-    println!("cargo:rerun-if-changed=resources");
-}
-
-#[cfg(windows)]
-fn parse_version(version: &str) -> (&str, &str, &str) {
-    let mut parts = version.split('.');
-    let mut next = || parts.next().expect("the version should have three parts");
-    (next(), next(), next())
+    println!("cargo:rerun-if-changed=resources/resources.rc");
+    println!("cargo:rerun-if-changed=resources/com.oppzippy.OpenSCQ30.ico");
 }

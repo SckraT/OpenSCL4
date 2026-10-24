@@ -2,11 +2,17 @@ name: validate legacy GUI appstream metainfo
 
 on:
   push:
+    branches: ["**"]
     paths: &push_paths
       - gui/resources/com.oppzippy.OpenSCQ30.metainfo.xml
       - .github/workflows/validate-appstream-metainfo.yml
   pull_request:
     paths: *push_paths
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

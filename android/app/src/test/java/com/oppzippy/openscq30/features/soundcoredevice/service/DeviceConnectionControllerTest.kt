@@ -1,6 +1,8 @@
 package com.oppzippy.openscq30.features.soundcoredevice.service
 
+import com.oppzippy.openscq30.features.autoconnect.AutoConnectCoordinator
 import com.oppzippy.openscq30.lib.bindings.SessionFailureReason
+import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -24,6 +26,61 @@ class DeviceConnectionControllerTest {
             MutableStateFlow(SessionConnectionState.Connected),
     ): DeviceConnectionManager = mockk<DeviceConnectionManager>(relaxed = true).also {
         every { it.sessionStatusFlow } returns sessionStatusFlow
+    }
+
+    @Test
+    fun reconcileThenBroadcastForTheSameDeviceConnectsOnce() = runTest {
+        val manager = mockManager()
+        var attempts = 0
+        val controller = DeviceConnectionController(this, {
+            attempts += 1
+            manager
+        }, { throw AssertionError(it) })
+        val coordinator = AutoConnectCoordinator(
+            isAutoConnectEnabled = { true },
+            associatedAddresses = { listOf("AA:BB:CC:DD:EE:FF") },
+            savedDevices = { listOf(PairedDevice("AA:BB:CC:DD:EE:FF", "model", false)) },
+            connect = controller::connect,
+        )
+
+        coordinator.reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+        runCurrent()
+        coordinator.handleConnectedDevice("aa:bb:cc:dd:ee:ff")
+        runCurrent()
+
+        assertEquals(1, attempts)
+        assertSame(
+            manager,
+            (controller.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager,
+        )
+        controller.close()
+    }
+
+    @Test
+    fun restartedServiceConnectsTheSameDeviceAgain() = runTest {
+        val manager = mockManager()
+        var attempts = 0
+        val beforeRestart = DeviceConnectionController(this, {
+            attempts += 1
+            manager
+        }, { throw AssertionError(it) })
+        beforeRestart.connect("AA:BB:CC:DD:EE:FF")
+        runCurrent()
+        beforeRestart.close()
+
+        val afterRestart = DeviceConnectionController(this, {
+            attempts += 1
+            manager
+        }, { throw AssertionError(it) })
+        afterRestart.connect("AA:BB:CC:DD:EE:FF")
+        runCurrent()
+
+        assertEquals(2, attempts)
+        assertSame(
+            manager,
+            (afterRestart.connectionStatusFlow.value as ConnectionStatus.Connected).deviceManager,
+        )
+        afterRestart.close()
     }
 
     @Test

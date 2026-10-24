@@ -5,7 +5,7 @@ Priority: optional
 Architecture: amd64
 Maintainer: SckraT <noreply@github.com>
 Homepage: https://github.com/SckraT/OpenSCL4
-Depends: libc6 (>= 2.39), libgcc-s1, libstdc++6, libdbus-1-3, libfontconfig1, libxkbcommon0, libx11-6, libx11-xcb1, libxcb1, libxcursor1, libxi6, libxrandr2, libwayland-client0, libwayland-cursor0, libwayland-egl1, libegl1, libgl1, bluez, xdg-desktop-portal
+Depends: libc6 (>= 2.39), libgcc-s1, libstdc++6, libdbus-1-3, libfontconfig1, libxkbcommon0, libxkbcommon-x11-0, libx11-6, libx11-xcb1, libxcb1, libxcursor1, libxi6, libxrandr2, libwayland-client0, libwayland-cursor0, libwayland-egl1, libegl1, libgl1, bluez, xdg-desktop-portal
 Description: Control Soundcore Bluetooth headphones and speakers
  OpenSCL4 provides device settings, equalizer profiles and quick presets.
  It is based on OpenSCQ30 and uses a shared Rust device library.
