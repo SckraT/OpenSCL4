@@ -128,45 +128,59 @@ impl ShowOnBus {
 /// crash leaves no lock behind.
 #[cfg(target_os = "linux")]
 pub fn claim(config_dir: &Path, show: fn()) -> bool {
-    use std::sync::{Arc, OnceLock};
+    use std::sync::OnceLock;
 
-    static CONNECTION: OnceLock<zbus::blocking::Connection> = OnceLock::new();
+    /// The connection and the runtime that drives it, kept for as long as the app runs.
+    static INSTANCE: OnceLock<(tokio::runtime::Runtime, zbus::Connection)> = OnceLock::new();
 
     let name = instance_name(&folder_key(config_dir));
-    let connection = match zbus::blocking::connection::Builder::session().and_then(|builder| {
-        builder
-            .method_timeout(std::time::Duration::from_secs(2))
-            .build()
-    }) {
-        Ok(connection) => connection,
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            tracing::warn!(
+                "no runtime for the session bus, so a later start can not be asked to show: {err}"
+            );
+            return true;
+        }
+    };
+    let connection = match runtime.block_on(connect(&name, show)) {
+        Ok(Some(connection)) => connection,
+        Ok(None) => return false,
         Err(err) => {
             tracing::warn!("no session bus, so a later start can not be asked to show: {err}");
             return true;
         }
     };
+    // the name lives while its connection does, so keep both for as long as the app runs
+    let _ = INSTANCE.set((runtime, connection));
+    true
+}
+
+#[cfg(target_os = "linux")]
+async fn connect(name: &str, show: fn()) -> zbus::Result<Option<zbus::Connection>> {
+    use std::sync::Arc;
+
+    let connection = zbus::Connection::session().await?;
     // the handler runs on the bus's thread, so hand the window to the event loop as the Windows thread does
     let callback: ShowCallback = Arc::new(move || {
         if slint::invoke_from_event_loop(show).is_err() {
             tracing::debug!("the window is gone");
         }
     });
-    match claim_on(&connection, &name, callback) {
-        Ok(true) => {
-            // the name lives while its connection does, so keep both for as long as the app runs
-            let _ = CONNECTION.set(connection);
-            true
-        }
-        Ok(false) => false,
-        Err(err) => {
-            tracing::warn!("could not tell whether the app runs already: {err}");
-            true
-        }
+    if claim_on(&connection, name, callback).await? {
+        Ok(Some(connection))
+    } else {
+        Ok(None)
     }
 }
 
 #[cfg(target_os = "linux")]
-fn claim_on(
-    connection: &zbus::blocking::Connection,
+async fn claim_on(
+    connection: &zbus::Connection,
     name: &str,
     show: ShowCallback,
 ) -> zbus::Result<bool> {
@@ -175,33 +189,40 @@ fn claim_on(
     use zbus::fdo::{RequestNameFlags, RequestNameReply};
 
     // serve the window before taking the name, so a start that finds the name can call Show at once
-    connection.object_server().at(
-        "/io/github/sckrat/openscl4/SingleInstance",
-        ShowOnBus { show },
-    )?;
+    connection
+        .object_server()
+        .at(
+            "/io/github/sckrat/openscl4/SingleInstance",
+            ShowOnBus { show },
+        )
+        .await?;
     for _ in 0..3 {
-        match connection.request_name_with_flags(name, RequestNameFlags::DoNotQueue.into())? {
+        match connection
+            .request_name_with_flags(name, RequestNameFlags::DoNotQueue.into())
+            .await?
+        {
             RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner => return Ok(true),
             RequestNameReply::Exists | RequestNameReply::InQueue => {}
         }
-        if ask_to_show(connection, name).is_ok() {
+        if ask_to_show(connection, name).await.is_ok() {
             return Ok(false);
         }
         // the app that had the name may have ended as this one started; try to take it
-        std::thread::sleep(Duration::from_millis(100));
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
     Ok(false)
 }
 
 #[cfg(target_os = "linux")]
-fn ask_to_show(connection: &zbus::blocking::Connection, name: &str) -> zbus::Result<()> {
-    let proxy = zbus::blocking::Proxy::new(
+async fn ask_to_show(connection: &zbus::Connection, name: &str) -> zbus::Result<()> {
+    let proxy = zbus::Proxy::new(
         connection,
         name,
         "/io/github/sckrat/openscl4/SingleInstance",
         "io.github.sckrat.openscl4.SingleInstance",
-    )?;
-    proxy.call::<_, _, ()>("Show", &())
+    )
+    .await?;
+    proxy.call::<_, _, ()>("Show", &()).await
 }
 
 #[cfg(not(any(windows, target_os = "linux")))]
@@ -293,24 +314,32 @@ mod bus_tests {
             eprintln!("skipped: no session bus; run it under dbus-run-session");
             return;
         }
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
         let name = instance_name(&format!("test{}", std::process::id()));
-        let first = zbus::blocking::Connection::session().unwrap();
         let shown = Arc::new(AtomicUsize::new(0));
         let counted = shown.clone();
+        let first = runtime.block_on(zbus::Connection::session()).unwrap();
         assert!(
-            claim_on(
-                &first,
-                &name,
-                Arc::new(move || {
-                    counted.fetch_add(1, Ordering::SeqCst);
-                })
-            )
-            .unwrap(),
+            runtime
+                .block_on(claim_on(
+                    &first,
+                    &name,
+                    Arc::new(move || {
+                        counted.fetch_add(1, Ordering::SeqCst);
+                    })
+                ))
+                .unwrap(),
             "the first start should own the name"
         );
-        let second = zbus::blocking::Connection::session().unwrap();
+        let second = runtime.block_on(zbus::Connection::session()).unwrap();
         assert!(
-            !claim_on(&second, &name, Arc::new(|| {})).unwrap(),
+            !runtime
+                .block_on(claim_on(&second, &name, Arc::new(|| {})))
+                .unwrap(),
             "the second start should not own the name"
         );
         for _ in 0..100 {
