@@ -6,28 +6,20 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  repro:
+  build-and-run:
     runs-on: ubuntu-24.04
-    env:
-      DEBIAN_FRONTEND: noninteractive
     steps:
-      - run: sudo apt-get update && sudo apt-get install -y dbus xvfb x11-utils openbox wmctrl fonts-dejavu-core
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
         with:
-          name: release-linux
-          run-id: 40066225684
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: artifacts
-      - name: Install package
-        run: |
-          deb=$(realpath "$(find artifacts -name '*.deb' | head -1)")
-          echo "DEB=$deb"
-          sudo apt-get install -y "$deb"
-      - name: Run app with backtrace
+          ref: spec/remaining-openscl4
+      - run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev desktop-file-utils dbus xvfb x11-utils openbox wmctrl fonts-dejavu-core
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked -p openscq30-desktop 2>&1 | tail -n 30
+      - name: Run debug app with backtrace
         run: |
           set +e
-          dbus-run-session -- xvfb-run -a bash -c 'RUST_BACKTRACE=1 RUST_LIB_BACKTRACE=1 SLINT_RENDERER=software OPENSCL4_CONFIG_DIR=$(mktemp -d) timeout 8s /usr/bin/openscl4' 2>&1 | tail -n 250
+          dbus-run-session -- xvfb-run -a bash -c 'RUST_BACKTRACE=full RUST_LOG=debug SLINT_RENDERER=software OPENSCL4_CONFIG_DIR=$(mktemp -d) timeout 10s ./target/debug/openscl4' 2>&1 | tail -n 220
           exit 0
