@@ -1,6 +1,6 @@
 # Developing OpenSCL4
 
-Start with the [README](../README.md) for product scope and platform status. Build setup is in [Windows](build-windows.md), [Android](build-android.md), [Linux](build-linux.md) and [the common release guide](build-release.md). Current development uses Android Compose and `desktop/` Slint; `gui/` is the [legacy libcosmic client](../gui/README.md).
+Start with the [README](../README.md) for product scope and platform status. Build setup is in [Windows](build-windows.md), [Android](build-android.md), [Linux](build-linux.md) and [the common release guide](build-release.md). Current development uses Android Compose and `desktop/` Slint; `gui/` is the [legacy libcosmic client](../gui/README.md). The [macOS Bluetooth transport research](macos-bluetooth-transport.md) records a proposed path and risks; it is not an implemented backend.
 
 ## Boundaries and device state
 

@@ -244,6 +244,11 @@ def verify(output: Path, linux_evidence: Path | None, *, preview: bool = False, 
         raise ValueError("Build identity does not match this source checkout")
     if expected_commit is not None and reports[0]["commit"] != expected_commit:
         raise ValueError("Bundle commit does not match this source checkout")
+    if any(report.get("application") != "OpenSCL4" for report in reports):
+        raise ValueError("Build reports must carry the OpenSCL4 identity")
+    pins = configured_tools()
+    if any(report.get("configuredTools") != pins for report in reports):
+        raise ValueError("Build reports must use this checkout's tool pins")
     certificates = {report.get("androidCertificateSha256") for report in reports if report["platform"] == "android" and report["signed"]}
     if len(certificates) > 1 or any(not certificate or not re.fullmatch(r"[0-9a-f]{64}", certificate) for certificate in certificates):
         raise ValueError("Signed Android builds must have one verified signing certificate")

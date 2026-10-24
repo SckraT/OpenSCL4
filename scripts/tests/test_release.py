@@ -29,9 +29,11 @@ class ReleaseVerificationTest(unittest.TestCase):
                 path.write_bytes(filename.encode())
                 artifacts.append({"file": filename, "sha256": release.sha256(path)})
             report = {
+                "application": "OpenSCL4",
                 "applicationId": release.APP_ID,
                 "version": product_version,
                 "commit": "a" * 40,
+                "configuredTools": release.configured_tools(),
                 "dirty": False,
                 "platform": os_name,
                 "abi": abi,
@@ -75,6 +77,18 @@ class ReleaseVerificationTest(unittest.TestCase):
         self.save_reports()
         with self.assertRaisesRegex(ValueError, "one version, commit"):
             release.verify(self.output, self.evidence)
+
+    def test_other_application_identity_is_rejected(self) -> None:
+        self.reports[-1][1]["application"] = "OpenSCQ30"
+        self.save_reports()
+        with self.assertRaisesRegex(ValueError, "OpenSCL4 identity"):
+            release.verify(self.output, self.evidence)
+
+    def test_report_tool_pins_must_match_this_checkout(self) -> None:
+        self.reports[0][1]["configuredTools"] = dict(release.configured_tools(), ndk="0.0.0")
+        self.save_reports()
+        with self.assertRaisesRegex(ValueError, "tool pins"):
+            release.verify(self.output, None, preview=True)
 
     def test_other_checkout_revision_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "source checkout"):
