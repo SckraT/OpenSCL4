@@ -199,10 +199,13 @@ async fn claim_on(
     for _ in 0..3 {
         match connection
             .request_name_with_flags(name, RequestNameFlags::DoNotQueue.into())
-            .await?
+            .await
         {
-            RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner => return Ok(true),
-            RequestNameReply::Exists | RequestNameReply::InQueue => {}
+            Ok(RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner) => return Ok(true),
+            Ok(RequestNameReply::Exists | RequestNameReply::InQueue) => {}
+            // The flags API reports an existing owner as an error rather than a reply.
+            Err(zbus::Error::NameTaken) => {}
+            Err(err) => return Err(err),
         }
         if ask_to_show(connection, name).await.is_ok() {
             return Ok(false);
