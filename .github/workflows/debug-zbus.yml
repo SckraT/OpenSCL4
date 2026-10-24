@@ -1,0 +1,34 @@
+name: debug zbus backtrace
+
+on:
+  push:
+    branches: ["debug/zbus-backtrace"]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  repro:
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - run: apt-get update && apt-get install -y ca-certificates curl dbus xvfb x11-utils openbox wmctrl fonts-dejavu-core
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+          run-id: 40066225684
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+      - name: Install package
+        run: |
+          deb=$(find artifacts -name '*.deb' | head -1)
+          echo "DEB=$deb"
+          apt-get install -y "$deb"
+      - name: Run app with backtrace
+        run: |
+          set +e
+          dbus-run-session -- xvfb-run -a bash -c 'RUST_BACKTRACE=1 RUST_LIB_BACKTRACE=1 SLINT_RENDERER=software OPENSCL4_CONFIG_DIR=$(mktemp -d) timeout 8s /usr/bin/openscl4' 2>&1 | tail -n 250
+          exit 0
