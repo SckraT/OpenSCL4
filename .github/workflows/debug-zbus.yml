@@ -11,11 +11,10 @@ permissions:
 jobs:
   repro:
     runs-on: ubuntu-24.04
-    container: ubuntu:24.04
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - run: apt-get update && apt-get install -y ca-certificates curl dbus xvfb x11-utils openbox wmctrl fonts-dejavu-core
+      - run: sudo apt-get update && sudo apt-get install -y dbus xvfb x11-utils openbox wmctrl fonts-dejavu-core
       - uses: actions/download-artifact@v4
         with:
           name: release-linux
@@ -26,7 +25,7 @@ jobs:
         run: |
           deb=$(find artifacts -name '*.deb' | head -1)
           echo "DEB=$deb"
-          apt-get install -y "$deb"
+          sudo apt-get install -y "$deb"
       - name: Run app with backtrace
         run: |
           set +e
