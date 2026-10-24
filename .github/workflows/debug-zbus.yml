@@ -23,7 +23,7 @@ jobs:
           path: artifacts
       - name: Install package
         run: |
-          deb=$(find artifacts -name '*.deb' | head -1)
+          deb=$(realpath "$(find artifacts -name '*.deb' | head -1)")
           echo "DEB=$deb"
           sudo apt-get install -y "$deb"
       - name: Run app with backtrace
