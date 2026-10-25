@@ -7,7 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
-import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
 import com.oppzippy.openscq30.features.autoconnect.stopAutoConnectService
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
@@ -37,8 +37,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoConnect(value: Boolean) {
         preferences.autoConnect = value
+        // The value is already known here, so the helper must not re-read the preference it just wrote.
         if (value) {
-            startAutoConnectServiceIfEnabled(context, preferences)
+            startAutoConnectService(context)
         } else {
             stopAutoConnectService(context)
         }

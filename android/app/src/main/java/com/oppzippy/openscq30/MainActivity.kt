@@ -75,7 +75,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        startAutoConnectServiceIfEnabled(this, preferences)
+        // Retries a start that Android refused while the process was in the background; the surviving process does
+        // not run OpenSCQ30Application.onCreate again when the app is reopened.
+        startAutoConnectServiceIfEnabled(applicationContext, preferences)
     }
 
     @Deprecated(
