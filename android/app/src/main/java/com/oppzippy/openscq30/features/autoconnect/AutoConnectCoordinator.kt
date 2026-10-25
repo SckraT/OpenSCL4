@@ -11,18 +11,21 @@ internal class AutoConnectCoordinator(
     private val savedDevices: suspend () -> List<PairedDevice>,
     private val connect: (String) -> Unit,
 ) {
-    private val reconciledAddresses = mutableSetOf<String>()
+    // Devices this coordinator has started, by canonical address; the start reconcile skips them.
+    private val startedAddresses = mutableSetOf<String>()
 
+    /** Connects a device on its ACL broadcast, also when it was started before: the broadcast means it reconnected. */
     suspend fun handleConnectedDevice(macAddress: String) {
         if (!isAutoConnectEnabled()) return
         if (!isEligible(macAddress)) return
         if (!isAutoConnectEnabled()) return
-        connect(macAddress)
+        start(macAddress)
     }
 
     /**
-     * Connects devices that were already connected when autoconnect started. Each profile reports separately, so a
-     * device is connected at most once however many reports list it.
+     * Connects devices that were already connected when autoconnect started. Each profile reports separately and a
+     * device connecting meanwhile is started by its broadcast, so a device is connected at most once however many
+     * reports list it.
      */
     suspend fun reconcileConnectedDevices(connectedAddresses: List<String>) {
         if (!isAutoConnectEnabled()) return
@@ -33,12 +36,13 @@ internal class AutoConnectCoordinator(
         )
         currentCoroutineContext().ensureActive()
         if (!isAutoConnectEnabled()) return
-        for (address in candidates) {
-            if (canonicalMacAddress(address) in reconciledAddresses) continue
-            connect(address)
-            // Marked only once started: a failed start leaves the device to the next report.
-            reconciledAddresses += canonicalMacAddress(address)
-        }
+        candidates.filterNot { canonicalMacAddress(it) in startedAddresses }.forEach(::start)
+    }
+
+    private fun start(macAddress: String) {
+        connect(macAddress)
+        // Marked only once started: a failed start leaves the device to the next report.
+        startedAddresses += canonicalMacAddress(macAddress)
     }
 
     private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(

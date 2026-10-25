@@ -16,14 +16,16 @@ class AutoConnectReconcilerTest {
     private val bluetooth = FakeBluetoothProfiles()
     private val dispatched = mutableListOf<String>()
 
-    private fun TestScope.reconciler() = AutoConnectReconciler(
+    private fun coordinator() = AutoConnectCoordinator(
+        isAutoConnectEnabled = { true },
+        associatedAddresses = { listOf(liberty) },
+        savedDevices = { listOf(PairedDevice(liberty, "model", false)) },
+        connect = { dispatched.add(it) },
+    )
+
+    private fun TestScope.reconciler(coordinator: AutoConnectCoordinator = coordinator()) = AutoConnectReconciler(
         bluetooth = bluetooth,
-        coordinator = AutoConnectCoordinator(
-            isAutoConnectEnabled = { true },
-            associatedAddresses = { listOf(liberty) },
-            savedDevices = { listOf(PairedDevice(liberty, "model", false)) },
-            connect = { dispatched.add(it) },
-        ),
+        coordinator = coordinator,
         scope = this,
     )
 
@@ -45,6 +47,19 @@ class AutoConnectReconcilerTest {
         bluetooth.devices[BluetoothProfile.GATT] = listOf(liberty)
 
         reconciler().start()
+        bluetooth.connectProxies()
+        advanceUntilIdle()
+
+        assertEquals(listOf(liberty), dispatched)
+    }
+
+    @Test
+    fun aDeviceTheBroadcastStartedBeforeItsProxyReportedIsStartedOnce() = runTest {
+        bluetooth.devices[BluetoothProfile.A2DP] = listOf(liberty)
+        val coordinator = coordinator()
+        reconciler(coordinator).start()
+
+        coordinator.handleConnectedDevice(liberty)
         bluetooth.connectProxies()
         advanceUntilIdle()
 

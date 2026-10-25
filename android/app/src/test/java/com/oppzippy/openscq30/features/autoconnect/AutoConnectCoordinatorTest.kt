@@ -135,6 +135,16 @@ class AutoConnectCoordinatorTest {
     }
 
     @Test
+    fun broadcastStartsADeviceAgainWhenItReconnects() = runTest {
+        val coordinator = coordinator()
+
+        coordinator.handleConnectedDevice("AA:BB:CC:DD:EE:FF")
+        coordinator.handleConnectedDevice("AA:BB:CC:DD:EE:FF")
+
+        assertEquals(listOf("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"), dispatched)
+    }
+
+    @Test
     fun broadcastIgnoresUnwantedDevices() = runTest {
         coordinator(saved = listOf(PairedDevice("AA:BB:CC:DD:EE:FF", "demo", true)))
             .handleConnectedDevice("AA:BB:CC:DD:EE:FF")
