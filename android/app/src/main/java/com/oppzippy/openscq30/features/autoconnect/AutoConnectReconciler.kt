@@ -44,7 +44,7 @@ internal class AutoConnectReconciler(
     private fun reconcile(addresses: List<String>) {
         scope.launch {
             try {
-                coordinator.reconcileConnectedDevices { addresses }
+                coordinator.reconcileConnectedDevices(addresses)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {

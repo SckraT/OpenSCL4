@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.autoconnect
 
+import com.oppzippy.openscq30.features.phonelink.canonicalMacAddress
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -23,16 +24,16 @@ internal class AutoConnectCoordinator(
      * Connects devices that were already connected when autoconnect started. Each profile reports separately, so a
      * device is connected at most once however many reports list it.
      */
-    suspend fun reconcileConnectedDevices(connectedAddresses: () -> List<String>) {
+    suspend fun reconcileConnectedDevices(connectedAddresses: List<String>) {
         if (!isAutoConnectEnabled()) return
         val candidates = AutoConnectCandidates.resolve(
-            connectedAddresses = connectedAddresses(),
+            connectedAddresses = connectedAddresses,
             associatedAddresses = associatedAddresses(),
             savedDevices = savedDevices(),
         )
         currentCoroutineContext().ensureActive()
         if (!isAutoConnectEnabled()) return
-        candidates.filter { reconciledAddresses.add(it.lowercase()) }.forEach(connect)
+        candidates.filter { reconciledAddresses.add(canonicalMacAddress(it)) }.forEach(connect)
     }
 
     private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(

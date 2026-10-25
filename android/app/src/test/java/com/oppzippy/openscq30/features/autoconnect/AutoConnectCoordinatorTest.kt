@@ -23,7 +23,7 @@ class AutoConnectCoordinatorTest {
 
     @Test
     fun reconcileConnectsAlreadyConnectedAssociatedSavedDevice() = runTest {
-        coordinator().reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+        coordinator().reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(listOf("AA:BB:CC:DD:EE:FF"), dispatched)
     }
@@ -33,7 +33,7 @@ class AutoConnectCoordinatorTest {
         coordinator(
             associated = listOf("aa:bb:cc:dd:ee:ff"),
             saved = listOf(PairedDevice("Aa:Bb:Cc:Dd:Ee:Ff", "model", false)),
-        ).reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+        ).reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(listOf("AA:BB:CC:DD:EE:FF"), dispatched)
     }
@@ -41,7 +41,7 @@ class AutoConnectCoordinatorTest {
     @Test
     fun reconcileIgnoresDeviceThatIsNotAssociated() = runTest {
         coordinator(associated = listOf("11:22:33:44:55:66"))
-            .reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+            .reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
     }
@@ -49,7 +49,7 @@ class AutoConnectCoordinatorTest {
     @Test
     fun reconcileIgnoresDeviceThatIsNotSaved() = runTest {
         coordinator(saved = listOf(PairedDevice("11:22:33:44:55:66", "other", false)))
-            .reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+            .reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
     }
@@ -57,32 +57,28 @@ class AutoConnectCoordinatorTest {
     @Test
     fun reconcileIgnoresDemoDevices() = runTest {
         coordinator(saved = listOf(PairedDevice("AA:BB:CC:DD:EE:FF", "demo", true)))
-            .reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+            .reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
     }
 
     @Test
     fun reconcileDeduplicatesSameDeviceCaseInsensitively() = runTest {
-        coordinator().reconcileConnectedDevices {
-            listOf("AA:BB:CC:DD:EE:FF", "aa:bb:cc:dd:ee:ff")
-        }
+        coordinator().reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF", "aa:bb:cc:dd:ee:ff"))
 
         assertEquals(listOf("AA:BB:CC:DD:EE:FF"), dispatched)
     }
 
     @Test
     fun reconcileDoesNothingWhenAutoConnectIsDisabled() = runTest {
-        coordinator(autoConnect = false).reconcileConnectedDevices {
-            throw AssertionError("connected devices must not be queried when auto connect is disabled")
-        }
+        coordinator(autoConnect = false).reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
     }
 
     @Test
     fun reconcileDoesNothingWhenNoDevicesAreConnected() = runTest {
-        coordinator().reconcileConnectedDevices { emptyList() }
+        coordinator().reconcileConnectedDevices(emptyList())
 
         assertEquals(emptyList<String>(), dispatched)
     }
@@ -100,7 +96,7 @@ class AutoConnectCoordinatorTest {
             connect = { dispatched.add(it) },
         )
 
-        coordinator.reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+        coordinator.reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
     }
