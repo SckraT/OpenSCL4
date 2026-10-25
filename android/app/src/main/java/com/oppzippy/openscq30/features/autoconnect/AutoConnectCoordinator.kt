@@ -10,6 +10,8 @@ internal class AutoConnectCoordinator(
     private val savedDevices: suspend () -> List<PairedDevice>,
     private val connect: (String) -> Unit,
 ) {
+    private val reconciledAddresses = mutableSetOf<String>()
+
     suspend fun handleConnectedDevice(macAddress: String) {
         if (!isAutoConnectEnabled()) return
         if (!isEligible(macAddress)) return
@@ -17,6 +19,10 @@ internal class AutoConnectCoordinator(
         connect(macAddress)
     }
 
+    /**
+     * Connects devices that were already connected when autoconnect started. Each profile reports separately, so a
+     * device is connected at most once however many reports list it.
+     */
     suspend fun reconcileConnectedDevices(connectedAddresses: () -> List<String>) {
         if (!isAutoConnectEnabled()) return
         val candidates = AutoConnectCandidates.resolve(
@@ -26,7 +32,7 @@ internal class AutoConnectCoordinator(
         )
         currentCoroutineContext().ensureActive()
         if (!isAutoConnectEnabled()) return
-        candidates.forEach(connect)
+        candidates.filter { reconciledAddresses.add(it.lowercase()) }.forEach(connect)
     }
 
     private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(
