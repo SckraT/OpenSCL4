@@ -80,6 +80,36 @@ class BluetoothProfileDevicesTest {
     }
 
     @Test
+    fun aDroppedProxyIsNotRequestedAgainBeforeOpeningAgain() {
+        profileDevices.open()
+        bluetooth.connectProxies()
+
+        bluetooth.dropProxies()
+        bluetooth.connectProxies()
+
+        assertEquals(
+            listOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET),
+            bluetooth.proxies.map { it.request.profile },
+        )
+    }
+
+    @Test
+    fun openingAgainKeepsProxiesThatAndroidRestored() {
+        profileDevices.open()
+        bluetooth.connectProxies()
+        bluetooth.dropProxies()
+        bluetooth.restoreProxies()
+
+        profileDevices.open()
+        bluetooth.connectProxies()
+
+        assertEquals(
+            listOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET),
+            bluetooth.proxies.map { it.request.profile },
+        )
+    }
+
+    @Test
     fun gattDevicesComeFromBothGattProfiles() {
         bluetooth.devices[BluetoothProfile.GATT] = listOf(liberty)
         bluetooth.devices[BluetoothProfile.GATT_SERVER] = listOf("AC:12:2F:C8:6E:08")
