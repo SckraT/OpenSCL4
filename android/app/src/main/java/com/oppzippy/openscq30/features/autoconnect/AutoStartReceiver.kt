@@ -16,9 +16,7 @@ class AutoStartReceiver : BroadcastReceiver() {
             val preferences = Preferences(context.applicationContext)
             if (preferences.autoConnect) {
                 Log.d(TAG, "starting background service")
-                context.applicationContext.startService(
-                    Intent(context.applicationContext, AutoConnectService::class.java),
-                )
+                startAutoConnectService(context.applicationContext)
             } else {
                 Log.d(TAG, "not starting background service on boot since auto connect is disabled")
             }

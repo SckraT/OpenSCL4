@@ -1,8 +1,7 @@
 package com.oppzippy.openscq30
 
 import android.app.Application
-import android.content.Intent
-import com.oppzippy.openscq30.features.autoconnect.AutoConnectService
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.lib.bindings.LanguageIdentifier
 import dagger.hilt.android.HiltAndroidApp
@@ -22,7 +21,8 @@ class OpenSCQ30Application : Application() {
         super.onCreate()
         initializeI18n()
         if (preferences.autoConnect) {
-            startService(Intent(this, AutoConnectService::class.java))
+            // Refused when the process starts in the background; MainActivity retries in the foreground.
+            startAutoConnectService(this)
         }
     }
 

@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import com.oppzippy.openscq30.features.autoconnect.AutoConnectService
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.preferences.SoundModesView
@@ -37,11 +38,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoConnect(value: Boolean) {
         preferences.autoConnect = value
-        val intent = Intent(context, AutoConnectService::class.java)
         if (value) {
-            context.startService(intent)
+            startAutoConnectService(context)
         } else {
-            context.stopService(intent)
+            context.stopService(Intent(context, AutoConnectService::class.java))
         }
     }
 
