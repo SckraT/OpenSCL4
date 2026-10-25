@@ -11,7 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.ui.OpenSCQ30Root
@@ -73,12 +73,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        // The process may have started in the background, where Android refused the start in OpenSCQ30Application.
-        if (preferences.autoConnect) {
-            startAutoConnectService(this)
-        }
+    override fun onResume() {
+        super.onResume()
+        startAutoConnectServiceIfEnabled(this, preferences)
     }
 
     @Deprecated(

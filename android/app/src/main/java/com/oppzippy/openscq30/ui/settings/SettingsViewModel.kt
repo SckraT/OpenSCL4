@@ -3,13 +3,12 @@ package com.oppzippy.openscq30.ui.settings
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
-import com.oppzippy.openscq30.features.autoconnect.AutoConnectService
-import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
+import com.oppzippy.openscq30.features.autoconnect.stopAutoConnectService
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.preferences.SoundModesView
@@ -39,9 +38,9 @@ class SettingsViewModel @Inject constructor(
     fun setAutoConnect(value: Boolean) {
         preferences.autoConnect = value
         if (value) {
-            startAutoConnectService(context)
+            startAutoConnectServiceIfEnabled(context, preferences)
         } else {
-            context.stopService(Intent(context, AutoConnectService::class.java))
+            stopAutoConnectService(context)
         }
     }
 
