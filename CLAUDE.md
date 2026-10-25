@@ -14,12 +14,12 @@ Reviews and implementation follow `docs/agents/review-standards.md`; tooling cov
 
 ### Issue tracker
 
-Tasks and specs use GitHub Issues in SckraT/OpenSCL4. Before working with tickets, read `docs/agents/issue-tracker.md`.
+Tasks and specs use GitHub Issues in SckraT/OpenSCL4; PRs are not a request surface. `to-tickets`, `triage`, `wayfinder` and `to-spec` read and write them. Before working with tickets, read `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Use the canonical five-role mapping. Before triage, read `docs/agents/triage-labels.md`.
+One `bug`/`enhancement` category label plus one of the five canonical state labels. Before triage, read `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: root `GLOSSARY.md` and `docs/adr/`. Before exploring the codebase, read `docs/agents/domain.md`.
+Single-context: root `GLOSSARY.md` (Russian vocabulary) and `docs/adr/`. Before exploring the codebase, read `docs/agents/domain.md`.
