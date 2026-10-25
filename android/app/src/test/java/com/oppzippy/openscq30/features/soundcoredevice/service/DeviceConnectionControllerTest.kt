@@ -43,7 +43,7 @@ class DeviceConnectionControllerTest {
             connect = controller::connect,
         )
 
-        coordinator.reconcileConnectedDevices { listOf("AA:BB:CC:DD:EE:FF") }
+        coordinator.reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
         runCurrent()
         coordinator.handleConnectedDevice("aa:bb:cc:dd:ee:ff")
         runCurrent()
