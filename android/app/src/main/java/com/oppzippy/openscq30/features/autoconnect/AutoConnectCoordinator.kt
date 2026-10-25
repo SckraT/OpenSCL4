@@ -33,7 +33,12 @@ internal class AutoConnectCoordinator(
         )
         currentCoroutineContext().ensureActive()
         if (!isAutoConnectEnabled()) return
-        candidates.filter { reconciledAddresses.add(canonicalMacAddress(it)) }.forEach(connect)
+        for (address in candidates) {
+            if (canonicalMacAddress(address) in reconciledAddresses) continue
+            connect(address)
+            // Marked only once started: a failed start leaves the device to the next report.
+            reconciledAddresses += canonicalMacAddress(address)
+        }
     }
 
     private suspend fun isEligible(macAddress: String): Boolean = AutoConnectCandidates.resolve(

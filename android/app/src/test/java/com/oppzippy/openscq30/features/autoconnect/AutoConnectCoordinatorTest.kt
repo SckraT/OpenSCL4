@@ -8,6 +8,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AutoConnectCoordinatorTest {
+    private val liberty = "F4:9D:8A:7C:99:06"
+    private val q30 = "AC:12:2F:C8:6E:08"
     private val dispatched = mutableListOf<String>()
 
     private fun coordinator(
@@ -99,6 +101,30 @@ class AutoConnectCoordinatorTest {
         coordinator.reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
 
         assertEquals(emptyList<String>(), dispatched)
+    }
+
+    @Test
+    fun aLaterReportConnectsDevicesThatAFailedConnectLeftUnconnected() = runTest {
+        val saved = listOf(liberty, q30).map { PairedDevice(it, "model", false) }
+        var connectFails = true
+        val coordinator = AutoConnectCoordinator(
+            isAutoConnectEnabled = { true },
+            associatedAddresses = { listOf(liberty, q30) },
+            savedDevices = { saved },
+            connect = {
+                if (connectFails) throw IllegalStateException("startForegroundService not allowed")
+                dispatched.add(it)
+            },
+        )
+        try {
+            coordinator.reconcileConnectedDevices(listOf(liberty, q30))
+        } catch (_: IllegalStateException) {
+        }
+
+        connectFails = false
+        coordinator.reconcileConnectedDevices(listOf(liberty, q30))
+
+        assertEquals(listOf(liberty, q30), dispatched)
     }
 
     @Test
