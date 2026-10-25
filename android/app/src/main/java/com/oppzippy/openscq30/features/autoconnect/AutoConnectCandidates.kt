@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.autoconnect
 
+import com.oppzippy.openscq30.features.phonelink.canonicalMacAddress
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 
 internal object AutoConnectCandidates {
@@ -8,10 +9,10 @@ internal object AutoConnectCandidates {
         associatedAddresses: List<String>,
         savedDevices: List<PairedDevice>,
     ): List<String> {
-        val associated = associatedAddresses.map { it.lowercase() }.toSet()
-        val saved = savedDevices.filterNot { it.isDemo }.map { it.macAddress.lowercase() }.toSet()
+        val associated = associatedAddresses.map(::canonicalMacAddress).toSet()
+        val saved = savedDevices.filterNot { it.isDemo }.map { canonicalMacAddress(it.macAddress) }.toSet()
         return connectedAddresses
-            .distinctBy { it.lowercase() }
-            .filter { it.lowercase() in associated && it.lowercase() in saved }
+            .distinctBy(::canonicalMacAddress)
+            .filter { canonicalMacAddress(it) in associated && canonicalMacAddress(it) in saved }
     }
 }

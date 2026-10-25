@@ -4,7 +4,8 @@ import android.bluetooth.BluetoothProfile
 
 /**
  * Bluetooth as Android 16 behaves on a Pixel 8 Pro: `BluetoothManager.getConnectedDevices` rejects A2DP and HEADSET,
- * profile proxies arrive asynchronously, and closing a proxy reports it disconnected to its listener.
+ * profile proxies arrive asynchronously, Android hands a dropped proxy back to the same listener, and closing a proxy
+ * reports it disconnected to its listener.
  */
 internal class FakeBluetoothProfiles : BluetoothProfiles {
     /** Devices each profile reports, with addresses formatted as Android formats them. */
@@ -40,7 +41,18 @@ internal class FakeBluetoothProfiles : BluetoothProfiles {
 
     /** Drops every open proxy, as Android does when the adapter turns off. */
     fun dropProxies() {
-        openProxies.forEach { it.request.onDisconnected() }
+        for (proxy in openProxies.filterNot { it.isDropped }) {
+            proxy.isDropped = true
+            proxy.request.onDisconnected()
+        }
+    }
+
+    /** Hands every dropped proxy that was not closed back to its listener, as Android does when the adapter is on. */
+    fun restoreProxies() {
+        for (proxy in openProxies.filter { it.isDropped }) {
+            proxy.isDropped = false
+            proxy.request.onConnected(proxy)
+        }
     }
 
     class Request(val profile: Int, val onConnected: (ProfileProxy) -> Unit, val onDisconnected: () -> Unit)
@@ -48,6 +60,7 @@ internal class FakeBluetoothProfiles : BluetoothProfiles {
     inner class FakeProxy(val request: Request) : ProfileProxy {
         var isClosed = false
             private set
+        var isDropped = false
 
         override fun connectedDevices(): List<String> = devices[request.profile].orEmpty()
 
