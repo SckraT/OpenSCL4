@@ -6,7 +6,10 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 
-/** [BluetoothProfiles] on the Android framework. Callers check the Bluetooth permissions first. */
+/**
+ * [BluetoothProfiles] on the Android framework. Without the Bluetooth permissions its calls throw [SecurityException]
+ * as Android's do; [BluetoothProfileDevices] handles that, so callers need not check the permissions first.
+ */
 internal class AndroidBluetoothProfiles(private val context: Context) : BluetoothProfiles {
     private val manager: BluetoothManager? = context.getSystemService(BluetoothManager::class.java)
 

@@ -8,6 +8,9 @@ import android.bluetooth.BluetoothProfile
  * supported` for them, so it is used only for GATT and GATT_SERVER. Addresses are reported as Android formats them;
  * compare them case-insensitively.
  *
+ * Without the Bluetooth permissions a classic profile reports nothing, so [open] and [reread] need no permission
+ * check first; [gattDevices] throws [SecurityException] instead, which the caller turns into its own state.
+ *
  * Calls and [bluetooth] callbacks are expected on the main thread.
  */
 internal class BluetoothProfileDevices(
@@ -114,7 +117,10 @@ internal class BluetoothProfileDevices(
     }
 }
 
-/** The Android Bluetooth calls behind [BluetoothProfileDevices]; [AndroidBluetoothProfiles] implements them. */
+/**
+ * The Android Bluetooth calls behind [BluetoothProfileDevices]; [AndroidBluetoothProfiles] implements them. Like
+ * Android's, they throw [SecurityException] without the Bluetooth permissions.
+ */
 internal interface BluetoothProfiles {
     /**
      * `BluetoothAdapter.getProfileProxy`; false when the proxy cannot be requested. [onConnected] runs when the proxy
@@ -127,7 +133,7 @@ internal interface BluetoothProfiles {
 }
 
 internal interface ProfileProxy {
-    /** `BluetoothProfile.getConnectedDevices`. */
+    /** `BluetoothProfile.getConnectedDevices`; throws [SecurityException] without the Bluetooth permissions. */
     fun connectedDevices(): List<String>
 
     /** `BluetoothAdapter.closeProfileProxy`. */
