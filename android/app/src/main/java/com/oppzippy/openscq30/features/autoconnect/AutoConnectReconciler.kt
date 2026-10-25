@@ -9,8 +9,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Connects devices that were already connected when autoconnect started: Android does not repeat their ACL broadcast.
- * GATT devices are read on [start]; each classic profile reports once its proxy connects. The proxies stay open until
- * [stop].
+ * GATT devices are read on [start]; each classic profile reports once its proxy connects, and the proxy is then
+ * released, since devices that connect later arrive through the broadcast. [stop] releases proxies still pending.
  */
 internal class AutoConnectReconciler(
     bluetooth: BluetoothProfiles,
@@ -23,7 +23,7 @@ internal class AutoConnectReconciler(
 
     private val profileDevices = BluetoothProfileDevices(
         bluetooth = bluetooth,
-        onProfileDevices = { _, addresses -> reconcile(addresses) },
+        onProfileDevices = ::onProfileDevices,
     )
 
     fun start() {
@@ -39,6 +39,11 @@ internal class AutoConnectReconciler(
 
     fun stop() {
         profileDevices.close()
+    }
+
+    private fun onProfileDevices(profile: Int, addresses: List<String>) {
+        profileDevices.close(profile)
+        reconcile(addresses)
     }
 
     private fun reconcile(addresses: List<String>) {

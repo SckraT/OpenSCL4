@@ -48,6 +48,11 @@ internal class BluetoothProfileDevices(
         closing.forEach { it.close() }
     }
 
+    /** Closes the proxy of [profile], so Android cannot restore it and report again; [open] requests it anew. */
+    fun close(profile: Int) {
+        requests.remove(profile)?.close()
+    }
+
     /**
      * Devices connected over GATT or GATT_SERVER, or null when neither profile can be read. A missing Bluetooth
      * permission throws [SecurityException].

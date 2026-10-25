@@ -67,12 +67,12 @@ class AutoConnectReconcilerTest {
     }
 
     @Test
-    fun stopClosesTheClassicProfileProxies() = runTest {
-        val reconciler = reconciler()
-        reconciler.start()
-        bluetooth.connectProxies()
+    fun eachClassicProxyIsReleasedOnceItHasReported() = runTest {
+        bluetooth.devices[BluetoothProfile.A2DP] = listOf(liberty)
 
-        reconciler.stop()
+        reconciler().start()
+        bluetooth.connectProxies()
+        advanceUntilIdle()
 
         assertEquals(
             listOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET),
@@ -82,7 +82,7 @@ class AutoConnectReconcilerTest {
     }
 
     @Test
-    fun restartingBeforeTheStoppedProxiesConnectStartsTheDeviceOnceAndClosesThem() = runTest {
+    fun restartingBeforeTheStoppedProxiesConnectStartsTheDeviceOnceAndReleasesEveryProxy() = runTest {
         bluetooth.devices[BluetoothProfile.A2DP] = listOf(liberty)
         val stopped = reconciler()
         stopped.start()
@@ -93,9 +93,6 @@ class AutoConnectReconcilerTest {
         advanceUntilIdle()
 
         assertEquals(listOf(liberty), dispatched)
-        assertEquals(
-            listOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET),
-            bluetooth.openProxies.map { it.request.profile },
-        )
+        assertEquals(emptyList<FakeBluetoothProfiles.FakeProxy>(), bluetooth.openProxies)
     }
 }
