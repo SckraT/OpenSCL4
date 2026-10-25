@@ -333,9 +333,10 @@ Frontier: A, C, G. Hardware QA is last. The spec is the source for all issue bod
 
 ## 8. Open risks
 
-- Android 16: `BluetoothManager.getConnectedDevices` is not supported for classic A2DP/HEADSET;
-  the monitor uses `getProfileProxy`. Verified on Pixel 8 Pro. `AutoConnectService` still uses
-  the unsupported call and is tracked separately in #38.
+- Android 16: `BluetoothManager.getConnectedDevices` is not supported for classic A2DP/HEADSET.
+  The monitor and the `AutoConnectService` start reconcile share `BluetoothProfileDevices`, which
+  uses `getProfileProxy` (#38). The monitor is verified on Pixel 8 Pro; the autoconnect path still
+  needs that hardware check.
 - ACL broadcast delivery is OEM/Android-version dependent; verify on Pixel 8 Pro and keep the
   profile/resume fallback.
 - EQ device acceptance at one earbud is inferred from the core tests, not measured directly; the
