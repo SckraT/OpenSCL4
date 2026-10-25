@@ -13,16 +13,29 @@ import android.bluetooth.BluetoothProfile
 internal class BluetoothProfileDevices(
     private val bluetooth: BluetoothProfiles,
     private val onProfileDevices: (profile: Int, addresses: List<String>) -> Unit,
+    private val onProfileDisconnected: (profile: Int) -> Unit = {},
 ) {
     private val requests = mutableMapOf<Int, ProxyRequest>()
 
-    /** Requests a proxy for each classic profile; a profile reports its devices once its proxy connects. */
+    /**
+     * Requests a proxy for each classic profile; a profile reports its devices once its proxy connects. Opening again
+     * keeps pending and connected proxies and replaces the ones Android dropped, for example after the adapter
+     * turned off.
+     */
     fun open() {
         for (profile in CLASSIC_PROFILES) {
+            val current = requests[profile]
+            if (current != null && !current.isDropped) continue
+            current?.close()
             val request = ProxyRequest(profile)
             requests[profile] = request
             if (!request.open()) requests.remove(profile)
         }
+    }
+
+    /** Reports the devices of every connected proxy again. */
+    fun reread() {
+        requests.values.toList().forEach { it.report() }
     }
 
     /** Closes every proxy, including ones that connect later; they report nothing. */
@@ -32,7 +45,10 @@ internal class BluetoothProfileDevices(
         closing.forEach { it.close() }
     }
 
-    /** Devices connected over GATT or GATT_SERVER, or null when neither profile can be read. */
+    /**
+     * Devices connected over GATT or GATT_SERVER, or null when neither profile can be read. A missing Bluetooth
+     * permission throws [SecurityException].
+     */
     fun gattDevices(): List<String>? {
         var readable = false
         val addresses = mutableListOf<String>()
@@ -47,11 +63,14 @@ internal class BluetoothProfileDevices(
     }
 
     private inner class ProxyRequest(val profile: Int) {
+        // A dropped proxy is kept so that close() still releases it; Android may restore it.
         private var proxy: ProfileProxy? = null
+        private var isConnected = false
         private var isClosed = false
+        val isDropped: Boolean get() = proxy != null && !isConnected
 
         fun open(): Boolean = try {
-            bluetooth.openProxy(profile, onConnected = ::onConnected, onDisconnected = {})
+            bluetooth.openProxy(profile, onConnected = ::onConnected, onDisconnected = ::onDisconnected)
         } catch (_: SecurityException) {
             false
         }
@@ -63,11 +82,18 @@ internal class BluetoothProfileDevices(
                 return
             }
             this.proxy = proxy
+            isConnected = true
             report()
         }
 
+        private fun onDisconnected() {
+            if (isClosed) return
+            isConnected = false
+            onProfileDisconnected(profile)
+        }
+
         fun report() {
-            val proxy = proxy ?: return
+            val proxy = proxy?.takeIf { isConnected } ?: return
             val addresses = try {
                 proxy.connectedDevices()
             } catch (_: SecurityException) {

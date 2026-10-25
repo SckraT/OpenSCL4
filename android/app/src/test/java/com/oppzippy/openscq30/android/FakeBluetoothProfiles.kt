@@ -9,11 +9,13 @@ import android.bluetooth.BluetoothProfile
 internal class FakeBluetoothProfiles : BluetoothProfiles {
     /** Devices each profile reports, with addresses formatted as Android formats them. */
     val devices = mutableMapOf<Int, List<String>>()
+
+    /** Profiles `BluetoothManager.getConnectedDevices` rejects. */
+    val unsupportedProfiles = mutableSetOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET)
     val proxies = mutableListOf<FakeProxy>()
     private val requests = mutableListOf<Request>()
 
     val openProxies: List<FakeProxy> get() = proxies.filterNot { it.isClosed }
-    val requestedProfiles: List<Int> get() = requests.map { it.profile }
 
     override fun openProxy(profile: Int, onConnected: (ProfileProxy) -> Unit, onDisconnected: () -> Unit): Boolean {
         requests += Request(profile, onConnected, onDisconnected)
@@ -21,9 +23,7 @@ internal class FakeBluetoothProfiles : BluetoothProfiles {
     }
 
     override fun connectedDevices(profile: Int): List<String> {
-        require(profile != BluetoothProfile.A2DP && profile != BluetoothProfile.HEADSET) {
-            "Profile not supported: $profile"
-        }
+        require(profile !in unsupportedProfiles) { "Profile not supported: $profile" }
         return devices[profile].orEmpty()
     }
 
