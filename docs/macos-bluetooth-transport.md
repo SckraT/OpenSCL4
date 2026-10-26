@@ -23,9 +23,9 @@ The shared library already abstracts RFCOMM, but it has no macOS implementation.
 - The `none` fallback is not a usable transport: `rfcomm()` is `unimplemented!()`, as are
   `devices()` and `connect()` [S3].
 - The trait surface a macOS backend must satisfy is small [S4]:
-  - `RfcommBackend::devices() -> HashSet<ConnectionDescriptor>`
-  - `RfcommBackend::connect(mac, RfcommServiceSelectionStrategy) -> Arc<dyn RfcommConnection>`
-  - `RfcommConnection::{write, read_channel, connection_status}`
+    - `RfcommBackend::devices() -> HashSet<ConnectionDescriptor>`
+    - `RfcommBackend::connect(mac, RfcommServiceSelectionStrategy) -> Arc<dyn RfcommConnection>`
+    - `RfcommConnection::{write, read_channel, connection_status}`
 
 The device protocol requires **classic RFCOMM/SPP**, not BLE GATT:
 
@@ -98,12 +98,12 @@ unworkable, not the first choice.
 
 ### Comparison
 
-| Option | SPP/RFCOMM | Reuses protocol | Rust-only | Main risk | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| IOBluetooth via `objc2-io-bluetooth` | Yes | Yes | Yes | Legacy ObjC API, run-loop/delegate bridging | **Recommend** |
-| CoreBluetooth | No (GATT) | No | Yes | New BLE protocol per device | Out of scope |
-| `bluer` / `btleplug` | No | No | Yes | Wrong OS / wrong transport | Not applicable |
-| Swift/ObjC shim + UniFFI | Yes | Yes | No | Extra toolchain and binding layer | Fallback |
+| Option                               | SPP/RFCOMM | Reuses protocol | Rust-only | Main risk                                   | Verdict        |
+| ------------------------------------ | ---------- | --------------- | --------- | ------------------------------------------- | -------------- |
+| IOBluetooth via `objc2-io-bluetooth` | Yes        | Yes             | Yes       | Legacy ObjC API, run-loop/delegate bridging | **Recommend**  |
+| CoreBluetooth                        | No (GATT)  | No              | Yes       | New BLE protocol per device                 | Out of scope   |
+| `bluer` / `btleplug`                 | No         | No              | Yes       | Wrong OS / wrong transport                  | Not applicable |
+| Swift/ObjC shim + UniFFI             | Yes        | Yes             | No        | Extra toolchain and binding layer           | Fallback       |
 
 ## 3. Recommended design
 
@@ -112,22 +112,22 @@ Add, entirely behind `#[cfg(target_os = "macos")]`:
 1. `lib/src/connection_backend/macos.rs`: `PlatformConnectionBackends`, analogous to the Linux and
    Windows modules.
 2. `lib/src/connection_backend/macos/rfcomm.rs`:
-   - `devices()`: list `IOBluetoothDevice::pairedDevices()` (possibly also `recentDevices()`), map
-     `addressString` to `MacAddr6`, use `nameOrAddress`, and include connected/paired state as the
-     trait allows. The trait explicitly permits a superset of connected devices [S4].
-   - `connect(mac, strategy)`:
-     1. Resolve the device by `deviceWithAddressString`.
-     2. Run `performSDPQuery` and await `sdpQueryComplete:status:`.
-     3. Collect service-record UUIDs and apply `RfcommServiceSelectionStrategy` exactly as the other
-        backends do, including the vendor UUID preference.
-     4. Extract the channel ID with `getRFCOMMChannelID`.
-     5. Open with `openRFCOMMChannelAsync` and a channel delegate. Apple requires the data listener
-        to be registered before opening completes [S9].
-   - `RfcommConnection`:
-     - `write()` -> `writeAsync`/`writeSync`, respecting the `UInt16` length parameter.
-     - `read_channel()` -> `tokio::sync::mpsc` fed by delegate data callbacks.
-     - `connection_status()` -> `tokio::sync::watch` fed by channel-close/disconnect notifications,
-       with polling as a fallback if notifications are unreliable.
+    - `devices()`: list `IOBluetoothDevice::pairedDevices()` (possibly also `recentDevices()`), map
+      `addressString` to `MacAddr6`, use `nameOrAddress`, and include connected/paired state as the
+      trait allows. The trait explicitly permits a superset of connected devices [S4].
+    - `connect(mac, strategy)`:
+        1. Resolve the device by `deviceWithAddressString`.
+        2. Run `performSDPQuery` and await `sdpQueryComplete:status:`.
+        3. Collect service-record UUIDs and apply `RfcommServiceSelectionStrategy` exactly as the other
+           backends do, including the vendor UUID preference.
+        4. Extract the channel ID with `getRFCOMMChannelID`.
+        5. Open with `openRFCOMMChannelAsync` and a channel delegate. Apple requires the data listener
+           to be registered before opening completes [S9].
+    - `RfcommConnection`:
+        - `write()` -> `writeAsync`/`writeSync`, respecting the `UInt16` length parameter.
+        - `read_channel()` -> `tokio::sync::mpsc` fed by delegate data callbacks.
+        - `connection_status()` -> `tokio::sync::watch` fed by channel-close/disconnect notifications,
+          with polling as a fallback if notifications are unreliable.
 3. Threading: one dedicated thread owning a `CFRunLoop` and all `IOBluetoothDevice` /
    `IOBluetoothRFCOMMChannel` objects. Delegate callbacks push into Tokio channels. Never hold an
    Objective-C object across `.await`.
@@ -203,15 +203,15 @@ existing `RequestState` exchange, and read one setting through the existing API.
 
 ### Required test environment
 
-| Item | Requirement |
-| --- | --- |
-| Mac | Apple Silicon (M1 or later), macOS 14 Sonoma / 15 Sequoia / 26; record exact version and build |
-| Toolchain | Xcode with a macOS SDK, XcodeGen, Rust with `aarch64-apple-darwin` |
-| Signing | Developer ID Application certificate recommended; stable bundle id; local self-sign only if no membership |
-| Headphones | Soundcore Liberty 4 Pro, both earbuds connected, one recorded firmware version |
-| Pairing | Paired in System Settings; not connected to a phone or another Mac during the test |
-| Reference | Android or Windows client at the same commit/firmware for value comparison |
-| Evidence | App commit, macOS build, headphone MAC and firmware, logs, setting value, audio check |
+| Item       | Requirement                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| Mac        | Apple Silicon (M1 or later), macOS 14 Sonoma / 15 Sequoia / 26; record exact version and build            |
+| Toolchain  | Xcode with a macOS SDK, XcodeGen, Rust with `aarch64-apple-darwin`                                        |
+| Signing    | Developer ID Application certificate recommended; stable bundle id; local self-sign only if no membership |
+| Headphones | Soundcore Liberty 4 Pro, both earbuds connected, one recorded firmware version                            |
+| Pairing    | Paired in System Settings; not connected to a phone or another Mac during the test                        |
+| Reference  | Android or Windows client at the same commit/firmware for value comparison                                |
+| Evidence   | App commit, macOS build, headphone MAC and firmware, logs, setting value, audio check                     |
 
 ### Acceptance evidence for the spike
 
@@ -291,12 +291,12 @@ These are proposals, not created issues.
 
 ## 10. Status against issue #15
 
-| Acceptance criterion | Status in this document |
-| --- | --- |
-| Transport, permissions, build, system integration, and target limits researched | Covered in sections 2-5 and 7 |
-| Minimal connect + read path and Mac/headphone requirements defined | Covered in section 6 |
-| Justified choice and risks saved; product decisions surfaced, not invented | Sections 3, 7, 8 |
-| Bounded follow-up sequence; macOS support not declared implemented | Sections 9 and the status banner |
+| Acceptance criterion                                                            | Status in this document          |
+| ------------------------------------------------------------------------------- | -------------------------------- |
+| Transport, permissions, build, system integration, and target limits researched | Covered in sections 2-5 and 7    |
+| Minimal connect + read path and Mac/headphone requirements defined              | Covered in section 6             |
+| Justified choice and risks saved; product decisions surfaced, not invented      | Sections 3, 7, 8                 |
+| Bounded follow-up sequence; macOS support not declared implemented              | Sections 9 and the status banner |
 
 The research criteria are addressed. The implementation criteria are **not** met: no macOS backend,
 build, package, or device test exists.

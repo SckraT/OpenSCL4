@@ -17,6 +17,7 @@ The OpenSCL4 behaviors being compared are the ones in the two notes: (a) the lis
 **BudsLink.** Status comes from the operating system's BlueZ `org.bluez.Device1.Connected` property, not from its own socket. `BluetoothClient` enumerates managed objects, keeps only `Paired` devices, reads `Connected`, and subscribes to `PropertiesChanged` for `Connected`/`Paired` (`src/lib/bluetoothClient.js:47-58,96-132`). The app window adds a row only while `dev.connected` is true and removes it when false (`src/app.js:280-341`). It never probes the vendor session for the status label.
 
 App control is a second, implicit condition: `EnhancedDeviceSupportManager` creates the protocol object only when `type && connected` (`src/lib/devices/enhancedDeviceSupportManager.js:253-332`, Soundcore at `:316-320`), and the row is only attached after the first `0x01 0x01` state reply produced a `DataHandler` (`src/lib/devices/soundcore/soundcoreDevice.js:570-581`; `src/app.js:300-311`). So:
+
 - OS link up + SPP handshake complete: device row appears.
 - OS link up + SPP dead on first attempt: no row is created; if no other device works, the window says "No compatible device found" (`src/app.js:338-341`). If the row already existed, it can remain because socket destruction is not propagated to the device object (see Q3).
 - There is no label that distinguishes "phone/OS-linked but not app-controlled"; the failure is hidden by removing the row or leaving it stale.
@@ -69,18 +70,18 @@ LDAC is a `Настройка устройства`: its effective value is owne
 
 ## Comparison table
 
-| Concern | BudsLink | OpenSCL4 | Consequence |
-|---|---|---|---|
-| Status source | BlueZ `Device1.Connected` (OS link) | App session (`DeviceConnectionController` state) | Opposite semantics; BudsLink hides SPP failure by removing the row |
-| Phone-link vs app-control | Implicit: row needs both; no separate state/label | Session state only; no phone-link state | Neither exposes both axes; BudsLink's issue #95 shows the false-positive risk |
-| Multipoint visibility | Host list from earbuds (`0x0B 01`), not OS status | `DualConnections` from device, per model | Different data source, same device-owned truth |
-| Codec confirmation | Interpret `0x017F` body, no post-write read, no deadline | Same-command ACK, body ignored, local overwrite | Both can show a value the device did not apply |
-| Ignored codec write | No detection; persists until `0x017F`/reconnect | No detection; persists until state update/reconnect | Neither is a confirmed write |
-| Codec gating | Multipoint switch insensitive under LDAC; no TWS gate | No state availability for LDAC at all | BudsLink is closer, but only one direction |
-| Connect deadline | ~4.5 s fd acquisition; `ConnectProfile` retries | Android `socket.connect()` unbounded | BudsLink is better here |
-| Read/write deadline | None | Write unbounded; ACK bounded; read unbounded | Both weak |
-| Auto reconnect | None in app; BlueZ `AutoConnect` + ACL transitions | None after RFCOMM loss | Neither solves recovery |
-| Codec change | Expected link reset; socket destroyed | Session fatal on RFCOMM reset | Both drop the control session |
+| Concern                   | BudsLink                                                 | OpenSCL4                                            | Consequence                                                                   |
+| ------------------------- | -------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Status source             | BlueZ `Device1.Connected` (OS link)                      | App session (`DeviceConnectionController` state)    | Opposite semantics; BudsLink hides SPP failure by removing the row            |
+| Phone-link vs app-control | Implicit: row needs both; no separate state/label        | Session state only; no phone-link state             | Neither exposes both axes; BudsLink's issue #95 shows the false-positive risk |
+| Multipoint visibility     | Host list from earbuds (`0x0B 01`), not OS status        | `DualConnections` from device, per model            | Different data source, same device-owned truth                                |
+| Codec confirmation        | Interpret `0x017F` body, no post-write read, no deadline | Same-command ACK, body ignored, local overwrite     | Both can show a value the device did not apply                                |
+| Ignored codec write       | No detection; persists until `0x017F`/reconnect          | No detection; persists until state update/reconnect | Neither is a confirmed write                                                  |
+| Codec gating              | Multipoint switch insensitive under LDAC; no TWS gate    | No state availability for LDAC at all               | BudsLink is closer, but only one direction                                    |
+| Connect deadline          | ~4.5 s fd acquisition; `ConnectProfile` retries          | Android `socket.connect()` unbounded                | BudsLink is better here                                                       |
+| Read/write deadline       | None                                                     | Write unbounded; ACK bounded; read unbounded        | Both weak                                                                     |
+| Auto reconnect            | None in app; BlueZ `AutoConnect` + ACL transitions       | None after RFCOMM loss                              | Neither solves recovery                                                       |
+| Codec change              | Expected link reset; socket destroyed                    | Session fatal on RFCOMM reset                       | Both drop the control session                                                 |
 
 ## Q4. Reusable Soundcore protocol knowledge
 
@@ -88,21 +89,21 @@ BudsLink implements exactly one Soundcore model, **Liberty 4 NC (A3947)**, vendo
 
 OpenSCL4 already supports A3947 (`lib/src/devices/soundcore/a3947.rs:30-56`), and most BudsLink commands already exist there. The genuine gaps are the commands/offsets BudsLink wires for A3947 but OpenSCL4's A3947 module does not:
 
-| Feature | BudsLink command / evidence | OpenSCL4 A3947 status |
-|---|---|---|
-| LDAC | get `01 7F`, set `01 FF`, one-byte bool (`soundcoreConfig.js:22-23`; `soundcoreSocket.js:151-154,191-193`) | generic flag exists (`common/device.rs:702`), **not registered for A3947** |
-| Dual/multipoint enable | `0B 84` + `[0/1]`, max 2 hosts (`soundcoreConfig.js:32-38`; `soundcoreSocket.js:187-189`; `Liberty-4-NC.js:27-28`) | generic module exists (`common/device.rs:684-690`), **not registered for A3947** |
-| Dual device list | `0B 01`; multi-packet body: total, index, then length/connected/6-byte MAC/name (`soundcoreConfig.js:113-136`; `soundcoreSocket.js:163-171`) | not parsed for A3947 |
-| Dual connect/disconnect/forget | `0B 82` / `0B 81` / `0B 83` + 6 MAC bytes (`soundcoreConfig.js:32-38`; `soundcoreSocket.js:199-222`) | not registered for A3947 |
-| Ambient cycle | `06 82`, body = mask repeated in both nibbles, state offset 125 (`soundcoreConfig.js:28`; `soundcoreSocket.js:298-300`; `Liberty-4-NC.js:59`) | parsed in state but **not exposed**: A3947 never calls `builder.ambient_sound_mode_cycle()` (`a3947.rs:30-56`) |
-| Dual enabled state | state offset 147, `body[147] === 1` (`Liberty-4-NC.js:27-29`; `soundcoreSocket.js:143-144`) | not parsed for A3947 |
-| Sound modes | set `06 81`, 7-byte body (`soundcoreConfig.js:21,86-111`) | present (`a3947/modules/sound_modes.rs`) |
-| Equalizer | set `03 87`; 71-byte block at offset 37; DRC ported from OpenSCQ30 (`soundcoreConfig.js:29,231-363`; `Liberty-4-NC.js:61-66`) | present (`a3947/modules/equalizer.rs`) |
-| Buttons | set `04 81`; button ids single 2/double 0/triple 5/long 1; sides left 0/right 1; high nibble for in-case, low nibble for out-of-case (`soundcoreConfig.js:27,142-171`; `soundcoreSocket.js:281-296`) | present with `TwsLowBits` (`a3947.rs:66-130`) |
-| Flags | sound leak `10 86`, gaming `10 85`, touch tone `01 83`, surround `02 86`, auto play/pause `01 81`, wearing tone `01 8C`, touch lock `04 86`, low-battery `10 82`; offsets 141-157 (`Liberty-4-NC.js:34-43`) | present (`a3947.rs:40-47`) |
-| Auto power off | `01 86`, enabled byte + duration index (10/20/30/60) (`soundcoreConfig.js:24`; `Liberty-4-NC.js:44-45`) | present |
-| Volume limit | `20 82` enabled+dB, `20 81` refresh rate (`soundcoreConfig.js:25-26`; `soundcoreSocket.js:258-264`) | present |
-| Firmware/serial/battery | parsed from state offsets 6/11, 16, 2 and 139 (`Liberty-4-NC.js:16-24`; `soundcoreSocket.js:323-376`) | present |
+| Feature                        | BudsLink command / evidence                                                                                                                                                                                 | OpenSCL4 A3947 status                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| LDAC                           | get `01 7F`, set `01 FF`, one-byte bool (`soundcoreConfig.js:22-23`; `soundcoreSocket.js:151-154,191-193`)                                                                                                  | generic flag exists (`common/device.rs:702`), **not registered for A3947**                                     |
+| Dual/multipoint enable         | `0B 84` + `[0/1]`, max 2 hosts (`soundcoreConfig.js:32-38`; `soundcoreSocket.js:187-189`; `Liberty-4-NC.js:27-28`)                                                                                          | generic module exists (`common/device.rs:684-690`), **not registered for A3947**                               |
+| Dual device list               | `0B 01`; multi-packet body: total, index, then length/connected/6-byte MAC/name (`soundcoreConfig.js:113-136`; `soundcoreSocket.js:163-171`)                                                                | not parsed for A3947                                                                                           |
+| Dual connect/disconnect/forget | `0B 82` / `0B 81` / `0B 83` + 6 MAC bytes (`soundcoreConfig.js:32-38`; `soundcoreSocket.js:199-222`)                                                                                                        | not registered for A3947                                                                                       |
+| Ambient cycle                  | `06 82`, body = mask repeated in both nibbles, state offset 125 (`soundcoreConfig.js:28`; `soundcoreSocket.js:298-300`; `Liberty-4-NC.js:59`)                                                               | parsed in state but **not exposed**: A3947 never calls `builder.ambient_sound_mode_cycle()` (`a3947.rs:30-56`) |
+| Dual enabled state             | state offset 147, `body[147] === 1` (`Liberty-4-NC.js:27-29`; `soundcoreSocket.js:143-144`)                                                                                                                 | not parsed for A3947                                                                                           |
+| Sound modes                    | set `06 81`, 7-byte body (`soundcoreConfig.js:21,86-111`)                                                                                                                                                   | present (`a3947/modules/sound_modes.rs`)                                                                       |
+| Equalizer                      | set `03 87`; 71-byte block at offset 37; DRC ported from OpenSCQ30 (`soundcoreConfig.js:29,231-363`; `Liberty-4-NC.js:61-66`)                                                                               | present (`a3947/modules/equalizer.rs`)                                                                         |
+| Buttons                        | set `04 81`; button ids single 2/double 0/triple 5/long 1; sides left 0/right 1; high nibble for in-case, low nibble for out-of-case (`soundcoreConfig.js:27,142-171`; `soundcoreSocket.js:281-296`)        | present with `TwsLowBits` (`a3947.rs:66-130`)                                                                  |
+| Flags                          | sound leak `10 86`, gaming `10 85`, touch tone `01 83`, surround `02 86`, auto play/pause `01 81`, wearing tone `01 8C`, touch lock `04 86`, low-battery `10 82`; offsets 141-157 (`Liberty-4-NC.js:34-43`) | present (`a3947.rs:40-47`)                                                                                     |
+| Auto power off                 | `01 86`, enabled byte + duration index (10/20/30/60) (`soundcoreConfig.js:24`; `Liberty-4-NC.js:44-45`)                                                                                                     | present                                                                                                        |
+| Volume limit                   | `20 82` enabled+dB, `20 81` refresh rate (`soundcoreConfig.js:25-26`; `soundcoreSocket.js:258-264`)                                                                                                         | present                                                                                                        |
+| Firmware/serial/battery        | parsed from state offsets 6/11, 16, 2 and 139 (`Liberty-4-NC.js:16-24`; `soundcoreSocket.js:323-376`)                                                                                                       | present                                                                                                        |
 
 Protocol facts demonstrated by the source:
 
