@@ -36,7 +36,10 @@ import kotlinx.coroutines.launch
 class AutoConnectService : LifecycleService() {
     companion object {
         private const val TAG = "AutoConnectService"
-        private const val NOTIFICATION_ID = 1
+
+        // Must differ from DeviceService.NOTIFICATION_ID: notification ids are shared by the whole app, so a
+        // collision would let one service overwrite or remove the other's foreground notification.
+        internal const val NOTIFICATION_ID = 2
         const val NOTIFICATION_CHANNEL_ID = "com.oppzippy.openscq30.notification.AutoConnectChannel"
     }
 
