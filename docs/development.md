@@ -26,7 +26,7 @@ cargo fmt --all --check
 python3 -m unittest discover -s scripts/tests -v
 ```
 
-On Windows use `python`; the release workflow runs the Rust library/desktop tests there and the library/desktop/Android host checks on Linux. Android JVM tests use `./gradlew testX86_64DebugUnitTest` from `android/` (or `gradlew.bat`). CI does not currently run Android instrumentation; those checks are manual. See [Android validation](android-interface.md#validation).
+On Windows use `python`; the release workflow runs the Rust library/desktop tests there and the library/desktop/Android host checks on Linux. Android JVM tests use `./gradlew testX86_64DebugUnitTest` from `android/` (or `gradlew.bat`); tests for the Gradle helpers in `android/buildSrc` use `./gradlew :buildSrc:test`. CI does not currently run Android instrumentation; those checks are manual. See [Android validation](android-interface.md#validation).
 
 `lint` runs on every push and pull request. The Rust, Windows and Android jobs are path-filtered, so a documentation-only change does not start them. When automatic triggering is unavailable, run a check for an existing revision directly from the repository root: `gh workflow run lint.yml --repo SckraT/OpenSCL4 --ref <branch>`, `gh workflow run test.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Rust job, or `gh workflow run test-android.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Android JVM job. Do not dispatch a workflow again for a revision whose push or pull request already started it.
 

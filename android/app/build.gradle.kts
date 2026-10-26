@@ -1,5 +1,7 @@
+import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import com.oppzippy.openscq30.gradle.CopyNativeLibTask
 import com.oppzippy.openscq30.gradle.GenerateUniffiBindingsTask
+import com.oppzippy.openscq30.gradle.requireConnectedTestsRan
 import dagger.hilt.android.plugin.util.capitalize
 import java.io.FileInputStream
 import java.util.Properties
@@ -246,6 +248,12 @@ tasks.withType<Test>().configureEach {
         },
     ).withPropertyName("hostNativeLibrary")
     systemProperty("jna.library.path", cargoTargetDirectory.resolve("debug").absolutePath)
+}
+
+// A connected run whose instrumentation crashes before the first test otherwise succeeds with zero tests.
+tasks.withType<DeviceProviderInstrumentTestTask>().configureEach {
+    val resultsDirectory = resultsDir
+    doLast { requireConnectedTestsRan(resultsDirectory.get().asFile) }
 }
 
 gradleToCargoProfiles.forEach { (gradleBuildProfile, cargoProfile) ->
