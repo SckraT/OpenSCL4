@@ -46,7 +46,7 @@ python3 -m unittest discover -s scripts/tests -v
 just format-check
 ```
 
-`just format-check` adds ktlint (Android/Kotlin) and Prettier (Markdown) on top of rustfmt; `just shellcheck` checks shell scripts. Both recipes need bash, so on Windows run them from Git Bash/WSL or rely on CI.
+`just format-check` adds ktlint (Android/Kotlin) and Prettier (Markdown) on top of rustfmt; `just shellcheck` checks shell scripts. Both recipes need bash, so on Windows run them from Git Bash/WSL or rely on CI. Use the Prettier version pinned in `.github/workflows/lint.yml`: CI fails without Prettier, while a local run skips Markdown when it is missing. A Windows checkout with `core.autocrlf=true` has CRLF files that Prettier rejects; check them by hand with `--end-of-line auto`.
 
 Done when every command exits 0.
 

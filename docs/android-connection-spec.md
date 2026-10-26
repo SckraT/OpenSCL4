@@ -66,9 +66,10 @@ The effective link set is the union of:
 
 1. a profile scan seed on start/resume. Classic profiles are read through
    `BluetoothAdapter.getProfileProxy` (A2DP, HEADSET): on Android 16
-   `BluetoothManager.getConnectedDevices` throws `IllegalArgumentException: Profile not
-   supported` for them. `BluetoothManager.getConnectedDevices` is used only for
-   GATT/GATT_SERVER. Lowercased MAC addresses; unsupported profiles skipped;
+   `BluetoothManager.getConnectedDevices` throws
+   `IllegalArgumentException: Profile not supported` for them.
+   `BluetoothManager.getConnectedDevices` is used only for GATT/GATT_SERVER. Lowercased MAC
+   addresses; unsupported profiles skipped;
 2. live `ACTION_ACL_CONNECTED` / `ACTION_ACL_DISCONNECTED` broadcasts;
 3. evidence from an active app session (`AppControl.Controlling` implies a link).
 
@@ -89,14 +90,14 @@ Invariants:
 Featured card: two badges (link and app control). Other rows: one combined line that does not hide a
 divergence.
 
-| Link | Control | Featured badges | Other row | Tap |
-|---|---|---|---|---|
-| Linked | Controlling | «По Bluetooth подключено» + «Управление активно» | «Подключено» | Open |
-| Linked | Connecting | «По Bluetooth подключено» + «Подключение…» | «Подключение…» | None |
-| Linked | NotControlling | «По Bluetooth подключено» + «Управление недоступно» | «По Bluetooth · без управления» | Connect |
-| NotLinked | NotControlling | «По Bluetooth не подключено» + «Управление недоступно» | «Не подключено» | Connect |
-| Unknown | NotControlling | «Bluetooth: состояние неизвестно» + «Управление недоступно» | «Bluetooth-статус неизвестен» | Connect / grant |
-| Unknown | Controlling | «Bluetooth не подтверждён» + «Управление активно» | «Подключено» | Open |
+| Link      | Control        | Featured badges                                             | Other row                       | Tap             |
+| --------- | -------------- | ----------------------------------------------------------- | ------------------------------- | --------------- |
+| Linked    | Controlling    | «По Bluetooth подключено» + «Управление активно»            | «Подключено»                    | Open            |
+| Linked    | Connecting     | «По Bluetooth подключено» + «Подключение…»                  | «Подключение…»                  | None            |
+| Linked    | NotControlling | «По Bluetooth подключено» + «Управление недоступно»         | «По Bluetooth · без управления» | Connect         |
+| NotLinked | NotControlling | «По Bluetooth не подключено» + «Управление недоступно»      | «Не подключено»                 | Connect         |
+| Unknown   | NotControlling | «Bluetooth: состояние неизвестно» + «Управление недоступно» | «Bluetooth-статус неизвестен»   | Connect / grant |
+| Unknown   | Controlling    | «Bluetooth не подтверждён» + «Управление активно»           | «Подключено»                    | Open            |
 
 Featured order: controlling > phone-linked > last used > first saved. Keep the order stable while
 the list is open; do not re-sort on every link event.
@@ -219,12 +220,12 @@ not an input.
 
 ### 5.2 Rules with one earbud
 
-| Setting | Availability | Reason |
-|---|---|---|
-| ANC, transparency, auto power off, wearing detection, safe volume, quick chat, leak compensation, multipoint | `Available` | — |
-| EQ (`presetEqualizerProfile`, `customEqualizerProfile`, `volumeAdjustments`) | `Unavailable` | `RequiresBothEarbuds` |
-| LDAC | `ReadOnly` | `RequiresBothEarbuds` |
-| Untested settings (buttons, case, voice/tone, find device, fit test) | `Available` by default | — |
+| Setting                                                                                                      | Availability           | Reason                |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------- | --------------------- |
+| ANC, transparency, auto power off, wearing detection, safe volume, quick chat, leak compensation, multipoint | `Available`            | —                     |
+| EQ (`presetEqualizerProfile`, `customEqualizerProfile`, `volumeAdjustments`)                                 | `Unavailable`          | `RequiresBothEarbuds` |
+| LDAC                                                                                                         | `ReadOnly`             | `RequiresBothEarbuds` |
+| Untested settings (buttons, case, voice/tone, find device, fit test)                                         | `Available` by default | —                     |
 
 Models without `TwsStatus`: everything `Available` (the one-earbud condition cannot be determined).
 `DualConnections` never gates LDAC or EQ. LDAC and multipoint are compatible.
@@ -317,17 +318,17 @@ All issues are normal implementation issues, not wayfinder tickets. Labels: `enh
 `ready-for-agent`, except hardware QA which is `ready-for-human`. Dependencies are native GitHub
 blocking links.
 
-| Issue | Scope | Blocked by |
-|---|---|---|
-| A. PhoneBluetoothLink + DeviceListState | Android link adapter, pure presenter, JVM tests | — |
-| B. Two-axis device list UI | Compose badges/rows/banner, tap flow, strings | A |
-| C. Setting availability core | `SettingAvailability`, reasons, one-earbud rules, glossary | — |
-| D. Confirmed write core | `WriteOutcome`, read-back, no optimistic publish, mutex/pacing, tests | C |
-| E. WriteOutcome client migration | UniFFI, Android, desktop, CLI, legacy GUI, tests | D |
-| F. Availability and write UI | disabled+reason, one-earbud banner, presets, tile, desktop parity | E |
-| G. ConnectionSession core | state machine, backoff, deadlines, watchdog, queue fixes, re-fetch | — |
-| H. Android recovery integration | ConnectionStatus, service lifecycle, banner, notification, Retry | G |
-| I. Hardware QA | Pixel 8 Pro / Liberty 4 Pro: status, writes, availability, recovery | B, F, H |
+| Issue                                   | Scope                                                                 | Blocked by |
+| --------------------------------------- | --------------------------------------------------------------------- | ---------- |
+| A. PhoneBluetoothLink + DeviceListState | Android link adapter, pure presenter, JVM tests                       | —          |
+| B. Two-axis device list UI              | Compose badges/rows/banner, tap flow, strings                         | A          |
+| C. Setting availability core            | `SettingAvailability`, reasons, one-earbud rules, glossary            | —          |
+| D. Confirmed write core                 | `WriteOutcome`, read-back, no optimistic publish, mutex/pacing, tests | C          |
+| E. WriteOutcome client migration        | UniFFI, Android, desktop, CLI, legacy GUI, tests                      | D          |
+| F. Availability and write UI            | disabled+reason, one-earbud banner, presets, tile, desktop parity     | E          |
+| G. ConnectionSession core               | state machine, backoff, deadlines, watchdog, queue fixes, re-fetch    | —          |
+| H. Android recovery integration         | ConnectionStatus, service lifecycle, banner, notification, Retry      | G          |
+| I. Hardware QA                          | Pixel 8 Pro / Liberty 4 Pro: status, writes, availability, recovery   | B, F, H    |
 
 Frontier: A, C, G. Hardware QA is last. The spec is the source for all issue bodies.
 
