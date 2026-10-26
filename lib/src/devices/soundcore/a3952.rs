@@ -289,7 +289,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_packet_from_github_issue_134() {
+    async fn with_packet_from_github_issue_134() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,
@@ -328,11 +328,11 @@ mod tests {
             (SettingId::WindNoiseSuppression, true.into()),
             (
                 SettingId::LeftSinglePress,
-                settings::Value::OptionalString(None).into(),
+                settings::Value::OptionalString(None),
             ),
             (
                 SettingId::RightSinglePress,
-                settings::Value::OptionalString(None).into(),
+                settings::Value::OptionalString(None),
             ),
             (SettingId::LeftDoublePress, Some("NextSong").into()),
             (SettingId::RightDoublePress, Some("PlayPause").into()),

@@ -408,7 +408,7 @@ mod tests {
 
     proptest::proptest! {
         #[test]
-        fn test_valid_state_transitions(
+        fn valid_state_transitions(
             from: SoundModes,
             to: SoundModes,
         ) {
@@ -425,12 +425,12 @@ mod tests {
 
                 plan.windows(2)
                     .enumerate()
-                    .for_each(|(i, change)| assert_valid_change(change[0], change[1], i as i32))
+                    .for_each(|(i, change)| assert_valid_change(change[0], change[1], i as i32));
             }
         }
 
         #[test]
-        fn test_worst_case(
+        fn worst_case(
             from: SoundModes,
             to: SoundModes,
         ) {
@@ -465,11 +465,11 @@ mod tests {
         let average = total as f64 / runner.config().cases as f64;
 
         // round up to nearest 10th for leeway
-        assert!(average <= 7.0, "average case: {average} steps",);
+        assert!(average <= 7.0, "average case: {average} steps");
     }
 
     #[test]
-    fn test_change_ambient_sound_mode() {
+    fn change_ambient_sound_mode() {
         let migration_planner = SoundModes::migration_planner();
         let from = SoundModes {
             ambient_sound_mode: AmbientSoundMode::Transparency,
@@ -484,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn test_change_wind_noise_suppression_from_noise_canceling() {
+    fn change_wind_noise_suppression_from_noise_canceling() {
         let migration_planner = SoundModes::migration_planner();
         let from = SoundModes {
             ambient_sound_mode: AmbientSoundMode::NoiseCanceling,
@@ -501,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn test_change_wind_noise_suppression_from_transparency() {
+    fn change_wind_noise_suppression_from_transparency() {
         let migration_planner = SoundModes::migration_planner();
         let from = SoundModes {
             ambient_sound_mode: AmbientSoundMode::Transparency,

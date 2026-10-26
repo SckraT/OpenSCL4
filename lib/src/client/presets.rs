@@ -304,7 +304,7 @@ mod tests {
     fn presets_with_blocked_fields_are_reported_from_their_availability() {
         let ldac = QuickPreset {
             name: "LDAC".to_string(),
-            fields: vec![field(SettingId::Ldac, true.into(), true)],
+            fields: vec![field(SettingId::Ldac, true, true)],
         };
         let eq = QuickPreset {
             name: "EQ".to_string(),
@@ -322,7 +322,7 @@ mod tests {
         // disabled fields are not applied, so they do not block the preset
         let disabled = QuickPreset {
             name: "Disabled".to_string(),
-            fields: vec![field(SettingId::Ldac, true.into(), false)],
+            fields: vec![field(SettingId::Ldac, true, false)],
         };
         assert!(!presets_use_blocked_settings(&[disabled], &one_earbud()));
         let both = toggles(&[(WEAR, true)]);

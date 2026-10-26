@@ -32,7 +32,7 @@ mod tests {
         let expected: &[u8] = &[0x08, 0xee, 0x00, 0x00, 0x00, 0x01, 0x05, 0x0a, 0x00, 0x06];
         assert_eq!(
             expected,
-            RequestSerialNumberAndFirmwareVersion::default()
+            RequestSerialNumberAndFirmwareVersion
                 .to_packet()
                 .bytes_with_checksum()
         );

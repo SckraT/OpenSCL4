@@ -214,17 +214,17 @@ mod tests {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_all_settings() {
+    async fn set_all_settings() {
         let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
         for model in DeviceModel::iter() {
             let device_registry = model
                 .demo_device_registry(database.clone())
                 .await
-                .expect(&format!("{model} device registry"));
+                .unwrap_or_else(|_| panic!("{model} device registry"));
             let device = device_registry
                 .connect(MacAddr6::nil())
                 .await
-                .expect(&format!("{model} device"));
+                .unwrap_or_else(|_| panic!("{model} device"));
             for category_id in device.categories() {
                 for setting_id in device.settings_in_category(&category_id) {
                     if let Some(setting) = device.setting(&setting_id) {
@@ -256,9 +256,9 @@ mod tests {
                             device
                                 .set_setting_values(vec![(setting_id, value)])
                                 .await
-                                .expect(&format!(
-                                    "setting {model} -> {category_id} -> {setting_id}"
-                                ));
+                                .unwrap_or_else(|_| {
+                                    panic!("setting {model} -> {category_id} -> {setting_id}")
+                                });
                         }
                     }
                 }

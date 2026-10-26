@@ -143,7 +143,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_packet_from_github_issue_149() {
+    async fn with_packet_from_github_issue_149() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,
@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_packet_from_github_issue_149_modified_to_disable_tws() {
+    async fn with_packet_from_github_issue_149_modified_to_disable_tws() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_other_packet_from_github_issue_149() {
+    async fn with_other_packet_from_github_issue_149() {
         // assert that it successfully connects (it will panic otherwise)
         let _device = TestSoundcoreDevice::new(
             super::device_registry,
@@ -281,7 +281,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_multiple_button_actions() {
+    async fn set_multiple_button_actions() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,
@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_disable_button() {
+    async fn disable_button() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_equalizer_configuration() {
+    async fn set_equalizer_configuration() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3959,

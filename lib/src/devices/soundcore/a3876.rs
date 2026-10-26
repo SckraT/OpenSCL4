@@ -455,7 +455,7 @@ mod tests {
             .assert_set_settings_response(
                 vec![(
                     SettingId::VolumeAdjustments,
-                    Value::I16Vec(vec![0, 0, 0, 0, 0, 0, 0, 60]).into(),
+                    Value::I16Vec(vec![0, 0, 0, 0, 0, 0, 0, 60]),
                 )],
                 vec![packet::Outbound::new(
                     packet::Command([2, 131]),

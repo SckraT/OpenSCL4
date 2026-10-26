@@ -156,32 +156,32 @@ mod tests {
     use super::FirmwareVersion;
 
     #[test]
-    fn test_to_string() {
+    fn to_string() {
         let firmware_version = FirmwareVersion::new(12, 34);
         assert_eq!("12.34", firmware_version.to_string());
     }
 
     #[test]
-    fn test_to_string_for_numbers_starting_with_zero() {
+    fn to_string_for_numbers_starting_with_zero() {
         let firmware_version = FirmwareVersion::new(1, 2);
         assert_eq!("01.02", firmware_version.to_string());
     }
 
     #[test]
-    fn test_to_string_for_numbers_ending_with_zero() {
+    fn to_string_for_numbers_ending_with_zero() {
         let firmware_version = FirmwareVersion::new(10, 20);
         assert_eq!("10.20", firmware_version.to_string());
     }
 
     #[test]
-    fn test_major_has_priority_in_ordering() {
+    fn major_has_priority_in_ordering() {
         let bigger = FirmwareVersion::new(1, 0);
         let smaller = FirmwareVersion::new(0, 20);
         assert!(smaller < bigger);
     }
 
     #[test]
-    fn test_parse_version_number() {
+    fn parse_version_number() {
         let version_str = "12.34";
         let firmware_version = FirmwareVersion::take::<VerboseError<&[u8]>>(version_str.as_bytes())
             .unwrap()
@@ -190,16 +190,16 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_fails_with_non_numeric() {
+    fn parsing_fails_with_non_numeric() {
         let version_str = "1a.23";
         let result = FirmwareVersion::take::<VerboseError<&[u8]>>(version_str.as_bytes());
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 
     #[test]
-    fn test_parsing_fails_with_incorrect_separator() {
+    fn parsing_fails_with_incorrect_separator() {
         let version_str = "12_23";
         let result = FirmwareVersion::take::<VerboseError<&[u8]>>(version_str.as_bytes());
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 }

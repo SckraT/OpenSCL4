@@ -105,6 +105,6 @@ mod tests {
                     0,   // unknown
                 ]
             )
-        )
+        );
     }
 }

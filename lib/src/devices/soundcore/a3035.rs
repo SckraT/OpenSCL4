@@ -81,7 +81,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_known_good_packet() {
+    async fn with_known_good_packet() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3035,

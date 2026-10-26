@@ -269,10 +269,7 @@ mod tests {
             (SettingId::SpatialAudioMusicMode, "Fixed".into()),
             (SettingId::LeftSinglePress, Some("PlayPause").into()),
             (SettingId::LeftDoublePress, Some("PreviousSong").into()),
-            (
-                SettingId::LeftTriplePress,
-                Value::OptionalString(None).into(),
-            ),
+            (SettingId::LeftTriplePress, Value::OptionalString(None)),
             (SettingId::LeftLongPress, Some("AmbientSoundMode").into()),
             (SettingId::LeftSlideUp, Some("VolumeUp").into()),
             (SettingId::LeftSlideDown, Some("VolumeDown").into()),

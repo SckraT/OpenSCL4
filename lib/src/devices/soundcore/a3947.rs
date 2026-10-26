@@ -137,7 +137,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_known_good_packet() {
+    async fn with_known_good_packet() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3947,
@@ -240,7 +240,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_sound_mode_normal() {
+    async fn set_sound_mode_normal() {
         let mut device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3947,
