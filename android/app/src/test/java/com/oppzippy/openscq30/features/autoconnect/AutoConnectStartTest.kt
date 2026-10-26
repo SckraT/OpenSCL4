@@ -4,7 +4,9 @@ import android.app.BackgroundServiceStartNotAllowedException
 import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.oppzippy.openscq30.features.preferences.Preferences
 import io.mockk.every
 import io.mockk.mockk
@@ -26,11 +28,15 @@ class AutoConnectStartTest {
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        // The real helper reaches into android.jar stubs, which throw here instead of answering.
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.checkSelfPermission(any(), any()) } returns PackageManager.PERMISSION_GRANTED
     }
 
     @After
     fun tearDown() {
         unmockkStatic(Log::class)
+        unmockkStatic(ContextCompat::class)
     }
 
     private fun preferences(autoConnect: Boolean): Preferences {
@@ -75,29 +81,29 @@ class AutoConnectStartTest {
 
     @Test
     fun aRefusedForegroundStartIsRecognisedFromAndroid12() {
-        assertTrue(isBackgroundStartRefusal(mockk<ForegroundServiceStartNotAllowedException>(), sdkInt = 31))
+        assertTrue(isServiceStartRefusal(mockk<ForegroundServiceStartNotAllowedException>(), sdkInt = 31))
     }
 
     @Test
     fun aRefusedBackgroundStartIsStillRecognisedFromAndroid12() {
-        assertTrue(isBackgroundStartRefusal(mockk<BackgroundServiceStartNotAllowedException>(), sdkInt = 31))
+        assertTrue(isServiceStartRefusal(mockk<BackgroundServiceStartNotAllowedException>(), sdkInt = 31))
     }
 
     @Test
     fun otherIllegalStateFailuresAreNotMistakenForARefusalFromAndroid12() {
-        assertFalse(isBackgroundStartRefusal(IllegalStateException("boom"), sdkInt = 31))
+        assertFalse(isServiceStartRefusal(IllegalStateException("boom"), sdkInt = 31))
     }
 
     @Test
     fun plainIllegalStateIsTheRefusalBeforeAndroid12() {
         // Android 8-11 have no ServiceStartNotAllowedException; the refusal is the plain base class.
-        assertTrue(isBackgroundStartRefusal(IllegalStateException("Not allowed to start service"), sdkInt = 30))
+        assertTrue(isServiceStartRefusal(IllegalStateException("Not allowed to start service"), sdkInt = 30))
     }
 
     @Test
     fun subclassedIllegalStateIsStillARefusalBeforeAndroid12() {
         // A ROM that subclasses IllegalStateException for the same refusal must not crash the process again.
-        assertTrue(isBackgroundStartRefusal(SubclassedIllegalState("Not allowed to start service"), sdkInt = 30))
+        assertTrue(isServiceStartRefusal(SubclassedIllegalState("Not allowed to start service"), sdkInt = 30))
     }
 
     @Test

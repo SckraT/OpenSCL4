@@ -34,8 +34,10 @@ class AutoStartReceiver : BroadcastReceiver() {
         val preferences = EntryPointAccessors
             .fromApplication<AutoStartHiltEntryPoint>(applicationContext)
             .preferences()
-        if (!preferences.autoConnect) return
-        observeCompanionPresenceForAutoconnect(applicationContext)
-        startAutoConnectService(applicationContext)
+        if (preferences.autoConnect) {
+            // The previous registrations did not survive this event.
+            observeCompanionPresenceForAutoconnect(applicationContext)
+        }
+        startAutoConnectServiceIfEnabled(applicationContext, preferences)
     }
 }

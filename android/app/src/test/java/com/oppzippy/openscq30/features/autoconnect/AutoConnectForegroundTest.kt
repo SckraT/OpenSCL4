@@ -6,20 +6,19 @@ import org.junit.Test
 
 class AutoConnectForegroundTest {
     @Test
-    fun holdsTheNotificationWhileEnabledAndNoDeviceServiceRuns() {
-        assertTrue(shouldHoldForeground(autoConnectEnabled = true, deviceServiceRunning = false))
+    fun holdsTheNotificationWhileEnabledAndNotConnected() {
+        assertTrue(shouldHoldForeground(autoConnectEnabled = true, deviceConnected = false))
     }
 
     @Test
-    fun dropsTheNotificationOnceTheDeviceServiceRuns() {
-        // That service is already foreground, so a second permanent notification would only be noise.
-        assertFalse(shouldHoldForeground(autoConnectEnabled = true, deviceServiceRunning = true))
+    fun dropsTheNotificationOnceTheDeviceIsConnected() {
+        assertFalse(shouldHoldForeground(autoConnectEnabled = true, deviceConnected = true))
     }
 
     @Test
     fun holdsNoNotificationWhenAutoconnectIsDisabled() {
-        assertFalse(shouldHoldForeground(autoConnectEnabled = false, deviceServiceRunning = false))
-        assertFalse(shouldHoldForeground(autoConnectEnabled = false, deviceServiceRunning = true))
+        assertFalse(shouldHoldForeground(autoConnectEnabled = false, deviceConnected = false))
+        assertFalse(shouldHoldForeground(autoConnectEnabled = false, deviceConnected = true))
     }
 
     @Test

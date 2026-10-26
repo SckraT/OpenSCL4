@@ -3,18 +3,19 @@ package com.oppzippy.openscq30.features.autoconnect
 /**
  * Whether [AutoConnectService] should hold a foreground notification right now.
  *
- * The autoconnect service only needs the foreground while it waits for a device: once the device service runs, its
- * own foreground notification keeps the process alive, so a second permanent notification would be noise.
+ * The autoconnect service only needs the foreground while it has not connected a device yet. A running device
+ * service is not enough: it exists before the connection is up and stays through a loss, so the handover follows
+ * [deviceConnected] rather than "some other service is running".
  */
-internal fun shouldHoldForeground(autoConnectEnabled: Boolean, deviceServiceRunning: Boolean): Boolean =
-    autoConnectEnabled && !deviceServiceRunning
+internal fun shouldHoldForeground(autoConnectEnabled: Boolean, deviceConnected: Boolean): Boolean =
+    autoConnectEnabled && !deviceConnected
 
 /**
- * Whether autoconnect may be enabled at all.
+ * Whether autoconnect may be enabled, and may keep starting in the background.
  *
- * Holding the autoconnect service in the foreground needs a visible notification, and from Android 13 that needs the
- * notification permission. Without it the service could not run in the background, so enabling autoconnect would
- * promise behaviour the app cannot deliver.
+ * The autoconnect service is a foreground service, and a foreground service without a visible notification runs
+ * hidden from the user. Without the notification permission that is what autoconnect would become, so it stays off
+ * instead.
  */
 internal fun canEnableAutoConnect(sdkInt: Int, notificationsGranted: Boolean): Boolean =
     sdkInt < NOTIFICATION_PERMISSION_SDK || notificationsGranted

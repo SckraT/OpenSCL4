@@ -24,7 +24,6 @@ class CompanionPresenceService : CompanionDeviceService() {
 
     override fun onDeviceAppeared(address: String) {
         Log.d(TAG, "companion device appeared")
-        if (!preferences.autoConnect) return
-        startAutoConnectService(this)
+        startAutoConnectServiceIfEnabled(this, preferences)
     }
 }

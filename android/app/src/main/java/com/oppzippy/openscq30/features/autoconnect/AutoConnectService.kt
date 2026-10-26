@@ -94,19 +94,19 @@ class AutoConnectService : LifecycleService() {
     }
 
     /**
-     * The notification is only needed while no device service runs, so it follows [shouldHoldForeground] rather than
+     * The notification is only needed until a device is connected, so it follows [shouldHoldForeground] rather than
      * being posted once and kept. A refused start leaves the service in the background, which the caller handles.
      */
     private fun observeForegroundNeed() {
         lifecycleScope.launch {
-            DeviceService.isRunning.collect { deviceServiceRunning ->
-                updateForeground(deviceServiceRunning)
+            DeviceService.isConnected.collect { deviceConnected ->
+                updateForeground(deviceConnected)
             }
         }
     }
 
-    private fun updateForeground(deviceServiceRunning: Boolean = DeviceService.isRunning.value) {
-        if (shouldHoldForeground(preferences.autoConnect, deviceServiceRunning)) {
+    private fun updateForeground(deviceConnected: Boolean = DeviceService.isConnected.value) {
+        if (shouldHoldForeground(preferences.autoConnect, deviceConnected)) {
             startForeground(NOTIFICATION_ID, buildNotification())
         } else {
             stopForeground(STOP_FOREGROUND_REMOVE)
