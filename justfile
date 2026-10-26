@@ -155,3 +155,6 @@ shellcheck:
         fd_command=fd
     fi
     $fd_command --type file --extension sh --exec shellcheck {}
+
+install-hooks:
+    bash scripts/git-hooks/install.sh
