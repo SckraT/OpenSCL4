@@ -17,29 +17,62 @@ private const val TAG = "AutoConnectStart"
  * companion presence, app resume and the settings switch — goes through here, so the two preconditions cannot drift
  * apart between them.
  *
- * Android refuses to start a foreground service while the app is in the background, for example when the process
- * starts for a boot or package-replaced broadcast, or behind the lock screen. That refusal is logged instead of
- * crashing the process; [MainActivity.onResume] calls this again once the app is in the foreground.
+ * Android refuses to start a foreground service from the background unless an exemption applies, such as the companion
+ * association or a boot or package-replaced broadcast. A refusal is logged instead of crashing the process;
+ * [MainActivity.onResume] calls this again once the app is in the foreground.
  */
-internal fun startAutoConnectServiceIfEnabled(context: Context, preferences: Preferences) {
+internal fun startAutoConnectServiceIfEnabled(
+    context: Context,
+    preferences: Preferences,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+) {
     if (!preferences.autoConnect) {
         Log.d(TAG, "not starting the autoconnect service because auto connect is disabled")
         return
     }
-    if (!canEnableAutoConnect(Build.VERSION.SDK_INT, hasNotificationPermission(context))) {
+    if (!canEnableAutoConnect(context, sdkInt)) {
         // The service would run as a foreground service with no visible notification: exactly the silent background
-        // work autoconnect must not do. The settings switch already refuses to enable it in this state.
+        // work autoconnect must not do. Opening the app turns autoconnect off in this state and says why.
         Log.w(TAG, "not starting the autoconnect service because notification permission is missing")
+        return
+    }
+    if (AutoConnectService.isRunning) {
+        // Every startForegroundService must be answered with startForeground, so starting again would post the
+        // notification even while a device is connected. A running service already follows the connection itself.
+        Log.d(TAG, "not starting the autoconnect service because it is already running")
         return
     }
     try {
         // minSdk is 26, so the foreground variant is always available.
         context.startForegroundService(autoConnectServiceIntent(context))
     } catch (ex: IllegalStateException) {
-        if (!isServiceStartRefusal(ex, Build.VERSION.SDK_INT)) throw ex
+        if (!isServiceStartRefusal(ex, sdkInt)) throw ex
         Log.w(TAG, "Android refused to start the autoconnect service; it is retried in the foreground", ex)
     }
 }
+
+/**
+ * Turns autoconnect off when it is on without the notification permission, and returns whether it did.
+ *
+ * The permission can be revoked after autoconnect was turned on, and a user who turned it on before it needed the
+ * permission may never have granted it. Every start is refused then while the switch still shows autoconnect on, so
+ * it is turned off where the user can be told why: when the app is opened.
+ */
+internal fun turnOffAutoConnectWithoutNotifications(
+    context: Context,
+    preferences: Preferences,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+): Boolean {
+    if (!preferences.autoConnect || canEnableAutoConnect(context, sdkInt)) return false
+    Log.w(TAG, "turning auto connect off because notification permission is missing")
+    preferences.autoConnect = false
+    stopAutoConnectService(context)
+    return true
+}
+
+/** [canEnableAutoConnect] with this app's notification permission. */
+internal fun canEnableAutoConnect(context: Context, sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
+    canEnableAutoConnect(sdkInt, hasNotificationPermission(context))
 
 /**
  * Registers companion-device presence observation, so the system reports when a paired device appears even while the
@@ -56,7 +89,7 @@ internal fun observeCompanionPresenceForAutoconnect(context: Context) {
     observeAssociatedDevicePresence(context.applicationContext)
 }
 
-internal fun hasNotificationPermission(context: Context): Boolean =
+private fun hasNotificationPermission(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
         PackageManager.PERMISSION_GRANTED
 

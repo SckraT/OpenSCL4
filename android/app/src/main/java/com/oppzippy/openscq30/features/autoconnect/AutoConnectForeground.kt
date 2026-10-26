@@ -1,5 +1,7 @@
 package com.oppzippy.openscq30.features.autoconnect
 
+import android.os.Build
+
 /**
  * Whether [AutoConnectService] should hold a foreground notification right now.
  *
@@ -11,13 +13,12 @@ internal fun shouldHoldForeground(autoConnectEnabled: Boolean, deviceConnected: 
     autoConnectEnabled && !deviceConnected
 
 /**
- * Whether autoconnect may be enabled, and may keep starting in the background.
+ * Whether autoconnect may be on, and may keep starting in the background.
  *
  * The autoconnect service is a foreground service, and a foreground service without a visible notification runs
  * hidden from the user. Without the notification permission that is what autoconnect would become, so it stays off
- * instead.
+ * instead: the settings switch refuses to turn it on, and [turnOffAutoConnectWithoutNotifications] turns it off when
+ * the permission is missing later.
  */
 internal fun canEnableAutoConnect(sdkInt: Int, notificationsGranted: Boolean): Boolean =
-    sdkInt < NOTIFICATION_PERMISSION_SDK || notificationsGranted
-
-internal const val NOTIFICATION_PERMISSION_SDK = 33
+    sdkInt < Build.VERSION_CODES.TIRAMISU || notificationsGranted

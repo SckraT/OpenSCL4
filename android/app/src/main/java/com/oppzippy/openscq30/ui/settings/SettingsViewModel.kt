@@ -1,14 +1,10 @@
 package com.oppzippy.openscq30.ui.settings
 
-import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import com.oppzippy.openscq30.R
@@ -43,7 +39,7 @@ class SettingsViewModel @Inject constructor(
     val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
 
     fun setAutoConnect(value: Boolean) {
-        if (value && !canEnableAutoConnect(Build.VERSION.SDK_INT, hasNotificationPermission())) {
+        if (value && !canEnableAutoConnect(context)) {
             // The autoconnect service is a foreground service, and without the permission its notification would be
             // hidden, so the switch would promise background work the user cannot see or stop.
             toastHandler.add(R.string.auto_connect_requires_notifications, Toast.LENGTH_LONG)
@@ -57,10 +53,6 @@ class SettingsViewModel @Inject constructor(
             stopAutoConnectService(context)
         }
     }
-
-    private fun hasNotificationPermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
 
     fun setTheme(theme: ThemeType?) {
         preferences.theme = theme

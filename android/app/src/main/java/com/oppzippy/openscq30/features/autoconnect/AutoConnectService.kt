@@ -29,8 +29,9 @@ import kotlinx.coroutines.launch
  * Waits for a paired device while autoconnect is enabled and starts [DeviceService] when it appears.
  *
  * This service is a foreground service because Android refuses to start a plain background service while the app is
- * in the background, and autoconnect has to work after a reboot or an update. The notification is dropped as soon as
- * [DeviceService] runs, since that service is already foreground and keeps the process alive.
+ * in the background, and autoconnect has to work after a reboot or an update. The notification is only shown while no
+ * device is connected: once one is, [DeviceService] is foreground and keeps the process alive, and the notification
+ * returns as soon as that connection is lost.
  */
 @AndroidEntryPoint
 class AutoConnectService : LifecycleService() {
@@ -41,6 +42,10 @@ class AutoConnectService : LifecycleService() {
         // collision would let one service overwrite or remove the other's foreground notification.
         internal const val NOTIFICATION_ID = 2
         const val NOTIFICATION_CHANNEL_ID = "com.oppzippy.openscq30.notification.AutoConnectChannel"
+
+        // True from onCreate to onDestroy, so startAutoConnectServiceIfEnabled can leave a running service alone.
+        internal var isRunning = false
+            private set
     }
 
     @Inject
@@ -76,12 +81,14 @@ class AutoConnectService : LifecycleService() {
         if (canReadConnectedDevices()) reconciler.start()
         createNotificationChannel()
         observeForegroundNeed()
+        isRunning = true
     }
 
     override fun onDestroy() {
         super.onDestroy()
         application.unregisterReceiver(receiver)
         reconciler.stop()
+        isRunning = false
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

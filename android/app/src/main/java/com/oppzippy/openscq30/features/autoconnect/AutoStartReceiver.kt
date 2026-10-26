@@ -13,8 +13,8 @@ import dagger.hilt.components.SingletonComponent
  * Starts the autoconnect service when the device boots and when the package is replaced, and re-registers companion
  * presence observation, which does not survive either event.
  *
- * The immediate start is best effort: Android may refuse it while the process is in the background. Presence
- * observation is what makes autoconnect work afterwards, when the paired device appears.
+ * The immediate start is best effort: a refused start is logged, and presence observation still wakes autoconnect
+ * when the paired device appears.
  */
 class AutoStartReceiver : BroadcastReceiver() {
     companion object {
