@@ -14,7 +14,7 @@ Sources for the **Standards** axis of `code-review`. Read the cited file before 
 
 - `cargo fmt --check`; ktlint with `.editorconfig` (`android_studio` style, 120 columns, trailing commas); Prettier for Markdown; `shellcheck`.
 - `cargo clippy -- -D warnings` with the workspace lint set (`use_self`, `cloned_instead_of_copied`, `map_unwrap_or`, `try_err`, `get_unwrap`, `assertions_on_result_states`, and the rest of `[workspace.lints.clippy]`).
-- `python3 -m unittest discover -s scripts/tests` for README/release-script consistency and for workflow triggers: a push to a pull request branch must not cancel that pull request's run.
+- `python3 -m unittest discover -s scripts/tests` for README/release-script consistency and for workflow concurrency: push, pull request and manual runs of one branch fall into different concurrency groups.
 - The Rust type checker and the generated UniFFI headers.
 
 A finding must name something the tools cannot decide. Run the gate first; "formatting" or "clippy would complain" is not a finding.
