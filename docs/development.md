@@ -42,7 +42,7 @@ bash scripts/generate-readme
 
 This existing generator requires bash, Rust/Cargo, `jq`, `sd` and Prettier. It runs the CLI's `list-models --json`, removes the development-only model, substitutes `@SUPPORTED_DEVICES_TABLE@` and formats Markdown. Its input is this checkout's template, not an upstream README download. On Windows use an environment with those tools, or update both files and run the documentation consistency checks; the device table must still match the current enum and English model names.
 
-The lightweight Python suite checks that the checked-in README matches its template and that its catalog matches the core model declarations. It is also run by documentation CI, without rebuilding the apps.
+The lightweight Python suite checks that the checked-in README matches its template and that its catalog matches the core model declarations. It also checks release scripts and workflow triggers, so a push to a pull request branch cannot cancel the pull request's run (see the CI rules above). Documentation CI runs it without rebuilding the apps.
 
 Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
 
