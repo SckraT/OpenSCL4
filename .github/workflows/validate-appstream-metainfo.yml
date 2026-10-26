@@ -2,7 +2,7 @@ name: validate legacy GUI appstream metainfo
 
 on:
   push:
-    branches: ["**"]
+    branches: [master]
     paths: &push_paths
       - gui/resources/com.oppzippy.OpenSCQ30.metainfo.xml
       - .github/workflows/validate-appstream-metainfo.yml
