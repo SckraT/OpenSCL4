@@ -5,10 +5,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.bluetooth.BluetoothDevice
 import android.companion.CompanionDeviceManager
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -69,10 +67,9 @@ class AutoConnectService : LifecycleService() {
             coroutineScope = lifecycleScope,
             coordinator = coordinator,
         )
-        application.registerReceiver(
-            receiver,
-            IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED),
-        )
+        // Registered before the reconcile reads the profiles, so a profile that connects after that read still arrives
+        // as a broadcast.
+        application.registerReceiver(receiver, BluetoothConnectionReceiver.intentFilter())
         reconciler = AutoConnectReconciler(
             bluetooth = AndroidBluetoothProfiles(applicationContext),
             coordinator = coordinator,
