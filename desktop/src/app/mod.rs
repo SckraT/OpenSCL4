@@ -38,7 +38,7 @@ use crate::{
     },
     overview,
     rows::{self, Edit},
-    view, window_chrome,
+    system_settings, view, window_chrome,
 };
 
 enum Connection {
@@ -288,6 +288,11 @@ fn install_actions(window: &AppWindow) {
     actions.on_open_uri(|uri| {
         if let Err(err) = open::that_detached(uri.as_str()) {
             tracing::warn!("could not open {uri}: {err}");
+        }
+    });
+    actions.on_open_system_settings(|page| {
+        if let Err(err) = system_settings::open(page) {
+            tracing::warn!("could not open the system's {page:?} settings: {err}");
         }
     });
 }

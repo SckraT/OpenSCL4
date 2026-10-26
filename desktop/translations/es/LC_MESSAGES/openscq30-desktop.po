@@ -217,6 +217,9 @@ msgstr "Comprueba que tu altavoz esté cerca y conectado a este ordenador por Bl
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Activa el Bluetooth en la configuración de Windows y vuelve a intentar la conexión."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Activa el Bluetooth en la configuración del sistema y vuelve a intentar la conexión."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Conéctate para ver la batería y cambiar los ajustes."
 
@@ -278,6 +281,9 @@ msgstr "¿Olvidar {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "El dispositivo sale de esta lista junto con sus perfiles y ajustes rápidos en la aplicación. Su emparejamiento con Windows se mantiene."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "El dispositivo sale de esta lista junto con sus perfiles y ajustes rápidos en la aplicación. Su emparejamiento con este ordenador se mantiene."
+
 msgid "Forget"
 msgstr "Olvidar"
 
@@ -318,6 +324,9 @@ msgstr "¿Listo para conectar tu altavoz?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Elige el dispositivo emparejado con Windows. Si no aparece, emparéjalo primero en la configuración de Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Elige el dispositivo emparejado con este ordenador. Si no aparece, emparéjalo primero en la configuración de Bluetooth."
+
 msgid "Another model"
 msgstr "Otro modelo"
 
@@ -336,11 +345,17 @@ msgstr "Actualizar"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "El Bluetooth está desactivado. Actívalo en la configuración de Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "El Bluetooth está desactivado. Actívalo en la configuración del sistema."
+
 msgid "Looking for paired devices…"
 msgstr "Buscando dispositivos emparejados…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Asegúrate de que tus auriculares estén encendidos y emparejados con Windows y luego actualiza."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Asegúrate de que tus auriculares estén encendidos y emparejados con este ordenador y luego actualiza."
 
 msgid "Simulated device data"
 msgstr "Datos de dispositivo simulados"
@@ -348,8 +363,14 @@ msgstr "Datos de dispositivo simulados"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Emparejado en Windows · parece el modelo elegido"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Emparejado con este ordenador · parece el modelo elegido"
+
 msgid "Paired in Windows"
 msgstr "Emparejado en Windows"
+
+msgid "Paired with this computer"
+msgstr "Emparejado con este ordenador"
 
 msgid "Could not add the device."
 msgstr "No se pudo añadir el dispositivo."
@@ -549,6 +570,9 @@ msgstr "Acciones de los botones del dispositivo."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "El propio dispositivo realiza estas acciones. Las teclas multimedia de Windows funcionan como siempre."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "El propio dispositivo realiza estas acciones. Las teclas multimedia funcionan como siempre."
 
 msgid "Small details. More comfort."
 msgstr "Pequeños detalles. Más comodidad."
@@ -1096,7 +1120,7 @@ msgid "Quit OpenSCL4"
 msgstr "Salir de OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows y acceso rápido"
+msgstr "Escritorio y acceso rápido"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

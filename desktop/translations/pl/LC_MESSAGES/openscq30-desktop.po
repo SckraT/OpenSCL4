@@ -217,6 +217,9 @@ msgstr "Sprawdź, czy głośnik jest w pobliżu i połączony z tym komputerem p
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Włącz Bluetooth w ustawieniach systemu Windows, a potem spróbuj połączyć ponownie."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Włącz Bluetooth w ustawieniach systemu, a potem spróbuj połączyć ponownie."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Połącz się, aby zobaczyć stan baterii i zmienić ustawienia."
 
@@ -278,6 +281,9 @@ msgstr "Zapomnieć {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "Urządzenie zniknie z tej listy razem z profilami i ustawieniami w aplikacji. Parowanie z systemem Windows pozostanie."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "Urządzenie zniknie z tej listy razem z profilami i ustawieniami w aplikacji. Parowanie z tym komputerem pozostanie."
+
 msgid "Forget"
 msgstr "Zapomnij"
 
@@ -318,6 +324,9 @@ msgstr "Gotowy, by połączyć głośnik?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Wybierz urządzenie sparowane z systemem Windows. Jeśli go nie ma, najpierw sparuj je w ustawieniach Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Wybierz urządzenie sparowane z tym komputerem. Jeśli go nie ma, najpierw sparuj je w ustawieniach Bluetooth."
+
 msgid "Another model"
 msgstr "Inny model"
 
@@ -336,11 +345,17 @@ msgstr "Odśwież"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth jest wyłączony. Włącz go w ustawieniach systemu Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth jest wyłączony. Włącz go w ustawieniach systemu."
+
 msgid "Looking for paired devices…"
 msgstr "Szukanie sparowanych urządzeń…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Upewnij się, że słuchawki są włączone i sparowane z systemem Windows, a potem odśwież."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Upewnij się, że słuchawki są włączone i sparowane z tym komputerem, a potem odśwież."
 
 msgid "Simulated device data"
 msgstr "Symulowane dane urządzenia"
@@ -348,8 +363,14 @@ msgstr "Symulowane dane urządzenia"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Sparowane w Windows · wygląda na wybrany model"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Sparowane z tym komputerem · wygląda na wybrany model"
+
 msgid "Paired in Windows"
 msgstr "Sparowane w Windows"
+
+msgid "Paired with this computer"
+msgstr "Sparowane z tym komputerem"
 
 msgid "Could not add the device."
 msgstr "Nie udało się dodać urządzenia."
@@ -549,6 +570,9 @@ msgstr "Akcje przycisków urządzenia."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "Urządzenie samo wykonuje te akcje. Klawisze multimedialne systemu Windows działają jak zwykle."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "Urządzenie samo wykonuje te akcje. Klawisze multimedialne działają jak zwykle."
 
 msgid "Small details. More comfort."
 msgstr "Drobne szczegóły. Więcej komfortu."
@@ -1099,7 +1123,7 @@ msgid "Quit OpenSCL4"
 msgstr "Zakończ OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows i szybki dostęp"
+msgstr "Pulpit i szybki dostęp"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

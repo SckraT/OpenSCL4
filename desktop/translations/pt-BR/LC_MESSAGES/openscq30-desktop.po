@@ -217,6 +217,9 @@ msgstr "Verifique se sua caixa de som está por perto e conectada a este computa
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Ligue o Bluetooth nas configurações do Windows e tente conectar de novo."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Ligue o Bluetooth nas configurações do sistema e tente conectar de novo."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Conecte para ver a bateria e alterar as configurações."
 
@@ -278,6 +281,9 @@ msgstr "Esquecer {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "O dispositivo sai desta lista junto com seus perfis e predefinições no app. O pareamento com o Windows continua."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "O dispositivo sai desta lista junto com seus perfis e predefinições no app. O pareamento com este computador continua."
+
 msgid "Forget"
 msgstr "Esquecer"
 
@@ -318,6 +324,9 @@ msgstr "Pronto para conectar sua caixa de som?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Escolha o dispositivo pareado com o Windows. Se ele não estiver na lista, pareie-o antes nas configurações de Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Escolha o dispositivo pareado com este computador. Se ele não estiver na lista, pareie-o antes nas configurações de Bluetooth."
+
 msgid "Another model"
 msgstr "Outro modelo"
 
@@ -336,11 +345,17 @@ msgstr "Atualizar"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "O Bluetooth está desligado. Ligue-o nas configurações do Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "O Bluetooth está desligado. Ligue-o nas configurações do sistema."
+
 msgid "Looking for paired devices…"
 msgstr "Procurando dispositivos pareados…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Verifique se seus fones estão ligados e pareados com o Windows e atualize."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Verifique se seus fones estão ligados e pareados com este computador e atualize."
 
 msgid "Simulated device data"
 msgstr "Dados de dispositivo simulados"
@@ -348,8 +363,14 @@ msgstr "Dados de dispositivo simulados"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Pareado no Windows · parece o modelo escolhido"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Pareado com este computador · parece o modelo escolhido"
+
 msgid "Paired in Windows"
 msgstr "Pareado no Windows"
+
+msgid "Paired with this computer"
+msgstr "Pareado com este computador"
 
 msgid "Could not add the device."
 msgstr "Não foi possível adicionar o dispositivo."
@@ -549,6 +570,9 @@ msgstr "Ações dos botões do dispositivo."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "O próprio dispositivo executa essas ações. As teclas de mídia do Windows funcionam normalmente."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "O próprio dispositivo executa essas ações. As teclas de mídia funcionam normalmente."
 
 msgid "Small details. More comfort."
 msgstr "Pequenos detalhes. Mais conforto."
@@ -1096,7 +1120,7 @@ msgid "Quit OpenSCL4"
 msgstr "Sair do OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows e acesso rápido"
+msgstr "Área de trabalho e acesso rápido"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

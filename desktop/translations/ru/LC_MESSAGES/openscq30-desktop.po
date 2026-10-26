@@ -217,6 +217,9 @@ msgstr "Проверьте, что колонка рядом и подключе
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Включите Bluetooth в параметрах Windows, затем снова попробуйте подключиться."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Включите Bluetooth в параметрах системы, затем снова попробуйте подключиться."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Подключите, чтобы видеть заряд и менять настройки."
 
@@ -278,6 +281,9 @@ msgstr "Забыть {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "Устройство пропадёт из списка вместе с его профилями и пресетами в приложении. Сопряжение в Windows сохранится."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "Устройство пропадёт из списка вместе с его профилями и пресетами в приложении. Сопряжение с этим компьютером сохранится."
+
 msgid "Forget"
 msgstr "Забыть"
 
@@ -318,6 +324,9 @@ msgstr "Подключим колонку?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Выберите устройство, сопряжённое с Windows. Если его нет в списке, сначала выполните сопряжение в параметрах Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Выберите устройство, сопряжённое с этим компьютером. Если его нет в списке, сначала выполните сопряжение в параметрах Bluetooth."
+
 msgid "Another model"
 msgstr "Другая модель"
 
@@ -336,11 +345,17 @@ msgstr "Обновить"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth выключен. Включите его в параметрах Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth выключен. Включите его в параметрах системы."
+
 msgid "Looking for paired devices…"
 msgstr "Ищем сопряжённые устройства…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Убедитесь, что наушники включены и сопряжены с Windows, затем обновите список."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Убедитесь, что наушники включены и сопряжены с этим компьютером, затем обновите список."
 
 msgid "Simulated device data"
 msgstr "Пример данных"
@@ -348,8 +363,14 @@ msgstr "Пример данных"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Сопряжено в Windows · похоже на выбранную модель"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Сопряжено с этим компьютером · похоже на выбранную модель"
+
 msgid "Paired in Windows"
 msgstr "Сопряжено в Windows"
+
+msgid "Paired with this computer"
+msgstr "Сопряжено с этим компьютером"
 
 msgid "Could not add the device."
 msgstr "Ошибка добавления устройства."
@@ -549,6 +570,9 @@ msgstr "Действия кнопок на корпусе."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "Действия выполняет само устройство. Клавиши мультимедиа Windows работают как обычно."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "Действия выполняет само устройство. Клавиши мультимедиа работают как обычно."
 
 msgid "Small details. More comfort."
 msgstr "Маленькие детали. Больше удобства."

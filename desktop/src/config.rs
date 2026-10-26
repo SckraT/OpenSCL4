@@ -13,7 +13,7 @@ use crate::model::device_art::EarbudsColor;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AppTheme {
-    /// As in Windows
+    /// As in the system
     #[default]
     System,
     Light,

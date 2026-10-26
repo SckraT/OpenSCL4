@@ -1,7 +1,7 @@
 // My devices: the saved devices, adding one, and what is shown while no device is connected.
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
-import { AppState, Actions, Page, Connection, DeviceCard, FailureKind } from "../types.slint";
+import { AppState, Actions, Page, Connection, DeviceCard, FailureKind, SystemPage } from "../types.slint";
 
 // what went wrong, in words
 export global FailureText {
@@ -237,7 +237,7 @@ export component ConnectionState inherits VerticalLayout {
         text: AppState.connection == Connection.recovering ? (AppState.connection-reason == "" ? @tr("The device is still nearby. Settings will return when it reconnects.") : AppState.connection-reason)
             : AppState.connection == Connection.connecting ? (root.speaker ? @tr("Turn on your speaker. Controls will appear once connected.") : @tr("Open the case or turn on your headphones. Controls will appear once connected."))
             : AppState.connection == Connection.lost ? (root.speaker ? @tr("Check that your speaker is nearby and connected to this computer by Bluetooth.") : @tr("Check that your headphones are nearby and connected to this computer by Bluetooth."))
-            : AppState.connection == Connection.bluetooth-off ? @tr("Turn on Bluetooth in Windows settings, then try connecting again.")
+            : AppState.connection == Connection.bluetooth-off ? (AppState.linux ? @tr("Turn on Bluetooth in the system settings, then try connecting again.") : @tr("Turn on Bluetooth in Windows settings, then try connecting again."))
             : AppState.connection == Connection.failed ? FailureText.describe(AppState.failure-kind, AppState.failure-text)
             : @tr("Connect to see battery levels and change settings.");
     }
@@ -255,12 +255,12 @@ export component ConnectionState inherits VerticalLayout {
             text: @tr("Cancel");
             clicked => { Actions.cancel-connect(); }
         }
-        if AppState.connection == Connection.bluetooth-off: Button {
+        if AppState.connection == Connection.bluetooth-off && AppState.system-settings-available: Button {
             text: @tr("Bluetooth settings");
             kind: ButtonKind.primary;
             has-icon: true;
             icon: Icons.external;
-            clicked => { Actions.open-uri("ms-settings:bluetooth"); }
+            clicked => { Actions.open-system-settings(SystemPage.bluetooth); }
         }
         if AppState.connection != Connection.connecting && AppState.connection != Connection.recovering && AppState.connection != Connection.bluetooth-off: Button {
             text: AppState.connection == Connection.lost ? @tr("Connect again") : @tr("Connect");

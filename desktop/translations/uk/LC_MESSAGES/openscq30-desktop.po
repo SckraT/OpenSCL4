@@ -217,6 +217,9 @@ msgstr "Перевірте, що колонка поруч і підключен
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Увімкніть Bluetooth у параметрах Windows і спробуйте підключитися знову."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Увімкніть Bluetooth у параметрах системи і спробуйте підключитися знову."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Підключіться, щоб бачити заряд і змінювати налаштування."
 
@@ -278,6 +281,9 @@ msgstr "Забути {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "Пристрій зникне з цього списку разом із профілями та пресетами в застосунку. Сполучення з Windows залишиться."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "Пристрій зникне з цього списку разом із профілями та пресетами в застосунку. Сполучення з цим комп’ютером залишиться."
+
 msgid "Forget"
 msgstr "Забути"
 
@@ -318,6 +324,9 @@ msgstr "Готові підключити колонку?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Виберіть пристрій, сполучений з Windows. Якщо його немає у списку, спершу сполучіть його в параметрах Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Виберіть пристрій, сполучений із цим комп’ютером. Якщо його немає у списку, спершу сполучіть його в параметрах Bluetooth."
+
 msgid "Another model"
 msgstr "Інша модель"
 
@@ -336,11 +345,17 @@ msgstr "Оновити"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth вимкнено. Увімкніть його в параметрах Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth вимкнено. Увімкніть його в параметрах системи."
+
 msgid "Looking for paired devices…"
 msgstr "Пошук сполучених пристроїв…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Переконайтеся, що навушники увімкнені й сполучені з Windows, а потім оновіть список."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Переконайтеся, що навушники увімкнені й сполучені з цим комп’ютером, а потім оновіть список."
 
 msgid "Simulated device data"
 msgstr "Імітовані дані пристрою"
@@ -348,8 +363,14 @@ msgstr "Імітовані дані пристрою"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Сполучено в Windows · схоже на вибрану модель"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Сполучено з цим комп’ютером · схоже на вибрану модель"
+
 msgid "Paired in Windows"
 msgstr "Сполучено в Windows"
+
+msgid "Paired with this computer"
+msgstr "Сполучено з цим комп’ютером"
 
 msgid "Could not add the device."
 msgstr "Не вдалося додати пристрій."
@@ -549,6 +570,9 @@ msgstr "Дії кнопок на пристрої."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "Пристрій виконує ці дії сам. Мультимедійні клавіші Windows працюють як зазвичай."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "Пристрій виконує ці дії сам. Мультимедійні клавіші працюють як зазвичай."
 
 msgid "Small details. More comfort."
 msgstr "Дрібні деталі. Більше комфорту."
@@ -1099,7 +1123,7 @@ msgid "Quit OpenSCL4"
 msgstr "Вийти з OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows і швидкий доступ"
+msgstr "Робочий стіл і швидкий доступ"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

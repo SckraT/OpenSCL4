@@ -1,7 +1,7 @@
-// Adding a device: the exact model first, then which of Windows' paired devices it is, or a demo device.
+// Adding a device: the exact model first, then which of the system's paired devices it is, or a demo device.
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
-import { AppState, Actions, ModelOption, PairedOption, FailureKind } from "../types.slint";
+import { AppState, Actions, ModelOption, PairedOption, FailureKind, SystemPage } from "../types.slint";
 import { FailureText } from "devices.slint";
 import { Icon, Button, ButtonKind, IconButton, Chip, Toggle, Banner } from "../components/basics.slint";
 import { LineEdit, ScrollView } from "std-widgets.slint";
@@ -136,6 +136,7 @@ component PairedRow inherits Rectangle {
             }
             Text {
                 text: AppState.add-demo ? @tr("Simulated device data")
+                    : AppState.linux ? (root.option.suggested ? @tr("Paired with this computer · looks like the chosen model") : @tr("Paired with this computer"))
                     : root.option.suggested ? @tr("Paired in Windows · looks like the chosen model") : @tr("Paired in Windows");
                 color: Theme.muted;
                 font-size: Theme.font-caption;
@@ -159,6 +160,7 @@ export component AddDeviceDialog inherits DialogFrame {
     title: AppState.add-step == 0 ? @tr("Find your model.")
         : AppState.add-model-is-speaker ? @tr("Ready to connect your speaker?") : @tr("Ready to connect your headphones?");
     description: AppState.add-step == 0 ? @tr("Choose the exact model so you see the controls your device supports.")
+        : AppState.linux ? @tr("Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first.")
         : @tr("Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first.");
     close => { AppState.adding = false; }
 
@@ -276,11 +278,11 @@ export component AddDeviceDialog inherits DialogFrame {
         if AppState.add-bluetooth-off: Banner {
             error: true;
             icon: Icons.bluetooth;
-            text: @tr("Bluetooth is off. Turn it on in Windows settings.");
-            Button {
+            text: AppState.linux ? @tr("Bluetooth is off. Turn it on in the system settings.") : @tr("Bluetooth is off. Turn it on in Windows settings.");
+            if AppState.system-settings-available: Button {
                 text: @tr("Bluetooth settings");
                 kind: ButtonKind.soft;
-                clicked => { Actions.open-uri("ms-settings:bluetooth"); }
+                clicked => { Actions.open-system-settings(SystemPage.bluetooth); }
             }
         }
         if AppState.add-loading: Text {
@@ -288,7 +290,8 @@ export component AddDeviceDialog inherits DialogFrame {
             color: Theme.muted;
         }
         if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0: Text {
-            text: @tr("Make sure your headphones are turned on and paired with Windows, then refresh.");
+            text: AppState.linux ? @tr("Make sure your headphones are turned on and paired with this computer, then refresh.")
+                : @tr("Make sure your headphones are turned on and paired with Windows, then refresh.");
             color: Theme.muted;
             wrap: word-wrap;
         }
@@ -315,12 +318,12 @@ export component AddDeviceDialog inherits DialogFrame {
         HorizontalLayout {
             alignment: end;
             spacing: 8px;
-            Button {
+            if AppState.system-settings-available: Button {
                 text: @tr("Bluetooth settings");
                 kind: ButtonKind.ghost;
                 has-icon: true;
                 icon: Icons.external;
-                clicked => { Actions.open-uri("ms-settings:bluetooth"); }
+                clicked => { Actions.open-system-settings(SystemPage.bluetooth); }
             }
             Button {
                 text: @tr("Back");
@@ -332,7 +335,8 @@ export component AddDeviceDialog inherits DialogFrame {
 
 export component ConfirmForgetDialog inherits DialogFrame {
     title: @tr("Forget {}?", AppState.confirm-forget-name);
-    description: @tr("The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays.");
+    description: AppState.linux ? @tr("The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays.")
+        : @tr("The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays.");
     dialog-width: 520px;
     close => { AppState.confirm-forget-mac = ""; }
     HorizontalLayout {

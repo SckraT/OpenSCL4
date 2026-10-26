@@ -217,6 +217,9 @@ msgstr "স্পিকার কাছেই আছে এবং ব্লু�
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Windows সেটিংসে ব্লুটুথ চালু করুন, তারপর আবার সংযোগের চেষ্টা করুন।"
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "সিস্টেম সেটিংসে ব্লুটুথ চালু করুন, তারপর আবার সংযোগের চেষ্টা করুন।"
+
 msgid "Connect to see battery levels and change settings."
 msgstr "ব্যাটারি দেখতে এবং সেটিংস বদলাতে সংযোগ করুন।"
 
@@ -278,6 +281,9 @@ msgstr "{} ভুলে যাবেন?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "ডিভাইসটি অ্যাপে এর প্রোফাইল ও প্রিসেটসহ এই তালিকা থেকে সরে যাবে। Windows-এর সাথে জোড়া থেকে যাবে।"
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "ডিভাইসটি অ্যাপে এর প্রোফাইল ও প্রিসেটসহ এই তালিকা থেকে সরে যাবে। এই কম্পিউটারের সাথে জোড়া থেকে যাবে।"
+
 msgid "Forget"
 msgstr "ভুলে যান"
 
@@ -318,6 +324,9 @@ msgstr "স্পিকার সংযোগের জন্য প্রস্
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Windows-এর সাথে জোড়া লাগানো ডিভাইসটি বেছে নিন। তালিকায় না থাকলে আগে ব্লুটুথ সেটিংসে জোড়া লাগান।"
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "এই কম্পিউটারের সাথে জোড়া লাগানো ডিভাইসটি বেছে নিন। তালিকায় না থাকলে আগে ব্লুটুথ সেটিংসে জোড়া লাগান।"
+
 msgid "Another model"
 msgstr "অন্য মডেল"
 
@@ -336,11 +345,17 @@ msgstr "রিফ্রেশ করুন"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "ব্লুটুথ বন্ধ। Windows সেটিংসে এটি চালু করুন।"
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "ব্লুটুথ বন্ধ। সিস্টেম সেটিংসে এটি চালু করুন।"
+
 msgid "Looking for paired devices…"
 msgstr "জোড়া লাগানো ডিভাইস খোঁজা হচ্ছে…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "হেডফোন চালু এবং Windows-এর সাথে জোড়া লাগানো আছে কি না নিশ্চিত করুন, তারপর রিফ্রেশ করুন।"
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "হেডফোন চালু এবং এই কম্পিউটারের সাথে জোড়া লাগানো আছে কি না নিশ্চিত করুন, তারপর রিফ্রেশ করুন।"
 
 msgid "Simulated device data"
 msgstr "সিমুলেটেড ডিভাইস ডেটা"
@@ -348,8 +363,14 @@ msgstr "সিমুলেটেড ডিভাইস ডেটা"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Windows-এ জোড়া লাগানো · বেছে নেওয়া মডেলের মতো"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "এই কম্পিউটারের সাথে জোড়া লাগানো · বেছে নেওয়া মডেলের মতো"
+
 msgid "Paired in Windows"
 msgstr "Windows-এ জোড়া লাগানো"
+
+msgid "Paired with this computer"
+msgstr "এই কম্পিউটারের সাথে জোড়া লাগানো"
 
 msgid "Could not add the device."
 msgstr "ডিভাইস যোগ করা যায়নি।"
@@ -549,6 +570,9 @@ msgstr "ডিভাইসের বোতামের অ্যাকশন।"
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "ডিভাইস নিজেই এই অ্যাকশনগুলো করে। Windows-এর মিডিয়া কী আগের মতোই কাজ করে।"
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "ডিভাইস নিজেই এই অ্যাকশনগুলো করে। মিডিয়া কী আগের মতোই কাজ করে।"
 
 msgid "Small details. More comfort."
 msgstr "ছোট ছোট খুঁটিনাটি। আরও আরাম।"
@@ -1096,7 +1120,7 @@ msgid "Quit OpenSCL4"
 msgstr "OpenSCL4 থেকে প্রস্থান"
 
 msgid "Desktop and quick access"
-msgstr "Windows ও দ্রুত প্রবেশ"
+msgstr "ডেস্কটপ ও দ্রুত প্রবেশ"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

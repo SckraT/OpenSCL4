@@ -217,6 +217,9 @@ msgstr "Pastikan speaker ada di dekatmu dan terhubung ke komputer ini lewat Blue
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Nyalakan Bluetooth di pengaturan Windows, lalu coba hubungkan lagi."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Nyalakan Bluetooth di pengaturan sistem, lalu coba hubungkan lagi."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Hubungkan untuk melihat baterai dan mengubah pengaturan."
 
@@ -278,6 +281,9 @@ msgstr "Lupakan {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "Perangkat keluar dari daftar ini beserta profil dan presetnya di aplikasi. Pemasangannya dengan Windows tetap ada."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "Perangkat keluar dari daftar ini beserta profil dan presetnya di aplikasi. Pemasangannya dengan komputer ini tetap ada."
+
 msgid "Forget"
 msgstr "Lupakan"
 
@@ -318,6 +324,9 @@ msgstr "Siap menghubungkan speaker?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Pilih perangkat yang dipasangkan dengan Windows. Jika tidak ada di daftar, pasangkan dulu di pengaturan Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Pilih perangkat yang dipasangkan dengan komputer ini. Jika tidak ada di daftar, pasangkan dulu di pengaturan Bluetooth."
+
 msgid "Another model"
 msgstr "Model lain"
 
@@ -336,11 +345,17 @@ msgstr "Segarkan"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth mati. Nyalakan di pengaturan Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth mati. Nyalakan di pengaturan sistem."
+
 msgid "Looking for paired devices…"
 msgstr "Mencari perangkat yang dipasangkan…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Pastikan headphone menyala dan dipasangkan dengan Windows, lalu segarkan."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Pastikan headphone menyala dan dipasangkan dengan komputer ini, lalu segarkan."
 
 msgid "Simulated device data"
 msgstr "Data perangkat simulasi"
@@ -348,8 +363,14 @@ msgstr "Data perangkat simulasi"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Dipasangkan di Windows · mirip model yang dipilih"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Dipasangkan dengan komputer ini · mirip model yang dipilih"
+
 msgid "Paired in Windows"
 msgstr "Dipasangkan di Windows"
+
+msgid "Paired with this computer"
+msgstr "Dipasangkan dengan komputer ini"
 
 msgid "Could not add the device."
 msgstr "Tidak dapat menambahkan perangkat."
@@ -549,6 +570,9 @@ msgstr "Aksi tombol pada perangkat."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "Perangkat menjalankan aksi ini sendiri. Tombol media Windows berfungsi seperti biasa."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "Perangkat menjalankan aksi ini sendiri. Tombol media berfungsi seperti biasa."
 
 msgid "Small details. More comfort."
 msgstr "Detail kecil. Lebih nyaman."
@@ -1093,7 +1117,7 @@ msgid "Quit OpenSCL4"
 msgstr "Keluar dari OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows dan akses cepat"
+msgstr "Desktop dan akses cepat"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

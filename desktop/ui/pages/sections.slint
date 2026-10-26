@@ -1,7 +1,7 @@
 // The device's section pages: the heading, the settings in panels, and on the side what helps to read them.
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
-import { AppState, Actions, Page } from "../types.slint";
+import { AppState, Actions, Page, SystemPage } from "../types.slint";
 import { Icon, Button, ButtonKind, Panel, PanelHeading, Note } from "../components/basics.slint";
 import { SettingsPanelView, Segmented } from "../components/settings.slint";
 import { ModesPanel } from "../components/modes.slint";
@@ -135,10 +135,10 @@ component Tip inherits HorizontalLayout {
     }
 }
 
-component WindowsLink inherits HorizontalLayout {
+component SystemLink inherits HorizontalLayout {
     in property <string> title;
     in property <string> text;
-    in property <string> uri;
+    in property <SystemPage> page;
     spacing: 12px;
     padding-top: 10px;
     padding-bottom: 10px;
@@ -162,7 +162,7 @@ component WindowsLink inherits HorizontalLayout {
         kind: ButtonKind.ghost;
         has-icon: true;
         icon: Icons.external;
-        clicked => { Actions.open-uri(root.uri); }
+        clicked => { Actions.open-system-settings(root.page); }
     }
 }
 
@@ -204,7 +204,8 @@ component AsideColumn inherits VerticalLayout {
             }
         }
     }
-    if root.page == Page.effects && AppState.has-ldac: Note {
+    // whether Linux plays LDAC depends on its audio setup, so only Windows gets the note
+    if root.page == Page.effects && AppState.has-ldac && !AppState.linux: Note {
         text: @tr("Windows plays sound without LDAC. The setting is for your phone and other sources with LDAC.");
     }
     if root.page == Page.effects && AppState.has-spatial: Note {
@@ -217,7 +218,8 @@ component AsideColumn inherits VerticalLayout {
         text: AppState.has-sides ? @tr("Actions for the chosen earbud.") : @tr("Actions of the buttons on the device.");
     }
     if root.page == Page.controls: Note {
-        text: @tr("The device carries out these actions itself. Windows media keys work as usual.");
+        text: AppState.linux ? @tr("The device carries out these actions itself. Media keys work as usual.")
+            : @tr("The device carries out these actions itself. Windows media keys work as usual.");
     }
     if root.page == Page.comfort: Showcase {
         title: @tr("Small details. More comfort.");
@@ -229,20 +231,21 @@ component AsideColumn inherits VerticalLayout {
     if root.page == Page.power: Note {
         text: @tr("Auto power off works while the device plays no sound.");
     }
-    if root.page == Page.connections: Panel {
+    // named as the system's settings name them
+    if root.page == Page.connections && AppState.system-settings-available: Panel {
         PanelHeading {
-            text: "Windows";
+            text: AppState.linux ? "Linux" : "Windows";
             icon: Icons.monitor;
         }
-        WindowsLink {
-            title: @tr("Bluetooth and devices");
+        SystemLink {
+            title: AppState.linux ? "Bluetooth" : @tr("Bluetooth and devices");
             text: @tr("Pairing and removing devices");
-            uri: "ms-settings:bluetooth";
+            page: SystemPage.bluetooth;
         }
-        WindowsLink {
+        SystemLink {
             title: @tr("Sound");
             text: @tr("Output device and volume");
-            uri: "ms-settings:sound";
+            page: SystemPage.sound;
         }
     }
     if root.page == Page.case: Rectangle {

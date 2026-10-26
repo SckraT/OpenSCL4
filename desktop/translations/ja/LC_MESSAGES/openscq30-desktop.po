@@ -217,6 +217,9 @@ msgstr "スピーカーが近くにあり、このコンピューターに Bluet
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Windows の設定で Bluetooth をオンにしてから、もう一度接続してください。"
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "システムの設定で Bluetooth をオンにしてから、もう一度接続してください。"
+
 msgid "Connect to see battery levels and change settings."
 msgstr "接続するとバッテリー残量の確認や設定の変更ができます。"
 
@@ -278,6 +281,9 @@ msgstr "{} を削除しますか？"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "このデバイスは、アプリ内のプロファイルやプリセットとともにこの一覧から削除されます。Windows とのペアリングはそのままです。"
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "このデバイスは、アプリ内のプロファイルやプリセットとともにこの一覧から削除されます。このコンピューターとのペアリングはそのままです。"
+
 msgid "Forget"
 msgstr "削除"
 
@@ -318,6 +324,9 @@ msgstr "スピーカーを接続しますか？"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Windows とペアリング済みのデバイスを選んでください。一覧にない場合は、先に Bluetooth の設定でペアリングしてください。"
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "このコンピューターとペアリング済みのデバイスを選んでください。一覧にない場合は、先に Bluetooth の設定でペアリングしてください。"
+
 msgid "Another model"
 msgstr "別のモデル"
 
@@ -336,11 +345,17 @@ msgstr "更新"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth がオフです。Windows の設定でオンにしてください。"
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth がオフです。システムの設定でオンにしてください。"
+
 msgid "Looking for paired devices…"
 msgstr "ペアリング済みのデバイスを探しています…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "ヘッドホンの電源が入っていて Windows とペアリングされているか確認してから、更新してください。"
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "ヘッドホンの電源が入っていてこのコンピューターとペアリングされているか確認してから、更新してください。"
 
 msgid "Simulated device data"
 msgstr "シミュレーションのデバイスデータ"
@@ -348,8 +363,14 @@ msgstr "シミュレーションのデバイスデータ"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Windows でペアリング済み · 選んだモデルと思われます"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "このコンピューターとペアリング済み · 選んだモデルと思われます"
+
 msgid "Paired in Windows"
 msgstr "Windows でペアリング済み"
+
+msgid "Paired with this computer"
+msgstr "このコンピューターとペアリング済み"
 
 msgid "Could not add the device."
 msgstr "デバイスを追加できませんでした。"
@@ -549,6 +570,9 @@ msgstr "デバイスのボタンの動作。"
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "これらの動作はデバイス自身が行います。Windows のメディアキーは通常どおり使えます。"
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "これらの動作はデバイス自身が行います。メディアキーは通常どおり使えます。"
 
 msgid "Small details. More comfort."
 msgstr "小さな工夫で、もっと快適に。"
@@ -1093,7 +1117,7 @@ msgid "Quit OpenSCL4"
 msgstr "OpenSCL4を終了"
 
 msgid "Desktop and quick access"
-msgstr "Windowsとクイックアクセス"
+msgstr "デスクトップとクイックアクセス"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."
