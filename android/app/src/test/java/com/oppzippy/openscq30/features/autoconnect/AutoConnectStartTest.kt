@@ -1,6 +1,7 @@
 package com.oppzippy.openscq30.features.autoconnect
 
 import android.app.BackgroundServiceStartNotAllowedException
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -39,32 +40,33 @@ class AutoConnectStartTest {
     }
 
     @Test
-    fun enabledAutoconnectStartsTheService() {
+    fun enabledAutoconnectStartsTheForegroundService() {
         startAutoConnectServiceIfEnabled(context, preferences(autoConnect = true))
 
-        verify(exactly = 1) { context.startService(any<Intent>()) }
+        verify(exactly = 1) { context.startForegroundService(any<Intent>()) }
     }
 
     @Test
     fun disabledAutoconnectDoesNotTouchTheService() {
         startAutoConnectServiceIfEnabled(context, preferences(autoConnect = false))
 
-        verify(exactly = 0) { context.startService(any<Intent>()) }
+        verify(exactly = 0) { context.startForegroundService(any<Intent>()) }
     }
 
     @Test
-    fun backgroundStartRefusalIsReportedInsteadOfThrown() {
-        every { context.startService(any<Intent>()) } throws IllegalStateException("Not allowed to start service")
+    fun refusedForegroundStartIsReportedInsteadOfThrown() {
+        every { context.startForegroundService(any<Intent>()) } throws
+            IllegalStateException("Not allowed to start service")
 
         // Must not propagate: the process has to survive the refused start.
         startAutoConnectServiceIfEnabled(context, preferences(autoConnect = true))
 
-        verify(exactly = 1) { context.startService(any<Intent>()) }
+        verify(exactly = 1) { context.startForegroundService(any<Intent>()) }
     }
 
     @Test
     fun otherStartFailuresStillThrow() {
-        every { context.startService(any<Intent>()) } throws SecurityException("missing permission")
+        every { context.startForegroundService(any<Intent>()) } throws SecurityException("missing permission")
 
         assertThrows(SecurityException::class.java) {
             startAutoConnectServiceIfEnabled(context, preferences(autoConnect = true))
@@ -72,10 +74,13 @@ class AutoConnectStartTest {
     }
 
     @Test
-    fun backgroundStartRefusalIsRecognisedFromAndroid12() {
-        val refusal = mockk<BackgroundServiceStartNotAllowedException>()
+    fun aRefusedForegroundStartIsRecognisedFromAndroid12() {
+        assertTrue(isBackgroundStartRefusal(mockk<ForegroundServiceStartNotAllowedException>(), sdkInt = 31))
+    }
 
-        assertTrue(isBackgroundStartRefusal(refusal, sdkInt = 31))
+    @Test
+    fun aRefusedBackgroundStartIsStillRecognisedFromAndroid12() {
+        assertTrue(isBackgroundStartRefusal(mockk<BackgroundServiceStartNotAllowedException>(), sdkInt = 31))
     }
 
     @Test
@@ -85,7 +90,7 @@ class AutoConnectStartTest {
 
     @Test
     fun plainIllegalStateIsTheRefusalBeforeAndroid12() {
-        // Android 8-11 have no BackgroundServiceStartNotAllowedException; the refusal is the plain base class.
+        // Android 8-11 have no ServiceStartNotAllowedException; the refusal is the plain base class.
         assertTrue(isBackgroundStartRefusal(IllegalStateException("Not allowed to start service"), sdkInt = 30))
     }
 
@@ -93,6 +98,13 @@ class AutoConnectStartTest {
     fun subclassedIllegalStateIsStillARefusalBeforeAndroid12() {
         // A ROM that subclasses IllegalStateException for the same refusal must not crash the process again.
         assertTrue(isBackgroundStartRefusal(SubclassedIllegalState("Not allowed to start service"), sdkInt = 30))
+    }
+
+    @Test
+    fun presenceObservationIsSkippedBeforeAndroid12() {
+        observeCompanionPresenceForAutoconnect(context)
+
+        verify(exactly = 0) { context.getSystemService(any<Class<*>>()) }
     }
 
     private class SubclassedIllegalState(message: String) : IllegalStateException(message)

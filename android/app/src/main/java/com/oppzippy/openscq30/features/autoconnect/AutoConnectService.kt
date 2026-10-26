@@ -1,6 +1,10 @@
 package com.oppzippy.openscq30.features.autoconnect
 
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.bluetooth.BluetoothDevice
 import android.companion.CompanionDeviceManager
 import android.content.Intent
@@ -11,17 +15,29 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.oppzippy.openscq30.MainActivity
+import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.android.AndroidBluetoothProfiles
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
+/**
+ * Waits for a paired device while autoconnect is enabled and starts [DeviceService] when it appears.
+ *
+ * This service is a foreground service because Android refuses to start a plain background service while the app is
+ * in the background, and autoconnect has to work after a reboot or an update. The notification is dropped as soon as
+ * [DeviceService] runs, since that service is already foreground and keeps the process alive.
+ */
 @AndroidEntryPoint
 class AutoConnectService : LifecycleService() {
     companion object {
         private const val TAG = "AutoConnectService"
+        private const val NOTIFICATION_ID = 1
+        const val NOTIFICATION_CHANNEL_ID = "com.oppzippy.openscq30.notification.AutoConnectChannel"
     }
 
     @Inject
@@ -55,6 +71,8 @@ class AutoConnectService : LifecycleService() {
             scope = lifecycleScope,
         )
         if (canReadConnectedDevices()) reconciler.start()
+        createNotificationChannel()
+        observeForegroundNeed()
     }
 
     override fun onDestroy() {
@@ -65,7 +83,55 @@ class AutoConnectService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        // A service started with startForegroundService must call startForeground, or Android kills it. Post the
+        // notification first and let updateForeground remove it again when nothing needs to be shown.
+        startForeground(NOTIFICATION_ID, buildNotification())
+        updateForeground()
         return START_STICKY
+    }
+
+    /**
+     * The notification is only needed while no device service runs, so it follows [shouldHoldForeground] rather than
+     * being posted once and kept. A refused start leaves the service in the background, which the caller handles.
+     */
+    private fun observeForegroundNeed() {
+        lifecycleScope.launch {
+            DeviceService.isRunning.collect { deviceServiceRunning ->
+                updateForeground(deviceServiceRunning)
+            }
+        }
+    }
+
+    private fun updateForeground(deviceServiceRunning: Boolean = DeviceService.isRunning.value) {
+        if (shouldHoldForeground(preferences.autoConnect, deviceServiceRunning)) {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
+    }
+
+    private fun buildNotification() = Notification.Builder(this, NOTIFICATION_CHANNEL_ID).setOngoing(true)
+        .setOnlyAlertOnce(true).setSmallIcon(R.drawable.openscq30_logo_foreground).setContentTitle(
+            getString(R.string.auto_connect_waiting_for_device),
+        ).setContentText(getString(R.string.auto_connect_waiting_for_device_description)).setContentIntent(
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        ).build()
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            getString(R.string.auto_connect_notification_channel),
+            NotificationManager.IMPORTANCE_LOW,
+        )
+        channel.enableVibration(false)
+        channel.enableLights(false)
+        channel.setSound(null, null)
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     private fun associatedAddresses(): List<String> =

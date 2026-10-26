@@ -1,12 +1,19 @@
 package com.oppzippy.openscq30.ui.settings
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
+import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.autoconnect.canEnableAutoConnect
+import com.oppzippy.openscq30.features.autoconnect.observeCompanionPresenceForAutoconnect
 import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
 import com.oppzippy.openscq30.features.autoconnect.stopAutoConnectService
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
@@ -36,14 +43,25 @@ class SettingsViewModel @Inject constructor(
     val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
 
     fun setAutoConnect(value: Boolean) {
+        if (value && !canEnableAutoConnect(Build.VERSION.SDK_INT, hasNotificationPermission())) {
+            // The autoconnect service needs a visible notification to run in the background, so promising it
+            // without the permission would leave the user with a switch that does nothing after a reboot.
+            toastHandler.add(R.string.auto_connect_requires_notifications, Toast.LENGTH_LONG)
+            return
+        }
         preferences.autoConnect = value
         // The value is already known here, so the helper must not re-read the preference it just wrote.
         if (value) {
+            observeCompanionPresenceForAutoconnect(context)
             startAutoConnectService(context)
         } else {
             stopAutoConnectService(context)
         }
     }
+
+    private fun hasNotificationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
 
     fun setTheme(theme: ThemeType?) {
         preferences.theme = theme

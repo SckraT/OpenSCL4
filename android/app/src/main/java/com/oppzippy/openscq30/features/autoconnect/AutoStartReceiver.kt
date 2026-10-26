@@ -10,9 +10,11 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 
 /**
- * Starts the autoconnect service when the device boots and when the package is replaced. Android refuses the start
- * while the process is in the background; the refusal is logged and `MainActivity.onResume` retries, see
- * [startAutoConnectServiceIfEnabled].
+ * Starts the autoconnect service when the device boots and when the package is replaced, and re-registers companion
+ * presence observation, which does not survive either event.
+ *
+ * The immediate start is best effort: Android may refuse it while the process is in the background. Presence
+ * observation is what makes autoconnect work afterwards, when the paired device appears.
  */
 class AutoStartReceiver : BroadcastReceiver() {
     companion object {
@@ -32,6 +34,8 @@ class AutoStartReceiver : BroadcastReceiver() {
         val preferences = EntryPointAccessors
             .fromApplication<AutoStartHiltEntryPoint>(applicationContext)
             .preferences()
-        startAutoConnectServiceIfEnabled(applicationContext, preferences)
+        if (!preferences.autoConnect) return
+        observeCompanionPresenceForAutoconnect(applicationContext)
+        startAutoConnectService(applicationContext)
     }
 }
