@@ -206,6 +206,9 @@ where
         let current_value = current_settings
             .get(&setting_id)
             .map(|s| Value::from(s.clone()));
+        let expected = current_settings
+            .get(&setting_id)
+            .map_or_else(|| requested.clone(), |s| read_back_form(s, &requested));
         let mut candidate_state = target_state.clone();
         match module_collection
             .setting_manager
@@ -265,9 +268,9 @@ where
             .get(&setting_id)
             .is_some_and(|setting| setting.mode().is_readable());
         let already_equal =
-            readable && current_value.as_ref() == Some(&requested) && target_value == requested;
+            readable && current_value.as_ref() == Some(&expected) && target_value == expected;
         if already_equal {
-            entries.push(Entry::applied(setting_id, requested));
+            entries.push(Entry::applied(setting_id, expected));
             continue;
         }
         if readable && current_value.as_ref() == Some(&target_value) {
@@ -288,6 +291,7 @@ where
         entries.push(Entry {
             setting_id,
             requested,
+            expected,
             flag,
             command_only: !is_flag && !target_is_readable,
             deadline: Instant::now() + timeout,
@@ -360,7 +364,7 @@ where
         for entry in &mut entries {
             if entry.outcome.is_none() {
                 entry.outcome = Some(WriteOutcome::Applied {
-                    observed: entry.requested.clone(),
+                    observed: entry.expected.clone(),
                 });
             }
         }
@@ -372,7 +376,7 @@ where
             // A command has no state to read back. Its acceptance is reported, but it publishes
             // nothing to the device state.
             entry.outcome = Some(WriteOutcome::Applied {
-                observed: entry.requested.clone(),
+                observed: entry.expected.clone(),
             });
         }
     }
@@ -431,6 +435,8 @@ where
 struct Entry {
     setting_id: SettingId,
     requested: Value,
+    /// [`Self::requested`] in the form the setting reads back, which confirmation compares and reports.
+    expected: Value,
     flag: Option<FlagPlan>,
     /// An action or import: sent to the device, but it has no value to read back.
     command_only: bool,
@@ -452,6 +458,7 @@ impl Entry {
         Self {
             setting_id,
             requested: Value::Bool(false),
+            expected: Value::Bool(false),
             flag: None,
             command_only: false,
             deadline: Instant::now(),
@@ -494,6 +501,20 @@ fn finish(entries: Vec<Entry>) -> Vec<SettingWriteOutcome> {
 
 fn is_command_only(setting: &Setting) -> bool {
     matches!(setting, Setting::Action | Setting::ImportString { .. })
+}
+
+/// Clients name the option of an optional select with a plain string (a custom equalizer profile accepts nothing
+/// else), but the setting reads back as an optional string. Compared directly, an applied option is never confirmed.
+fn read_back_form(setting: &Setting, requested: &Value) -> Value {
+    match (setting, requested) {
+        (
+            Setting::OptionalSelect { .. }
+            | Setting::PresetEqualizerProfileSelect { .. }
+            | Setting::ModifiableSelect { .. },
+            Value::String(name),
+        ) => Value::OptionalString(Some(name.clone())),
+        _ => requested.clone(),
+    }
 }
 
 fn local_error(setting_id: SettingId, error: SettingHandlerError) -> device::Error {
@@ -550,9 +571,9 @@ async fn verify_targeted<StateType>(
             TargetedRead::TimedOut => {}
             TargetedRead::Observed(observed) => {
                 saw_response = true;
-                if observed.as_ref() == Some(&entry.requested) {
+                if observed.as_ref() == Some(&entry.expected) {
                     return WriteOutcome::Applied {
-                        observed: entry.requested.clone(),
+                        observed: entry.expected.clone(),
                     };
                 }
                 last_observed = Some(observed);
@@ -614,9 +635,9 @@ async fn verify_bulk<StateType>(
                     .setting_manager
                     .get(&state, &entry.setting_id)
                     .map(Value::from);
-                if observed.as_ref() == Some(&entry.requested) {
+                if observed.as_ref() == Some(&entry.expected) {
                     entry.outcome = Some(WriteOutcome::Applied {
-                        observed: entry.requested.clone(),
+                        observed: entry.expected.clone(),
                     });
                 } else {
                     entry.last_observed = Some(observed);
@@ -672,9 +693,9 @@ async fn verify_bulk<StateType>(
         {
             continue;
         }
-        if entry.last_observed.as_ref() == Some(&Some(entry.requested.clone())) {
+        if entry.last_observed.as_ref() == Some(&Some(entry.expected.clone())) {
             entry.outcome = Some(WriteOutcome::Applied {
-                observed: entry.requested.clone(),
+                observed: entry.expected.clone(),
             });
         } else if saw_response {
             entry.outcome = Some(WriteOutcome::Rejected {
@@ -739,7 +760,11 @@ mod tests {
         auto_power_off: AutoPowerOff,
         unverifiable_after_change: bool,
         battery_level: u8,
+        /// Index into [`PROFILES`].
+        profile: Option<usize>,
     }
+
+    const PROFILES: [&str; 2] = ["Bass", "Treble"];
 
     macro_rules! has {
         ($field:ident, $ty:ty) => {
@@ -781,6 +806,42 @@ mod tests {
             _value: Value,
         ) -> SettingHandlerResult<()> {
             state.unverifiable_after_change = true;
+            Ok(())
+        }
+    }
+
+    /// Like the custom equalizer profile: an option is requested by its name and reads back as an optional name.
+    struct ProfileSettingHandler;
+
+    #[async_trait]
+    impl SettingHandler<TestState> for ProfileSettingHandler {
+        fn settings(&self) -> Vec<SettingId> {
+            vec![SettingId::CustomEqualizerProfile]
+        }
+
+        fn get(&self, state: &TestState, _setting_id: &SettingId) -> Option<Setting> {
+            Some(Setting::ModifiableSelect {
+                setting: crate::api::settings::Select {
+                    options: PROFILES.iter().map(|name| (*name).into()).collect(),
+                    localized_options: PROFILES.iter().map(ToString::to_string).collect(),
+                },
+                value: state
+                    .profile
+                    .and_then(|index| PROFILES.get(index))
+                    .map(|name| (*name).into()),
+            })
+        }
+
+        async fn set(
+            &self,
+            state: &mut TestState,
+            _setting_id: &SettingId,
+            value: Value,
+        ) -> SettingHandlerResult<()> {
+            let name = value.try_as_str()?;
+            if let Some(index) = PROFILES.iter().position(|profile| *profile == name) {
+                state.profile = Some(index);
+            }
             Ok(())
         }
     }
@@ -845,12 +906,18 @@ mod tests {
             else {
                 return Ok(());
             };
-            let auto_power_off = match rest {
-                [enabled, duration] => Some(AutoPowerOff {
-                    is_enabled: *enabled == 1,
-                    duration: AutoPowerOffDurationIndex(*duration),
-                }),
-                _ => None,
+            let (auto_power_off, profile) = match rest {
+                [enabled, duration, profile @ ..] => (
+                    Some(AutoPowerOff {
+                        is_enabled: *enabled == 1,
+                        duration: AutoPowerOffDurationIndex(*duration),
+                    }),
+                    // zero is no profile, otherwise the index plus one
+                    profile
+                        .first()
+                        .map(|profile| usize::from(*profile).checked_sub(1)),
+                ),
+                _ => (None, None),
             };
             state.send_modify(|state| {
                 state.ldac.0 = *ldac == 1;
@@ -859,6 +926,9 @@ mod tests {
                 state.touch_tone.0 = *touch_tone == 1;
                 if let Some(auto_power_off) = auto_power_off {
                     state.auto_power_off = auto_power_off;
+                }
+                if let Some(profile) = profile {
+                    state.profile = profile;
                 }
             });
             Ok(())
@@ -932,6 +1002,9 @@ mod tests {
                 .setting_manager
                 .add_handler(CategoryId::Miscellaneous, UnverifiableSettingHandler);
             modules
+                .setting_manager
+                .add_handler(CategoryId::Equalizer, ProfileSettingHandler);
+            modules
                 .packet_handlers
                 .set_handler(packet::inbound::STATE_COMMAND, Box::new(BulkStateHandler));
             modules
@@ -969,6 +1042,15 @@ mod tests {
                     .set_setting_values(&state_sender, &packet_io, values)
                     .await
             })
+        }
+
+        async fn demo_write(
+            &self,
+            values: Vec<(SettingId, Value)>,
+        ) -> device::Result<Vec<SettingWriteOutcome>> {
+            self.modules
+                .set_setting_values_demo(&self.state_sender, &self.packet_io, values)
+                .await
         }
 
         async fn next_packet(&mut self) -> packet::Outbound {
@@ -1487,6 +1569,85 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_option_requested_by_name_is_applied_when_the_read_back_selects_it() {
+        let mut harness = Harness::new(TestState::default()).await;
+        let write = harness.spawn_write(vec![(
+            SettingId::CustomEqualizerProfile,
+            Value::String("Treble".into()),
+        )]);
+
+        let get = harness.next_packet().await;
+        assert_eq!(packet::inbound::STATE_COMMAND, get.command);
+        harness
+            .respond(get.command, vec![0, 0, 0, 0, 0, 0, 2])
+            .await;
+
+        let outcomes = write.await.unwrap().unwrap();
+        assert_eq!(
+            WriteOutcome::Applied {
+                observed: Value::OptionalString(Some("Treble".into()))
+            },
+            outcomes[0].outcome
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_option_that_is_already_selected_is_applied_without_a_write() {
+        let mut harness = Harness::new(TestState {
+            profile: Some(1),
+            ..Default::default()
+        })
+        .await;
+
+        let outcomes = harness
+            .spawn_write(vec![(
+                SettingId::CustomEqualizerProfile,
+                Value::String("Treble".into()),
+            )])
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            WriteOutcome::Applied {
+                observed: Value::OptionalString(Some("Treble".into()))
+            },
+            outcomes[0].outcome
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_demo_write_reports_the_value_the_setting_reads_back() {
+        let harness = Harness::new(TestState::default()).await;
+
+        let outcomes = harness
+            .demo_write(vec![(
+                SettingId::CustomEqualizerProfile,
+                Value::String("Treble".into()),
+            )])
+            .await
+            .unwrap();
+
+        let observed = Value::from(
+            harness
+                .modules
+                .setting_manager
+                .get(
+                    &harness.state_sender.borrow(),
+                    &SettingId::CustomEqualizerProfile,
+                )
+                .unwrap(),
+        );
+        assert_eq!(Value::OptionalString(Some("Treble".into())), observed);
+        assert_eq!(WriteOutcome::Applied { observed }, outcomes[0].outcome);
     }
 
     #[tokio::test(start_paused = true)]

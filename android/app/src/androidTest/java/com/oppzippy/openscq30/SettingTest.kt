@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -86,13 +87,16 @@ class SettingTest : OpenSCQ30RootTestBase() {
         composeRule.onNodeWithText(getString(R.string.sound_profile_save_short)).performClick()
         val replace = composeRule.onAllNodes(hasText(getString(R.string.sound_profile_replace)) and hasClickAction())
         if (replace.fetchSemanticsNodes().isNotEmpty()) replace[0].performClick()
-        waitForNode(hasText(name))
+        // the profile shows up before the device has answered the save, which keeps the list locked until it does
+        waitForNode(hasText(name) and hasClickAction() and isEnabled())
         composeRule.onNodeWithText(name).performScrollTo().assertExists()
     }
 
     private fun deleteEqualizerProfile(name: String) {
-        composeRule.onNodeWithContentDescription(getString(R.string.sound_profile_more_named, name))
-            .performScrollTo().performClick()
+        // the saved profiles stay locked while the device confirms the profile that was just applied
+        val menu = hasContentDescription(getString(R.string.sound_profile_more_named, name)) and isEnabled()
+        waitForNode(menu)
+        composeRule.onNode(menu).performScrollTo().performClick()
         composeRule.onNodeWithText(getString(R.string.delete)).performClick()
         composeRule.onNode(hasText(getString(R.string.delete)) and hasAnyAncestor(isDialog())).performClick()
         composeRule.waitUntil(uiTimeoutMillis()) {
