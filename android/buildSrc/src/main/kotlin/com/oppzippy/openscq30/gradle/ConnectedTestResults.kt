@@ -29,6 +29,5 @@ fun requireConnectedTestsRan(resultsDir: File) {
     }
 }
 
-private fun testCount(result: File): Int =
-    DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(result)
-        .documentElement.getAttribute("tests").toInt()
+private fun testCount(result: File): Int = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(result)
+    .documentElement.getAttribute("tests").toInt()
