@@ -16,13 +16,13 @@ import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.bindings.SettingIdValuePair
 import com.oppzippy.openscq30.lib.bindings.SettingWriteOutcome
 import com.oppzippy.openscq30.lib.bindings.WriteOutcome
-import com.oppzippy.openscq30.lib.wrapper.ModifiableSelectCommandInner
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.sound.profilesJson
+import com.oppzippy.openscq30.ui.sound.toTransferProfile
 import com.oppzippy.openscq30.ui.utils.ToastHandler
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -326,36 +326,16 @@ class DeviceSettingsManager(
     val legacyEqualizerProfilesFlow = legacyEqualizerProfileDao.all()
 
     /**
-     * Saves old profiles as custom profiles of this device. They are moved one after another, since each one briefly
-     * puts its values on the device and then the old values back.
+     * Saves old profiles as custom profiles of this device by importing them, so the device keeps its sound. Saving
+     * the device's curve under each name would not work: the library keeps only the last value of each setting in a
+     * batch, so putting the old values on the device, saving and restoring them would save the current curve.
      */
     fun migrateLegacyEqualizerProfiles(legacyEqualizerProfiles: List<LegacyEqualizerProfile>) {
+        if (legacyEqualizerProfiles.isEmpty()) return
         coroutineScope.launch {
-            for (legacyEqualizerProfile in legacyEqualizerProfiles) {
-                val oldVolumeAdjustments = device.setting("volumeAdjustments")
-                if (oldVolumeAdjustments !is Setting.EqualizerSetting) return@launch
-                try {
-                    device.setSettingValues(
-                        listOf(
-                            SettingIdValuePair(
-                                "volumeAdjustments",
-                                legacyEqualizerProfile.getVolumeAdjustments().map { (it * 10.0).roundToInt().toShort() }
-                                    .toValue(),
-                            ),
-                            SettingIdValuePair(
-                                "customEqualizerProfile",
-                                Value.ModifiableSelectCommand(
-                                    ModifiableSelectCommandInner.Add(legacyEqualizerProfile.name),
-                                ),
-                            ),
-                            SettingIdValuePair("volumeAdjustments", oldVolumeAdjustments.toValue()),
-                        ),
-                    )
-                } catch (ex: OpenScq30Exception) {
-                    Log.e(TAG, "error migrating legacy equalizer profile", ex)
-                    toastHandler.add(R.string.error_migrating_legacy_profile, Toast.LENGTH_SHORT)
-                    return@launch
-                }
+            val json = profilesJson(legacyEqualizerProfiles.map { it.toTransferProfile() })
+            setSettingValueForResult("importCustomEqualizerProfiles", json.toValue()).onFailure {
+                toastHandler.add(R.string.error_migrating_legacy_profile, Toast.LENGTH_SHORT)
             }
         }
     }
