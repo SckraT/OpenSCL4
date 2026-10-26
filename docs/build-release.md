@@ -57,7 +57,7 @@ For signed CI builds, configure repository Actions secrets `OPENSCL4_KEYSTORE_BA
 
 ## CI and verification
 
-The `OpenSCL4 release builds` workflow supports manual preview runs and `v*` tags. All platform jobs check out the source job's exact commit. Its Linux package checks install/remove the `.deb` on Ubuntu 24.04 and 26.04, exercise X11 and nested Wayland, and test closing without a tray. These checks do not replace GNOME/KDE session and real-headphone QA. Failed jobs block assembling the complete preview bundle; successful individual jobs retain their artifacts.
+The `OpenSCL4 release builds` workflow supports manual preview runs and `v*` tags. A manual run with `platforms: linux` builds and checks only the Linux packages, without the complete bundle; [the Linux guide](build-linux.md#development-and-packaging) shows the commands. All platform jobs check out the source job's exact commit. Its Linux package checks install/remove the `.deb` on Ubuntu 24.04 and 26.04, exercise X11 and nested Wayland, and test closing without a tray. These checks do not replace GNOME/KDE session and real-headphone QA. Failed jobs block assembling the complete preview bundle; successful individual jobs retain their artifacts.
 
 Download the platform packages and all six build reports into one output directory. Verify an unsigned or otherwise preliminary complete set with:
 

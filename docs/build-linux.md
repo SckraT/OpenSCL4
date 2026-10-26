@@ -27,6 +27,13 @@ python3 scripts/release.py build linux
 
 The last command produces `openscl4_VERSION_amd64.deb`, `openscl4-VERSION-linux-x86_64.tar.gz`, and `build-linux.json` in `build-output/`. The tarball contains the same staged application files as the Debian package; it is not an AppImage or a distribution-independent runtime. Use `--allow-dirty` only for a source preview.
 
+Without an Ubuntu 24.04 host, build the same files in CI from a pushed branch. The `linux` platforms choice skips Windows, Android and the preview bundle, and still runs the package checks below:
+
+```sh
+gh workflow run build.yml --repo SckraT/OpenSCL4 --ref BRANCH -f platforms=linux
+gh run download RUN_ID --repo SckraT/OpenSCL4 --name release-linux
+```
+
 ## Install and run
 
 Once a matching package is available:
