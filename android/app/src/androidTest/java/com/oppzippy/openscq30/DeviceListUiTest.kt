@@ -1,6 +1,5 @@
 package com.oppzippy.openscq30
 
-import androidx.activity.compose.setContent
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import com.oppzippy.openscq30.features.phonelink.BluetoothAccess
@@ -25,9 +24,10 @@ class DeviceListUiTest : EmptyActivityTestBase() {
         show(
             DeviceListPresenter.present(
                 devices = listOf(controlled, linked),
+                // an app session alone leaves the link unconfirmed, so the controlled device is seen by a scan too
                 phoneLink = PhoneLinkSignals(
                     access = BluetoothAccess.Ready,
-                    profileAddresses = setOf(linked.macAddress),
+                    profileAddresses = setOf(controlled.macAddress, linked.macAddress),
                 ),
                 appControl = AppControlSnapshot(controlled.macAddress, AppControl.Controlling),
             ),
@@ -63,11 +63,11 @@ class DeviceListUiTest : EmptyActivityTestBase() {
     }
 
     private fun show(state: com.oppzippy.openscq30.ui.deviceselection.DeviceListState) {
-        composeRule.activity.setContent {
+        // the rule sets the content on the main thread and waits for it to settle
+        composeRule.setContent {
             OpenSCQ30Theme(dynamicColor = false) {
                 DeviceListingScreen(state = state)
             }
         }
-        composeRule.waitForIdle()
     }
 }
