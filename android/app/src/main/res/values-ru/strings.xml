@@ -26,6 +26,11 @@
     <string name="awaiting_connection">Ожидание подключения</string>
     <string name="quick_presets">Быстрые пресеты</string>
     <string name="auto_connect">Автоподключение</string>
+    <string name="auto_connect_waiting_for_device">Ожидание устройства</string>
+    <string name="auto_connect_waiting_for_device_description">Автоподключение включено: устройство подключится, когда окажется рядом.</string>
+    <string name="auto_connect_notification_channel">Автоподключение</string>
+    <string name="auto_connect_requires_notifications">Автоподключению нужен доступ к уведомлениям, чтобы работать после перезагрузки. Разрешите уведомления, а затем включите его.</string>
+    <string name="auto_connect_turned_off_without_notifications">Автоподключение выключено: приложению запрещены уведомления. Разрешите уведомления и включите его снова.</string>
     <string name="settings">Настройки</string>
     <string name="unpair_device">Забыть устройство</string>
     <string name="unpairing_from_device_name">Удаление %s</string>

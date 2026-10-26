@@ -158,4 +158,22 @@ class AutoConnectCoordinatorTest {
 
         assertEquals(emptyList<String>(), dispatched)
     }
+
+    @Test
+    fun profileReportDoesNotStartADeviceTheReconcileStarted() = runTest {
+        val coordinator = coordinator()
+
+        coordinator.reconcileConnectedDevices(listOf("AA:BB:CC:DD:EE:FF"))
+        coordinator.handleConnectedProfile("aa:bb:cc:dd:ee:ff")
+
+        assertEquals(listOf("AA:BB:CC:DD:EE:FF"), dispatched)
+    }
+
+    @Test
+    fun profileReportUsesTheSameEligibilityRuleAsReconciliation() = runTest {
+        coordinator(saved = listOf(PairedDevice("AA:BB:CC:DD:EE:FF", "demo", true)))
+            .handleConnectedProfile("AA:BB:CC:DD:EE:FF")
+
+        assertEquals(emptyList<String>(), dispatched)
+    }
 }

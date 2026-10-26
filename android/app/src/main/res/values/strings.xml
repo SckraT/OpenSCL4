@@ -47,6 +47,11 @@
     <string name="awaiting_connection">Awaiting Connection</string>
     <string name="quick_presets">Quick Presets</string>
     <string name="auto_connect">Auto Connect</string>
+    <string name="auto_connect_waiting_for_device">Waiting for a device</string>
+    <string name="auto_connect_waiting_for_device_description">Auto Connect is on and connects when your device is nearby.</string>
+    <string name="auto_connect_notification_channel">Auto Connect</string>
+    <string name="auto_connect_requires_notifications">Auto Connect needs notification permission to work after a restart. Allow notifications, then turn it on.</string>
+    <string name="auto_connect_turned_off_without_notifications">Auto Connect was turned off because notifications are not allowed. Allow notifications, then turn it back on.</string>
     <string name="settings">Settings</string>
     <string name="unpair_device">Unpair Device</string>
     <string name="unpairing_from_device_name">Unpairing From %s</string>

@@ -7,7 +7,10 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
-import com.oppzippy.openscq30.features.autoconnect.startAutoConnectService
+import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.autoconnect.canEnableAutoConnect
+import com.oppzippy.openscq30.features.autoconnect.observeCompanionPresenceForAutoconnect
+import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
 import com.oppzippy.openscq30.features.autoconnect.stopAutoConnectService
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
@@ -36,10 +39,16 @@ class SettingsViewModel @Inject constructor(
     val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
 
     fun setAutoConnect(value: Boolean) {
+        if (value && !canEnableAutoConnect(context)) {
+            // The autoconnect service is a foreground service, and without the permission its notification would be
+            // hidden, so the switch would promise background work the user cannot see or stop.
+            toastHandler.add(R.string.auto_connect_requires_notifications, Toast.LENGTH_LONG)
+            return
+        }
         preferences.autoConnect = value
-        // The value is already known here, so the helper must not re-read the preference it just wrote.
         if (value) {
-            startAutoConnectService(context)
+            observeCompanionPresenceForAutoconnect(context)
+            startAutoConnectServiceIfEnabled(context, preferences)
         } else {
             stopAutoConnectService(context)
         }

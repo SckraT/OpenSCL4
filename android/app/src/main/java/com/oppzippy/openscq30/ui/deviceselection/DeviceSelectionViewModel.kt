@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.oppzippy.openscq30.MainActivity
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.autoconnect.observeCompanionPresenceForAutoconnect
 import com.oppzippy.openscq30.features.phonelink.AndroidPhoneLinkMonitor
 import com.oppzippy.openscq30.features.phonelink.BluetoothAccess
 import com.oppzippy.openscq30.features.preferences.Preferences
@@ -142,6 +143,21 @@ class DeviceSelectionViewModel @Inject constructor(
         onPaired()
     }
 
+    /**
+     * Common tail of both association callbacks: record the pairing and make sure a device that was paired while
+     * autoconnect was already on starts being observed for presence, which nothing else would do for it.
+     */
+    private fun onDevicePaired(pairedDevice: PairedDevice, onPaired: () -> Unit) {
+        viewModelScope.launch {
+            session.pair(pairedDevice)
+            refreshPairedDevices()
+            if (preferences.autoConnect) {
+                observeCompanionPresenceForAutoconnect(application)
+            }
+            onPaired()
+        }
+    }
+
     private fun pairReal(activity: Activity, pairedDevice: PairedDevice, onPaired: () -> Unit) {
         val pairingRequest = AssociationRequest.Builder()
             .apply {
@@ -165,21 +181,13 @@ class DeviceSelectionViewModel @Inject constructor(
                     ),
                 )
                 override fun onAssociationCreated(associationInfo: AssociationInfo) {
-                    viewModelScope.launch {
-                        session.pair(pairedDevice)
-                        refreshPairedDevices()
-                        onPaired()
-                    }
+                    onDevicePaired(pairedDevice, onPaired)
                 }
 
                 @Deprecated("Deprecated in Java")
                 override fun onDeviceFound(intentSender: IntentSender) {
                     MainActivity.onPaired = {
-                        viewModelScope.launch {
-                            session.pair(pairedDevice)
-                            refreshPairedDevices()
-                            onPaired()
-                        }
+                        onDevicePaired(pairedDevice, onPaired)
                     }
                     activity.startIntentSenderForResult(
                         intentSender,

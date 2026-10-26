@@ -11,7 +11,7 @@ internal class AutoConnectCoordinator(
     private val savedDevices: suspend () -> List<PairedDevice>,
     private val connect: (String) -> Unit,
 ) {
-    // Devices this coordinator has started, by canonical address; the start reconcile skips them.
+    // Devices this coordinator has started, by canonical address; the start reconcile and profile reports skip them.
     private val startedAddresses = mutableSetOf<String>()
 
     /** Connects a device on its ACL broadcast, also when it was started before: the broadcast means it reconnected. */
@@ -21,6 +21,15 @@ internal class AutoConnectCoordinator(
         if (!isAutoConnectEnabled()) return
         start(macAddress)
     }
+
+    /**
+     * Connects a device whose A2DP or HEADSET profile connected, unless it was started already.
+     *
+     * This continues the start reconcile for a device whose profiles came up after it read them, which is what happens
+     * when a presence event starts the service before the profiles connect. It never starts a device twice: the
+     * profiles of a device that its ACL broadcast started connect right after it.
+     */
+    suspend fun handleConnectedProfile(macAddress: String) = reconcileConnectedDevices(listOf(macAddress))
 
     /**
      * Connects devices that were already connected when autoconnect started. Each profile reports separately and a

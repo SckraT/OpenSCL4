@@ -91,6 +91,11 @@ class DeviceService : LifecycleService() {
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
 
+        // A running service is not a connected one: autoconnect needs to tell the two apart to know when to hand
+        // its foreground notification over.
+        private val _isConnected = MutableStateFlow(false)
+        val isConnected = _isConnected.asStateFlow()
+
         // the connected device's LDAC setting and whether it can be changed, or null without a device that has one
         private val _ldacState = MutableStateFlow<LdacTileState?>(null)
         val ldacState = _ldacState.asStateFlow()
@@ -390,6 +395,9 @@ class DeviceService : LifecycleService() {
             }
         }
 
+        lifecycleScope.launch {
+            connectionStatusFlow.collect { _isConnected.value = it is ConnectionStatus.Connected }
+        }
         _isRunning.value = true
     }
 

@@ -6,12 +6,14 @@ import android.content.res.Resources
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
+import com.oppzippy.openscq30.features.autoconnect.turnOffAutoConnectWithoutNotifications
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.ui.OpenSCQ30Root
@@ -75,6 +77,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (turnOffAutoConnectWithoutNotifications(applicationContext, preferences)) {
+            Toast.makeText(this, R.string.auto_connect_turned_off_without_notifications, Toast.LENGTH_LONG).show()
+        }
         // Retries a start that Android refused while the process was in the background; the surviving process does
         // not run OpenSCQ30Application.onCreate again when the app is reopened.
         startAutoConnectServiceIfEnabled(applicationContext, preferences)
