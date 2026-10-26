@@ -299,7 +299,8 @@ mod tests {
     }
 }
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(test)]
+#[cfg(target_os = "linux")]
 mod bus_tests {
     use std::{
         sync::{
