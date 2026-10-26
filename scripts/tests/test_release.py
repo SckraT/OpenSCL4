@@ -140,57 +140,120 @@ class ReleaseVerificationTest(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "exactly one signing certificate"):
                 release.android_certificate(self.output / "app.apk")
 
-    def _apk_fixture(self, abi: str) -> Path:
+    def _android_build_fixture(self, abi: str, *, signed: bool) -> None:
+        """Lay out what build_android reads, relative to a patched ROOT."""
+        (self.output / "Cargo.toml").write_text(
+            f'[workspace.package]\nversion = "{release.version()}"\n',
+        )
         apk_dir = self.output / f"android/app/build/outputs/apk/{abi}/release"
         apk_dir.mkdir(parents=True, exist_ok=True)
-        apk = apk_dir / f"openscl4-{release.version()}-android-{abi}.apk"
+        suffix = "" if signed else "-unsigned"
+        apk = apk_dir / f"openscl4-{release.version()}-android-{abi}{suffix}.apk"
         apk.write_bytes(b"apk")
         (apk_dir / "output-metadata.json").write_text(json.dumps({
             "applicationId": release.APP_ID,
             "elements": [{"versionName": release.version(), "outputFile": apk.name}],
         }))
-        return apk
 
     def test_android_build_asks_gradle_for_the_abi_release_task(self) -> None:
-        self._apk_fixture("arm64-v8a")
+        self._android_build_fixture("arm64-v8a", signed=True)
 
-        with patch.object(release.sys, "platform", "linux"), patch.object(release, "run") as run:
-            release.build_android(self.output, "arm64-v8a", unsigned=False)
+        with patch.object(release.sys, "platform", "linux"), patch.object(
+            release, "ROOT", self.output,
+        ), patch.object(release, "run") as run:
+            artifacts = release.build_android(self.output, "arm64-v8a", unsigned=False)
 
         self.assertEqual(
             ["./gradlew", "assembleArm64-v8aRelease", "-Popenscl4Unsigned=false"],
             run.call_args_list[0].args[0],
         )
+        self.assertEqual(self.output / f"openscl4-{release.version()}-android-arm64-v8a.apk", artifacts[0])
 
-    def test_windows_batch_commands_run_through_the_command_interpreter(self) -> None:
-        # .bat and .cmd are not executable images, so they need an explicit interpreter.
+    def test_android_build_rejects_a_mis_signed_apk(self) -> None:
+        self._android_build_fixture("arm64-v8a", signed=False)
+
+        with patch.object(release.sys, "platform", "linux"), patch.object(
+            release, "ROOT", self.output,
+        ), patch.object(release, "run"):
+            with self.assertRaisesRegex(ValueError, "signing state"):
+                release.build_android(self.output, "arm64-v8a", unsigned=False)
+
+    def test_windows_resolves_a_bare_executable_against_its_working_directory(self) -> None:
+        # Windows searches PATH for a bare name, not cwd, so the wrapper in android/ would never be found.
         completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
-        for name in ("gradlew.bat", "apksigner.bat", "tool.CMD"):
-            with self.subTest(name=name), patch.object(
+        (self.output / "gradlew.bat").write_bytes(b"")
+
+        with patch.object(release.sys, "platform", "win32"), patch.object(
+            release.subprocess, "run", return_value=completed,
+        ) as run:
+            release.run(["gradlew.bat", "--version"], cwd=self.output)
+
+        self.assertEqual(
+            [str(self.output / "gradlew.bat"), "--version"],
+            run.call_args.args[0],
+        )
+
+    def test_windows_leaves_absolute_and_path_lookup_commands_alone(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
+        (self.output / "tool.bat").write_bytes(b"")
+        absolute = str(self.output / "tool.bat")
+
+        for command in (["cargo", "build"], [absolute, "verify"], ["./gradlew", "build"]):
+            with self.subTest(command=command), patch.object(
                 release.sys, "platform", "win32",
             ), patch.object(release.subprocess, "run", return_value=completed) as run:
-                release.run([name, "--version"])
+                release.run(command, cwd=self.output)
 
-            self.assertEqual(["cmd", "/c", name, "--version"], run.call_args.args[0])
+            self.assertEqual(command, run.call_args.args[0])
 
-    def test_non_batch_commands_are_started_directly_on_windows(self) -> None:
+    def test_other_platforms_start_the_wrapper_as_given(self) -> None:
         completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
-        for name in ("gradlew", "cargo", "git"):
-            with self.subTest(name=name), patch.object(
-                release.sys, "platform", "win32",
-            ), patch.object(release.subprocess, "run", return_value=completed) as run:
-                release.run([name, "--version"])
+        (self.output / "tool.bat").write_bytes(b"")
 
-            self.assertEqual([name, "--version"], run.call_args.args[0])
-
-    def test_batch_commands_are_started_directly_off_windows(self) -> None:
-        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
         with patch.object(release.sys, "platform", "linux"), patch.object(
             release.subprocess, "run", return_value=completed,
         ) as run:
-            release.run(["./gradlew", "assembleArm64-v8aRelease"])
+            release.run(["tool.bat", "build"], cwd=self.output)
 
-        self.assertEqual(["./gradlew", "assembleArm64-v8aRelease"], run.call_args.args[0])
+        self.assertEqual(["tool.bat", "build"], run.call_args.args[0])
+
+    def test_windows_resolution_keeps_a_path_with_spaces_intact(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
+        spaced = self.output / "dir with space"
+        spaced.mkdir(exist_ok=True)
+        (spaced / "tool.bat").write_bytes(b"")
+
+        with patch.object(release.sys, "platform", "win32"), patch.object(
+            release.subprocess, "run", return_value=completed,
+        ) as run:
+            release.run(["tool.bat", "verify", "--print-certs", "app.apk"], cwd=spaced)
+
+        # A single argv entry, so the space cannot split the executable path.
+        self.assertEqual(
+            [str(spaced / "tool.bat"), "verify", "--print-certs", "app.apk"],
+            run.call_args.args[0],
+        )
+
+    def test_capture_returns_trimmed_stdout_for_a_batch_command(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="  gradle 9.8.1  \n")
+        (self.output / "gradlew.bat").write_bytes(b"")
+
+        with patch.object(release.sys, "platform", "win32"), patch.object(
+            release.subprocess, "run", return_value=completed,
+        ):
+            self.assertEqual("gradle 9.8.1", release.run(["gradlew.bat", "--version"], cwd=self.output, capture=True))
+
+    def test_a_failing_batch_command_raises_with_its_exit_code(self) -> None:
+        (self.output / "gradlew.bat").write_bytes(b"")
+        failed = subprocess.CalledProcessError(7, "gradlew.bat")
+
+        with patch.object(release.sys, "platform", "win32"), patch.object(
+            release.subprocess, "run", side_effect=failed,
+        ):
+            with self.assertRaises(subprocess.CalledProcessError) as raised:
+                release.run(["gradlew.bat", "build"], cwd=self.output)
+
+        self.assertEqual(7, raised.exception.returncode)
 
     def test_stable_requires_real_device_evidence_for_this_revision(self) -> None:
         with self.assertRaisesRegex(ValueError, "linux-evidence"):
