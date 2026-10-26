@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -139,6 +140,58 @@ class ReleaseVerificationTest(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "exactly one signing certificate"):
                 release.android_certificate(self.output / "app.apk")
 
+    def _apk_fixture(self, abi: str) -> Path:
+        apk_dir = self.output / f"android/app/build/outputs/apk/{abi}/release"
+        apk_dir.mkdir(parents=True, exist_ok=True)
+        apk = apk_dir / f"openscl4-{release.version()}-android-{abi}.apk"
+        apk.write_bytes(b"apk")
+        (apk_dir / "output-metadata.json").write_text(json.dumps({
+            "applicationId": release.APP_ID,
+            "elements": [{"versionName": release.version(), "outputFile": apk.name}],
+        }))
+        return apk
+
+    def test_android_build_asks_gradle_for_the_abi_release_task(self) -> None:
+        self._apk_fixture("arm64-v8a")
+
+        with patch.object(release.sys, "platform", "linux"), patch.object(release, "run") as run:
+            release.build_android(self.output, "arm64-v8a", unsigned=False)
+
+        self.assertEqual(
+            ["./gradlew", "assembleArm64-v8aRelease", "-Popenscl4Unsigned=false"],
+            run.call_args_list[0].args[0],
+        )
+
+    def test_windows_batch_commands_run_through_the_command_interpreter(self) -> None:
+        # .bat and .cmd are not executable images, so they need an explicit interpreter.
+        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
+        for name in ("gradlew.bat", "apksigner.bat", "tool.CMD"):
+            with self.subTest(name=name), patch.object(
+                release.sys, "platform", "win32",
+            ), patch.object(release.subprocess, "run", return_value=completed) as run:
+                release.run([name, "--version"])
+
+            self.assertEqual(["cmd", "/c", name, "--version"], run.call_args.args[0])
+
+    def test_non_batch_commands_are_started_directly_on_windows(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
+        for name in ("gradlew", "cargo", "git"):
+            with self.subTest(name=name), patch.object(
+                release.sys, "platform", "win32",
+            ), patch.object(release.subprocess, "run", return_value=completed) as run:
+                release.run([name, "--version"])
+
+            self.assertEqual([name, "--version"], run.call_args.args[0])
+
+    def test_batch_commands_are_started_directly_off_windows(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="ok\n")
+        with patch.object(release.sys, "platform", "linux"), patch.object(
+            release.subprocess, "run", return_value=completed,
+        ) as run:
+            release.run(["./gradlew", "assembleArm64-v8aRelease"])
+
+        self.assertEqual(["./gradlew", "assembleArm64-v8aRelease"], run.call_args.args[0])
+
     def test_stable_requires_real_device_evidence_for_this_revision(self) -> None:
         with self.assertRaisesRegex(ValueError, "linux-evidence"):
             release.verify(self.output, None)
@@ -171,3 +224,4 @@ class ReleaseVerificationTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

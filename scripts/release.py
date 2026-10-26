@@ -62,6 +62,9 @@ def target_directory() -> Path:
 
 
 def run(args: list[str], *, cwd: Path = ROOT, capture: bool = False) -> str:
+    # Windows cannot execute .bat/.cmd images directly, so run them through the command interpreter.
+    if sys.platform == "win32" and Path(args[0]).suffix.lower() in {".bat", ".cmd"}:
+        args = ["cmd", "/c", *args]
     result = subprocess.run(args, cwd=cwd, check=True, text=True, capture_output=capture)
     return result.stdout.strip() if capture else ""
 
