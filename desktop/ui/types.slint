@@ -27,6 +27,9 @@ export enum FailureKind { none, not-found, timed-out, other }
 // short messages at the bottom of the window; some say how many with AppState.toast-count
 export enum ToastKind { none, copied, profile-saved, profile-deleted, file-saved, imported, migrated, preset-applied, preset-deleted, preset-replaced, preset-loaded }
 
+// a page of the system's own settings
+export enum SystemPage { bluetooth, sound }
+
 // what the import and export panel last did
 export enum TransferNote { none, file-saved, file-save-failed, not-profiles, clipboard-empty, too-large, read-failed, imported }
 
@@ -317,6 +320,9 @@ export global AppState {
     // the system's language, then every language by its own name
     in property <[string]> language-names;
     in property <string> app-version;
+    // the system the window runs on, for wording, and whether it has settings pages to open
+    in property <bool> linux;
+    in property <bool> system-settings-available;
 
     // what the asides of the section pages show
     in property <bool> has-ldac;
@@ -349,6 +355,7 @@ export global Actions {
     callback retry();
     callback dismiss-error();
     callback open-uri(string);
+    callback open-system-settings(SystemPage);
     callback set-toggle(string, bool);
     callback set-option(string, int);
     callback set-number(string, int);
@@ -390,8 +397,8 @@ export global Actions {
     callback preset-toggle(string, string, bool);
     callback preset-load(string);
     callback preset-delete(string);
-    // the app's settings: as in Windows, light, dark; purple, sage, rose; as the theme, silver, black;
-    // tiles, the scale; as in Windows, Russian, English
+    // the app's settings: as in the system, light, dark; purple, sage, rose; as the theme, silver, black;
+    // tiles, the scale; as in the system, Russian, English
     callback set-app-theme(int);
     callback set-palette(int);
     callback set-device-color(int);

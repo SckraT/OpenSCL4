@@ -15,6 +15,7 @@ mod overview;
 mod presets;
 mod rows;
 mod single_instance;
+mod system_settings;
 mod view;
 mod window_chrome;
 

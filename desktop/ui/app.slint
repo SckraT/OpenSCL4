@@ -16,7 +16,7 @@ import { PresetsPage, CreatePresetDialog, PresetEditorDialog, LoadPresetDialog, 
 
 export { Tray } from "tray.slint";
 export { Theme, PaletteChoice, AppState, Actions, Page, Connection, FailureKind, DeviceCard, ModelOption, PairedOption, Strings }
-export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem, EqBand, EqLine, EqProfile, ImportItem, TransferNote, PresetCard, PresetFieldRow, PresetGroup } from "types.slint";
+export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, BlockKind, Battery, QuickToggle, OverviewBlockData, OverviewRow, LayoutBlock, PresetItem, EqBand, EqLine, EqProfile, ImportItem, TransferNote, PresetCard, PresetFieldRow, PresetGroup, SystemPage } from "types.slint";
 
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings

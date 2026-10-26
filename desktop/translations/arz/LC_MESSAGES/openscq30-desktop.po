@@ -217,6 +217,9 @@ msgstr "اتأكد إن السماعة الخارجية قريبة ومتصلة 
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "شغّل البلوتوث من إعدادات Windows وجرّب تتصل تاني."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "شغّل البلوتوث من إعدادات النظام وجرّب تتصل تاني."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "اتصل علشان تشوف البطارية وتغيّر الإعدادات."
 
@@ -278,6 +281,9 @@ msgstr "تنسى {}؟"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "الجهاز هيتشال من القايمة دي هو وبروفايلاته وإعداداته في التطبيق. اقترانه بـ Windows هيفضل."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "الجهاز هيتشال من القايمة دي هو وبروفايلاته وإعداداته في التطبيق. اقترانه بالكمبيوتر ده هيفضل."
+
 msgid "Forget"
 msgstr "انسى"
 
@@ -318,6 +324,9 @@ msgstr "جاهز توصّل السماعة الخارجية؟"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "اختار الجهاز المقترن بـ Windows. لو مش في القايمة، اقرنه الأول من إعدادات البلوتوث."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "اختار الجهاز المقترن بالكمبيوتر ده. لو مش في القايمة، اقرنه الأول من إعدادات البلوتوث."
+
 msgid "Another model"
 msgstr "موديل تاني"
 
@@ -336,11 +345,17 @@ msgstr "تحديث"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "البلوتوث مقفول. شغّله من إعدادات Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "البلوتوث مقفول. شغّله من إعدادات النظام."
+
 msgid "Looking for paired devices…"
 msgstr "بندوّر على الأجهزة المقترنة…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "اتأكد إن السماعات شغالة ومقترنة بـ Windows، وبعدين حدّث."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "اتأكد إن السماعات شغالة ومقترنة بالكمبيوتر ده، وبعدين حدّث."
 
 msgid "Simulated device data"
 msgstr "بيانات جهاز تجريبية"
@@ -348,8 +363,14 @@ msgstr "بيانات جهاز تجريبية"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "مقترن في Windows · شكله الموديل اللي اخترته"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "مقترن بالكمبيوتر ده · شكله الموديل اللي اخترته"
+
 msgid "Paired in Windows"
 msgstr "مقترن في Windows"
+
+msgid "Paired with this computer"
+msgstr "مقترن بالكمبيوتر ده"
 
 msgid "Could not add the device."
 msgstr "مقدرناش نضيف الجهاز."
@@ -549,6 +570,9 @@ msgstr "إجراءات زراير الجهاز."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "الجهاز بيعمل الإجراءات دي بنفسه. زراير الميديا في Windows شغالة عادي."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "الجهاز بيعمل الإجراءات دي بنفسه. زراير الميديا شغالة عادي."
 
 msgid "Small details. More comfort."
 msgstr "تفاصيل صغيرة. راحة أكتر."
@@ -1108,7 +1132,7 @@ msgid "Quit OpenSCL4"
 msgstr "خروج من OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows والوصول السريع"
+msgstr "سطح المكتب والوصول السريع"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

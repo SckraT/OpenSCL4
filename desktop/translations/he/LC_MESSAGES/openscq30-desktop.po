@@ -217,6 +217,9 @@ msgstr "ודא שהרמקול בקרבת מקום ומחובר למחשב הזה
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "הפעל Bluetooth בהגדרות Windows ונסה להתחבר שוב."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "הפעל Bluetooth בהגדרות המערכת ונסה להתחבר שוב."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "התחבר כדי לראות את הסוללה ולשנות הגדרות."
 
@@ -278,6 +281,9 @@ msgstr "לשכוח את {}?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "המכשיר יוסר מהרשימה יחד עם הפרופילים וההגדרות שלו באפליקציה. ההתאמה ל-Windows נשארת."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "המכשיר יוסר מהרשימה יחד עם הפרופילים וההגדרות שלו באפליקציה. ההתאמה למחשב הזה נשארת."
+
 msgid "Forget"
 msgstr "שכח"
 
@@ -318,6 +324,9 @@ msgstr "מוכן לחבר את הרמקול?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "בחר את המכשיר שמותאם ל-Windows. אם הוא לא ברשימה, התאם אותו קודם בהגדרות Bluetooth."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "בחר את המכשיר שמותאם למחשב הזה. אם הוא לא ברשימה, התאם אותו קודם בהגדרות Bluetooth."
+
 msgid "Another model"
 msgstr "דגם אחר"
 
@@ -336,11 +345,17 @@ msgstr "רענן"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "ה-Bluetooth כבוי. הפעל אותו בהגדרות Windows."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "ה-Bluetooth כבוי. הפעל אותו בהגדרות המערכת."
+
 msgid "Looking for paired devices…"
 msgstr "מחפש מכשירים מותאמים…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "ודא שהאוזניות דולקות ומותאמות ל-Windows, ואז רענן."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "ודא שהאוזניות דולקות ומותאמות למחשב הזה, ואז רענן."
 
 msgid "Simulated device data"
 msgstr "נתוני מכשיר מדומים"
@@ -348,8 +363,14 @@ msgstr "נתוני מכשיר מדומים"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "מותאם ב-Windows · נראה כמו הדגם שנבחר"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "מותאם למחשב הזה · נראה כמו הדגם שנבחר"
+
 msgid "Paired in Windows"
 msgstr "מותאם ב-Windows"
+
+msgid "Paired with this computer"
+msgstr "מותאם למחשב הזה"
 
 msgid "Could not add the device."
 msgstr "לא ניתן להוסיף את המכשיר."
@@ -549,6 +570,9 @@ msgstr "פעולות הכפתורים במכשיר."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "המכשיר מבצע את הפעולות האלה בעצמו. מקשי המדיה של Windows עובדים כרגיל."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "המכשיר מבצע את הפעולות האלה בעצמו. מקשי המדיה עובדים כרגיל."
 
 msgid "Small details. More comfort."
 msgstr "פרטים קטנים. יותר נוחות."
@@ -1096,7 +1120,7 @@ msgid "Quit OpenSCL4"
 msgstr "יציאה מ־OpenSCL4"
 
 msgid "Desktop and quick access"
-msgstr "Windows וגישה מהירה"
+msgstr "שולחן העבודה וגישה מהירה"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

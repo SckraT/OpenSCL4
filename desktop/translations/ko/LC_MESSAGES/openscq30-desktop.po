@@ -217,6 +217,9 @@ msgstr "스피커가 가까이 있고 이 컴퓨터에 블루투스로 연결되
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Windows 설정에서 블루투스를 켠 다음 다시 연결해 보세요."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "시스템 설정에서 블루투스를 켠 다음 다시 연결해 보세요."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "연결하면 배터리를 확인하고 설정을 바꿀 수 있습니다."
 
@@ -278,6 +281,9 @@ msgstr "{}을(를) 삭제할까요?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "기기가 앱의 프로필 및 프리셋과 함께 이 목록에서 사라집니다. Windows와의 페어링은 유지됩니다."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "기기가 앱의 프로필 및 프리셋과 함께 이 목록에서 사라집니다. 이 컴퓨터와의 페어링은 유지됩니다."
+
 msgid "Forget"
 msgstr "삭제"
 
@@ -318,6 +324,9 @@ msgstr "스피커를 연결할 준비가 되셨나요?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Windows와 페어링된 기기를 선택하세요. 목록에 없다면 먼저 블루투스 설정에서 페어링하세요."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "이 컴퓨터와 페어링된 기기를 선택하세요. 목록에 없다면 먼저 블루투스 설정에서 페어링하세요."
+
 msgid "Another model"
 msgstr "다른 모델"
 
@@ -336,11 +345,17 @@ msgstr "새로 고침"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "블루투스가 꺼져 있습니다. Windows 설정에서 켜세요."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "블루투스가 꺼져 있습니다. 시스템 설정에서 켜세요."
+
 msgid "Looking for paired devices…"
 msgstr "페어링된 기기를 찾는 중…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "헤드폰이 켜져 있고 Windows와 페어링되어 있는지 확인한 다음 새로 고치세요."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "헤드폰이 켜져 있고 이 컴퓨터와 페어링되어 있는지 확인한 다음 새로 고치세요."
 
 msgid "Simulated device data"
 msgstr "시뮬레이션된 기기 데이터"
@@ -348,8 +363,14 @@ msgstr "시뮬레이션된 기기 데이터"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Windows에서 페어링됨 · 선택한 모델로 보임"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "이 컴퓨터와 페어링됨 · 선택한 모델로 보임"
+
 msgid "Paired in Windows"
 msgstr "Windows에서 페어링됨"
+
+msgid "Paired with this computer"
+msgstr "이 컴퓨터와 페어링됨"
 
 msgid "Could not add the device."
 msgstr "기기를 추가할 수 없습니다."
@@ -549,6 +570,9 @@ msgstr "기기 버튼의 동작입니다."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "이 동작은 기기가 직접 수행합니다. Windows 미디어 키는 평소처럼 작동합니다."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "이 동작은 기기가 직접 수행합니다. 미디어 키는 평소처럼 작동합니다."
 
 msgid "Small details. More comfort."
 msgstr "작은 배려. 더 큰 편안함."
@@ -1093,7 +1117,7 @@ msgid "Quit OpenSCL4"
 msgstr "OpenSCL4 종료"
 
 msgid "Desktop and quick access"
-msgstr "Windows 및 빠른 접근"
+msgstr "데스크톱 및 빠른 접근"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."

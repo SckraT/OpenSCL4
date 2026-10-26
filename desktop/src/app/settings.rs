@@ -9,6 +9,7 @@ use crate::{
     controller::Command,
     logs,
     model::{device_art::EarbudsColor, languages::LANGUAGES},
+    system_settings,
 };
 
 /// Changes a setting, saves it and shows the window with it.
@@ -144,5 +145,7 @@ impl App {
         state.set_tray_presets(settings.tray_items.presets);
         state.set_tray_ldac(settings.tray_items.ldac);
         state.set_app_version(env!("CARGO_PKG_VERSION").into());
+        state.set_linux(cfg!(target_os = "linux"));
+        state.set_system_settings_available(system_settings::available());
     }
 }

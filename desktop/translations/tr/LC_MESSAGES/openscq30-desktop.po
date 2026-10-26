@@ -217,6 +217,9 @@ msgstr "Hoparlörünüzün yakında olduğunu ve bu bilgisayara Bluetooth ile ba
 msgid "Turn on Bluetooth in Windows settings, then try connecting again."
 msgstr "Windows ayarlarında Bluetooth’u açın ve yeniden bağlanmayı deneyin."
 
+msgid "Turn on Bluetooth in the system settings, then try connecting again."
+msgstr "Sistem ayarlarında Bluetooth’u açın ve yeniden bağlanmayı deneyin."
+
 msgid "Connect to see battery levels and change settings."
 msgstr "Pil düzeyini görmek ve ayarları değiştirmek için bağlanın."
 
@@ -278,6 +281,9 @@ msgstr "{} unutulsun mu?"
 msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with Windows stays."
 msgstr "Cihaz, uygulamadaki profilleri ve ön ayarlarıyla birlikte bu listeden çıkar. Windows ile eşleşmesi kalır."
 
+msgid "The device leaves this list together with its profiles and presets in the app. Its pairing with this computer stays."
+msgstr "Cihaz, uygulamadaki profilleri ve ön ayarlarıyla birlikte bu listeden çıkar. Bu bilgisayarla eşleşmesi kalır."
+
 msgid "Forget"
 msgstr "Unut"
 
@@ -318,6 +324,9 @@ msgstr "Hoparlörünüzü bağlamaya hazır mısınız?"
 msgid "Choose the device paired with Windows. If it is not listed, pair it in Bluetooth settings first."
 msgstr "Windows ile eşlenmiş cihazı seçin. Listede yoksa önce Bluetooth ayarlarında eşleyin."
 
+msgid "Choose the device paired with this computer. If it is not listed, pair it in Bluetooth settings first."
+msgstr "Bu bilgisayarla eşlenmiş cihazı seçin. Listede yoksa önce Bluetooth ayarlarında eşleyin."
+
 msgid "Another model"
 msgstr "Başka model"
 
@@ -336,11 +345,17 @@ msgstr "Yenile"
 msgid "Bluetooth is off. Turn it on in Windows settings."
 msgstr "Bluetooth kapalı. Windows ayarlarında açın."
 
+msgid "Bluetooth is off. Turn it on in the system settings."
+msgstr "Bluetooth kapalı. Sistem ayarlarında açın."
+
 msgid "Looking for paired devices…"
 msgstr "Eşlenmiş cihazlar aranıyor…"
 
 msgid "Make sure your headphones are turned on and paired with Windows, then refresh."
 msgstr "Kulaklığınızın açık ve Windows ile eşlenmiş olduğundan emin olun, sonra yenileyin."
+
+msgid "Make sure your headphones are turned on and paired with this computer, then refresh."
+msgstr "Kulaklığınızın açık ve bu bilgisayarla eşlenmiş olduğundan emin olun, sonra yenileyin."
 
 msgid "Simulated device data"
 msgstr "Benzetilmiş cihaz verileri"
@@ -348,8 +363,14 @@ msgstr "Benzetilmiş cihaz verileri"
 msgid "Paired in Windows · looks like the chosen model"
 msgstr "Windows’ta eşlenmiş · seçilen modele benziyor"
 
+msgid "Paired with this computer · looks like the chosen model"
+msgstr "Bu bilgisayarla eşlenmiş · seçilen modele benziyor"
+
 msgid "Paired in Windows"
 msgstr "Windows’ta eşlenmiş"
+
+msgid "Paired with this computer"
+msgstr "Bu bilgisayarla eşlenmiş"
 
 msgid "Could not add the device."
 msgstr "Cihaz eklenemedi."
@@ -549,6 +570,9 @@ msgstr "Cihazdaki düğmelerin eylemleri."
 
 msgid "The device carries out these actions itself. Windows media keys work as usual."
 msgstr "Bu eylemleri cihazın kendisi yapar. Windows medya tuşları her zamanki gibi çalışır."
+
+msgid "The device carries out these actions itself. Media keys work as usual."
+msgstr "Bu eylemleri cihazın kendisi yapar. Medya tuşları her zamanki gibi çalışır."
 
 msgid "Small details. More comfort."
 msgstr "Küçük ayrıntılar. Daha fazla konfor."
@@ -1096,7 +1120,7 @@ msgid "Quit OpenSCL4"
 msgstr "OpenSCL4’dan çık"
 
 msgid "Desktop and quick access"
-msgstr "Windows ve hızlı erişim"
+msgstr "Masaüstü ve hızlı erişim"
 
 msgid "The notification area icon is unavailable. Closing the window quits the app."
 msgstr "The notification area icon is unavailable. Closing the window quits the app."
