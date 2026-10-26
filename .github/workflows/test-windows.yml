@@ -2,7 +2,7 @@ name: test windows
 
 on:
   push:
-    branches: ["**"]
+    branches: [master]
     paths: &push_paths
       - Cargo.lock
       - Cargo.toml

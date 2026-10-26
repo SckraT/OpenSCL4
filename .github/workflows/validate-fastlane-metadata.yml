@@ -2,7 +2,7 @@ name: validate draft Android distribution metadata
 
 on:
   push:
-    branches: ["**"]
+    branches: [master]
     paths: &push_paths
       - fastlane/**
       - .github/workflows/validate-fastlane-metadata.yml

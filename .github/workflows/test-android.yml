@@ -2,7 +2,7 @@ name: test android
 
 on:
   push:
-    branches: ["**"]
+    branches: [master]
     paths: &push_paths
       - Cargo.lock
       - Cargo.toml
