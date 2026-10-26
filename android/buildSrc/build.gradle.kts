@@ -6,3 +6,7 @@ repositories {
     google()
     mavenCentral()
 }
+
+dependencies {
+    testImplementation(libs.junit)
+}

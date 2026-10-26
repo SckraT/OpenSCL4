@@ -63,9 +63,15 @@ the new interface paths.
 
 Build one architecture with `assembleArm64-v8aDebug` for an arm64 phone or
 `assembleX86_64Debug` for an x86_64 emulator. Run Android instrumentation with
-`connectedX86_64DebugAndroidTest`. Emulator demo checks do not establish physical
-Bluetooth behavior or Pixel gesture-animation behavior; those require a phone
-and headphones.
+`connectedX86_64DebugAndroidTest`, or `connectedArm64-v8aDebugAndroidTest` on an
+arm64 phone. Emulator demo checks do not establish physical Bluetooth behavior or
+Pixel gesture-animation behavior; those require a phone and headphones.
+
+A connected test task fails when a device ran no tests or no results were
+written, including a test filter that matches nothing. AGP reports an
+instrumentation that crashes before its first test as a passing run with zero
+tests, so the build checks the result files itself; read the crash with
+`adb logcat -b crash -d` on that device.
 
 Software emulators can pass `-e uiTimeoutMillis 60000` to the instrumentation
 runner to extend asynchronous waits. The default timeouts and state assertions

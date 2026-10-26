@@ -13,7 +13,7 @@ build profile arch:
 
 test:
     cargo test
-    ./gradlew testDebugUnitTest
+    ./gradlew :buildSrc:test testDebugUnitTest
 
 test-cov:
     cargo llvm-cov --no-report
