@@ -62,6 +62,13 @@ def target_directory() -> Path:
 
 
 def run(args: list[str], *, cwd: Path = ROOT, capture: bool = False) -> str:
+    # Windows resolves a bare executable name against PATH only, not against cwd, so a script such as
+    # "gradlew.bat" is not found even when cwd holds it. Resolve it here instead of relying on the child.
+    executable = Path(args[0])
+    if sys.platform == "win32" and not executable.is_absolute() and not args[0].startswith("./"):
+        candidate = Path(cwd) / args[0]
+        if candidate.is_file():
+            args = [str(candidate), *args[1:]]
     result = subprocess.run(args, cwd=cwd, check=True, text=True, capture_output=capture)
     return result.stdout.strip() if capture else ""
 
