@@ -105,4 +105,33 @@ mod tests {
             command("GNOME", SystemPage::Sound, without_gnome_settings)
         );
     }
+
+    /// The .slint files under `dir` that name a settings URI, which only Windows opens.
+    fn files_with_settings_uris(dir: &std::path::Path, found: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                files_with_settings_uris(&path, found);
+            } else if path.extension().is_some_and(|e| e == "slint")
+                && std::fs::read_to_string(&path)
+                    .unwrap()
+                    .contains("ms-settings:")
+            {
+                found.push(path);
+            }
+        }
+    }
+
+    #[test]
+    fn the_window_opens_system_settings_only_through_this_module() {
+        let mut found = Vec::new();
+        files_with_settings_uris(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("ui"),
+            &mut found,
+        );
+        assert!(
+            found.is_empty(),
+            "use Actions.open-system-settings instead of ms-settings: in {found:?}"
+        );
+    }
 }

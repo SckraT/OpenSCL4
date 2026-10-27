@@ -1,6 +1,6 @@
 //! Every string the window translates with @tr() is translated to every language in translations/, with the same
-//! placeholders and as many plural forms as the language has, and no translation file has strings the window no
-//! longer uses.
+//! placeholders, the same operating systems named and as many plural forms as the language has, and no translation
+//! file has strings the window no longer uses.
 
 use std::{collections::BTreeSet, fs, path::Path};
 
@@ -78,6 +78,10 @@ fn plural_forms(text: &str) -> usize {
     header[..1].parse().unwrap()
 }
 
+/// The operating systems a string may name. A translation names one exactly when its string does, so wording reworded
+/// for another system cannot keep the old name in a translation.
+const SYSTEMS: [&str; 2] = ["Windows", "Linux"];
+
 /// The placeholders of a string in order, such as ["{}", "{}"], which a translation must keep.
 fn placeholders(text: &str) -> Vec<&str> {
     let mut found = Vec::new();
@@ -136,6 +140,16 @@ mod tests {
             );
 
             for entry in &entries {
+                for translation in &entry.translations {
+                    for system in SYSTEMS {
+                        assert_eq!(
+                            entry.id.contains(system),
+                            translation.contains(system),
+                            "{name} names {system} differently from {:?}: {translation:?}",
+                            entry.id
+                        );
+                    }
+                }
                 if entry.plural {
                     assert_eq!(
                         forms,

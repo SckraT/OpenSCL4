@@ -15,6 +15,7 @@ Sources for the **Standards** axis of `code-review`. Read the cited file before 
 - `cargo fmt --check`; ktlint with `.editorconfig` (`android_studio` style, 120 columns, trailing commas); Prettier for Markdown; `shellcheck`.
 - `cargo clippy -- -D warnings` with the workspace lint set (`use_self`, `cloned_instead_of_copied`, `map_unwrap_or`, `try_err`, `get_unwrap`, `assertions_on_result_states`, and the rest of `[workspace.lints.clippy]`).
 - `python3 -m unittest discover -s scripts/tests` for README/release-script consistency and for workflow concurrency: push, pull request and manual runs of one branch fall into different concurrency groups.
+- `cargo test -p openscq30-desktop`: every `@tr` string is translated with the same placeholders and the same named systems (Windows, Linux), and `ms-settings:` stays out of `desktop/ui`.
 - The Rust type checker and the generated UniFFI headers.
 
 A finding must name something the tools cannot decide. Run the gate first; "formatting" or "clippy would complain" is not a finding.
@@ -28,6 +29,8 @@ A finding must name something the tools cannot decide. Run the gate first; "form
 **Native boundary.** Setting values cross UniFFI as JSON; native types and Kotlin wrappers move together, and exported API changes require regenerated bindings (`docs/development.md`). Demo devices replay `OutboundPacket`, so a setting without an outbound implementation is incomplete.
 
 **Data and text.** `lib/src/storage/` owns persisted data; Room changes keep the checked-in `android/app/schemas` JSON and migration tests for old data. User-visible text comes from i18n resources (`lib/i18n/*/openscq30-lib.ftl`, Android resources), not hardcoded English.
+
+**Desktop platforms.** The Slint client ships on Windows and Linux. Text that names the system, its settings or where a device is paired gives each platform its own wording through `AppState.linux`, and system settings pages open through `desktop/src/system_settings.rs` (`docs/development.md`). Windows-only wording or behaviour reachable on Linux, or the reverse, is a violation.
 
 **Identity and release.** The application id is `io.github.sckrat.openscl4`; OpenSCL4 stays a separate installation from OpenSCQ30 (ADR-0003). Do not rename inherited module identities without a stated reason. One product version and one tag per stable release; a platform hotfix bumps the common patch version and rebuilds every platform (ADR-0002). Keys, passwords and signing archives stay out of commits and review output (`docs/build-release.md`).
 
