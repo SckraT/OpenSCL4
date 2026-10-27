@@ -75,6 +75,8 @@ pub struct App {
     failed_command: Option<Command>,
     add: AddFlow,
     dark: bool,
+    /// Whether Linux prefers dark, once the desktop portal has said; Windows is asked each time.
+    system_dark: Option<bool>,
     legacy: Vec<(String, LegacyEqualizerProfile)>,
     started: bool,
     /// "ru" or "en", for numbers the window shows.
@@ -127,6 +129,7 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         failed_command: None,
         add: AddFlow::default(),
         dark: false,
+        system_dark: None,
         legacy: Vec::new(),
         started: false,
         language: "en",
@@ -171,7 +174,7 @@ pub fn shown() {
     let _ = slint::invoke_from_event_loop(|| {
         with_app(|app| {
             app.apply_theme();
-            // "As in Windows" follows Windows when it changes
+            // "As in Windows" follows Windows when it changes; winit doesn't report Linux changes, the portal does
             if let Some(window) = app.window() {
                 use slint::winit_030::{
                     EventResult, WinitWindowAccessor, winit::event::WindowEvent,
@@ -320,6 +323,16 @@ impl App {
                 self.tray_host = status.host;
                 self.tray_registered = registered;
                 self.sync_tray();
+            }
+            #[cfg(target_os = "linux")]
+            Event::SystemDark(dark) => {
+                if self.system_dark == Some(dark) {
+                    return;
+                }
+                self.system_dark = Some(dark);
+                if self.config.settings.theme == AppTheme::System {
+                    self.apply_theme();
+                }
             }
             Event::PairedDevices(paired) => {
                 self.paired = paired;
@@ -704,9 +717,10 @@ impl App {
 
     fn apply_theme(&mut self) {
         self.dark = match self.config.settings.theme {
-            AppTheme::System => self
-                .window()
-                .is_some_and(|window| window_chrome::system_prefers_dark(window.window())),
+            AppTheme::System => self.system_dark.unwrap_or_else(|| {
+                self.window()
+                    .is_some_and(|window| window_chrome::system_prefers_dark(window.window()))
+            }),
             AppTheme::Light => false,
             AppTheme::Dark => true,
         };

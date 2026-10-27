@@ -7,6 +7,8 @@ mod config;
 mod controller;
 mod equalizer;
 #[cfg(any(target_os = "linux", test))]
+mod linux_appearance;
+#[cfg(any(target_os = "linux", test))]
 mod linux_tray;
 pub mod logs;
 pub mod model;

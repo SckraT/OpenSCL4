@@ -43,6 +43,7 @@ roxmltree = { workspace = true }
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_Shell"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+futures = { workspace = true }
 zbus = { workspace = true }
 
 [build-dependencies]

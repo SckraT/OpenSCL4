@@ -28,6 +28,8 @@ pub fn system_prefers_dark(window: &slint::Window) -> bool {
         };
         result == ERROR_SUCCESS && light == 0
     }
+    // Slint gives the window the desktop's theme from the portal, so this holds only until the app sets one; the app
+    // follows `linux_appearance` once it reports
     #[cfg(not(windows))]
     {
         use slint::winit_030::{WinitWindowAccessor, winit::window::Theme};
