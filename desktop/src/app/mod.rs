@@ -77,6 +77,7 @@ pub struct App {
     dark: bool,
     /// Whether Linux prefers dark, once the desktop portal has said; Windows is asked each time.
     system_dark: Option<bool>,
+    title_bar: window_chrome::TitleBar,
     legacy: Vec<(String, LegacyEqualizerProfile)>,
     started: bool,
     /// "ru" or "en", for numbers the window shows.
@@ -130,6 +131,7 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         add: AddFlow::default(),
         dark: false,
         system_dark: None,
+        title_bar: window_chrome::TitleBar::default(),
         legacy: Vec::new(),
         started: false,
         language: "en",
@@ -159,17 +161,15 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Puts a chosen "Light" or "Dark" back on the title bar, before each wait of the event loop. Skipped quietly while
-/// the app is busy.
-#[cfg(target_os = "linux")]
+/// Keeps the app's theme on the title bar; on Linux `window_chrome` calls it after each round of events. Skipped
+/// quietly while the app is busy.
 pub fn keep_title_bar() {
     APP.with(|cell| {
-        if let Ok(app) = cell.try_borrow()
-            && let Some(app) = app.as_ref()
-            && app.config.settings.theme != AppTheme::System
+        if let Ok(mut slot) = cell.try_borrow_mut()
+            && let Some(app) = slot.as_mut()
             && let Some(window) = app.window()
         {
-            window_chrome::keep_title_bar(window.window(), app.dark);
+            app.title_bar.keep(window.window());
         }
     });
 }
@@ -341,13 +341,10 @@ impl App {
             }
             #[cfg(target_os = "linux")]
             Event::SystemDark(dark) => {
-                if self.system_dark == Some(dark) {
-                    return;
-                }
                 self.system_dark = Some(dark);
-                // Slint gives the title bar the desktop's theme on the same change, sooner or later than this. Wayland
-                // gets the app's back from keep_title_bar; X11 can't say the window's theme, so it is set again once
-                // Slint is done.
+                // Slint gives the title bar the desktop's theme on every report, the same one too, sooner or later than
+                // this. Wayland gets the app's back from keep_title_bar; X11 can't say the window's theme, so it is set
+                // now and again once Slint is done.
                 self.apply_theme();
                 slint::Timer::single_shot(Duration::from_millis(500), || {
                     with_app(Self::apply_theme);
@@ -736,10 +733,9 @@ impl App {
 
     fn apply_theme(&mut self) {
         self.dark = match self.config.settings.theme {
-            AppTheme::System => self.system_dark.unwrap_or_else(|| {
-                self.window()
-                    .is_some_and(|window| window_chrome::system_prefers_dark(window.window()))
-            }),
+            AppTheme::System => self
+                .system_dark
+                .unwrap_or_else(window_chrome::system_prefers_dark),
             AppTheme::Light => false,
             AppTheme::Dark => true,
         };
@@ -751,10 +747,8 @@ impl App {
                 Accent::Sage => PaletteChoice::Sage,
                 Accent::Rose => PaletteChoice::Rose,
             });
-            window_chrome::set_title_bar(
-                window.window(),
-                window_chrome::title_bar(self.config.settings.theme, self.dark),
-            );
+            self.title_bar
+                .set(window.window(), self.config.settings.theme, self.dark);
         }
     }
 
