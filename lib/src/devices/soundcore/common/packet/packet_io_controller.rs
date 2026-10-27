@@ -349,11 +349,15 @@ impl PacketIOController {
     }
 }
 
-async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String> {
-    let Some(controller) = controller.upgrade() else {
+async fn run_watchdog(weak_controller: Weak<PacketIOController>) -> Result<(), String> {
+    // The controller is held only while probing: its Drop stops this task and shuts the session
+    // down, so a strong reference across the waits below would keep the connection open forever.
+    let Some((session, last_inbound)) = weak_controller
+        .upgrade()
+        .map(|controller| (controller.session.clone(), controller.last_inbound.clone()))
+    else {
         return Ok(());
     };
-    let session = controller.session.clone();
     let mut status = session.status_receiver();
     loop {
         let mut reconnected = false;
@@ -372,14 +376,12 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
         if reconnected {
             // Silence before the reconnect says nothing about the new transport; give it a full
             // watchdog interval before probing again.
-            *controller
-                .last_inbound
+            *last_inbound
                 .lock()
                 .expect("last inbound mutex should not be poisoned") = Instant::now();
         }
 
-        let idle = controller
-            .last_inbound
+        let idle = last_inbound
             .lock()
             .expect("last inbound mutex should not be poisoned")
             .elapsed();
@@ -391,11 +393,14 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
         tracing::debug!("silence watchdog probing the device");
         let mut failures = 0;
         for attempt in 0..2 {
-            if controller
-                .send_with_response(&packet::outbound::RequestState.to_packet())
-                .await
-                .is_ok()
-            {
+            let answered = match weak_controller.upgrade() {
+                Some(controller) => controller
+                    .send_with_response(&packet::outbound::RequestState.to_packet())
+                    .await
+                    .is_ok(),
+                None => return Ok(()),
+            };
+            if answered {
                 failures = 0;
                 break;
             }
@@ -1073,6 +1078,24 @@ mod tests {
         }
         assert!(started.elapsed() >= SILENCE_TIMEOUT);
         assert!(!status.borrow().is_connected());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn dropping_the_controller_closes_the_session_while_the_watchdog_waits() {
+        let (connection, _sender, _receiver) = StubRfcommConnection::new();
+        let packet_io = Arc::new(
+            PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
+                .await
+                .unwrap()
+                .0,
+        );
+        packet_io.start_watchdog();
+        let status = packet_io.session_status();
+        tokio::time::sleep(Duration::from_secs(1)).await;
+
+        drop(packet_io);
+
+        assert_eq!(SessionStatus::Closed, *status.borrow());
     }
 
     #[tokio::test(start_paused = true)]
