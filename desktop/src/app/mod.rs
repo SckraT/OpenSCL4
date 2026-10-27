@@ -159,6 +159,21 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Puts a chosen "Light" or "Dark" back on the title bar, before each wait of the event loop. Skipped quietly while
+/// the app is busy.
+#[cfg(target_os = "linux")]
+pub fn keep_title_bar() {
+    APP.with(|cell| {
+        if let Ok(app) = cell.try_borrow()
+            && let Some(app) = app.as_ref()
+            && app.config.settings.theme != AppTheme::System
+            && let Some(window) = app.window()
+        {
+            window_chrome::keep_title_bar(window.window(), app.dark);
+        }
+    });
+}
+
 /// Lets go of the device and stops the controller, once the event loop has ended.
 pub fn stop() {
     let app = APP.with(|cell| cell.borrow_mut().take());
@@ -330,9 +345,13 @@ impl App {
                     return;
                 }
                 self.system_dark = Some(dark);
-                if self.config.settings.theme == AppTheme::System {
-                    self.apply_theme();
-                }
+                // Slint gives the title bar the desktop's theme on the same change, sooner or later than this. Wayland
+                // gets the app's back from keep_title_bar; X11 can't say the window's theme, so it is set again once
+                // Slint is done.
+                self.apply_theme();
+                slint::Timer::single_shot(Duration::from_millis(500), || {
+                    with_app(Self::apply_theme);
+                });
             }
             Event::PairedDevices(paired) => {
                 self.paired = paired;
@@ -734,11 +753,7 @@ impl App {
             });
             window_chrome::set_title_bar(
                 window.window(),
-                match self.config.settings.theme {
-                    AppTheme::System => None,
-                    AppTheme::Light => Some(false),
-                    AppTheme::Dark => Some(true),
-                },
+                window_chrome::title_bar(self.config.settings.theme, self.dark),
             );
         }
     }
