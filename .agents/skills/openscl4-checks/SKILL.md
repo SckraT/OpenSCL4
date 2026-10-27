@@ -39,7 +39,7 @@ Done when all commands exit 0. If only `openscq30-android` fails on Windows, run
 ## 3. Full gate on Linux/CI
 
 ```sh
-cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
+dbus-run-session -- cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
 cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android --all-targets -- -D warnings
 cargo fmt --all --check
 python3 -m unittest discover -s scripts/tests -v
