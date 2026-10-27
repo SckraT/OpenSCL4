@@ -30,7 +30,7 @@ A finding must name something the tools cannot decide. Run the gate first; "form
 
 **Data and text.** `lib/src/storage/` owns persisted data; Room changes keep the checked-in `android/app/schemas` JSON and migration tests for old data. User-visible text comes from i18n resources (`lib/i18n/*/openscq30-lib.ftl`, Android resources), not hardcoded English.
 
-**Desktop platforms.** The Slint client ships on Windows and Linux. Text that names the system, its settings or where a device is paired gives each platform its own wording through `AppState.linux`, and system settings pages open through `desktop/src/system_settings.rs`. Windows-only wording or behaviour reachable on Linux, or the reverse, is a violation.
+**Desktop platforms.** The Slint client ships on Windows and Linux. Text that names the system, its settings or where a device is paired gives each platform its own wording through `AppState.linux`, and system settings pages open through `desktop/src/system_settings.rs` (`docs/development.md`). Windows-only wording or behaviour reachable on Linux, or the reverse, is a violation.
 
 **Identity and release.** The application id is `io.github.sckrat.openscl4`; OpenSCL4 stays a separate installation from OpenSCQ30 (ADR-0003). Do not rename inherited module identities without a stated reason. One product version and one tag per stable release; a platform hotfix bumps the common patch version and rebuilds every platform (ADR-0002). Keys, passwords and signing archives stay out of commits and review output (`docs/build-release.md`).
 
