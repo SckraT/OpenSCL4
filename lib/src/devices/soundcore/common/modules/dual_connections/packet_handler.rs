@@ -109,7 +109,7 @@ mod tests {
                     .to_packet(),
                 )
                 .await
-                .unwrap_or_else(|_| panic!("handle packet {i}"));
+                .unwrap_or_else(|err| panic!("handle packet {i}: {err:?}"));
         }
 
         let state = state_receiver.borrow();

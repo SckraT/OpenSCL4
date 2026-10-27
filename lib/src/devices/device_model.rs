@@ -220,11 +220,11 @@ mod tests {
             let device_registry = model
                 .demo_device_registry(database.clone())
                 .await
-                .unwrap_or_else(|_| panic!("{model} device registry"));
+                .unwrap_or_else(|err| panic!("{model} device registry: {err:?}"));
             let device = device_registry
                 .connect(MacAddr6::nil())
                 .await
-                .unwrap_or_else(|_| panic!("{model} device"));
+                .unwrap_or_else(|err| panic!("{model} device: {err:?}"));
             for category_id in device.categories() {
                 for setting_id in device.settings_in_category(&category_id) {
                     if let Some(setting) = device.setting(&setting_id) {
@@ -256,8 +256,10 @@ mod tests {
                             device
                                 .set_setting_values(vec![(setting_id, value)])
                                 .await
-                                .unwrap_or_else(|_| {
-                                    panic!("setting {model} -> {category_id} -> {setting_id}")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "setting {model} -> {category_id} -> {setting_id}: {err:?}"
+                                    )
                                 });
                         }
                     }
