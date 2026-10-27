@@ -29,8 +29,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Install basic requirements
-        # libfontconfig1-dev for openscq30-desktop, which Slint draws
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev
+        # libfontconfig1-dev for openscq30-desktop, which Slint draws; dbus for the session bus of its single-instance test
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev dbus
       - name: Install rust
         run: rustup show active-toolchain
       - name: Install cargo-llvm-cov
@@ -40,7 +40,7 @@ jobs:
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Run shared and current client tests
-        run: cargo llvm-cov --locked --no-report --no-cfg-coverage -p openscq30-lib -p openscq30-desktop -p openscq30-android
+        run: dbus-run-session -- cargo llvm-cov --locked --no-report --no-cfg-coverage -p openscq30-lib -p openscq30-desktop -p openscq30-android
       - name: Generate HTML test coverage report
         run: cargo llvm-cov report --html
       - name: Check release verification

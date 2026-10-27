@@ -315,6 +315,11 @@ mod bus_tests {
     #[test]
     fn a_second_claim_asks_the_first_to_show_and_ends_without_the_name() {
         if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
+            // A skipped test reports ok, so CI must provide the bus rather than skip silently.
+            assert!(
+                std::env::var_os("CI").is_none(),
+                "no session bus in CI: run the tests under dbus-run-session"
+            );
             eprintln!("skipped: no session bus; run it under dbus-run-session");
             return;
         }
