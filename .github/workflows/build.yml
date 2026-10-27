@@ -7,6 +7,11 @@ on:
         description: Build unsigned Android preview packages
         type: boolean
         default: true
+      platforms:
+        description: Platforms to build; linux skips Windows, Android and the complete preview bundle
+        type: choice
+        options: [all, linux]
+        default: all
   push:
     tags:
       - "v*"
@@ -93,6 +98,7 @@ jobs:
 
   windows:
     needs: source
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all'
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -124,6 +130,7 @@ jobs:
 
   android:
     needs: source
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -183,6 +190,7 @@ jobs:
 
   bundle:
     needs: [source, linux, linux-package-check, windows, android]
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
