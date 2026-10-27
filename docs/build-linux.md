@@ -12,7 +12,7 @@ Install Python 3.11+, Rust via rustup, a C/C++ build toolchain, and the developm
 
 ```sh
 sudo apt-get update
-sudo apt-get install build-essential pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev desktop-file-utils
+sudo apt-get install build-essential pkg-config libdbus-1-dev libxkbcommon-dev libfontconfig1-dev libsqlite3-dev desktop-file-utils dbus
 ```
 
 The Rust version is selected by `rust-toolchain.toml`. For packaging, add `x86_64-unknown-linux-gnu` with rustup if needed. Release packages must be built on **Ubuntu 24.04 x86_64**, including packages intended for 26.04, to preserve the glibc baseline; the release script rejects a different build host.
