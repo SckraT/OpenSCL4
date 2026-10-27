@@ -349,10 +349,10 @@ impl PacketIOController {
     }
 }
 
-async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String> {
+async fn run_watchdog(weak_controller: Weak<PacketIOController>) -> Result<(), String> {
     // The controller is held only while probing: its Drop stops this task and shuts the session
     // down, so a strong reference across the waits below would keep the connection open forever.
-    let Some((session, last_inbound)) = controller
+    let Some((session, last_inbound)) = weak_controller
         .upgrade()
         .map(|controller| (controller.session.clone(), controller.last_inbound.clone()))
     else {
@@ -393,7 +393,7 @@ async fn run_watchdog(controller: Weak<PacketIOController>) -> Result<(), String
         tracing::debug!("silence watchdog probing the device");
         let mut failures = 0;
         for attempt in 0..2 {
-            let answered = match controller.upgrade() {
+            let answered = match weak_controller.upgrade() {
                 Some(controller) => controller
                     .send_with_response(&packet::outbound::RequestState.to_packet())
                     .await
@@ -1094,7 +1094,6 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(1)).await;
 
         drop(packet_io);
-        tokio::time::sleep(Duration::from_millis(1)).await;
 
         assert_eq!(SessionStatus::Closed, *status.borrow());
     }
