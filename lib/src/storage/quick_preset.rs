@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_all() {
+    async fn fetch_all_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch() {
+    async fn fetch_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_delete() {
+    async fn delete_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
@@ -428,7 +428,7 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            fetched_presets.len() > 0,
+            !fetched_presets.is_empty(),
             "the other presets for the same device should not have been deleted",
         );
         assert!(
@@ -444,7 +444,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_upsert() {
+    async fn upsert_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         db.upsert_quick_preset(
             DeviceModel::SoundcoreA3004,
@@ -533,7 +533,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_toggle_field() {
+    async fn toggle_field_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
@@ -559,24 +559,22 @@ mod tests {
             .fetch_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
             .await
             .unwrap();
-        assert_eq!(
+        assert!(
             test_data[0]
                 .fields
                 .iter()
                 .find(|entry| entry.setting_id == SettingId::AmbientSoundMode)
                 .unwrap()
                 .is_enabled,
-            true,
             "Test data is not as expected",
         );
-        assert_eq!(
-            fetched_preset
+        assert!(
+            !fetched_preset
                 .fields
                 .iter()
                 .find(|entry| entry.setting_id == SettingId::AmbientSoundMode)
                 .unwrap()
                 .is_enabled,
-            false,
         );
 
         let other_device_fetched_preset = db
@@ -620,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn test_toggle_all_legacy_duplicate_fields_preserving_order_and_values() {
+    fn toggle_all_legacy_duplicate_fields_preserving_order_and_values() {
         let connection = legacy_connection();
         let preset = legacy_duplicate_preset();
         let mut expected_fields = serde_json::to_value(&preset.fields).unwrap();
@@ -681,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_upsert_retains_enabled_flag_from_any_legacy_duplicate() {
+    fn upsert_retains_enabled_flag_from_any_legacy_duplicate() {
         let mut connection = legacy_connection();
         let preset = legacy_duplicate_preset();
         connection
@@ -714,7 +712,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_toggle_field_on_nonexistant_preset() {
+    async fn toggle_field_on_nonexistant_preset() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
@@ -737,7 +735,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_toggle_field_on_nonexistant_field() {
+    async fn toggle_field_on_nonexistant_field() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {

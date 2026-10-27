@@ -134,7 +134,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_new_with_example_state_update_packet() {
+    async fn new_with_example_state_update_packet() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())
@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_new_with_retry() {
+    async fn new_with_retry() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         tokio::spawn(async move {
             outbound_receiver
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_new_max_retries() {
+    async fn new_max_retries() {
         let (registry, _inbound_sender, _outbound_receiver) = create_test_connection().await;
         registry
             .connect(MacAddr6::nil())
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_ambient_sound_mode_update_packet() {
+    async fn ambient_sound_mode_update_packet() {
         let (registry, inbound_sender, mut _outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())
@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_sound_mode_resends_when_the_device_does_not_confirm() {
+    async fn set_sound_mode_resends_when_the_device_does_not_confirm() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())
@@ -276,7 +276,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_equalizer_configuration_resends_when_the_device_does_not_confirm() {
+    async fn set_equalizer_configuration_resends_when_the_device_does_not_confirm() {
         let (registry, inbound_sender, mut outbound_receiver) = create_test_connection().await;
         inbound_sender
             .send(example_state_update_packet())

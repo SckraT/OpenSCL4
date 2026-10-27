@@ -159,7 +159,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_liberty5_packet_from_issue_226() {
+    async fn with_liberty5_packet_from_issue_226() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3957,

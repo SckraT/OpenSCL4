@@ -537,7 +537,7 @@ mod tests {
             .fetch_equalizer_profile(DeviceModel::SoundcoreDevelopment, "test profile".to_owned())
             .await
             .expect("we just created the custom profile, so it should exist");
-        assert_eq!(custom_profile, [0; 8])
+        assert_eq!(custom_profile, [0; 8]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -567,7 +567,7 @@ mod tests {
                 0xfefe,
                 [VolumeAdjustments::new([1, 1, 1, 1, 1, 1, 1, 1, 0, 0]); 2]
             ),
-        )
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -597,7 +597,7 @@ mod tests {
                 0xfefe,
                 [VolumeAdjustments::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0]); 2]
             ),
-        )
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -659,7 +659,7 @@ mod tests {
             .await
             .unwrap();
         let Setting::PresetEqualizerProfileSelect { value, .. } = setting_handler
-            .get(&mut state, &SettingId::PresetEqualizerProfile)
+            .get(&state, &SettingId::PresetEqualizerProfile)
             .unwrap()
         else {
             panic!("setting type should be PresetEqualizerProfileSelect")

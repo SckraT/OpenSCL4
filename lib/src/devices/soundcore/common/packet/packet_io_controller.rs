@@ -600,7 +600,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_send_multiple() {
+    async fn send_multiple() {
         let (connection, sender, _receiver) = StubRfcommConnection::new();
         let controller = Arc::new(
             PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
@@ -652,7 +652,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_out_of_order_responses() {
+    async fn out_of_order_responses() {
         let (connection, sender, _receiver) = StubRfcommConnection::new();
         let controller = Arc::new(
             PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
@@ -704,7 +704,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_fragmented_packet() {
+    async fn fragmented_packet() {
         let (connection, sender, _receiver) = StubRfcommConnection::new();
         let packet_io = Arc::new(
             PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
@@ -728,7 +728,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_merged_packets() {
+    async fn merged_packets() {
         let (connection, sender, _receiver) = StubRfcommConnection::new();
         let packet_io = Arc::new(
             PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
@@ -770,7 +770,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_garbage_data_recovery() {
+    async fn garbage_data_recovery() {
         let (connection, sender, _receiver) = StubRfcommConnection::new();
         let packet_io = Arc::new(
             PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)

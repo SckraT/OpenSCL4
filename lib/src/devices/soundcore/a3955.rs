@@ -147,7 +147,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_packet_from_firmware_1_6_1() {
+    async fn with_packet_from_firmware_1_6_1() {
         //packet from github issue 159
         let device = TestSoundcoreDevice::new(
             super::device_registry,

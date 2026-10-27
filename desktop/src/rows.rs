@@ -502,7 +502,7 @@ mod tests {
         let snapshot = snapshot(one_earbud_settings());
         let row = row(
             SettingId::Ldac,
-            snapshot.settings.get(&SettingId::Ldac).unwrap(),
+            &snapshot.settings[&SettingId::Ldac],
             true,
             setting_availability(&snapshot.settings, "ldac"),
         )
@@ -523,7 +523,7 @@ mod tests {
         let snapshot = snapshot(settings);
         let row = row(
             SettingId::WearingDetection,
-            snapshot.settings.get(&SettingId::WearingDetection).unwrap(),
+            &snapshot.settings[&SettingId::WearingDetection],
             true,
             setting_availability(&snapshot.settings, "wearingDetection"),
         )

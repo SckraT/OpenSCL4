@@ -21,7 +21,7 @@ With the relevant host prerequisites installed, the current Rust-client suite is
 
 ```sh
 cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
-cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android -- -D warnings
+cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android --all-targets -- -D warnings
 cargo fmt --all --check
 python3 -m unittest discover -s scripts/tests -v
 ```

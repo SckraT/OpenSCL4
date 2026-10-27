@@ -1528,11 +1528,9 @@ mod tests {
             outcomes[0].outcome
         );
         assert!(harness.state_sender.borrow().ldac.0);
-        assert!(
-            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
-                .await
-                .is_err()
-        );
+        tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+            .await
+            .unwrap_err();
     }
 
     #[tokio::test(start_paused = true)]
@@ -1564,11 +1562,9 @@ mod tests {
             },
             outcomes[0].outcome
         );
-        assert!(
-            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
-                .await
-                .is_err()
-        );
+        tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+            .await
+            .unwrap_err();
     }
 
     #[tokio::test(start_paused = true)]
@@ -1617,11 +1613,9 @@ mod tests {
             },
             outcomes[0].outcome
         );
-        assert!(
-            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
-                .await
-                .is_err()
-        );
+        tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+            .await
+            .unwrap_err();
     }
 
     #[tokio::test(start_paused = true)]
@@ -1698,10 +1692,8 @@ mod tests {
             },
             outcomes[0].outcome
         );
-        assert!(
-            tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
-                .await
-                .is_err()
-        );
+        tokio::time::timeout(Duration::from_millis(10), harness.outbound.recv())
+            .await
+            .unwrap_err();
     }
 }

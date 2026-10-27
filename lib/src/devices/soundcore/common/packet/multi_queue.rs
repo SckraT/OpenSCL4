@@ -180,7 +180,7 @@ mod tests {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn test_independent_queues() {
+    async fn independent_queues() {
         const RANGE: RangeInclusive<i8> = 1..=5;
         let queues: MultiQueue<i8, i8> = MultiQueue::new();
         let mut queue1_handles = RANGE.map(|_| queues.add(1)).collect::<VecDeque<_>>();
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_cancel() {
+    async fn cancel() {
         let queues = MultiQueue::<i8, i8>::new();
         let first = queues.add(0);
         let second = queues.add(0);
@@ -226,7 +226,7 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_cancel_does_not_block_the_next_handle() {
+    async fn cancel_does_not_block_the_next_handle() {
         let queues = MultiQueue::<i8, i8>::new();
         let first = queues.add(0);
         let second = queues.add(0);

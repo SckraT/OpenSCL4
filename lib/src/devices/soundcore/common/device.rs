@@ -1053,7 +1053,7 @@ pub mod test_utils {
                 let setting = self
                     .device
                     .setting(&setting_id)
-                    .expect(&format!("{setting_id} returned None"));
+                    .unwrap_or_else(|| panic!("{setting_id} returned None"));
                 assert_eq!(
                     Value::from(setting),
                     expected,
@@ -1108,7 +1108,7 @@ pub mod test_utils {
 
             let mut sent_packets = Vec::new();
             select! {
-                 _ = self.gather_sent_packets(&mut sent_packets) => (),
+                 () = self.gather_sent_packets(&mut sent_packets) => (),
                  _ = join_handle => (),
             };
             while let Ok(bytes) = self.outbound_receiver.try_recv() {
@@ -1140,24 +1140,19 @@ pub mod test_utils {
         }
 
         async fn gather_sent_packets(&mut self, sent_packets: &mut Vec<Vec<u8>>) {
-            loop {
-                if let Some(bytes) = self.outbound_receiver.recv().await {
-                    let packet = packet::Outbound::take::<VerboseError<_>>(
-                        self.config.checksum_kind,
-                    )(&bytes)
-                    .unwrap()
-                    .1;
-                    self.ack(&packet).await;
-                    if !matches!(
-                        packet.command,
-                        packet::Command([0x01, 0x01])
-                            | packet::Command([0x01, 0x7F])
-                            | packet::Command([0x01, 0x10])
-                    ) {
-                        sent_packets.push(bytes);
-                    }
-                } else {
-                    break;
+            while let Some(bytes) = self.outbound_receiver.recv().await {
+                let packet =
+                    packet::Outbound::take::<VerboseError<_>>(self.config.checksum_kind)(&bytes)
+                        .unwrap()
+                        .1;
+                self.ack(&packet).await;
+                if !matches!(
+                    packet.command,
+                    packet::Command([0x01, 0x01])
+                        | packet::Command([0x01, 0x7F])
+                        | packet::Command([0x01, 0x10])
+                ) {
+                    sent_packets.push(bytes);
                 }
             }
         }

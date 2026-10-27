@@ -86,7 +86,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_set_left_single_press() {
+    async fn set_left_single_press() {
         let mut test_device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3926,

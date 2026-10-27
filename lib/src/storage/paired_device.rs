@@ -125,7 +125,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_fetch_all() {
+    async fn fetch_all_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let paired_devices = [
             PairedDevice {
@@ -156,7 +156,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch() {
+    async fn fetch_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let paired_devices = [
             PairedDevice {
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_upsert() {
+    async fn upsert_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let paired_devices = [
             PairedDevice {
@@ -221,7 +221,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_delete() {
+    async fn delete_through_database() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let paired_devices = [
             PairedDevice {

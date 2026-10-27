@@ -109,7 +109,7 @@ mod tests {
                     .to_packet(),
                 )
                 .await
-                .expect(&format!("handle packet {i}"));
+                .unwrap_or_else(|err| panic!("handle packet {i}: {err:?}"));
         }
 
         let state = state_receiver.borrow();
@@ -119,7 +119,7 @@ mod tests {
                 is_enabled: true,
                 devices: devices.into_iter().collect(),
             }
-        )
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -170,6 +170,6 @@ mod tests {
                 is_enabled: true,
                 devices: devices.into_iter().collect(),
             }
-        )
+        );
     }
 }

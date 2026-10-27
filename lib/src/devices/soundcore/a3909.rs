@@ -140,7 +140,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_with_packet_from_issue_264() {
+    async fn with_packet_from_issue_264() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3957,
@@ -199,11 +199,11 @@ mod tests {
             device.inner().setting(&SettingId::BatteryLevelLeft),
             None,
             "left battery level is 255, which means this side is disconnected, so we don't know its level",
-        )
+        );
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_equalizer_presets_have_proper_volume_adjustments() {
+    async fn equalizer_presets_have_proper_volume_adjustments() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3957,

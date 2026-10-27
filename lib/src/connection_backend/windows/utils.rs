@@ -77,7 +77,7 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_original_equals_to_and_from() {
+    fn original_equals_to_and_from() {
         let mac_address = MacAddr6::from_str("01:23:45:67:89:AB").unwrap();
         let windows_u64 = mac_address.as_windows_u64();
         let from_windows_u64 = MacAddr6::from_windows_u64(windows_u64);
@@ -85,13 +85,13 @@ mod tests {
     }
 
     #[test]
-    fn test_to() {
+    fn to() {
         let mac_address = MacAddr6::from_str("01:23:45:67:89:AB").unwrap();
         assert_eq!(mac_address.as_windows_u64(), 0x0123456789AB);
     }
 
     #[test]
-    fn test_from() {
+    fn from() {
         let mac_address = MacAddr6::from_windows_u64(0x0123456789AB);
         assert_eq!(
             mac_address,

@@ -110,7 +110,7 @@ mod tests {
     };
 
     #[tokio::test(start_paused = true)]
-    async fn test_new_with_example_state_update_packet() {
+    async fn new_with_example_state_update_packet() {
         let device = TestSoundcoreDevice::new(
             super::device_registry,
             DeviceModel::SoundcoreA3948,

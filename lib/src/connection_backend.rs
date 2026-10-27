@@ -13,7 +13,7 @@ cfg_select! {
     }
 }
 #[cfg(test)]
-pub(crate) mod mock;
+pub mod mock;
 
 /// Groups together platform specific implementations of various means of connecting to devices.
 pub trait ConnectionBackends {

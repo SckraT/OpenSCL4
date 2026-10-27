@@ -177,10 +177,7 @@ mod tests {
         device.assert_setting_values([
             (SettingId::FirmwareVersionRight, "14.43".into()),
             (SettingId::SerialNumber, "3949B9AEC72C9C18".into()),
-            (
-                SettingId::RightSinglePress,
-                Value::OptionalString(None).into(),
-            ),
+            (SettingId::RightSinglePress, Value::OptionalString(None)),
             (SettingId::RightDoublePress, Some("PlayPause").into()),
             (SettingId::RightLongPress, Some("NextSong").into()),
         ]);
@@ -254,14 +251,8 @@ mod tests {
             (SettingId::TouchTone, true.into()),
             (SettingId::GamingMode, false.into()),
             (SettingId::PresetEqualizerProfile, Some("Piano").into()),
-            (
-                SettingId::LeftSinglePress,
-                Value::OptionalString(None).into(),
-            ),
-            (
-                SettingId::RightSinglePress,
-                Value::OptionalString(None).into(),
-            ),
+            (SettingId::LeftSinglePress, Value::OptionalString(None)),
+            (SettingId::RightSinglePress, Value::OptionalString(None)),
             (SettingId::LeftDoublePress, Some("VoiceAssistant").into()),
             (SettingId::RightDoublePress, Some("PlayPause").into()),
             (SettingId::LeftLongPress, Some("PreviousSong").into()),

@@ -46,7 +46,7 @@ Done when the fixture, the Rust contract tests and the Kotlin side agree.
 
 ```sh
 cargo test --locked -p openscq30-lib
-cargo clippy --locked -p openscq30-lib -p openscq30-desktop -- -D warnings
+cargo clippy --locked -p openscq30-lib -p openscq30-desktop --all-targets -- -D warnings
 ```
 
 Then exercise the CLI against the demo device with an isolated database:
