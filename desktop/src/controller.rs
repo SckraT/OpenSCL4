@@ -77,6 +77,9 @@ pub enum Failure {
 pub enum Event {
     #[cfg(target_os = "linux")]
     TrayStatus(crate::linux_tray::TrayStatus),
+    /// Whether the desktop prefers dark: once known, then on every change.
+    #[cfg(target_os = "linux")]
+    SystemDark(bool),
     PairedDevices(Vec<PairedDevice>),
     Devices {
         model: DeviceModel,
@@ -158,9 +161,13 @@ impl Controller {
         let emit: Arc<dyn Fn(Event) + Send + Sync> = Arc::new(emit);
         #[cfg(target_os = "linux")]
         {
-            let emit = emit.clone();
+            let tray = emit.clone();
             runtime.spawn(crate::linux_tray::watch(move |status| {
-                emit(Event::TrayStatus(status));
+                tray(Event::TrayStatus(status));
+            }));
+            let appearance = emit.clone();
+            runtime.spawn(crate::linux_appearance::watch(move |dark| {
+                appearance(Event::SystemDark(dark));
             }));
         }
         let actor = Actor {
