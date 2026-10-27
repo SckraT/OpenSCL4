@@ -93,6 +93,17 @@ wait_exit "$first"
 wait "$first"
 pids=()
 
+# After a normal exit the same data folder starts again.
+start_app "$config"
+reopened=$started
+pids+=("$reopened")
+window=$(wait_window "$reopened")
+test -n "$window"
+wmctrl -ic "$window"
+wait_exit "$reopened"
+wait "$reopened"
+pids=()
+
 # Different data folders run beside each other.
 config_a="$(mktemp -d)"
 config_b="$(mktemp -d)"
