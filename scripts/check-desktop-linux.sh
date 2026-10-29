@@ -20,6 +20,8 @@ RUN apt-get update \
         libdbus-1-dev libfontconfig1-dev libsqlite3-dev libxkbcommon-dev \
     && rm -rf /var/lib/apt/lists/*
 ENV RUSTUP_HOME=/cache/rustup CARGO_HOME=/cache/cargo CARGO_TARGET_DIR=/cache/target PATH=/cache/cargo/bin:$PATH
+# incremental state kept in the volume crashes rustc on the next run; the crates stay cached without it
+ENV CARGO_INCREMENTAL=0
 DOCKERFILE
 
 # MSYS_NO_PATHCONV keeps Git Bash from turning the container's paths into Windows ones
