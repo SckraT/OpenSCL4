@@ -11,6 +11,7 @@ import tarfile
 import tempfile
 import time
 import tomllib
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,11 @@ BUILD_ENVIRONMENT = (
     "RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_BUILD_JOBS", "CARGO_TARGET_DIR",
     "SOURCE_DATE_EPOCH", "CC", "CXX", "AR",
 )
+# Release downloads of the AppImage packaging tools; .build-tool-versions pins the version and SHA-256 of each.
+APPIMAGE_TOOLS = {
+    "appimagetool": "https://github.com/AppImage/appimagetool/releases/download/{}/appimagetool-x86_64.AppImage",
+    "appimage-runtime": "https://github.com/AppImage/type2-runtime/releases/download/{}/runtime-x86_64",
+}
 
 
 def configured_tools() -> dict[str, str]:
@@ -76,6 +82,25 @@ def run(args: list[str], *, cwd: Path = ROOT, capture: bool = False) -> str:
 def sha256(path: Path) -> str:
     with path.open("rb") as source:
         return hashlib.file_digest(source, "sha256").hexdigest()
+
+
+def download(url: str, destination: Path) -> None:
+    with urllib.request.urlopen(url, timeout=120) as response, destination.open("wb") as target:
+        shutil.copyfileobj(response, target)
+
+
+def appimage_tool(name: str) -> Path:
+    # Like the Gradle wrapper: fetched once into .local/, and never kept or run unless it has the pinned SHA-256.
+    tools = configured_tools()
+    path = ROOT / ".local/appimage" / f"{name}-{tools[name]}"
+    if not path.is_file():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        download(APPIMAGE_TOOLS[name].format(tools[name]), path)
+    if sha256(path) != tools[f"{name}-sha256"]:
+        path.unlink()
+        raise ValueError(f"{name} {tools[name]} does not have the SHA-256 pinned in .build-tool-versions")
+    path.chmod(0o755)
+    return path
 
 
 def inno_compiler() -> Path:

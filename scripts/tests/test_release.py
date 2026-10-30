@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 import sys
@@ -315,6 +316,44 @@ class ReleaseVerificationTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     release.set_version(value)
         self.assertEqual(original, manifest.read_text())
+
+
+class AppImageToolTest(unittest.TestCase):
+    RUNTIME_URL = "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64"
+
+    def setUp(self) -> None:
+        (release.ROOT / "target").mkdir(exist_ok=True)
+        self.temporary = tempfile.TemporaryDirectory(dir=release.ROOT / "target")
+        self.root = Path(self.temporary.name).resolve()
+        (self.root / ".build-tool-versions").write_text(
+            f"appimage-runtime 20251108\nappimage-runtime-sha256 {hashlib.sha256(b'runtime').hexdigest()}\n",
+        )
+        self.downloads = []
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def serve(self, content: bytes):
+        def download(url: str, destination: Path) -> None:
+            self.downloads.append(url)
+            destination.write_bytes(content)
+
+        return patch.object(release, "download", side_effect=download)
+
+    def test_tool_is_downloaded_from_its_pinned_release_once(self) -> None:
+        with patch.object(release, "ROOT", self.root), self.serve(b"runtime"):
+            release.appimage_tool("appimage-runtime")
+            tool = release.appimage_tool("appimage-runtime")
+
+        self.assertEqual([self.RUNTIME_URL], self.downloads)
+        self.assertEqual(b"runtime", tool.read_bytes())
+
+    def test_download_that_differs_from_the_pinned_checksum_is_refused_and_not_kept(self) -> None:
+        with patch.object(release, "ROOT", self.root), self.serve(b"tampered"):
+            with self.assertRaisesRegex(ValueError, "SHA-256"):
+                release.appimage_tool("appimage-runtime")
+
+        self.assertEqual([], [path for path in self.root.rglob("*") if path.is_file() and path.name != ".build-tool-versions"])
 
 
 if __name__ == "__main__":
