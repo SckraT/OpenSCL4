@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -12,6 +13,7 @@ import tempfile
 import time
 import tomllib
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,14 +137,17 @@ def build_windows(output: Path) -> list[Path]:
     return [portable, output / f"openscl4-{version()}-windows-x86_64-setup.exe"]
 
 
-def build_linux(output: Path) -> list[Path]:
+def require_linux_build_host() -> None:
     if sys.platform != "linux" or platform.machine() != "x86_64":
         raise ValueError("Linux packaging must run on x86_64 Linux")
     distribution = platform.freedesktop_os_release()
     if distribution.get("ID") != "ubuntu" or distribution.get("VERSION_ID") != "24.04":
         raise ValueError("Build Linux release packages on Ubuntu 24.04 for the supported glibc baseline")
-    # before the long Rust build, so that a download without the pinned checksum fails first
-    appimagetool, runtime = appimage_tool("appimagetool"), appimage_tool("appimage-runtime")
+
+
+@contextlib.contextmanager
+def staged_linux_application() -> Iterator[Path]:
+    """A temporary folder whose usr/ holds the release build as every Linux package installs it."""
     run(["cargo", "build", "--locked", "--release", "--target", "x86_64-unknown-linux-gnu", "-p", "openscq30-desktop", "--features", "openscq30-lib/bundled-dependencies"])
     with tempfile.TemporaryDirectory(prefix="openscl4-linux-", dir=ROOT / "target") as temporary:
         stage = Path(temporary).resolve()
@@ -158,11 +163,15 @@ def build_linux(output: Path) -> list[Path]:
         for source, destination in files.items():
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
+        yield stage
+
+
+def build_linux(output: Path) -> list[Path]:
+    require_linux_build_host()
+    with staged_linux_application() as stage:
         archive = output / f"openscl4-{version()}-linux-x86_64.tar.gz"
         with tarfile.open(archive, "w:gz") as target:
             target.add(stage / "usr", arcname=f"openscl4-{version()}/usr")
-        appimage = output / f"openscl4-{version()}-linux-x86_64.AppImage"
-        build_appimage(stage / "usr", appimage, appimagetool, runtime)
         control = stage / "DEBIAN/control"
         control.parent.mkdir()
         template = (ROOT / "packaging/linux/control").read_text(encoding="utf-8")
@@ -170,7 +179,18 @@ def build_linux(output: Path) -> list[Path]:
         deb = output / f"openscl4_{version()}_amd64.deb"
         run(["dpkg-deb", "--root-owner-group", "--build", str(stage), str(deb)])
         run(["dpkg-deb", "--info", str(deb)])
-    return [archive, appimage, deb]
+    return [archive, deb]
+
+
+def build_linux_appimage(output: Path) -> list[Path]:
+    # A build of its own, with its own report, so that its failure leaves the .deb, the tarball and their report.
+    require_linux_build_host()
+    # before the Rust build, so that a download without the pinned checksum fails first
+    appimagetool, runtime = appimage_tool("appimagetool"), appimage_tool("appimage-runtime")
+    appimage = output / f"openscl4-{version()}-linux-x86_64.AppImage"
+    with staged_linux_application() as stage:
+        build_appimage(stage / "usr", appimage, appimagetool, runtime)
+    return [appimage]
 
 
 def build_appimage(usr: Path, destination: Path, appimagetool: Path, runtime: Path) -> None:
@@ -257,6 +277,8 @@ def build(args: argparse.Namespace) -> None:
         artifacts = build_windows(output)
     elif args.platform == "linux":
         artifacts = build_linux(output)
+    elif args.platform == "linux-appimage":
+        artifacts = build_linux_appimage(output)
     else:
         artifacts = build_android(output, args.abi, args.unsigned)
     name = f"android-{args.abi}" if args.platform == "android" else args.platform
@@ -279,8 +301,6 @@ def build(args: argparse.Namespace) -> None:
         "java": java,
         "cargoNdk": cargo_ndk,
         "innoCompilerSha256": sha256(inno_compiler()) if args.platform == "windows" else None,
-        "appimagetoolSha256": sha256(appimage_tool("appimagetool")) if args.platform == "linux" else None,
-        "appimageRuntimeSha256": sha256(appimage_tool("appimage-runtime")) if args.platform == "linux" else None,
         "durationSeconds": round(time.perf_counter() - started, 3),
         "artifacts": [{"file": item.name, "sha256": sha256(item)} for item in artifacts],
     }
@@ -290,7 +310,10 @@ def build(args: argparse.Namespace) -> None:
 def verify(output: Path, linux_evidence: Path | None, *, preview: bool = False, expected_commit: str | None = None) -> list[dict]:
     reports = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(output.glob("build-*.json"))]
     required = {("windows", "x86_64"), ("linux", "x86_64"), *(("android", abi) for abi in ABIS)}
-    if {(report["platform"], report["abi"]) for report in reports} != required or len(reports) != len(required):
+    # A build a set may carry or leave out with its report: no release requires the AppImage until a decision makes it so.
+    optional = {("linux-appimage", "x86_64")}
+    builds = [(report["platform"], report["abi"]) for report in reports]
+    if len(set(builds)) != len(builds) or not required <= set(builds) <= required | optional:
         raise ValueError("A complete Windows/Linux/four-ABI Android build set is required")
     if len({(report["version"], report["commit"], report["applicationId"]) for report in reports}) != 1:
         raise ValueError("Builds must have one version, commit and application ID")
@@ -310,17 +333,16 @@ def verify(output: Path, linux_evidence: Path | None, *, preview: bool = False, 
     for report in reports:
         if not preview and (report["dirty"] or report.get("preview", False) or (report["platform"] == "android" and not report["signed"])):
             raise ValueError("Stable builds require a clean tree and signed Android APKs")
-        # A package a set may carry or leave out: the AppImage is not required by any release until a decision makes it so.
-        optional = set()
         if report["platform"] == "windows":
             expected = {f'openscl4-{version()}-windows-x86_64.exe', f'openscl4-{version()}-windows-x86_64-setup.exe'}
         elif report["platform"] == "linux":
             expected = {f'openscl4-{version()}-linux-x86_64.tar.gz', f'openscl4_{version()}_amd64.deb'}
-            optional = {f'openscl4-{version()}-linux-x86_64.AppImage'}
+        elif report["platform"] == "linux-appimage":
+            expected = {f'openscl4-{version()}-linux-x86_64.AppImage'}
         else:
             suffix = "" if report["signed"] else "-unsigned"
             expected = {f'openscl4-{version()}-android-{report["abi"]}{suffix}.apk'}
-        if not expected <= {artifact["file"] for artifact in report["artifacts"]} <= expected | optional:
+        if {artifact["file"] for artifact in report["artifacts"]} != expected:
             raise ValueError("Build manifest has an incomplete or unexpected package set")
         for artifact in report["artifacts"]:
             name = artifact["file"]
@@ -348,7 +370,7 @@ def main() -> None:
     setter = commands.add_parser("set-version")
     setter.add_argument("version")
     builder = commands.add_parser("build")
-    builder.add_argument("platform", choices=("windows", "linux", "android"))
+    builder.add_argument("platform", choices=("windows", "linux", "linux-appimage", "android"))
     builder.add_argument("--abi", choices=ABIS, default="arm64-v8a")
     builder.add_argument("--unsigned", action="store_true")
     builder.add_argument("--allow-dirty", action="store_true")
