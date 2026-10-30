@@ -2,22 +2,37 @@
 # Starts the AppImage with --appimage-extract-and-run, as a system without FUSE must, under X11 and nested Wayland.
 # The application inside is the one scripts/test-linux-package.sh checks from the .deb; this checks only that the
 # AppImage starts it, that its window opens, and that closing the window without a tray ends the AppImage.
-# Each session writes its programs' output to the log folder as SESSION-*.log; a failed session's logs are printed.
+# Each session writes its programs' output to its own folder in the log folder; a failed session's logs are printed.
 set -euo pipefail
 
-export OPENSCL4_TEST_APPIMAGE OPENSCL4_TEST_LOGS
+export OPENSCL4_TEST_APPIMAGE
 OPENSCL4_TEST_APPIMAGE="$(readlink -f "${1:?AppImage required}")"
 mkdir -p "${2:?log folder required}"
-OPENSCL4_TEST_LOGS="$(readlink -f "$2")"
+log_root="$(readlink -f "$2")"
 
-# Both sessions run even when one fails, so the result shows whether only one of them broke.
+# Runs the script on stdin in its own session bus and X server, with the folder for its logs as $1. Both sessions
+# run even when one fails, so the result shows whether only one of them broke.
 failed=()
+session() {
+    local logs="$log_root/$1"
+    mkdir -p "$logs"
+    if ! dbus-run-session -- xvfb-run -a bash -s "$logs"; then
+        failed+=("$1")
+        for log in "$logs"/*.log; do
+            if [ -f "$log" ]; then
+                echo "--- $log"
+                cat "$log"
+            fi
+        done
+    fi
+}
 
 # A session bus without a tray host: closing the window ends the application.
-dbus-run-session -- xvfb-run -a bash <<'X11' || failed+=(X11)
+session x11 <<'X11'
 set -euo pipefail
+logs="$1"
 runtime=""
-openbox >"$OPENSCL4_TEST_LOGS/x11-openbox.log" 2>&1 &
+openbox >"$logs/openbox.log" 2>&1 &
 wm=$!
 trap 'kill ${runtime:+"$runtime"} "$wm" 2>/dev/null || true' EXIT
 for _ in {1..50}; do
@@ -26,7 +41,7 @@ for _ in {1..50}; do
 done
 
 OPENSCL4_CONFIG_DIR="$(mktemp -d)" SLINT_RENDERER=software \
-    "$OPENSCL4_TEST_APPIMAGE" --appimage-extract-and-run </dev/null >"$OPENSCL4_TEST_LOGS/x11-app.log" 2>&1 &
+    "$OPENSCL4_TEST_APPIMAGE" --appimage-extract-and-run </dev/null >"$logs/app.log" 2>&1 &
 runtime=$!
 
 # The runtime unpacks the AppImage, then forks and waits for AppRun, which becomes the application: the window
@@ -55,13 +70,14 @@ runtime=""
 if [ "$status" -ne 0 ]; then echo "the AppImage ended with status $status"; exit 1; fi
 X11
 
-dbus-run-session -- xvfb-run -a bash <<'WAYLAND' || failed+=(Wayland)
+session wayland <<'WAYLAND'
 set -euo pipefail
+logs="$1"
 export XDG_RUNTIME_DIR
 XDG_RUNTIME_DIR="$(mktemp -d)"
 chmod 700 "$XDG_RUNTIME_DIR"
 weston --backend=x11-backend.so --renderer=pixman --no-config --socket=openscl4-test --idle-time=0 \
-    >"$OPENSCL4_TEST_LOGS/wayland-weston.log" 2>&1 &
+    >"$logs/weston.log" 2>&1 &
 weston_pid=$!
 trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
 for _ in {1..100}; do
@@ -76,25 +92,17 @@ if [ ! -S "$XDG_RUNTIME_DIR/openscl4-test" ]; then echo "weston opened no socket
 set +e
 env -u DISPLAY WAYLAND_DISPLAY=openscl4-test WAYLAND_DEBUG=client OPENSCL4_CONFIG_DIR="$(mktemp -d)" \
     SLINT_RENDERER=software timeout 8s "$OPENSCL4_TEST_APPIMAGE" --appimage-extract-and-run \
-    </dev/null >"$OPENSCL4_TEST_LOGS/wayland-app.log" 2>&1
+    </dev/null >"$logs/app.log" 2>&1
 result=$?
 set -e
 if [ "$result" -ne 124 ]; then echo "the AppImage ended with status $result before the deadline"; exit 1; fi
-if ! grep -qF 'set_app_id("io.github.sckrat.openscl4")' "$OPENSCL4_TEST_LOGS/wayland-app.log"; then
+if ! grep -qF 'set_app_id("io.github.sckrat.openscl4")' "$logs/app.log"; then
     echo "the application opened no window"
     exit 1
 fi
 WAYLAND
 
 if [ "${#failed[@]}" -ne 0 ]; then
-    for session in "${failed[@]}"; do
-        for log in "$OPENSCL4_TEST_LOGS/${session,,}"-*.log; do
-            if [ -f "$log" ]; then
-                echo "--- $log"
-                cat "$log"
-            fi
-        done
-    done
     echo "the AppImage check failed under ${failed[*]}"
     exit 1
 fi
