@@ -85,8 +85,11 @@ def sha256(path: Path) -> str:
 
 
 def download(url: str, destination: Path) -> None:
-    with urllib.request.urlopen(url, timeout=120) as response, destination.open("wb") as target:
+    # an interrupted download leaves only the .part file, which the next attempt overwrites
+    partial = destination.with_name(f"{destination.name}.part")
+    with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as target:
         shutil.copyfileobj(response, target)
+    partial.replace(destination)
 
 
 def appimage_tool(name: str) -> Path:
