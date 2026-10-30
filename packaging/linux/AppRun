@@ -1,0 +1,4 @@
+#!/bin/sh
+# The AppImage runtime starts this file from the mounted or extracted AppDir; it runs the packaged application.
+appdir="$(dirname "$(readlink -f "$0")")"
+exec "$appdir/usr/bin/openscl4" "$@"

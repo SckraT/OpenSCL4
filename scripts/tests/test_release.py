@@ -1,7 +1,10 @@
+import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -354,6 +357,104 @@ class AppImageToolTest(unittest.TestCase):
                 release.appimage_tool("appimage-runtime")
 
         self.assertEqual([], [path for path in self.root.rglob("*") if path.is_file() and path.name != ".build-tool-versions"])
+
+
+class LinuxBuildTest(unittest.TestCase):
+    """`release.py build linux` on an Ubuntu 24.04 host, with the commands and downloads it uses faked."""
+
+    TOOLS = {"appimagetool": b"fake appimagetool", "appimage-runtime": b"fake runtime"}
+
+    def setUp(self) -> None:
+        (release.ROOT / "target").mkdir(exist_ok=True)
+        self.temporary = tempfile.TemporaryDirectory(dir=release.ROOT / "target")
+        self.root = Path(self.temporary.name).resolve()
+        for name in ["Cargo.toml", "rust-toolchain.toml", "LICENSE.txt", "desktop/ui/icons/app.svg"]:
+            (self.root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(release.ROOT / name, self.root / name)
+        shutil.copytree(release.ROOT / "packaging/linux", self.root / "packaging/linux")
+        self.pins = dict(release.configured_tools(), **{
+            f"{name}-sha256": hashlib.sha256(content).hexdigest() for name, content in self.TOOLS.items()
+        })
+        (self.root / ".build-tool-versions").write_text("".join(f"{name} {value}\n" for name, value in self.pins.items()))
+        self.output = self.root / "build-output"
+        self.appimagetool = None
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def serve(self, url: str, destination: Path) -> None:
+        destination.write_bytes(self.TOOLS["appimagetool" if "/appimagetool/" in url else "appimage-runtime"])
+
+    def run_command(self, args: list[str], *, cwd: Path | None = None, capture: bool = False) -> str:
+        command = Path(args[0])
+        if args[:2] == ["git", "rev-parse"]:
+            return "a" * 40
+        if args[0] == "rustc":
+            return f"rustc {self.pins['rust']} (fixture)"
+        if args[0] == "cargo":
+            binary = self.root / "target/x86_64-unknown-linux-gnu/release/openscl4"
+            binary.parent.mkdir(parents=True, exist_ok=True)
+            binary.write_bytes(b"\x7fELF openscl4")
+        elif args[:2] == ["dpkg-deb", "--root-owner-group"]:
+            Path(args[-1]).write_bytes(b"deb")
+        elif command.is_absolute() and command.read_bytes() == self.TOOLS["appimagetool"]:
+            # appimagetool [OPTION...] SOURCE DESTINATION
+            source, destination = Path(args[-2]), Path(args[-1])
+            self.appimagetool = {
+                "args": args,
+                "appdir": {path.relative_to(source).as_posix(): path.read_bytes() for path in source.rglob("*") if path.is_file()},
+            }
+            destination.write_bytes(b"AppImage")
+        return ""
+
+    def build(self) -> dict:
+        args = argparse.Namespace(platform="linux", abi="arm64-v8a", unsigned=False, allow_dirty=False, output=self.output)
+        with patch.object(release, "ROOT", self.root), patch.object(release.sys, "platform", "linux"), patch.object(
+            release.platform, "machine", return_value="x86_64",
+        ), patch.object(
+            release.platform, "freedesktop_os_release", return_value={"ID": "ubuntu", "VERSION_ID": "24.04"},
+        ), patch.object(release.platform, "platform", return_value="Linux-fixture"), patch.object(
+            release, "run", side_effect=self.run_command,
+        ), patch.object(release, "download", side_effect=self.serve), patch.dict(release.os.environ):
+            release.os.environ.pop("CARGO_TARGET_DIR", None)
+            release.build(args)
+        return json.loads((self.output / "build-linux.json").read_text(encoding="utf-8"))
+
+    def test_linux_build_reports_the_appimage_with_its_checksum(self) -> None:
+        report = self.build()
+
+        self.assertIn(
+            {"file": f"openscl4-{release.version()}-linux-x86_64.AppImage", "sha256": hashlib.sha256(b"AppImage").hexdigest()},
+            report["artifacts"],
+        )
+
+    def test_appimage_holds_the_staged_application_of_the_tarball_and_its_entry_points(self) -> None:
+        self.build()
+
+        prefix = f"openscl4-{release.version()}/"
+        with tarfile.open(self.output / f"{prefix[:-1]}-linux-x86_64.tar.gz") as archive:
+            staged = {
+                member.name.removeprefix(prefix): archive.extractfile(member).read()
+                for member in archive.getmembers() if member.isfile()
+            }
+        appdir = self.appimagetool["appdir"]
+        self.assertEqual(staged, {name: content for name, content in appdir.items() if name.startswith("usr/")})
+        # The AppDir root: what the runtime starts, and the launcher entry and icon that appimagetool requires there.
+        self.assertEqual({"AppRun", f"{release.APP_ID}.desktop", f"{release.APP_ID}.svg"}, {name for name in appdir if "/" not in name})
+        self.assertIn(b"usr/bin/openscl4", appdir["AppRun"])
+        self.assertEqual(staged[f"usr/share/applications/{release.APP_ID}.desktop"], appdir[f"{release.APP_ID}.desktop"])
+        self.assertEqual(staged[f"usr/share/icons/hicolor/scalable/apps/{release.APP_ID}.svg"], appdir[f"{release.APP_ID}.svg"])
+
+    def test_appimage_is_made_without_fuse_with_the_pinned_runtime_and_both_tools_are_reported(self) -> None:
+        report = self.build()
+
+        args = self.appimagetool["args"]
+        # The appimagetool AppImage reads only its first "--" argument, so this must lead; build containers lack FUSE.
+        self.assertEqual("--appimage-extract-and-run", args[1])
+        # Without --runtime-file appimagetool would embed the newest runtime it downloads instead of the pinned one.
+        self.assertEqual(self.TOOLS["appimage-runtime"], Path(args[args.index("--runtime-file") + 1]).read_bytes())
+        self.assertEqual(hashlib.sha256(self.TOOLS["appimagetool"]).hexdigest(), report["appimagetoolSha256"])
+        self.assertEqual(hashlib.sha256(self.TOOLS["appimage-runtime"]).hexdigest(), report["appimageRuntimeSha256"])
 
 
 if __name__ == "__main__":
