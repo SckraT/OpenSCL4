@@ -263,14 +263,17 @@ def verify(output: Path, linux_evidence: Path | None, *, preview: bool = False, 
     for report in reports:
         if not preview and (report["dirty"] or report.get("preview", False) or (report["platform"] == "android" and not report["signed"])):
             raise ValueError("Stable builds require a clean tree and signed Android APKs")
+        # A package a set may carry or leave out: the AppImage is not required by any release until a decision makes it so.
+        optional = set()
         if report["platform"] == "windows":
             expected = {f'openscl4-{version()}-windows-x86_64.exe', f'openscl4-{version()}-windows-x86_64-setup.exe'}
         elif report["platform"] == "linux":
             expected = {f'openscl4-{version()}-linux-x86_64.tar.gz', f'openscl4_{version()}_amd64.deb'}
+            optional = {f'openscl4-{version()}-linux-x86_64.AppImage'}
         else:
             suffix = "" if report["signed"] else "-unsigned"
             expected = {f'openscl4-{version()}-android-{report["abi"]}{suffix}.apk'}
-        if {artifact["file"] for artifact in report["artifacts"]} != expected:
+        if not expected <= {artifact["file"] for artifact in report["artifacts"]} <= expected | optional:
             raise ValueError("Build manifest has an incomplete or unexpected package set")
         for artifact in report["artifacts"]:
             name = artifact["file"]

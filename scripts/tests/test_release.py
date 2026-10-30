@@ -68,6 +68,38 @@ class ReleaseVerificationTest(unittest.TestCase):
         self.assertEqual(6, len(reports))
         self.assertEqual(8, len((self.output / "SHA256SUMS").read_text().splitlines()))
 
+    def add_linux_package(self, filename: str) -> None:
+        path = self.output / filename
+        path.write_bytes(filename.encode())
+        report = next(report for _, report in self.reports if report["platform"] == "linux")
+        report["artifacts"].append({"file": filename, "sha256": release.sha256(path)})
+        self.save_reports()
+
+    def test_preview_set_with_an_appimage_lists_it_in_the_checksums(self) -> None:
+        appimage = f"openscl4-{release.version()}-linux-x86_64.AppImage"
+        self.add_linux_package(appimage)
+
+        release.verify(self.output, None, preview=True)
+
+        checksums = (self.output / "SHA256SUMS").read_text().splitlines()
+        self.assertIn(f"{release.sha256(self.output / appimage)}  {appimage}", checksums)
+        self.assertEqual(9, len(checksums))
+
+    def test_stable_set_neither_requires_nor_drops_the_appimage(self) -> None:
+        release.verify(self.output, self.evidence, expected_commit="a" * 40)
+        appimage = f"openscl4-{release.version()}-linux-x86_64.AppImage"
+        self.add_linux_package(appimage)
+
+        release.verify(self.output, self.evidence, expected_commit="a" * 40)
+
+        self.assertIn(appimage, (self.output / "SHA256SUMS").read_text())
+
+    def test_appimage_for_another_architecture_is_rejected(self) -> None:
+        self.add_linux_package(f"openscl4-{release.version()}-linux-aarch64.AppImage")
+
+        with self.assertRaisesRegex(ValueError, "package set"):
+            release.verify(self.output, None, preview=True)
+
     def test_missing_platform_or_android_abi_is_rejected(self) -> None:
         self.reports[0][0].unlink()
         with self.assertRaisesRegex(ValueError, "complete"):
