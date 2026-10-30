@@ -14,7 +14,7 @@ Sources for the **Standards** axis of `code-review`. Read the cited file before 
 
 - `cargo fmt --check`; ktlint with `.editorconfig` (`android_studio` style, 120 columns, trailing commas); Prettier for Markdown; `shellcheck`.
 - `cargo clippy --all-targets -- -D warnings` (tests included) with the workspace lint set (`use_self`, `cloned_instead_of_copied`, `map_unwrap_or`, `try_err`, `get_unwrap`, `assertions_on_result_states`, and the rest of `[workspace.lints.clippy]`).
-- `python3 -m unittest discover -s scripts/tests` for README/release-script consistency, for the release workflow's Linux artifacts and their checks (the AppImage in its own artifact, started on both Ubuntu releases, its logs kept on failure, no job waiting for it), and for workflow concurrency: push, pull request and manual runs of one branch fall into different concurrency groups.
+- `python3 -m unittest discover -s scripts/tests` for README/release-script consistency, for the release workflow's Linux artifacts and their checks (the AppImage and its report in their own artifact, built in a step whose failure leaves the Linux packages and the bundle, started on both Ubuntu releases, its logs kept on failure, no job waiting for it), and for workflow concurrency: push, pull request and manual runs of one branch fall into different concurrency groups.
 - `cargo test -p openscq30-desktop`: every `@tr` string is translated with the same placeholders and the same named systems (Windows, Linux), and `ms-settings:` stays out of `desktop/ui`.
 - The Rust type checker and the generated UniFFI headers.
 
