@@ -10,7 +10,7 @@ Use Python 3.11 or newer. Product version comes from `[workspace.package].versio
 
 Use the exact versions in [`.build-tool-versions`](../.build-tool-versions), not the newest system defaults. Install the Rust target for the chosen platform. Android also needs the corresponding NDK targets and SDK licences; set `JAVA_HOME` and `ANDROID_HOME`. Windows needs Visual Studio C++ build tools and the pinned Inno compiler, discoverable through `ISCC`, `.local/iscc/ISCC.exe` or its normal installation path. Platform setup is covered in [Windows](build-windows.md), [Android](build-android.md) and [Linux](build-linux.md).
 
-Build Linux packages on x86_64 Ubuntu 24.04, including when targeting Ubuntu 26.04. Install the build dependencies listed in `.github/workflows/build.yml`; the release script bundles the library's supported native dependencies, but the package still declares desktop/Bluetooth runtime dependencies. A newer build host can raise the minimum glibc requirement and is rejected.
+Build Linux packages on x86_64 Ubuntu 24.04, including when targeting Ubuntu 26.04. Install the build dependencies listed in `.github/workflows/build.yml`; the release script bundles the library's supported native dependencies, but the package still declares desktop/Bluetooth runtime dependencies. A newer build host can raise the minimum glibc requirement and is rejected. For the AppImage, `.build-tool-versions` pins the version and SHA-256 of `appimagetool` and the AppImage runtime; the release script downloads them into `.local/appimage/` and refuses a file with another hash, as the Gradle wrapper does with its distribution. To move to newer tools, change both lines of each pin together.
 
 For desktop development:
 
@@ -43,7 +43,7 @@ python scripts/release.py build android --abi x86_64
 python scripts/release.py build android --abi x86
 ```
 
-Outputs go to `build-output/`. Windows produces a portable EXE and a per-user installer; Linux produces `.deb` and `.tar.gz`; Android produces one APK per ABI. Each job records the source revision, version, actual/configured tools, build parameters, duration and package hashes in `build-*.json`. For PowerShell Android builds, make the Gradle wrapper discoverable as described in [the Android guide](build-android.md#release-or-preview-apks).
+Outputs go to `build-output/`. Windows produces a portable EXE and a per-user installer; Linux produces `.deb`, `.tar.gz` and an AppImage from one staged application; Android produces one APK per ABI. Each job records the source revision, version, actual/configured tools, build parameters, duration and package hashes in `build-*.json`; the Linux report also records the hashes of the AppImage tools. For PowerShell Android builds, make the Gradle wrapper discoverable as described in [the Android guide](build-android.md#release-or-preview-apks).
 
 For a local source preview, append `--allow-dirty`. For an unsigned Android preview, append `--unsigned`. These flags mark the build as preview; stable verification rejects it. A dirty manifest's commit identifies its base, not all uncommitted contents.
 
@@ -57,13 +57,15 @@ For signed CI builds, configure repository Actions secrets `OPENSCL4_KEYSTORE_BA
 
 ## CI and verification
 
-The `OpenSCL4 release builds` workflow supports manual preview runs and `v*` tags. A manual run with `platforms: linux` builds and checks only the Linux packages, without the complete bundle; [the Linux guide](build-linux.md#development-and-packaging) shows the commands. All platform jobs check out the source job's exact commit. Its Linux package checks install/remove the `.deb` on Ubuntu 24.04 and 26.04, exercise X11 and nested Wayland, and test closing without a tray. These checks do not replace GNOME/KDE session and real-headphone QA. Failed jobs block assembling the complete preview bundle; successful individual jobs retain their artifacts.
+The `OpenSCL4 release builds` workflow supports manual preview runs and `v*` tags. A manual run with `platforms: linux` builds and checks only the Linux packages, without the complete bundle; [the Linux guide](build-linux.md#development-and-packaging) shows the commands. All platform jobs check out the source job's exact commit. Its Linux package checks install/remove the `.deb` on Ubuntu 24.04 and 26.04, exercise X11 and nested Wayland, and test closing without a tray. These checks do not replace GNOME/KDE session and real-headphone QA. The Linux job uploads the AppImage as its own artifact, `release-linux-appimage`; no CI check starts it yet. Failed jobs block assembling the complete preview bundle; successful individual jobs retain their artifacts.
 
 Download the platform packages and all six build reports into one output directory. Verify an unsigned or otherwise preliminary complete set with:
 
 ```text
 python scripts/release.py verify --preview
 ```
+
+The Linux report may list the AppImage. Verification then checks its hash and writes it to `SHA256SUMS` like any other package. Neither preview nor stable verification requires it, so a set without it still passes. The AppImage is not a release gate: whether it is published with a stable release is decided at publication.
 
 For stable verification, use signed Android packages, clean source builds and a real Linux Liberty 4 Pro check for the exact commit. Record truthful results in a JSON file of this form; change a check to `true` only after it passes:
 
@@ -83,4 +85,4 @@ Run `python scripts/release.py verify --linux-evidence path/to/linux-qa.json`. V
 
 Before first stable publication, verify these sessions on x86_64: Ubuntu 24.04 GNOME Wayland and X11; Kubuntu 24.04 X11; Ubuntu 26.04 GNOME Wayland; Kubuntu 26.04 Wayland. Check install/start/remove, no-tray close, hiding only with a registered tray, recovery when the tray disappears, and clean shutdown. Record session details alongside the JSON. Repeat real-device tests after Bluetooth or connection-lifecycle changes. Test installation alongside OpenSCQ30 and upgrades within the OpenSCL4 line with its own data.
 
-Publication remains manual in [SckraT/OpenSCL4 Releases](https://github.com/SckraT/OpenSCL4/releases), after all mandatory jobs and checks pass. Upload the verified packages, build reports, checksums and release notes for the same tag. The workflow never publishes a stable release automatically. macOS, stores, AppImage, Flatpak and an updater are not part of this first stage.
+Publication remains manual in [SckraT/OpenSCL4 Releases](https://github.com/SckraT/OpenSCL4/releases), after all mandatory jobs and checks pass. Upload the verified packages, build reports, checksums and release notes for the same tag. The workflow never publishes a stable release automatically. macOS, stores, Flatpak and an updater are not part of this first stage; the AppImage is built as a preview format but is not part of it either.
