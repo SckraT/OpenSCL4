@@ -15,7 +15,7 @@ else
 fi
 ndk_version=$("$project_dir/android/scripts/get-ndk-version.sh")
 cargo_ndk_version=$(cargo ndk --version | awk '{ print $2 }')
-extra_versions=$(awk '$1 == "innosetup" || $1 == "android-sdk" || $1 == "android-platform" || $1 == "android-build-tools"' "$output_path")
+extra_versions=$(awk '$1 == "innosetup" || $1 == "android-sdk" || $1 == "android-platform" || $1 == "android-build-tools" || $1 == "appimagetool" || $1 == "appimagetool-sha256" || $1 == "appimage-runtime" || $1 == "appimage-runtime-sha256"' "$output_path")
 
 cat <<EOF > "$output_path"
 rustup $rustup_version
