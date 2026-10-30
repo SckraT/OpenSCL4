@@ -65,7 +65,7 @@ chmod +x openscl4-VERSION-linux-x86_64.AppImage
 ./openscl4-VERSION-linux-x86_64.AppImage
 ```
 
-It is a later format, not part of the first release stage, and does not replace the `.deb` as the main package. CI builds and checksums it, but it has not been through the package and session checks below. Its limits:
+It is a later format, not part of the first release stage, and does not replace the `.deb` as the main package. CI builds, checksums and starts it, as described [below](#verification), but it has not been through the `.deb` package checks or the session checks. Its limits:
 
 - **Dependencies.** It needs the same system libraries as the `.tar.gz`: the runtime dependencies in [`packaging/linux/control`](../packaging/linux/control), including glibc 2.39 or newer, BlueZ and `xdg-desktop-portal`. Systems older than Ubuntu 24.04 do not have a new enough glibc.
 - **FUSE.** The AppImage mounts itself with FUSE through `fusermount3` or `fusermount`, from the `fuse3` package that Ubuntu Desktop installs; the older `libfuse2` is not needed. Without FUSE, for example in a container, run it with `--appimage-extract-and-run`, which unpacks it to a temporary folder on each start.
@@ -82,4 +82,8 @@ Starting the app again for the same data directory asks the running window to sh
 
 ## Verification
 
-The release workflow installs/removes the `.deb` on Ubuntu 24.04/26.04 and runs X11/nested-Wayland smoke checks with [`scripts/test-linux-package.sh`](../scripts/test-linux-package.sh). The AppImage is built and checksummed, but no CI check starts it yet. These are configured CI checks, not evidence that the full GNOME/KDE matrix or Bluetooth hardware checks have passed. See [the release gates](build-release.md#ci-and-verification) for the required session and Liberty 4 Pro evidence.
+The release workflow installs/removes the `.deb` on Ubuntu 24.04/26.04 and runs X11/nested-Wayland smoke checks with [`scripts/test-linux-package.sh`](../scripts/test-linux-package.sh). These cover the application's own behaviour: one instance per data folder, separate data folders, recovery after a crash and a start without a session bus.
+
+On the same releases, the `linux-appimage-check` job installs the runtime dependencies from `packaging/linux/control`, but no FUSE, and starts the AppImage artifact with `--appimage-extract-and-run` through [`scripts/test-linux-appimage.sh`](../scripts/test-linux-appimage.sh). Under X11 the application's window must open and closing it without a tray must end the AppImage with status 0. Under nested Wayland the application must open its window and still run after eight seconds. The check does not repeat the `.deb` checks. When it fails, it prints the failed session's logs in the job log and keeps the log folder as the `linux-appimage-check-logs-UBUNTU-attempt-N` artifact. It does not hold back the bundle, since the AppImage is not a release gate. To run it on an Ubuntu host, install the packages that job installs and run `bash scripts/test-linux-appimage.sh path/to/openscl4-VERSION-linux-x86_64.AppImage LOG_FOLDER`.
+
+These are configured CI checks, not evidence that the full GNOME/KDE matrix or Bluetooth hardware checks have passed. See [the release gates](build-release.md#ci-and-verification) for the required session and Liberty 4 Pro evidence.
