@@ -104,6 +104,51 @@ jobs:
       - run: bash scripts/test-linux-package.sh /usr/bin/openscl4
       - run: apt-get remove -y openscl4
 
+  # Starts the AppImage without FUSE, as a container or a system without fuse3 must. It is a later format, not a gate
+  # of the first release, so the bundle does not wait for it.
+  linux-appimage-check:
+    needs: [source, linux]
+    runs-on: ubuntu-24.04
+    container: ubuntu:${{ matrix.ubuntu }}
+    strategy:
+      # a dependency update can break one release and not the other; each keeps its own result and logs
+      fail-fast: false
+      matrix:
+        ubuntu: ["24.04", "26.04"]
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - run: apt-get update && apt-get install -y git ca-certificates curl unzip python3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Fetch the built AppImage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GH_REPO/actions/runs/$RUN_ID/artifacts?per_page=100" -o /tmp/artifacts.json
+          url=$(python3 -c 'import json; data=json.load(open("/tmp/artifacts.json")); print(next(item["archive_download_url"] for item in data["artifacts"] if item["name"] == "release-linux-appimage"))')
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o /tmp/appimage.zip
+          mkdir -p build-output
+          unzip /tmp/appimage.zip -d build-output
+          chmod +x build-output/*.AppImage
+      - name: Install the runtime dependencies and the test sessions
+        # The AppImage carries the application, not the system libraries: it needs the same Depends as the .deb.
+        run: |
+          depends=$(sed -n 's/^Depends: //p' packaging/linux/control | sed 's/ *([^)]*)//g; s/,/ /g')
+          apt-get install -y $depends dbus x11-utils xvfb xauth openbox wmctrl weston fonts-dejavu-core
+      - run: bash scripts/test-linux-appimage.sh build-output/*.AppImage appimage-logs
+      # the script also prints them in the job log; an attempt keeps its own, so a rerun does not replace them
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: failure()
+        with:
+          name: linux-appimage-check-logs-${{ matrix.ubuntu }}-attempt-${{ github.run_attempt }}
+          path: appimage-logs
+          if-no-files-found: ignore
+
   windows:
     needs: source
     if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all'

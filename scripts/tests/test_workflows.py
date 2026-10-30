@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+BUILD = ROOT / ".github/workflows/build.yml"
+APPIMAGE = "build-output/openscl4-1.2.3-linux-x86_64.AppImage"
 EVENTS = ("push", "pull_request", "workflow_dispatch")
 BRANCHES = ("feature/example", "master")
 
@@ -40,11 +42,28 @@ def job(text: str, name: str) -> str:
     return re.search(rf"(?ms)^  {name}:\n(.*?)(?=^  \S|\Z)", text)[1]
 
 
-def artifact_uploads(job_text: str) -> dict[str, list[str]]:
-    """Each actions/upload-artifact step of a job: its artifact name and path patterns."""
+def needs(job_text: str) -> list[str]:
+    found = re.search(r"(?m)^    needs: (?:\[(.*)\]|(\S+))$", job_text)
+    return [name.strip() for name in (found[1] or found[2]).split(",")] if found else []
+
+
+def matrix(job_text: str, key: str) -> list[str]:
+    values = re.search(rf"(?m)^        {key}: \[(.*)\]$", job_text)[1]
+    return [value.strip(" \"'") for value in values.split(",")]
+
+
+def fetched_artifacts(job_text: str) -> list[str]:
+    """The artifacts of this run that a job looks up by name through the Actions API."""
+    return re.findall(r"item\[\"name\"\] == \"([^\"]+)\"", job_text)
+
+
+def artifact_uploads(job_text: str, condition: str | None = None) -> dict[str, list[str]]:
+    """Each actions/upload-artifact step of a job, or only those run on `if: condition`: artifact name and paths."""
     uploads = {}
     for step in re.split(r"(?m)^      - ", job_text):
         if not step.startswith("uses: actions/upload-artifact@"):
+            continue
+        if condition is not None and not re.search(rf"(?m)^        if: {re.escape(condition)}$", step):
             continue
         name = re.search(r"(?m)^          name: (.+)$", step)[1]
         path = re.search(r"(?m)^          path: (.+)$((?:\n            .+)*)", step)
@@ -61,9 +80,9 @@ class WorkflowTest(unittest.TestCase):
     def test_linux_job_uploads_each_package_once_and_the_appimage_on_its_own(self):
         # The bundle copies every downloaded file into one folder, where two files of one name collide, and a later
         # check fetches the AppImage without the other packages.
-        text = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
+        text = BUILD.read_text(encoding="utf-8")
         uploads = artifact_uploads(job(text, "linux"))
-        appimage = "build-output/openscl4-1.2.3-linux-x86_64.AppImage"
+        appimage = APPIMAGE
         files = [
             appimage,
             "build-output/openscl4-1.2.3-linux-x86_64.tar.gz",
@@ -75,6 +94,41 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual([appimage], [file for file in files if holders[file] == holders[appimage]])
         collected = re.search(r"--pattern '([^']+)'", job(text, "bundle"))[1]
         self.assertTrue(all(fnmatch.fnmatchcase(name, collected) for name in uploads), uploads)
+
+    def test_appimage_check_starts_the_built_appimage_on_each_ubuntu_release(self):
+        # The AppImage itself is started on both checked releases; the application's own behaviour stays with the
+        # .deb's package checks, which do not fetch the AppImage.
+        text = BUILD.read_text(encoding="utf-8")
+        holders = [name for name, patterns in artifact_uploads(job(text, "linux")).items() if uploaded(APPIMAGE, patterns)]
+        check = job(text, "linux-appimage-check")
+        self.assertIn("linux", needs(check))
+        self.assertEqual(["24.04", "26.04"], matrix(check, "ubuntu"))
+        self.assertRegex(check, r"(?m)^    container: ubuntu:\$\{\{ matrix\.ubuntu \}\}$")
+        self.assertEqual(holders, fetched_artifacts(check))
+        self.assertRegex(check, r"chmod \+x \S+\.AppImage")
+        self.assertRegex(check, r"(?m)^      - run: bash scripts/test-linux-appimage\.sh ")
+        self.assertNotIn("test-linux-package.sh", check)
+        self.assertFalse(set(holders) & set(fetched_artifacts(job(text, "linux-package-check"))))
+
+    def test_appimage_check_keeps_the_logs_of_a_failed_start(self):
+        # Each Ubuntu release keeps its own logs, apart from the packages the bundle collects.
+        text = BUILD.read_text(encoding="utf-8")
+        check = job(text, "linux-appimage-check")
+        logs = re.search(r"(?m)^      - run: bash scripts/test-linux-appimage\.sh \S+ (\S+)$", check)[1]
+        kept = artifact_uploads(check, "failure()")
+        self.assertEqual([[logs]], list(kept.values()), kept)
+        name = next(iter(kept))
+        self.assertIn("${{ matrix.ubuntu }}", name)
+        collected = re.search(r"--pattern '([^']+)'", job(text, "bundle"))[1]
+        self.assertFalse(fnmatch.fnmatchcase(name, collected), name)
+
+    def test_appimage_check_gates_no_other_job(self):
+        # The AppImage is not a release gate of the first release (docs/cross-platform-release-plan.md), so a failed
+        # check marks the run without holding back the bundle.
+        text = BUILD.read_text(encoding="utf-8")
+        jobs = re.findall(r"(?m)^  ([\w-]+):$", text[text.index("\njobs:\n"):])
+        self.assertIn("linux-appimage-check", jobs)
+        self.assertEqual([], [name for name in jobs if "linux-appimage-check" in needs(job(text, name))])
 
 
     def test_runs_of_one_branch_do_not_cancel_each_other(self):
