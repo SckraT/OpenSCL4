@@ -12,6 +12,10 @@ test:
 test-cov:
     cargo llvm-cov --no-report --no-cfg-coverage
 
+[doc("Run the desktop clippy and tests on Ubuntu 24.04 in Docker, to check Linux-only code from another system")]
+check-linux:
+    bash ../scripts/check-desktop-linux.sh
+
 alias fmt := format
 format:
     cargo fmt
