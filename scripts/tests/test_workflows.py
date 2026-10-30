@@ -36,7 +36,47 @@ def pushes_to(text: str, branch: str) -> bool:
     )
 
 
+def job(text: str, name: str) -> str:
+    return re.search(rf"(?ms)^  {name}:\n(.*?)(?=^  \S|\Z)", text)[1]
+
+
+def artifact_uploads(job_text: str) -> dict[str, list[str]]:
+    """Each actions/upload-artifact step of a job: its artifact name and path patterns."""
+    uploads = {}
+    for step in re.split(r"(?m)^      - ", job_text):
+        if not step.startswith("uses: actions/upload-artifact@"):
+            continue
+        name = re.search(r"(?m)^          name: (.+)$", step)[1]
+        path = re.search(r"(?m)^          path: (.+)$((?:\n            .+)*)", step)
+        uploads[name] = [line.strip() for line in path[2].splitlines() if line.strip()] if path[1] == "|" else [path[1]]
+    return uploads
+
+
+def uploaded(file: str, patterns: list[str]) -> bool:
+    excluded = any(fnmatch.fnmatchcase(file, pattern[1:]) for pattern in patterns if pattern.startswith("!"))
+    return not excluded and any(fnmatch.fnmatchcase(file, pattern) for pattern in patterns if not pattern.startswith("!"))
+
+
 class WorkflowTest(unittest.TestCase):
+    def test_linux_job_uploads_each_package_once_and_the_appimage_on_its_own(self):
+        # The bundle copies every downloaded file into one folder, where two files of one name collide, and a later
+        # check fetches the AppImage without the other packages.
+        text = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
+        uploads = artifact_uploads(job(text, "linux"))
+        appimage = "build-output/openscl4-1.2.3-linux-x86_64.AppImage"
+        files = [
+            appimage,
+            "build-output/openscl4-1.2.3-linux-x86_64.tar.gz",
+            "build-output/openscl4_1.2.3_amd64.deb",
+            "build-output/build-linux.json",
+        ]
+        holders = {file: [name for name, patterns in uploads.items() if uploaded(file, patterns)] for file in files}
+        self.assertEqual({file: 1 for file in files}, {file: len(names) for file, names in holders.items()}, holders)
+        self.assertEqual([appimage], [file for file in files if holders[file] == holders[appimage]])
+        collected = re.search(r"--pattern '([^']+)'", job(text, "bundle"))[1]
+        self.assertTrue(all(fnmatch.fnmatchcase(name, collected) for name in uploads), uploads)
+
+
     def test_runs_of_one_branch_do_not_cancel_each_other(self):
         checked = []
         for path in sorted((ROOT / ".github/workflows").glob("*.yml")):
