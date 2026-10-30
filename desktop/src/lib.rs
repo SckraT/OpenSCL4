@@ -28,7 +28,7 @@ slint::include_modules!();
 
 /// Opens the main window and runs until it is closed.
 pub fn run() -> anyhow::Result<()> {
-    window_chrome::init()?;
+    window_chrome::init(app::keep_title_bar)?;
     let config_dir = match std::env::var_os("OPENSCL4_CONFIG_DIR") {
         Some(dir) => std::path::PathBuf::from(dir),
         None => dirs::config_dir()

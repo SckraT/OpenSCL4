@@ -77,6 +77,7 @@ pub struct App {
     dark: bool,
     /// Whether Linux prefers dark, once the desktop portal has said; Windows is asked each time.
     system_dark: Option<bool>,
+    title_bar: window_chrome::TitleBar,
     legacy: Vec<(String, LegacyEqualizerProfile)>,
     started: bool,
     /// "ru" or "en", for numbers the window shows.
@@ -130,6 +131,7 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         add: AddFlow::default(),
         dark: false,
         system_dark: None,
+        title_bar: window_chrome::TitleBar::default(),
         legacy: Vec::new(),
         started: false,
         language: "en",
@@ -157,6 +159,19 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         slint::CloseRequestResponse::HideWindow
     });
     Ok(())
+}
+
+/// Keeps the app's theme on the title bar; on Linux `window_chrome` calls it after each round of events. Skipped
+/// quietly while the app is busy.
+pub fn keep_title_bar() {
+    APP.with(|cell| {
+        if let Ok(mut slot) = cell.try_borrow_mut()
+            && let Some(app) = slot.as_mut()
+            && let Some(window) = app.window()
+        {
+            app.title_bar.keep(window.window());
+        }
+    });
 }
 
 /// Lets go of the device and stops the controller, once the event loop has ended.
@@ -326,13 +341,14 @@ impl App {
             }
             #[cfg(target_os = "linux")]
             Event::SystemDark(dark) => {
-                if self.system_dark == Some(dark) {
-                    return;
-                }
                 self.system_dark = Some(dark);
-                if self.config.settings.theme == AppTheme::System {
-                    self.apply_theme();
-                }
+                // Slint gives the title bar the desktop's theme on every report, the same one too, sooner or later than
+                // this. Wayland gets the app's back from keep_title_bar; X11 can't say the window's theme, so it is set
+                // now and again once Slint is done.
+                self.apply_theme();
+                slint::Timer::single_shot(Duration::from_millis(500), || {
+                    with_app(Self::apply_theme);
+                });
             }
             Event::PairedDevices(paired) => {
                 self.paired = paired;
@@ -717,10 +733,9 @@ impl App {
 
     fn apply_theme(&mut self) {
         self.dark = match self.config.settings.theme {
-            AppTheme::System => self.system_dark.unwrap_or_else(|| {
-                self.window()
-                    .is_some_and(|window| window_chrome::system_prefers_dark(window.window()))
-            }),
+            AppTheme::System => self
+                .system_dark
+                .unwrap_or_else(window_chrome::system_prefers_dark),
             AppTheme::Light => false,
             AppTheme::Dark => true,
         };
@@ -732,14 +747,8 @@ impl App {
                 Accent::Sage => PaletteChoice::Sage,
                 Accent::Rose => PaletteChoice::Rose,
             });
-            window_chrome::set_title_bar(
-                window.window(),
-                match self.config.settings.theme {
-                    AppTheme::System => None,
-                    AppTheme::Light => Some(false),
-                    AppTheme::Dark => Some(true),
-                },
-            );
+            self.title_bar
+                .set(window.window(), self.config.settings.theme, self.dark);
         }
     }
 
