@@ -277,3 +277,65 @@ jobs:
           path: build-output/*
           if-no-files-found: error
       - run: echo 'Build set verified. Stable publication remains manual after Linux session and real-device checks.' >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    # Publishing is limited to a version tag: a manual run only proves the build and keeps its artifact. The set is
+    # always published as a pre-release, because CI verifies it with `verify --preview` and cannot run the Linux
+    # session and real-device checks that a stable release requires.
+    needs: [source, bundle]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    # A job-level permissions block replaces the workflow-level one, so `actions: read` has to be repeated here for
+    # `gh run download`; `contents: write` is what publishing a release needs.
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      TAG: ${{ github.ref_name }}
+      COMMIT: ${{ needs.source.outputs.commit }}
+      VERSION: ${{ needs.source.outputs.version }}
+    steps:
+      - name: Fetch the verified bundle
+        run: |
+          gh run download "$RUN_ID" --pattern 'openscl4-*-preview' --dir staging
+          mkdir -p assets
+          find staging -type f -exec cp -t assets -- {} +
+          test -f assets/SHA256SUMS || { echo 'Verified bundle has no SHA256SUMS'; exit 1; }
+          ls -l assets
+      - name: Write release notes
+        run: |
+          {
+            echo "Preview package set for OpenSCL4 $VERSION, built from \`$COMMIT\`."
+            echo
+            echo 'This release is a **pre-release**. The bundle passed `python scripts/release.py verify --preview`:'
+            echo 'a complete set of Windows, Linux and four Android ABI packages with matching version, source'
+            echo 'revision, identity, tool pins, Android signing certificate and package hashes.'
+            echo
+            echo 'The AppImage is attached, with its report, only when its own build succeeded; it is not a release'
+            echo 'gate, so its absence does not weaken the rest of the set.'
+            echo
+            echo 'It is not a stable release. Stable promotion needs the Linux session matrix and a real Liberty 4 Pro'
+            echo 'check for this commit, which CI does not run; see `docs/build-release.md`. The packages, checksums and'
+            echo 'build reports are attached, so a maintainer can promote this release after those checks pass.'
+            echo
+            echo '`SHA256SUMS` covers every attached package:'
+            echo
+            echo '```'
+            cat assets/SHA256SUMS
+            echo '```'
+          } > notes.md
+      - name: Publish pre-release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --clobber
+            gh release edit "$TAG" --notes-file notes.md --prerelease
+          else
+            gh release create "$TAG" assets/* \
+              --title "OpenSCL4 $VERSION" \
+              --notes-file notes.md \
+              --prerelease
+          fi
+          gh release view "$TAG" --json url,isPrerelease,assets --jq '"\(.url) prerelease=\(.isPrerelease) assets=\(.assets|length)"' >> "$GITHUB_STEP_SUMMARY"
