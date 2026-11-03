@@ -1,12 +1,16 @@
 // The scroll container the window uses instead of the standard widget, because its bar cannot be restyled and the
-// stock one is a rounded capsule. This bar is a flat rectangle with square ends, the Windows 11 shape, and a little
-// wider so it reads as a control rather than a hairline.
+// stock one is a rounded capsule.
+//
+// The bar owns a gutter at the right edge and the content is that much narrower, so the bar never sits on top of a
+// card. It stays a thin line until the pointer reaches it, then widens and darkens, as the Windows 11 bar does.
 import { Theme } from "../theme.slint";
 
 export component ScrollArea inherits Rectangle {
-    in property <length> bar-width: 16px;
-    // Keeps the bar clear of the window's top and bottom edges.
+    // The gutter the bar lives in. The content gives up this much width, so nothing is drawn underneath the bar.
+    in property <length> bar-width: 12px;
+    // Keeps the bar clear of the top and bottom edges.
     in property <length> bar-inset: 4px;
+    in property <length> idle-thumb-width: 4px;
     out property <length> visible-width: flick.width;
     out property <length> visible-height: flick.height;
     in-out property <length> content-width <=> flick.content-width;
@@ -31,7 +35,7 @@ export component ScrollArea inherits Rectangle {
     preferred-width: 100%;
 
     flick := Flickable {
-        width: root.width;
+        width: root.width - root.bar-width;
         height: root.height;
         mouse-drag-pan-enabled: false;
         @children
@@ -45,9 +49,12 @@ export component ScrollArea inherits Rectangle {
         background: transparent;
 
         thumb := Rectangle {
+            x: (parent.width - self.width) / 2;
             y: root.thumb-y;
-            width: parent.width;
+            width: drag.has-hover || drag.pressed ? parent.width : root.idle-thumb-width;
             height: root.thumb-height;
+            // A line while idle, a rounded bar once the pointer is on it.
+            border-radius: drag.has-hover || drag.pressed ? 4px : root.idle-thumb-width / 2;
             background: drag.has-hover || drag.pressed ? Theme.muted : Theme.line;
         }
 
