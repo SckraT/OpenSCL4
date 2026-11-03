@@ -8,6 +8,9 @@ import { Theme } from "../theme.slint";
 export component ScrollArea inherits Rectangle {
     // The gutter the bar lives in. The content gives up this much width, so nothing is drawn underneath the bar.
     in property <length> bar-width: 12px;
+    // Moves the bar out of this component's width and into a parent's padding, so it can sit against a dialog's edge
+    // instead of next to the content. Nothing is reserved for it then, because it overlaps no content.
+    in property <length> bar-outset: 0px;
     // Keeps the bar clear of the top and bottom edges.
     in property <length> bar-inset: 4px;
     in property <length> idle-thumb-width: 4px;
@@ -17,6 +20,7 @@ export component ScrollArea inherits Rectangle {
     in-out property <length> content-height <=> flick.content-height;
     in-out property <length> content-y <=> flick.content-y;
 
+    private property <length> reserved: root.bar-outset > 0px ? 0px : root.bar-width;
     private property <length> maximum: max(0px, flick.content-height - flick.height);
     private property <bool> bar-visible: root.maximum > 0px;
     private property <length> track: max(0px, root.height - 2 * root.bar-inset);
@@ -35,14 +39,14 @@ export component ScrollArea inherits Rectangle {
     preferred-width: 100%;
 
     flick := Flickable {
-        width: root.width - root.bar-width;
+        width: root.width - root.reserved;
         height: root.height;
         mouse-drag-pan-enabled: false;
         @children
     }
 
     if root.bar-visible: Rectangle {
-        x: root.width - root.bar-width;
+        x: root.width - root.bar-width + root.bar-outset;
         y: root.bar-inset;
         width: root.bar-width;
         height: root.track;
@@ -55,7 +59,13 @@ export component ScrollArea inherits Rectangle {
             height: root.thumb-height;
             // A line while idle, a rounded bar once the pointer is on it.
             border-radius: drag.has-hover || drag.pressed ? 4px : root.idle-thumb-width / 2;
-            background: drag.has-hover || drag.pressed ? Theme.muted : Theme.line;
+            // The theme's text colour, mostly transparent: it darkens on a light background and lightens on a dark
+            // one, so the bar reads the same either way instead of turning bright or turning to mud.
+            background: drag.has-hover || drag.pressed ? Theme.text.transparentize(72%) : Theme.line;
+            animate width, background, border-radius {
+                duration: 160ms;
+                easing: ease-out;
+            }
         }
 
         drag := TouchArea {

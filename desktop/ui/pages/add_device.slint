@@ -178,6 +178,8 @@ export component AddDeviceDialog inherits DialogFrame {
             min-height: 200px;
             preferred-height: 340px;
             vertical-stretch: 1;
+            // DialogFrame pads by 26px; sitting 22px out puts the bar 4px from the dialog's edge, as in the window.
+            bar-outset: 22px;
             content-width: self.visible-width;
             content-height: models.height;
             models := Rectangle {
@@ -298,6 +300,7 @@ export component AddDeviceDialog inherits DialogFrame {
         }
         ScrollArea {
             preferred-height: min(paired-list.preferred-height, 300px);
+            bar-outset: 22px;
             content-height: paired-list.preferred-height;
             paired-list := VerticalLayout {
                 spacing: 8px;
