@@ -1,10 +1,11 @@
 import "fonts/onest.ttf";
-import { ScrollView, Palette } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
 import { Theme, PaletteChoice } from "theme.slint";
 import { Icons } from "icons.slint";
 import { AppState, Actions, Page, Connection, FailureKind, ToastKind, DeviceCard, ModelOption, PairedOption } from "types.slint";
 import { Strings } from "strings.slint";
 import { Button, ButtonKind, Banner } from "components/basics.slint";
+import { ScrollArea } from "components/scrollarea.slint";
 import { Sidebar, StatusBar } from "shell.slint";
 import { DevicesPage, ConnectionState } from "pages/devices.slint";
 import { AddDeviceDialog, ConfirmForgetDialog } from "pages/add_device.slint";
@@ -54,7 +55,7 @@ export component AppWindow inherits Window {
         width: root.width - sidebar.width;
         height: root.height;
         VerticalLayout {
-            scroll := ScrollView {
+            scroll := ScrollArea {
                 vertical-stretch: 1;
                 content := VerticalLayout {
                     width: scroll.visible-width;

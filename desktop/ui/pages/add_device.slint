@@ -4,7 +4,8 @@ import { Icons } from "../icons.slint";
 import { AppState, Actions, ModelOption, PairedOption, FailureKind, SystemPage } from "../types.slint";
 import { FailureText } from "devices.slint";
 import { Icon, Button, ButtonKind, IconButton, Chip, Toggle, Banner } from "../components/basics.slint";
-import { LineEdit, ScrollView } from "std-widgets.slint";
+import { LineEdit } from "std-widgets.slint";
+import { ScrollArea } from "../components/scrollarea.slint";
 
 export component DialogFrame inherits Rectangle {
     in property <string> title;
@@ -173,7 +174,7 @@ export component AddDeviceDialog inherits DialogFrame {
             init => { self.focus(); }
         }
         KindChips { }
-        model-scroll := ScrollView {
+        model-scroll := ScrollArea {
             min-height: 200px;
             preferred-height: 340px;
             vertical-stretch: 1;
@@ -295,7 +296,7 @@ export component AddDeviceDialog inherits DialogFrame {
             color: Theme.muted;
             wrap: word-wrap;
         }
-        ScrollView {
+        ScrollArea {
             preferred-height: min(paired-list.preferred-height, 300px);
             content-height: paired-list.preferred-height;
             paired-list := VerticalLayout {

@@ -5,6 +5,7 @@ mod app;
 mod art;
 mod config;
 mod controller;
+mod curve;
 mod equalizer;
 #[cfg(any(target_os = "linux", test))]
 mod linux_appearance;

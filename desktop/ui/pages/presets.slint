@@ -1,11 +1,12 @@
 // Quick presets: a card for each, creating one from the current settings, and choosing which of its settings it
 // applies. Rust (src/presets.rs) puts the cards and the editor's rows together.
-import { LineEdit, ScrollView } from "std-widgets.slint";
+import { LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { AppState, Actions, Page, PresetCard, PresetFieldRow } from "../types.slint";
 import { Strings } from "../strings.slint";
 import { Icon, IconButton, Button, ButtonKind, Note, ProfileCurve, MenuItem } from "../components/basics.slint";
+import { ScrollArea } from "../components/scrollarea.slint";
 import { PageHeading } from "../shell.slint";
 import { DialogFrame } from "add_device.slint";
 
@@ -335,7 +336,7 @@ export component PresetEditorDialog inherits DialogFrame {
         font-size: Theme.font-small;
         wrap: word-wrap;
     }
-    if AppState.preset-groups.length > 0: scroll := ScrollView {
+    if AppState.preset-groups.length > 0: scroll := ScrollArea {
         height: min(list.preferred-height, 420px);
         list := VerticalLayout {
             width: scroll.visible-width;
