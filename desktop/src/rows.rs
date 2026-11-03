@@ -198,6 +198,12 @@ fn shown(settings: &SettingMap, id: &str) -> bool {
             !settings.contains_key(&SettingId::SpatialAudioMode)
                 || is_option(settings, "spatialAudioMode", "Music")
         }
+        // The device picks this level itself, and only while in the adaptive mode; in the custom mode it keeps
+        // reporting whatever it last chose, which reads as a value that never changes.
+        "adaptiveNoiseCanceling" => {
+            !settings.contains_key(&SettingId::NoiseCancelingMode)
+                || is_option(settings, "noiseCancelingMode", "Adaptive")
+        }
         _ => true,
     }
 }
@@ -495,6 +501,43 @@ mod tests {
             (SettingId::TwsStatus, information("Disconnected")),
             (SettingId::Ldac, Setting::Toggle { value: true }),
         ])
+    }
+
+    /// The adaptive level and the mode it belongs to, as a device that reports both sends them.
+    fn adaptive_settings(mode: &'static str) -> SettingMap {
+        let options = vec!["Custom".into(), "Adaptive".into()];
+        SettingMap::from([
+            (SettingId::AdaptiveNoiseCanceling, information("1/5")),
+            (
+                SettingId::NoiseCancelingMode,
+                Setting::Select {
+                    setting: settings::Select {
+                        localized_options: options.iter().map(ToString::to_string).collect(),
+                        options,
+                    },
+                    value: mode.into(),
+                },
+            ),
+        ])
+    }
+
+    #[test]
+    fn the_adaptive_level_shows_only_while_the_device_is_adaptive() {
+        // In the custom mode the device keeps reporting the level it last chose, which never changes on its own.
+        assert!(!shown(
+            &adaptive_settings("Custom"),
+            "adaptiveNoiseCanceling"
+        ));
+        assert!(shown(
+            &adaptive_settings("Adaptive"),
+            "adaptiveNoiseCanceling"
+        ));
+    }
+
+    #[test]
+    fn the_adaptive_level_shows_where_there_is_no_mode_to_be_adaptive_in() {
+        let settings = SettingMap::from([(SettingId::AdaptiveNoiseCanceling, information("1/5"))]);
+        assert!(shown(&settings, "adaptiveNoiseCanceling"));
     }
 
     #[test]
