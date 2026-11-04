@@ -13,6 +13,12 @@ pub fn set_case_language(case_language: &a3954::structures::CaseLanguage) -> pac
     packet::Outbound::new(packet::Command([7, 138]), case_language.bytes().collect())
 }
 
+/// Time-aware Easy Chat frame (`10 9D`, body `[enabled, wait_time]`).
+///
+/// Soundcore builds two formats for this command: the time-aware body used
+/// here and a legacy one-byte body (`[enabled]`) selected by a firmware
+/// predicate. The legacy format has never been observed on a real device in
+/// this research, so it is intentionally not implemented.
 pub fn set_easy_chat(easy_chat: &a3954::structures::EasyChat) -> packet::Outbound {
     packet::Outbound::new(packet::Command([16, 157]), easy_chat.bytes().collect())
 }
