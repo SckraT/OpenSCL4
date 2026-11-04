@@ -31,6 +31,16 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
             .all(|mode| options.iter().any(|o| o == mode))
 }
 
+/// Whether the adaptive noise canceling level is worth showing. The device picks that level itself, and only while
+/// it is in the adaptive mode; in the custom mode it keeps reporting the level it last chose, which never changes on
+/// its own. A device that has no mode to be adaptive in keeps showing it, since there the value is all there is.
+pub fn shows_adaptive_noise_canceling(settings: &SettingMap) -> bool {
+    match settings.get(&SettingId::NoiseCancelingMode) {
+        Some(Setting::Select { value, .. }) => value == "Adaptive",
+        _ => true,
+    }
+}
+
 /// The scale position of the current mode, or None in other modes such as airplane mode.
 pub fn sound_mode_scale_value(settings: &SettingMap) -> Option<i32> {
     let (_, mode) = ambient(settings)?;

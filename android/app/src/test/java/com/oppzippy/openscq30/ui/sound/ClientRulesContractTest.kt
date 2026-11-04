@@ -5,6 +5,7 @@ import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.QuickPresetField
+import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import kotlinx.serialization.json.Json
@@ -110,6 +111,24 @@ class ClientRulesContractTest {
             assertEquals(
                 case.getValue("status").jsonPrimitive.content,
                 soundPresetStatus(QuickPreset("p", fields), values, lastApplied).name,
+            )
+        }
+        fixtures.getValue("adaptiveLevel").jsonArray.forEach { item ->
+            val case = item.jsonObject
+            val values = buildMap {
+                case.getValue("noiseCancelingMode").takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let { mode ->
+                    put(
+                        "noiseCancelingMode",
+                        Setting.SelectSetting(
+                            Select(listOf("Custom", "Adaptive"), listOf("Custom", "Adaptive")),
+                            mode,
+                        ),
+                    )
+                }
+            }
+            assertEquals(
+                case.getValue("shown").jsonPrimitive.boolean,
+                showsAdaptiveNoiseCanceling(values),
             )
         }
     }
