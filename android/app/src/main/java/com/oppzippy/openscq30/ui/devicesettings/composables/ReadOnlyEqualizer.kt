@@ -10,13 +10,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.ui.sound.equalizerCurve
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
 import java.math.BigDecimal
 import java.math.MathContext
@@ -75,13 +76,24 @@ fun ReadOnlyEqualizer(
             values = values,
         )
         val canvasSpacePoints = unscaledPoints.map { it * sizeWithoutPadding + padding }
+        val curve = equalizerCurve(canvasSpacePoints)
         // line
-        drawPoints(
-            canvasSpacePoints.zipWithNext().flatMap { listOf(it.first, it.second) },
-            pointMode = PointMode.Lines,
+        drawPath(
+            Path().apply {
+                moveTo(canvasSpacePoints.first().x, canvasSpacePoints.first().y)
+                curve.forEach { segment ->
+                    cubicTo(
+                        segment.control1.x,
+                        segment.control1.y,
+                        segment.control2.x,
+                        segment.control2.y,
+                        segment.end.x,
+                        segment.end.y,
+                    )
+                }
+            },
             color = color,
-            cap = StrokeCap.Round,
-            strokeWidth = strokeWidth,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
         )
         // shading below the line
         drawPath(
@@ -89,9 +101,18 @@ fun ReadOnlyEqualizer(
                 val leftEdgeX = canvasSpacePoints.first().x - strokeWidth
                 val rightEdgeX = canvasSpacePoints.last().x + strokeWidth
 
-                // top line
+                // top line, following the curve
                 moveTo(leftEdgeX, canvasSpacePoints.first().y)
-                canvasSpacePoints.forEach { lineTo(it.x, it.y) }
+                curve.forEach { segment ->
+                    cubicTo(
+                        segment.control1.x,
+                        segment.control1.y,
+                        segment.control2.x,
+                        segment.control2.y,
+                        segment.end.x,
+                        segment.end.y,
+                    )
+                }
                 lineTo(rightEdgeX, canvasSpacePoints.last().y)
 
                 // bottom line
