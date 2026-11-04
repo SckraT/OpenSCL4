@@ -66,9 +66,18 @@ import com.oppzippy.openscq30.widget.SettingWidgetReceiver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsPage(onBackClick: () -> Unit, embedded: Boolean = false, onNotificationSettings: (() -> Unit)? = null) {
+fun SettingsPage(
+    onBackClick: () -> Unit,
+    embedded: Boolean = false,
+    onNotificationSettings: (() -> Unit)? = null,
+    // only a device the scale can show has two views to choose between, and a choice needs a device
+    soundModesViewApplies: Boolean = false,
+) {
     if (embedded) {
-        SettingsContent(onNotificationSettings = onNotificationSettings)
+        SettingsContent(
+            onNotificationSettings = onNotificationSettings,
+            soundModesViewApplies = soundModesViewApplies,
+        )
     } else {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -88,14 +97,21 @@ fun SettingsPage(onBackClick: () -> Unit, embedded: Boolean = false, onNotificat
             },
         ) { innerPadding ->
             Box(Modifier.padding(innerPadding)) {
-                SettingsContent(onNotificationSettings = onNotificationSettings)
+                SettingsContent(
+                    onNotificationSettings = onNotificationSettings,
+                    soundModesViewApplies = soundModesViewApplies,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: SettingsViewModel = hiltViewModel()) {
+private fun SettingsContent(
+    onNotificationSettings: (() -> Unit)?,
+    soundModesViewApplies: Boolean,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val autoConnect by viewModel.autoConnect.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
@@ -162,7 +178,9 @@ private fun SettingsContent(onNotificationSettings: (() -> Unit)?, viewModel: Se
                 SettingsSectionTitle(stringResource(R.string.appearance))
                 ThemeSelection(theme = theme, onThemeChange = viewModel::setTheme)
                 EarbudsColorSelection(color = earbudsColor, onColorChange = viewModel::setEarbudsColor)
-                SoundModesViewSelection(view = soundModesView, onViewChange = viewModel::setSoundModesView)
+                if (soundModesViewApplies) {
+                    SoundModesViewSelection(view = soundModesView, onViewChange = viewModel::setSoundModesView)
+                }
                 SettingsGroup {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingsToggle(
