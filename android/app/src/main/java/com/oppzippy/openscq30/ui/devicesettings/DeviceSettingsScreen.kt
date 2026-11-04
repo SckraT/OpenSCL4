@@ -70,6 +70,7 @@ import com.oppzippy.openscq30.ui.PendingSettingWrite
 import com.oppzippy.openscq30.ui.devicesettings.screens.MigrateLegacyEqualizerProfilesScreen
 import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
+import com.oppzippy.openscq30.ui.settings.soundModesViewApplies
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
 import com.oppzippy.openscq30.ui.sound.LocalPendingSettingWrites
 import com.oppzippy.openscq30.ui.sound.LocalSettingAvailability
@@ -528,10 +529,13 @@ fun DeviceSettingsScreen(
                         }
                     }
                     composable(APP_SETTINGS) {
+                        val modesViewApplies =
+                            soundModesViewApplies(deviceManager.device.model(), settings.toMap())
                         SettingsPage(
                             onBackClick = { navController.popBackStack() },
                             embedded = true,
                             onNotificationSettings = { navController.navigate("notifications") },
+                            soundModesViewApplies = modesViewApplies,
                         )
                     }
                     composable(ALL_SETTINGS) {
