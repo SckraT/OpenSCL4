@@ -5,6 +5,7 @@ use std::{borrow::Cow, str::FromStr};
 
 use openscq30_i18n::Translate;
 use openscq30_lib::client::availability::{SettingAvailability, setting_availability};
+use openscq30_lib::client::sound_mode;
 use openscq30_lib::settings::{self, MultiSelectWithRemoveCommand, Setting, SettingId, Value};
 use slint::{Model, ModelRc, SharedString, VecModel};
 
@@ -198,12 +199,8 @@ fn shown(settings: &SettingMap, id: &str) -> bool {
             !settings.contains_key(&SettingId::SpatialAudioMode)
                 || is_option(settings, "spatialAudioMode", "Music")
         }
-        // The device picks this level itself, and only while in the adaptive mode; in the custom mode it keeps
-        // reporting whatever it last chose, which reads as a value that never changes.
-        "adaptiveNoiseCanceling" => {
-            !settings.contains_key(&SettingId::NoiseCancelingMode)
-                || is_option(settings, "noiseCancelingMode", "Adaptive")
-        }
+        // a shared rule, since the Android client shows the same rows
+        "adaptiveNoiseCanceling" => sound_mode::shows_adaptive_noise_canceling(settings),
         _ => true,
     }
 }
