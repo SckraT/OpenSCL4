@@ -213,6 +213,7 @@ auto-play-pause = Автовоспроизведение / пауза
 wearing-tone = Звук при надевании
 touch-lock = Блокировка сенсорного управления
 low-battery-prompt = Уведомление о низком заряде
+power-on-battery-notice = Сообщение о заряде при включении
 wearing-detection = Обнаружение наушника в ухе
 voice-prompt = Голосовые подсказки
 side-tone = Слышимость собственного голоса

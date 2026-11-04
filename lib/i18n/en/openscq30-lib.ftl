@@ -208,6 +208,7 @@ auto-play-pause = Auto Play/Pause
 wearing-tone = Wearing Tone
 touch-lock = Touch Lock
 low-battery-prompt = Low Battery Prompt
+power-on-battery-notice = Power-On Battery Notice
 wearing-detection = Wearing Detection
 press-sensitivity = Press Sensitivity
 ambient-sound-prompt = Ambient Sound Prompt

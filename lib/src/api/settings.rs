@@ -143,6 +143,10 @@ pub enum SettingId {
     WearingTone,
     TouchLock,
     LowBatteryPrompt,
+    // A3035 command 01 AF: announces the battery level when the headphones
+    // are turned on. It is not the low battery warning (10 82), which the
+    // device does not use for this model.
+    PowerOnBatteryNotice,
     WearingDetection,
     PressSensitivity,
     AmbientSoundPrompt,

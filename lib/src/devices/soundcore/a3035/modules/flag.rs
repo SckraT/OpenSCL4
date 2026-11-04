@@ -21,7 +21,7 @@ where
     pub fn add_a3035_battery_alert(&mut self) {
         self.add_flag(FlagConfiguration {
             category_id: CategoryId::Miscellaneous,
-            setting_id: SettingId::LowBatteryPrompt,
+            setting_id: SettingId::PowerOnBatteryNotice,
             set_command: packet::Command([1, 175]),
             update_command: None,
             is_inverted: false,

@@ -117,7 +117,7 @@ mod tests {
             (SettingId::NormalModeInCycle, false.into()),
             (SettingId::AutoPowerOff, "90m".into()),
             (SettingId::AutoPlayPause, true.into()),
-            (SettingId::LowBatteryPrompt, true.into()),
+            (SettingId::PowerOnBatteryNotice, true.into()),
             (SettingId::VoicePrompt, true.into()),
             (
                 SettingId::PresetEqualizerProfile,
