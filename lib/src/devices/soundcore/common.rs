@@ -2,6 +2,7 @@ pub mod demo;
 pub mod device;
 pub mod macros;
 pub mod modules;
+pub mod nl2;
 pub mod packet;
 pub mod packet_manager;
 pub mod settings_manager;
