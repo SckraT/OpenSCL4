@@ -292,7 +292,8 @@ export component AddDeviceDialog inherits DialogFrame {
             text: @tr("Looking for paired devices…");
             color: Theme.muted;
         }
-        if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0: Text {
+        // In demo mode the list holds simulated devices, so telling the user to pair real headphones would be wrong.
+        if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0 && !AppState.add-demo: Text {
             text: AppState.linux ? @tr("Make sure your headphones are turned on and paired with this computer, then refresh.")
                 : @tr("Make sure your headphones are turned on and paired with Windows, then refresh.");
             color: Theme.muted;

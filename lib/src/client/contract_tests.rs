@@ -183,4 +183,24 @@ fn shared_client_contract() {
             )
         );
     }
+    for case in fixtures["adaptiveLevel"].as_array().unwrap() {
+        let mut settings = SettingMap::new();
+        if let Some(mode) = case["noiseCancelingMode"].as_str() {
+            settings.insert(
+                SettingId::NoiseCancelingMode,
+                Setting::Select {
+                    setting: crate::settings::Select {
+                        options: vec!["Custom".into(), "Adaptive".into()],
+                        localized_options: vec!["Custom".into(), "Adaptive".into()],
+                    },
+                    value: mode.to_string().into(),
+                },
+            );
+        }
+        assert_eq!(
+            case["shown"].as_bool().unwrap(),
+            sound_mode::shows_adaptive_noise_canceling(&settings),
+            "{case}"
+        );
+    }
 }

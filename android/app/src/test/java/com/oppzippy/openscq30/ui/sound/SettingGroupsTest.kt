@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.ui.sound
 
+import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -68,5 +69,31 @@ class SettingGroupsTest {
         assertEquals(listOf("ldac", "spatialAudio"), grouped[SettingGroup.SoundEffects]?.map { it.first })
         assertEquals(listOf("wearingDetection"), grouped[SettingGroup.Comfort]?.map { it.first })
         assertEquals(null, grouped[SettingGroup.Case])
+    }
+
+    private fun adaptiveLevel(mode: String): List<Pair<String, Setting>> {
+        val select = Setting.SelectSetting(
+            Select(listOf("Custom", "Adaptive"), listOf("Custom", "Adaptive")),
+            mode,
+        )
+        return listOf(
+            "noiseCancelingMode" to select,
+            "adaptiveNoiseCanceling" to Setting.InformationSetting("1/5", "1/5"),
+        )
+    }
+
+    @Test
+    fun theAdaptiveLevelIsLeftOutWhileTheDeviceIsNotAdaptive() {
+        val custom = groupSettings(adaptiveLevel("Custom"), mapOf("soundModes" to adaptiveLevel("Custom")))
+        assertEquals(listOf("noiseCancelingMode"), custom[SettingGroup.SoundModes]?.map { it.first })
+    }
+
+    @Test
+    fun theAdaptiveLevelStaysWhileTheDeviceIsAdaptive() {
+        val adaptive = groupSettings(adaptiveLevel("Adaptive"), mapOf("soundModes" to adaptiveLevel("Adaptive")))
+        assertEquals(
+            listOf("noiseCancelingMode", "adaptiveNoiseCanceling"),
+            adaptive[SettingGroup.SoundModes]?.map { it.first },
+        )
     }
 }
