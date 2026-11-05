@@ -76,6 +76,8 @@ fun ReadOnlyEqualizer(
             values = values,
         )
         val canvasSpacePoints = unscaledPoints.map { it * sizeWithoutPadding + padding }
+        // A device that reports no bands draws the guide only, as it did before the curve was smoothed.
+        if (canvasSpacePoints.isEmpty()) return@Canvas
         val curve = equalizerCurve(canvasSpacePoints)
         // line
         drawPath(
