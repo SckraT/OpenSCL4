@@ -73,3 +73,4 @@ multi-scene-noise-canceling = إلغاء ضوضاء متعدد المشاهد
 environment-detection = اكتشاف البيئة
 transportation = المواصلات
 transportation-mode = وضع المواصلات
+power-on-battery-notice = إشعار البطارية عند التشغيل

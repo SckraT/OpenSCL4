@@ -285,3 +285,4 @@ alarm-n-repeat = Repetir la alarma { $number }
 alarm-n-wake-up-tune = Sonido para la alarma { $number }
 alarm-n-volume = Volumen de la alarma { $number }
 alarm-n-snooze-duration-minutes = Posponer la alarma (minutos) { $number }
+power-on-battery-notice = Aviso de batería al encender

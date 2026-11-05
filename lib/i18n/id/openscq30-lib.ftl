@@ -232,3 +232,4 @@ small-speakers = Small Speakers
 spoken-word = Spoken Word
 treble-booster = Treble Booster
 treble-reducer = Treble Reducer
+power-on-battery-notice = Pemberitahuan Baterai Saat Menyala

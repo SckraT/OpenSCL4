@@ -120,3 +120,4 @@ import-custom-equalizer-profiles-confirm = 同じ名のプロファイルがあ�
 export-custom-equalizer-profiles = カスタムプロファイルをエクスポート
 export-custom-equalizer-profiles-output = カスタムプロファイルをエクスポートの出力
 adaptive = アダプティブ
+power-on-battery-notice = 電源オン時のバッテリー通知

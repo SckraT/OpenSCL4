@@ -263,3 +263,4 @@ auto-stop-timer-duration = Duração do Temporizador de Parada Automática
 alarms = Alarmes
 listening-mode = Modo de Escuta
 default-listening-mode = Modo de Escuta Prédefinido
+power-on-battery-notice = Aviso de bateria ao ligar

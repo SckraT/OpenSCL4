@@ -109,6 +109,9 @@ fn group_by_id(id: &str) -> Option<SettingGroup> {
         | "autoPowerOffPrompt"
         | "powerOff"
         | "lowBatteryPrompt"
+        // A3035's own battery notice: it belongs beside the low battery prompt, not in Other, where an unmapped
+        // setting lands by its miscellaneous category.
+        | "powerOnBatteryNotice"
         | "voicePrompt"
         | "listeningModePrompt"
         | "noiseCancelingPrompt" => SettingGroup::Power,
@@ -228,6 +231,13 @@ mod tests {
         for (id, group) in expected {
             assert_eq!(group, group_of(id), "{id}");
         }
+    }
+
+    #[test]
+    fn the_power_on_battery_notice_stays_with_the_power_settings() {
+        // A3035 reports it under the miscellaneous category, so without an explicit rule it would move to Other and
+        // appear on a different page than the low battery prompt it replaces.
+        assert_eq!(SettingGroup::Power, group_of("powerOnBatteryNotice"));
     }
 
     #[test]

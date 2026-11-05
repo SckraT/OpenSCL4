@@ -256,3 +256,4 @@ light-on = 조명 켜짐
 breathing = 숨쉬기
 flash = 깜박임
 music-follows = 음악에 맞춤
+power-on-battery-notice = 전원을 켤 때 배터리 알림

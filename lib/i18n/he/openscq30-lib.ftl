@@ -186,3 +186,4 @@ pressure-sensitivity = רגישות ללחץ
 softest = הרך ביותר
 medium = בינוני
 firmest = הקשה ביותר
+power-on-battery-notice = הודעת סוללה בעת ההפעלה

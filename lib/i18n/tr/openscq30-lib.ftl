@@ -238,3 +238,4 @@ wednesday = Çarşamba
 thursday = Perşembe
 friday = Cuma
 saturday = Cumartesi
+power-on-battery-notice = Açılışta Pil Bildirimi

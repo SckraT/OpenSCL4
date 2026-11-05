@@ -204,3 +204,4 @@ soundcore-a3005 = Soundcore Q11i
 soundcore-a3330 = Soundcore C30i
 soundcore-a3944 = Soundcore Life P2 Mini
 soundcore-d1301 = Soundcore Sleep A30
+power-on-battery-notice = Повідомлення про заряд під час увімкнення

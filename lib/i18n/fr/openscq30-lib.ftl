@@ -30,3 +30,4 @@ soundcore-a3957 = Soundcore Liberty 5
 general = Général
 sound-modes = Modes sonore
 equalizer = Egaliseur
+power-on-battery-notice = Annonce du niveau de batterie à l'allumage
