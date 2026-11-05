@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.clientSettingGroup
+import com.oppzippy.openscq30.lib.bindings.clientShowsAdaptiveNoiseCanceling
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
@@ -60,6 +61,14 @@ internal fun groupSettings(
     settings: List<Pair<String, Setting>>,
     byCategory: Map<String, List<Pair<String, Setting>>>,
 ): Map<SettingGroup, List<Pair<String, Setting>>> {
+    val values = settings.toMap()
+    // the adaptive level is what the device picks itself, so it is left out while the device is not adaptive
+    val shown = settings.filter { (id, _) ->
+        id != "adaptiveNoiseCanceling" || showsAdaptiveNoiseCanceling(values)
+    }
     val categoryOf = byCategory.flatMap { (category, list) -> list.map { it.first to category } }.toMap()
-    return settings.groupBy { (id, _) -> settingGroup(id, categoryOf[id]) }
+    return shown.groupBy { (id, _) -> settingGroup(id, categoryOf[id]) }
 }
+
+internal fun showsAdaptiveNoiseCanceling(values: Map<String, Setting>): Boolean =
+    clientShowsAdaptiveNoiseCanceling(values)

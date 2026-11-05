@@ -10,6 +10,7 @@ use slint::{ModelRc, VecModel};
 use crate::{
     Battery, BlockKind, LayoutBlock, OverviewBlockData, OverviewRow, Page, PresetItem, QuickToggle,
     controller::DeviceSnapshot,
+    curve,
     model::{
         battery::{BatteryLabel, device_batteries, with_missing_earbud},
         overview::{OverviewBlock, OverviewLayout},
@@ -316,15 +317,7 @@ pub fn curve(values: &[i16], min: i16, max: i16, width: f32, height: f32) -> Str
         .enumerate()
         .map(|(i, v)| (left + i as f32 * step, y(*v)))
         .collect();
-    let mut path = format!("M {:.1} {:.1}", points[0].0, points[0].1);
-    for pair in points.windows(2) {
-        let ((x0, y0), (x1, y1)) = (pair[0], pair[1]);
-        let mid = (x0 + x1) / 2.0;
-        path.push_str(&format!(
-            " C {mid:.1} {y0:.1} {mid:.1} {y1:.1} {x1:.1} {y1:.1}"
-        ));
-    }
-    path
+    curve::smooth_path(&points)
 }
 
 #[cfg(test)]

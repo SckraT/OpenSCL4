@@ -115,8 +115,10 @@ component AppearancePanel inherits Panel {
             chosen(i) => { Actions.set-device-color(i); }
         }
     }
-    Divider { }
-    SettingLine {
+    // Only devices that keep their mode and strength as one 1 to 11 position can show the scale, so the choice is
+    // offered for those alone.
+    if AppState.app-mode-view-applies: Divider { }
+    if AppState.app-mode-view-applies: SettingLine {
         title: @tr("Sound modes");
         text: @tr("The view for devices with the scale, such as Liberty 4 Pro");
         Segmented {

@@ -480,15 +480,18 @@ private fun EqualizerChart(
         val zeroY = point(0, 0).y.coerceIn(inset, size.height - inset)
         drawLine(guide, Offset(inset, zeroY), Offset(size.width - inset, zeroY), strokeWidth = 1.dp.toPx())
         val points = values.mapIndexed(::point)
+        if (points.isEmpty()) return@Canvas
         val path = Path().apply {
-            points.forEachIndexed { index, point ->
-                if (index ==
-                    0
-                ) {
-                    moveTo(point.x, point.y)
-                } else {
-                    lineTo(point.x, point.y)
-                }
+            moveTo(points.first().x, points.first().y)
+            equalizerCurve(points).forEach { segment ->
+                cubicTo(
+                    segment.control1.x,
+                    segment.control1.y,
+                    segment.control2.x,
+                    segment.control2.y,
+                    segment.end.x,
+                    segment.end.y,
+                )
             }
         }
         drawPath(path, primary, style = Stroke(width = 2.5.dp.toPx()))

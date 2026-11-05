@@ -8,7 +8,9 @@ use crate::{
     config::{Accent, AppTheme, Settings, SoundModeView},
     controller::Command,
     logs,
-    model::{device_art::EarbudsColor, languages::LANGUAGES},
+    model::{
+        device_art::EarbudsColor, languages::LANGUAGES, sound_mode::supports_sound_mode_scale,
+    },
     system_settings,
 };
 
@@ -120,6 +122,12 @@ impl App {
             SoundModeView::Tiles => 0,
             SoundModeView::Scale => 1,
         });
+        // The choice only changes anything on a device that can be drawn as one 1 to 11 scale, so it is offered only
+        // while such a device is connected, and not at all with none.
+        state.set_app_mode_view_applies(self.snapshot().is_some_and(|snapshot| {
+            let model: &'static str = snapshot.model.into();
+            supports_sound_mode_scale(model, &snapshot.settings)
+        }));
         state.set_app_language(
             settings
                 .language

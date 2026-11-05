@@ -4,7 +4,8 @@ import { Icons } from "../icons.slint";
 import { AppState, Actions, ModelOption, PairedOption, FailureKind, SystemPage } from "../types.slint";
 import { FailureText } from "devices.slint";
 import { Icon, Button, ButtonKind, IconButton, Chip, Toggle, Banner } from "../components/basics.slint";
-import { LineEdit, ScrollView } from "std-widgets.slint";
+import { LineEdit } from "std-widgets.slint";
+import { ScrollArea } from "../components/scrollarea.slint";
 
 export component DialogFrame inherits Rectangle {
     in property <string> title;
@@ -173,10 +174,12 @@ export component AddDeviceDialog inherits DialogFrame {
             init => { self.focus(); }
         }
         KindChips { }
-        model-scroll := ScrollView {
+        model-scroll := ScrollArea {
             min-height: 200px;
             preferred-height: 340px;
             vertical-stretch: 1;
+            // DialogFrame pads by 26px; sitting 22px out puts the bar 4px from the dialog's edge, as in the window.
+            bar-outset: 22px;
             content-width: self.visible-width;
             content-height: models.height;
             models := Rectangle {
@@ -289,14 +292,16 @@ export component AddDeviceDialog inherits DialogFrame {
             text: @tr("Looking for paired devices…");
             color: Theme.muted;
         }
-        if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0: Text {
+        // In demo mode the list holds simulated devices, so telling the user to pair real headphones would be wrong.
+        if !AppState.add-loading && !AppState.add-bluetooth-off && AppState.paired-options.length == 0 && !AppState.add-demo: Text {
             text: AppState.linux ? @tr("Make sure your headphones are turned on and paired with this computer, then refresh.")
                 : @tr("Make sure your headphones are turned on and paired with Windows, then refresh.");
             color: Theme.muted;
             wrap: word-wrap;
         }
-        ScrollView {
+        ScrollArea {
             preferred-height: min(paired-list.preferred-height, 300px);
+            bar-outset: 22px;
             content-height: paired-list.preferred-height;
             paired-list := VerticalLayout {
                 spacing: 8px;

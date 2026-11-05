@@ -1,0 +1,92 @@
+// The scroll container the window uses instead of the standard widget, because its bar cannot be restyled and the
+// stock one is a rounded capsule.
+//
+// The bar owns a gutter at the right edge and the content is that much narrower, so the bar never sits on top of a
+// card. It stays a thin line until the pointer reaches it, then widens and darkens, as the Windows 11 bar does.
+import { Theme } from "../theme.slint";
+
+export component ScrollArea inherits Rectangle {
+    // The gutter the bar lives in. The content gives up this much width, so nothing is drawn underneath the bar.
+    in property <length> bar-width: 12px;
+    // Moves the bar out of this component's width and into a parent's padding, so it can sit against a dialog's edge
+    // instead of next to the content. Nothing is reserved for it then, because it overlaps no content.
+    in property <length> bar-outset: 0px;
+    // Keeps the bar clear of the top and bottom edges.
+    in property <length> bar-inset: 4px;
+    in property <length> idle-thumb-width: 4px;
+    out property <length> visible-width: flick.width;
+    out property <length> visible-height: flick.height;
+    in-out property <length> content-width <=> flick.content-width;
+    in-out property <length> content-height <=> flick.content-height;
+    in-out property <length> content-y <=> flick.content-y;
+
+    private property <length> reserved: root.bar-outset > 0px ? 0px : root.bar-width;
+    private property <length> maximum: max(0px, flick.content-height - flick.height);
+    private property <bool> bar-visible: root.maximum > 0px;
+    private property <length> track: max(0px, root.height - 2 * root.bar-inset);
+    private property <length> thumb-height: !root.bar-visible ? 0px
+        : min(root.track, max(40px, root.track * root.height / max(1px, flick.content-height)));
+    private property <length> thumb-y: root.maximum <= 0px ? 0px
+        : (root.track - root.thumb-height) * (-flick.content-y / root.maximum);
+    // Where inside the thumb the drag started, so the thumb does not jump to the pointer.
+    private property <length> grab: 0px;
+
+    min-height: 50px;
+    min-width: 50px;
+    horizontal-stretch: 1;
+    vertical-stretch: 1;
+    preferred-height: 100%;
+    preferred-width: 100%;
+
+    flick := Flickable {
+        width: root.width - root.reserved;
+        height: root.height;
+        mouse-drag-pan-enabled: false;
+        @children
+    }
+
+    if root.bar-visible: Rectangle {
+        x: root.width - root.bar-width + root.bar-outset;
+        y: root.bar-inset;
+        width: root.bar-width;
+        height: root.track;
+        background: transparent;
+
+        thumb := Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: root.thumb-y;
+            width: drag.has-hover || drag.pressed ? parent.width : root.idle-thumb-width;
+            height: root.thumb-height;
+            // A line while idle, a rounded bar once the pointer is on it.
+            border-radius: drag.has-hover || drag.pressed ? 4px : root.idle-thumb-width / 2;
+            // The theme's text colour, mostly transparent: it darkens on a light background and lightens on a dark
+            // one, so the bar reads the same either way instead of turning bright or turning to mud.
+            background: drag.has-hover || drag.pressed ? Theme.text.transparentize(72%) : Theme.line;
+            animate width, background, border-radius {
+                duration: 160ms;
+                easing: ease-out;
+            }
+        }
+
+        drag := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            mouse-cursor: pointer;
+            pointer-event(event) => {
+                if (event.kind == PointerEventKind.down) {
+                    root.grab = min(max(0px, self.mouse-y - thumb.y), max(0px, root.thumb-height - 1px));
+                } else if (event.kind == PointerEventKind.move && self.pressed) {
+                    scroll-to(self.mouse-y - root.grab);
+                }
+            }
+        }
+    }
+
+    // Keeps the thumb under the pointer: the top of the track is the top of the content, the bottom is its end.
+    function scroll-to(thumb-top: length) {
+        if (root.track > root.thumb-height) {
+            flick.content-y = max(0px, min(thumb-top, root.track - root.thumb-height))
+                / (root.track - root.thumb-height) * -root.maximum;
+        }
+    }
+}

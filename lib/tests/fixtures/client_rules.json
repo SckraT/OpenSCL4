@@ -122,5 +122,10 @@
     {"stored": [" wearingDetection ", "ldac", "wearingDetection", "", "removed"], "available": ["ldac", "wearingDetection"], "expected": ["wearingDetection", "ldac"]},
     {"stored": ["removed"], "available": ["ldac"], "expected": []},
     {"stored": ["ldac", "wearingDetection"], "available": ["wearingDetection", "ldac"], "expected": ["ldac", "wearingDetection"]}
+  ],
+  "adaptiveLevel": [
+    {"noiseCancelingMode": "Custom", "shown": false},
+    {"noiseCancelingMode": "Adaptive", "shown": true},
+    {"noiseCancelingMode": null, "shown": true}
   ]
 }

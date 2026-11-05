@@ -7,6 +7,7 @@ use openscq30_lib::settings::{Equalizer, Setting, SettingId, Value};
 use crate::{
     EqBand, EqLine, EqProfile, ImportItem, ModeOption,
     controller::DeviceSnapshot,
+    curve,
     model::{
         equalizer::{
             ImportStatus, TransferProfile, device_values, format_equalizer_value, frequency,
@@ -179,14 +180,7 @@ pub fn chart(values: &[i16], min: i16, max: i16) -> (String, String) {
             (x * CHART_WIDTH, y * CHART_HEIGHT)
         })
         .collect();
-    let mut line = format!("M {:.1} {:.1}", points[0].0, points[0].1);
-    for pair in points.windows(2) {
-        let ((x0, y0), (x1, y1)) = (pair[0], pair[1]);
-        let mid = (x0 + x1) / 2.0;
-        line.push_str(&format!(
-            " C {mid:.1} {y0:.1} {mid:.1} {y1:.1} {x1:.1} {y1:.1}"
-        ));
-    }
+    let line = curve::smooth_path(&points);
     let first = points[0].0;
     let last = points[points.len() - 1].0;
     let area = format!("{line} L {last:.1} {CHART_HEIGHT:.1} L {first:.1} {CHART_HEIGHT:.1} Z");

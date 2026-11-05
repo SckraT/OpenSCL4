@@ -74,6 +74,13 @@ pub fn client_supports_sound_mode_scale(
 }
 
 #[uniffi::export]
+pub fn client_shows_adaptive_noise_canceling(
+    values: HashMap<String, serializable::Setting>,
+) -> bool {
+    sound_mode::shows_adaptive_noise_canceling(&settings(values))
+}
+
+#[uniffi::export]
 pub fn client_sound_mode_scale_value(
     values: HashMap<String, serializable::Setting>,
 ) -> Option<i32> {
