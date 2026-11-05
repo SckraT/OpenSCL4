@@ -410,6 +410,6 @@ mod tests {
         assert_eq!(quantize(1.99).unwrap(), 1);
         assert_eq!(quantize(-3.5).unwrap(), 0);
         assert_eq!(quantize(0.0).unwrap(), 0);
-        assert!(quantize(f64::NAN).is_err());
+        assert!(quantize(f64::NAN).is_err(), "NaN has no integer result");
     }
 }
