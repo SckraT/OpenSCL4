@@ -125,6 +125,7 @@
   ],
   "adaptiveLevel": [
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Custom", "shown": false},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Manual", "shown": false},
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": true},
     {"noiseCancelingMode": null, "shown": true},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": "Adaptive", "shown": false},

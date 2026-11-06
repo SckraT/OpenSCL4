@@ -9,6 +9,31 @@ pub const SCALE_MIN: i32 = 1;
 pub const SCALE_NORMAL: i32 = 6;
 pub const SCALE_MAX: i32 = 11;
 
+/// The names a device gives its ambient sound modes. Rules compare against these rather than against literals, so a
+/// name no device uses cannot be written by accident.
+pub mod ambient_mode {
+    pub const NOISE_CANCELING: &str = "NoiseCanceling";
+    pub const TRANSPARENCY: &str = "Transparency";
+    pub const NORMAL: &str = "Normal";
+
+    /// Every name a rule may read. The shared examples must cover each one.
+    pub const ALL: &[&str] = &[NOISE_CANCELING, TRANSPARENCY, NORMAL];
+}
+
+/// The names a device gives its noise canceling mode. The mode whose strength the user sets is called `Manual` on
+/// some devices and `Custom` on others, and both mean the same thing to a client: the device is not choosing.
+pub mod noise_canceling_mode {
+    pub const MANUAL: &str = "Manual";
+    pub const CUSTOM: &str = "Custom";
+    pub const ADAPTIVE: &str = "Adaptive";
+
+    /// The names that mean the user sets the strength.
+    pub const STRENGTH_IS_SET_BY_USER: &[&str] = &[MANUAL, CUSTOM];
+
+    /// Every name a rule may read. The shared examples must cover each one.
+    pub const ALL: &[&str] = &[MANUAL, CUSTOM, ADAPTIVE];
+}
+
 // Models that keep the mode and its strength as one position from 1 to 11, which is what the scale shows. They offer
 // only the strength of the current mode, so support can not be told from the settings alone.
 const SCALE_MODELS: &[&str] = &["SoundcoreA3954"];
@@ -26,9 +51,13 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
         return false;
     };
     SCALE_MODELS.contains(&model)
-        && ["Transparency", "Normal", "NoiseCanceling"]
-            .iter()
-            .all(|mode| options.iter().any(|o| o == mode))
+        && [
+            ambient_mode::TRANSPARENCY,
+            ambient_mode::NORMAL,
+            ambient_mode::NOISE_CANCELING,
+        ]
+        .iter()
+        .all(|mode| options.iter().any(|o| o == mode))
 }
 
 /// Whether the adaptive noise canceling level is worth showing. The device picks that level itself, and only while
@@ -38,9 +67,9 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
 /// in keeps showing it, since there the value is all there is.
 pub fn shows_adaptive_noise_canceling(settings: &SettingMap) -> bool {
     match settings.get(&SettingId::AmbientSoundMode) {
-        Some(Setting::Select { value, .. }) if value != "NoiseCanceling" => false,
+        Some(Setting::Select { value, .. }) if value != ambient_mode::NOISE_CANCELING => false,
         _ => match settings.get(&SettingId::NoiseCancelingMode) {
-            Some(Setting::Select { value, .. }) => value == "Adaptive",
+            Some(Setting::Select { value, .. }) => value == noise_canceling_mode::ADAPTIVE,
             _ => true,
         },
     }
@@ -55,9 +84,11 @@ pub fn sound_mode_scale_value(settings: &SettingMap) -> Option<i32> {
         _ => 1,
     };
     match mode {
-        "Transparency" => Some(SCALE_NORMAL - strength(SettingId::ManualTransparency)),
-        "Normal" => Some(SCALE_NORMAL),
-        "NoiseCanceling" => Some(SCALE_NORMAL + strength(SettingId::ManualNoiseCanceling)),
+        ambient_mode::TRANSPARENCY => Some(SCALE_NORMAL - strength(SettingId::ManualTransparency)),
+        ambient_mode::NORMAL => Some(SCALE_NORMAL),
+        ambient_mode::NOISE_CANCELING => {
+            Some(SCALE_NORMAL + strength(SettingId::ManualNoiseCanceling))
+        }
         _ => None,
     }
 }
@@ -68,20 +99,20 @@ pub fn sound_mode_scale_settings(position: i32) -> Vec<(SettingId, Value)> {
     let mode = |name: &'static str| (SettingId::AmbientSoundMode, Value::String(name.into()));
     match value.cmp(&SCALE_NORMAL) {
         std::cmp::Ordering::Less => vec![
-            mode("Transparency"),
+            mode(ambient_mode::TRANSPARENCY),
             (
                 SettingId::ManualTransparency,
                 Value::I32(SCALE_NORMAL - value),
             ),
         ],
         std::cmp::Ordering::Greater => vec![
-            mode("NoiseCanceling"),
+            mode(ambient_mode::NOISE_CANCELING),
             (
                 SettingId::ManualNoiseCanceling,
                 Value::I32(value - SCALE_NORMAL),
             ),
         ],
-        std::cmp::Ordering::Equal => vec![mode("Normal")],
+        std::cmp::Ordering::Equal => vec![mode(ambient_mode::NORMAL)],
     }
 }
 
@@ -91,7 +122,12 @@ mod tests {
 
     use super::*;
 
-    const MODES: [&str; 4] = ["NoiseCanceling", "Transparency", "Normal", "AirplaneMode"];
+    const MODES: [&str; 4] = [
+        ambient_mode::NOISE_CANCELING,
+        ambient_mode::TRANSPARENCY,
+        ambient_mode::NORMAL,
+        "AirplaneMode",
+    ];
 
     fn select(options: &[&'static str], value: &'static str) -> Setting {
         Setting::Select {
@@ -130,43 +166,52 @@ mod tests {
     fn the_scale_is_for_models_with_one_slider_and_all_three_modes() {
         assert!(supports_sound_mode_scale(
             "SoundcoreA3954",
-            &device("Normal", 3, 2)
+            &device(ambient_mode::NORMAL, 3, 2)
         ));
         // the device offers only the strength of the current mode
         assert!(supports_sound_mode_scale(
             "SoundcoreA3954",
-            &without(device("Normal", 3, 2), SettingId::ManualTransparency)
+            &without(
+                device(ambient_mode::NORMAL, 3, 2),
+                SettingId::ManualTransparency
+            )
         ));
         assert!(!supports_sound_mode_scale(
             "SoundcoreA3951",
-            &device("Normal", 3, 2)
+            &device(ambient_mode::NORMAL, 3, 2)
         ));
-        let mut no_normal = device("Normal", 3, 2);
+        let mut no_normal = device(ambient_mode::NORMAL, 3, 2);
         no_normal.insert(
             SettingId::AmbientSoundMode,
-            select(&["NoiseCanceling", "Transparency"], "NoiseCanceling"),
+            select(
+                &[ambient_mode::NOISE_CANCELING, ambient_mode::TRANSPARENCY],
+                ambient_mode::NOISE_CANCELING,
+            ),
         );
         assert!(!supports_sound_mode_scale("SoundcoreA3954", &no_normal));
     }
 
     #[test]
     fn the_current_mode_is_a_position_on_the_scale() {
-        assert_eq!(Some(6), sound_mode_scale_value(&device("Normal", 3, 2)));
+        assert_eq!(
+            Some(6),
+            sound_mode_scale_value(&device(ambient_mode::NORMAL, 3, 2))
+        );
         assert_eq!(
             Some(9),
-            sound_mode_scale_value(&device("NoiseCanceling", 3, 2))
+            sound_mode_scale_value(&device(ambient_mode::NOISE_CANCELING, 3, 2))
         );
         assert_eq!(
             Some(11),
-            sound_mode_scale_value(&device("NoiseCanceling", 5, 2))
+            sound_mode_scale_value(&device(ambient_mode::NOISE_CANCELING, 5, 2))
         );
         assert_eq!(
             Some(4),
-            sound_mode_scale_value(&device("Transparency", 3, 2))
+            sound_mode_scale_value(&device(ambient_mode::TRANSPARENCY, 3, 2))
         );
         assert_eq!(
             Some(1),
-            sound_mode_scale_value(&device("Transparency", 3, 5))
+            sound_mode_scale_value(&device(ambient_mode::TRANSPARENCY, 3, 5))
         );
         assert_eq!(None, sound_mode_scale_value(&device("AirplaneMode", 3, 2)));
     }
@@ -174,10 +219,13 @@ mod tests {
     #[test]
     fn a_mode_without_its_strength_is_at_the_weakest_position() {
         let nc = without(
-            device("NoiseCanceling", 3, 2),
+            device(ambient_mode::NOISE_CANCELING, 3, 2),
             SettingId::ManualNoiseCanceling,
         );
-        let transparency = without(device("Transparency", 3, 2), SettingId::ManualTransparency);
+        let transparency = without(
+            device(ambient_mode::TRANSPARENCY, 3, 2),
+            SettingId::ManualTransparency,
+        );
         assert_eq!(Some(7), sound_mode_scale_value(&nc));
         assert_eq!(Some(5), sound_mode_scale_value(&transparency));
     }
@@ -188,21 +236,24 @@ mod tests {
             vec![
                 (
                     SettingId::AmbientSoundMode,
-                    Value::String("Transparency".into())
+                    Value::String(ambient_mode::TRANSPARENCY.into())
                 ),
                 (SettingId::ManualTransparency, Value::I32(5)),
             ],
             sound_mode_scale_settings(1)
         );
         assert_eq!(
-            vec![(SettingId::AmbientSoundMode, Value::String("Normal".into()))],
+            vec![(
+                SettingId::AmbientSoundMode,
+                Value::String(ambient_mode::NORMAL.into())
+            )],
             sound_mode_scale_settings(6)
         );
         assert_eq!(
             vec![
                 (
                     SettingId::AmbientSoundMode,
-                    Value::String("NoiseCanceling".into())
+                    Value::String(ambient_mode::NOISE_CANCELING.into())
                 ),
                 (SettingId::ManualNoiseCanceling, Value::I32(1)),
             ],
@@ -222,18 +273,18 @@ mod tests {
                 _ => panic!("the strength is a number"),
             });
             let mode: &'static str = match mode.as_ref() {
-                "Transparency" => "Transparency",
-                "NoiseCanceling" => "NoiseCanceling",
-                _ => "Normal",
+                ambient_mode::TRANSPARENCY => ambient_mode::TRANSPARENCY,
+                ambient_mode::NOISE_CANCELING => ambient_mode::NOISE_CANCELING,
+                _ => ambient_mode::NORMAL,
             };
             let values = device(
                 mode,
-                if mode == "NoiseCanceling" {
+                if mode == ambient_mode::NOISE_CANCELING {
                     strength.unwrap()
                 } else {
                     1
                 },
-                if mode == "Transparency" {
+                if mode == ambient_mode::TRANSPARENCY {
                     strength.unwrap()
                 } else {
                     1

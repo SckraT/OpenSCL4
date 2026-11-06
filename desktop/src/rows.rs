@@ -387,7 +387,7 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
         !snapshot
             .settings
             .contains_key(&SettingId::from_str(mode_id).unwrap())
-            || ["Manual", "Custom"]
+            || sound_mode::noise_canceling_mode::STRENGTH_IS_SET_BY_USER
                 .iter()
                 .any(|option| is_option(&snapshot.settings, mode_id, option))
     };

@@ -223,4 +223,27 @@ fn shared_client_contract() {
             "{case}"
         );
     }
+    assert_every_mode_name_is_exercised(&fixtures["adaptiveLevel"]);
+}
+
+/// A rule keyed on a setting value is only as good as the names the examples put in front of it: the Space One Pro
+/// calls its user-set mode `Custom`, another device calls it `Manual`, and a rule written against one name silently
+/// missed the other. Every name a rule may read therefore has to appear in the shared examples, which both clients
+/// check against.
+fn assert_every_mode_name_is_exercised(cases: &serde_json::Value) {
+    let cases = cases.as_array().unwrap();
+    let exercised =
+        |key: &str, name: &str| cases.iter().any(|case| case[key].as_str() == Some(name));
+    for name in sound_mode::ambient_mode::ALL {
+        assert!(
+            exercised("ambientSoundMode", name),
+            "no shared example uses the ambient mode {name}"
+        );
+    }
+    for name in sound_mode::noise_canceling_mode::ALL {
+        assert!(
+            exercised("noiseCancelingMode", name),
+            "no shared example uses the noise canceling mode {name}"
+        );
+    }
 }
