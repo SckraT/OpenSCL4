@@ -380,25 +380,30 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
         })
         .collect();
     let mode = value.as_ref();
-    let manual = |mode_id: &str| {
+    // The strength is the user's to set unless the device picks it itself, which the mode names. Devices that let the
+    // user set it call that mode either "Manual" or "Custom", and reading only one of the two left the Space One Pro
+    // without a strength slider while the transparency page kept its own.
+    let strength_is_set_by_user = |mode_id: &str| {
         !snapshot
             .settings
             .contains_key(&SettingId::from_str(mode_id).unwrap())
-            || is_option(&snapshot.settings, mode_id, "Manual")
+            || ["Manual", "Custom"]
+                .iter()
+                .any(|option| is_option(&snapshot.settings, mode_id, option))
     };
     let ids: Vec<&'static str> = match mode {
         "AirplaneMode" => vec!["airplaneMode"],
         _ if scale => Vec::new(),
         "NoiseCanceling" => {
             let mut ids = vec!["noiseCancelingMode"];
-            if manual("noiseCancelingMode") {
+            if strength_is_set_by_user("noiseCancelingMode") {
                 ids.push("manualNoiseCanceling");
             }
             ids
         }
         "Transparency" => {
             let mut ids = vec!["transparencyMode"];
-            if manual("transparencyMode") {
+            if strength_is_set_by_user("transparencyMode") {
                 ids.push("manualTransparency");
             }
             ids
@@ -529,6 +534,65 @@ mod tests {
             &adaptive_settings("Adaptive"),
             "adaptiveNoiseCanceling"
         ));
+    }
+
+    /// The sound modes of a device that calls its user-set mode "Custom", as the Space One Pro does, with the
+    /// strength the user sets in that mode.
+    fn custom_mode_settings(noise_canceling_mode: &'static str) -> SettingMap {
+        let modes = |values: Vec<&'static str>| settings::Select {
+            options: values
+                .iter()
+                .map(|value| value.to_string().into())
+                .collect(),
+            localized_options: values.iter().map(|value| value.to_string()).collect(),
+        };
+        SettingMap::from([
+            (
+                SettingId::AmbientSoundMode,
+                Setting::Select {
+                    setting: modes(vec!["NoiseCanceling", "Transparency", "Normal"]),
+                    value: "NoiseCanceling".into(),
+                },
+            ),
+            (
+                SettingId::NoiseCancelingMode,
+                Setting::Select {
+                    setting: modes(vec!["Custom", "Adaptive"]),
+                    value: noise_canceling_mode.into(),
+                },
+            ),
+            (SettingId::ManualNoiseCanceling, information("3/5")),
+        ])
+    }
+
+    fn row_ids(settings: SettingMap) -> Vec<String> {
+        mode_view(&snapshot(settings), false)
+            .unwrap()
+            .rows
+            .iter()
+            .map(|row| row.id.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn the_custom_noise_canceling_mode_keeps_its_strength() {
+        // The Space One Pro calls the mode the user sets "Custom", not "Manual", so matching the name "Manual" alone
+        // left it without the strength slider its transparency page still had.
+        assert!(
+            row_ids(custom_mode_settings("Custom")).contains(&"manualNoiseCanceling".to_string()),
+            "{:?}",
+            row_ids(custom_mode_settings("Custom"))
+        );
+    }
+
+    #[test]
+    fn the_adaptive_noise_canceling_mode_has_no_strength_to_set() {
+        assert!(
+            !row_ids(custom_mode_settings("Adaptive"))
+                .contains(&"manualNoiseCanceling".to_string()),
+            "{:?}",
+            row_ids(custom_mode_settings("Adaptive"))
+        );
     }
 
     #[test]
