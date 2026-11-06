@@ -305,6 +305,10 @@ def build(args: argparse.Namespace) -> None:
         "artifacts": [{"file": item.name, "sha256": sha256(item)} for item in artifacts],
     }
     (output / f"build-{name}.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    # Print what was built and its hash: a tester needs both to say which file they tried, and reading the report
+    # costs a second command.
+    for artifact in report["artifacts"]:
+        print(f"{artifact['sha256']}  {artifact['file']}")
 
 
 def verify(output: Path, linux_evidence: Path | None, *, preview: bool = False, expected_commit: str | None = None) -> list[dict]:

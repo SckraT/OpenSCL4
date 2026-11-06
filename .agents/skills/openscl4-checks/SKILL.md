@@ -72,6 +72,24 @@ Android instrumentation (`connectedX86_64DebugAndroidTest`) is manual; CI does n
 
 Done when the run for the exact revision is queued or green.
 
+## 6. Interface check on Windows
+
+`scripts/ui.ps1` drives the running desktop window instead of hand-written automation:
+
+```powershell
+pwsh scripts/ui.ps1 -Action rect                        # where the window is, in physical pixels
+pwsh scripts/ui.ps1 -Action click -X 1430 -Y 140        # coordinates are window-relative
+pwsh scripts/ui.ps1 -Action shot -Out .local/page.png -Width 1200 -Height 760
+pwsh scripts/ui.ps1 -Action wheel -X 600 -Y 400 -Delta -480
+pwsh scripts/ui.ps1 -Action key -Key PAGE_DOWN
+```
+
+It makes the process DPI aware before reading any coordinate. Without that a 125% display reports every window rectangle 1.25 times too small, so clicks land beside their target and appear to do nothing at all. It also focuses the window through `AttachThreadInput`, because `SetForegroundWindow` alone is refused while another process owns the foreground.
+
+Capture cropped: the window is 1600×1072 on a typical display, and a full capture costs an agent far more to read than the region it needs.
+
+Done when the capture shows the state you meant to reach, not merely that a command exited 0.
+
 ## Traps
 
 - `cargo test --workspace` and `just test` also build the legacy `gui/` and `cli/` targets. The release-client suite is the explicit three-package list above.
