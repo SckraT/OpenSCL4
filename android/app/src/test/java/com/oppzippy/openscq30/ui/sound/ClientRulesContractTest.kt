@@ -116,6 +116,18 @@ class ClientRulesContractTest {
         fixtures.getValue("adaptiveLevel").jsonArray.forEach { item ->
             val case = item.jsonObject
             val values = buildMap {
+                case["ambientSoundMode"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let { mode ->
+                    put(
+                        "ambientSoundMode",
+                        Setting.SelectSetting(
+                            Select(
+                                listOf("NoiseCanceling", "Transparency", "Normal"),
+                                listOf("NoiseCanceling", "Transparency", "Normal"),
+                            ),
+                            mode,
+                        ),
+                    )
+                }
                 case.getValue("noiseCancelingMode").takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let { mode ->
                     put(
                         "noiseCancelingMode",

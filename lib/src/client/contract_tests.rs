@@ -185,6 +185,26 @@ fn shared_client_contract() {
     }
     for case in fixtures["adaptiveLevel"].as_array().unwrap() {
         let mut settings = SettingMap::new();
+        if let Some(mode) = case["ambientSoundMode"].as_str() {
+            settings.insert(
+                SettingId::AmbientSoundMode,
+                Setting::Select {
+                    setting: crate::settings::Select {
+                        options: vec![
+                            "NoiseCanceling".into(),
+                            "Transparency".into(),
+                            "Normal".into(),
+                        ],
+                        localized_options: vec![
+                            "NoiseCanceling".into(),
+                            "Transparency".into(),
+                            "Normal".into(),
+                        ],
+                    },
+                    value: mode.to_string().into(),
+                },
+            );
+        }
         if let Some(mode) = case["noiseCancelingMode"].as_str() {
             settings.insert(
                 SettingId::NoiseCancelingMode,

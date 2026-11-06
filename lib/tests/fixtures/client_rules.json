@@ -124,8 +124,11 @@
     {"stored": ["ldac", "wearingDetection"], "available": ["wearingDetection", "ldac"], "expected": ["ldac", "wearingDetection"]}
   ],
   "adaptiveLevel": [
-    {"noiseCancelingMode": "Custom", "shown": false},
-    {"noiseCancelingMode": "Adaptive", "shown": true},
-    {"noiseCancelingMode": null, "shown": true}
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Custom", "shown": false},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": true},
+    {"noiseCancelingMode": null, "shown": true},
+    {"ambientSoundMode": "Transparency", "noiseCancelingMode": "Adaptive", "shown": false},
+    {"ambientSoundMode": "Normal", "noiseCancelingMode": "Adaptive", "shown": false},
+    {"ambientSoundMode": "Transparency", "noiseCancelingMode": null, "shown": false}
   ]
 }
