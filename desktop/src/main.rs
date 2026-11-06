@@ -3,5 +3,6 @@
 
 fn main() -> anyhow::Result<()> {
     openscq30_desktop::logs::init()?;
+    openscq30_desktop::logs::open_file(&openscq30_desktop::config_directory()?);
     openscq30_desktop::run()
 }

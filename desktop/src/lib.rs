@@ -27,15 +27,20 @@ use slint::ComponentHandle;
 
 slint::include_modules!();
 
+/// Where the app keeps its database, settings and logs. `OPENSCL4_CONFIG_DIR` overrides it.
+pub fn config_directory() -> anyhow::Result<std::path::PathBuf> {
+    match std::env::var_os("OPENSCL4_CONFIG_DIR") {
+        Some(dir) => Ok(std::path::PathBuf::from(dir)),
+        None => Ok(dirs::config_dir()
+            .context("no config folder")?
+            .join("openscl4")),
+    }
+}
+
 /// Opens the main window and runs until it is closed.
 pub fn run() -> anyhow::Result<()> {
     window_chrome::init(app::keep_title_bar)?;
-    let config_dir = match std::env::var_os("OPENSCL4_CONFIG_DIR") {
-        Some(dir) => std::path::PathBuf::from(dir),
-        None => dirs::config_dir()
-            .context("no config folder")?
-            .join("openscl4"),
-    };
+    let config_dir = config_directory()?;
     let window = AppWindow::new()?;
     if !single_instance::claim(&config_dir, app::show_from_elsewhere) {
         return Ok(());
