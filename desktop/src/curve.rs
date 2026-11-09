@@ -9,12 +9,21 @@
 /// plain Catmull-Rom spline overshoots, drawing a dip or a peak the device never has, which on an equalizer would
 /// read as a band set to a value it is not.
 pub fn smooth_path(points: &[(f32, f32)]) -> String {
-    let Some((first, rest)) = points.split_first() else {
+    let Some(first) = points.first() else {
         return String::new();
     };
     let mut path = format!("M {:.1} {:.1}", first.0, first.1);
-    if rest.is_empty() {
-        return path;
+    path.push_str(&smooth_segments(points));
+    path
+}
+
+/// The same curve as the `C` commands that follow its `M`, so a caller can walk it from a start point of its own
+/// choosing: an area under the curve is closed at its corners rather than on the curve, and its top edge stays the
+/// walk the line is stroked along. Empty when there is nothing to join.
+pub fn smooth_segments(points: &[(f32, f32)]) -> String {
+    let mut segments = String::new();
+    if points.len() < 2 {
+        return segments;
     }
     let slopes = slopes(points);
     for (index, pair) in points.windows(2).enumerate() {
@@ -23,12 +32,12 @@ pub fn smooth_path(points: &[(f32, f32)]) -> String {
         // The control points sit a third of the way along the segment, on the tangent of the point they belong to.
         let control0 = (x0 + dx / 3.0, y0 + slopes[index] * dx / 3.0);
         let control1 = (x1 - dx / 3.0, y1 - slopes[index + 1] * dx / 3.0);
-        path.push_str(&format!(
+        segments.push_str(&format!(
             " C {:.1} {:.1} {:.1} {:.1} {:.1} {:.1}",
             control0.0, control0.1, control1.0, control1.1, x1, y1,
         ));
     }
-    path
+    segments
 }
 
 /// The slope of the curve at each point, one per point.
@@ -58,7 +67,7 @@ fn slopes(points: &[(f32, f32)]) -> Vec<f32> {
 
 #[cfg(test)]
 mod tests {
-    use super::smooth_path;
+    use super::{smooth_path, smooth_segments};
 
     /// Every walk over the curve, as (from, to, control0, control1).
     fn segments(path: &str) -> Vec<[f32; 6]> {
@@ -113,5 +122,20 @@ mod tests {
     fn nothing_to_draw_has_no_path() {
         assert_eq!("", smooth_path(&[]));
         assert_eq!("M 5.0 5.0", smooth_path(&[(5.0, 5.0)]));
+        assert_eq!("", smooth_segments(&[]));
+        assert_eq!("", smooth_segments(&[(5.0, 5.0)]));
+    }
+
+    #[test]
+    fn the_segments_are_the_walk_without_the_move_that_starts_it() {
+        let points = [(0.0, 100.0), (10.0, 100.0), (20.0, 50.0)];
+        let path = smooth_path(&points);
+        assert_eq!(format!("M 0.0 100.0{}", smooth_segments(&points)), path);
+        // A flat run starts with a straight segment, so the walk can be joined from either end.
+        assert!(
+            smooth_segments(&points).starts_with(" C 3.3 100.0 6.7 100.0"),
+            "{}",
+            smooth_segments(&points)
+        );
     }
 }

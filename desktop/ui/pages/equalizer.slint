@@ -43,6 +43,9 @@ component EqualizerChart inherits Rectangle {
     private property <int> count: AppState.eq-bands.length;
     private property <int> span: max(1, AppState.eq-max - AppState.eq-min);
     private property <int> dragged: -1;
+    // The fill, the line and the points take the accent from here, so the area under the curve can not end up a
+    // different colour from the curve it sits under.
+    private property <color> accent: Theme.primary;
     height: 190px;
     accessible-role: image;
     accessible-label: @tr("Equalizer curve. Drag to adjust a frequency, or use the sliders below.");
@@ -84,7 +87,7 @@ component EqualizerChart inherits Rectangle {
         viewbox-width: 600;
         viewbox-height: 200;
         commands: AppState.eq-chart-area;
-        fill: @linear-gradient(180deg, Theme.primary.transparentize(80%) 0%, Theme.primary.transparentize(98%) 100%);
+        fill: @linear-gradient(180deg, root.accent.transparentize(80%) 0%, root.accent.transparentize(98%) 100%);
         stroke: transparent;
     }
     Path {
@@ -94,7 +97,7 @@ component EqualizerChart inherits Rectangle {
         viewbox-width: 600;
         viewbox-height: 200;
         commands: AppState.eq-chart-line;
-        stroke: Theme.primary;
+        stroke: root.accent;
         stroke-width: 2.6px;
         fill: transparent;
     }
@@ -106,7 +109,7 @@ component EqualizerChart inherits Rectangle {
         border-radius: self.width / 2;
         background: Theme.surface;
         border-width: 2.2px;
-        border-color: Theme.primary;
+        border-color: root.accent;
     }
     TouchArea {
         enabled: root.editable;

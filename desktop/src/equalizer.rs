@@ -183,7 +183,14 @@ pub fn chart(values: &[i16], min: i16, max: i16) -> (String, String) {
     let line = curve::smooth_path(&points);
     let first = points[0].0;
     let last = points[points.len() - 1].0;
-    let area = format!("{line} L {last:.1} {CHART_HEIGHT:.1} L {first:.1} {CHART_HEIGHT:.1} Z");
+    // The fill walks the same segments as the line, so its top edge can not drift from the stroke, but it starts and
+    // ends at its own bottom corners: a contour that starts on the curve puts its first and closing edges on the
+    // stroke, which a renderer draws as a gap between the fill and the line wherever the curve runs flat.
+    let area = format!(
+        "M {first:.1} {CHART_HEIGHT:.1} L {first:.1} {:.1}{} L {last:.1} {CHART_HEIGHT:.1} Z",
+        points[0].1,
+        curve::smooth_segments(&points),
+    );
     (line, area)
 }
 
@@ -427,8 +434,44 @@ mod tests {
         // two columns: their middles are at a quarter and three quarters of the width
         assert!(line.starts_with("M 150.0 188.0"), "{line}");
         assert!(line.ends_with("450.0 12.0"), "{line}");
-        assert!(area.ends_with("L 450.0 200.0 L 150.0 200.0 Z"), "{area}");
+        // the fill closes between its own corners, and its top edge is the walk the line is drawn along
+        assert!(area.starts_with("M 150.0 200.0 L 150.0"), "{area}");
+        assert!(area.ends_with("L 450.0 200.0 Z"), "{area}");
+        assert!(area.contains(&line[2..]), "{area}");
         assert_eq!((String::new(), String::new()), chart(&[], -6, 6));
+    }
+
+    #[test]
+    fn a_flat_run_leaves_the_fill_closed_under_the_line() {
+        // Both first bands at zero, which is where the area under the curve used to be drawn without one.
+        let values = [0, 0, -20, -20, -20, 0, 30, 50];
+        let (line, area) = chart(&values, -120, 134);
+        let zero = line[2..].split(' ').nth(1).expect("the first y");
+        // The first segment is straight across, at the height of the two bands.
+        assert!(
+            area.contains(&format!("L 37.5 {zero} C 62.5 {zero} 87.5 {zero}")),
+            "{area}"
+        );
+        // An area of its own: it starts at the bottom left and comes back along the bottom, so no edge of it is the
+        // stroke of a flat run.
+        assert!(
+            area.starts_with(&format!("M 37.5 200.0 L 37.5 {zero}")),
+            "{area}"
+        );
+        assert!(area.ends_with("L 562.5 200.0 Z"), "{area}");
+    }
+
+    #[test]
+    fn a_chart_of_zeros_is_still_a_band_under_the_line() {
+        let values: [i16; 8] = [0; 8];
+        let (line, area) = chart(&values, -120, 134);
+        let zero = line[2..].split(' ').nth(1).expect("the first y");
+        assert!(
+            area.starts_with(&format!("M 37.5 200.0 L 37.5 {zero}")),
+            "{area}"
+        );
+        assert!(area.ends_with("L 562.5 200.0 Z"), "{area}");
+        assert!(area.contains(&line[2..]), "{area}");
     }
 
     #[test]
