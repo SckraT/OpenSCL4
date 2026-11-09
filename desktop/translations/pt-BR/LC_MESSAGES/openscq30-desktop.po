@@ -1017,6 +1017,12 @@ msgstr "Claro"
 msgid "Dark"
 msgstr "Escuro"
 
+msgid "Content scale"
+msgstr "Escala do conteúdo"
+
+msgid "Larger text and elements"
+msgstr "Texto e elementos maiores"
+
 msgid "Palette"
 msgstr "Paleta"
 

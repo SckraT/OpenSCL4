@@ -1014,6 +1014,12 @@ msgstr "ライト"
 msgid "Dark"
 msgstr "ダーク"
 
+msgid "Content scale"
+msgstr "コンテンツの拡大率"
+
+msgid "Larger text and elements"
+msgstr "テキストと要素を大きくする"
+
 msgid "Palette"
 msgstr "パレット"
 

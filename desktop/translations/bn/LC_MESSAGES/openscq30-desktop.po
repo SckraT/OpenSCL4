@@ -1017,6 +1017,12 @@ msgstr "হালকা"
 msgid "Dark"
 msgstr "গাঢ়"
 
+msgid "Content scale"
+msgstr "কনটেন্টের স্কেল"
+
+msgid "Larger text and elements"
+msgstr "বড় লেখা ও উপাদান"
+
 msgid "Palette"
 msgstr "প্যালেট"
 

@@ -1014,6 +1014,12 @@ msgstr "밝게"
 msgid "Dark"
 msgstr "어둡게"
 
+msgid "Content scale"
+msgstr "콘텐츠 크기"
+
+msgid "Larger text and elements"
+msgstr "텍스트와 요소를 더 크게"
+
 msgid "Palette"
 msgstr "팔레트"
 

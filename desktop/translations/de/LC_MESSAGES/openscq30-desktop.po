@@ -1017,6 +1017,12 @@ msgstr "Hell"
 msgid "Dark"
 msgstr "Dunkel"
 
+msgid "Content scale"
+msgstr "Inhaltsskalierung"
+
+msgid "Larger text and elements"
+msgstr "Größerer Text und größere Elemente"
+
 msgid "Palette"
 msgstr "Palette"
 

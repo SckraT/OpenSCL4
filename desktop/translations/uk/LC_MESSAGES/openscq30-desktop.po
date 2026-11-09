@@ -1020,6 +1020,12 @@ msgstr "Світла"
 msgid "Dark"
 msgstr "Темна"
 
+msgid "Content scale"
+msgstr "Масштаб вмісту"
+
+msgid "Larger text and elements"
+msgstr "Більший текст і елементи"
+
 msgid "Palette"
 msgstr "Палітра"
 

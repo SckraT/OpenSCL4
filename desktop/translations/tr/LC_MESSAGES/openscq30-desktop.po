@@ -1017,6 +1017,12 @@ msgstr "Açık"
 msgid "Dark"
 msgstr "Koyu"
 
+msgid "Content scale"
+msgstr "İçerik ölçeği"
+
+msgid "Larger text and elements"
+msgstr "Daha büyük metin ve öğeler"
+
 msgid "Palette"
 msgstr "Palet"
 

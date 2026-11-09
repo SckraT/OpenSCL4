@@ -38,6 +38,48 @@ pub enum SoundModeView {
     Scale,
 }
 
+/// How much larger the window draws its text and shapes than at 100%. The window keeps its size, so a larger scale
+/// shows less of the content at once, as zooming a page does.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ContentScale {
+    #[default]
+    #[serde(rename = "100")]
+    Percent100,
+    #[serde(rename = "110")]
+    Percent110,
+    #[serde(rename = "125")]
+    Percent125,
+}
+
+impl ContentScale {
+    /// The choice's place on the settings page, from 0 to 2.
+    pub fn index(self) -> i32 {
+        match self {
+            Self::Percent100 => 0,
+            Self::Percent110 => 1,
+            Self::Percent125 => 2,
+        }
+    }
+
+    /// The choice at that place on the settings page.
+    pub fn from_index(index: i32) -> Self {
+        match index {
+            1 => Self::Percent110,
+            2 => Self::Percent125,
+            _ => Self::Percent100,
+        }
+    }
+
+    /// What the theme multiplies its sizes by.
+    pub fn factor(self) -> f32 {
+        match self {
+            Self::Percent100 => 1.0,
+            Self::Percent110 => 1.1,
+            Self::Percent125 => 1.25,
+        }
+    }
+}
+
 /// What the tray icon's menu shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -64,6 +106,8 @@ impl Default for TrayItems {
 pub struct Settings {
     pub theme: AppTheme,
     pub accent: Accent,
+    /// How much larger the window draws its content; 100% otherwise.
+    pub content_scale: ContentScale,
     /// None follows the theme.
     pub earbuds_color: Option<EarbudsColor>,
     pub sound_mode_view: SoundModeView,
@@ -88,6 +132,7 @@ impl Default for Settings {
         Self {
             theme: AppTheme::default(),
             accent: Accent::default(),
+            content_scale: ContentScale::default(),
             earbuds_color: None,
             sound_mode_view: SoundModeView::default(),
             one_earbud_badge: true,
@@ -178,5 +223,38 @@ mod tests {
         assert!(
             partial.tray_items.battery && partial.tray_items.modes && partial.tray_items.presets
         );
+    }
+
+    #[test]
+    fn content_scale_is_100_percent_by_default_and_survives_a_save() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let mut config = Config::load(path.clone());
+        assert_eq!(ContentScale::Percent100, config.settings.content_scale);
+        config.settings.content_scale = ContentScale::Percent125;
+        config.save();
+        assert_eq!(
+            ContentScale::Percent125,
+            Config::load(path.clone()).settings.content_scale
+        );
+
+        // a file written before the setting existed
+        fs::write(&path, "theme = \"dark\"\n").unwrap();
+        assert_eq!(
+            ContentScale::Percent100,
+            Config::load(path).settings.content_scale
+        );
+
+        // the settings page's three choices, there and back
+        for scale in [
+            ContentScale::Percent100,
+            ContentScale::Percent110,
+            ContentScale::Percent125,
+        ] {
+            assert_eq!(scale, ContentScale::from_index(scale.index()));
+        }
+        assert_eq!(ContentScale::Percent100, ContentScale::from_index(7));
+        assert_eq!(1.0_f32, ContentScale::Percent100.factor());
+        assert_eq!(1.25_f32, ContentScale::Percent125.factor());
     }
 }

@@ -7,6 +7,8 @@ export enum PaletteChoice { purple, sage, rose }
 export global Theme {
     in-out property <bool> dark;
     in-out property <PaletteChoice> palette: PaletteChoice.purple;
+    // How much larger the window draws its text and shapes than at 100%, from the app's settings.
+    in-out property <float> content-scale: 1.0;
 
     // accent, from the chosen family
     out property <color> primary: palette == PaletteChoice.sage ? (dark ? #bbcdaa : #526347)
@@ -39,14 +41,14 @@ export global Theme {
     out property <color> scrim: dark ? #00000080 : #16121e65;
 
     // shapes and type
-    out property <length> radius-panel: 24px;
-    out property <length> radius-card: 17px;
-    out property <length> radius-control: 12px;
-    out property <length> radius-chip: 10px;
-    out property <length> font-body: 13px;
-    out property <length> font-small: 12px;
-    out property <length> font-caption: 11px;
-    out property <length> font-title: 17px;
-    out property <length> font-section: 15px;
-    out property <length> font-slogan: 30px;
+    out property <length> radius-panel: 24px * content-scale;
+    out property <length> radius-card: 17px * content-scale;
+    out property <length> radius-control: 12px * content-scale;
+    out property <length> radius-chip: 10px * content-scale;
+    out property <length> font-body: 13px * content-scale;
+    out property <length> font-small: 12px * content-scale;
+    out property <length> font-caption: 11px * content-scale;
+    out property <length> font-title: 17px * content-scale;
+    out property <length> font-section: 15px * content-scale;
+    out property <length> font-slogan: 30px * content-scale;
 }

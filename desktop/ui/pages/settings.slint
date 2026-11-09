@@ -81,6 +81,17 @@ component AppearancePanel inherits Panel {
     }
     Divider { }
     SettingLine {
+        title: @tr("Content scale");
+        text: @tr("Larger text and elements");
+        Segmented {
+            label: @tr("Content scale");
+            options: ["100%", "110%", "125%"];
+            index: AppState.app-content-scale;
+            chosen(i) => { Actions.set-content-scale(i); }
+        }
+    }
+    Divider { }
+    SettingLine {
         title: @tr("Palette");
         text: @tr("Colors of buttons and highlights");
         HorizontalLayout {

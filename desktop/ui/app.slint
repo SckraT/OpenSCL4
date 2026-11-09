@@ -22,6 +22,7 @@ export { RowKind, SettingRow, PanelKind, SettingsPanel, ModeOption, ToastKind, B
 export component AppWindow inherits Window {
     title: (AppState.connection == Connection.connected && AppState.page != Page.devices && AppState.page != Page.settings
         ? Strings.title(AppState.page) + " · " + AppState.device-name : Strings.title(AppState.page)) + " — OpenSCL4";
+    // the window keeps its size: the content scale makes the text and shapes larger in it, as a zoom does
     preferred-width: 1280px;
     preferred-height: 820px;
     min-width: 800px;
@@ -46,7 +47,7 @@ export component AppWindow inherits Window {
         compact: root.compact;
         x: 0px;
         y: 0px;
-        width: root.compact ? 68px : 236px;
+        width: root.compact ? 68px : 236px * Theme.content-scale;
         height: root.height;
     }
     Rectangle {
@@ -59,7 +60,7 @@ export component AppWindow inherits Window {
                 vertical-stretch: 1;
                 content := VerticalLayout {
                     width: scroll.visible-width;
-                    padding: root.width <= 800px ? 20px : 28px;
+                    padding: (root.width <= 800px * Theme.content-scale ? 20px : 28px) * Theme.content-scale;
                     padding-top: 24px;
                     spacing: 16px;
                     alignment: start;

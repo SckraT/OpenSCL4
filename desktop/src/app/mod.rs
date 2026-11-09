@@ -742,6 +742,7 @@ impl App {
         if let Some(window) = self.window() {
             let theme = window.global::<Theme>();
             theme.set_dark(self.dark);
+            theme.set_content_scale(self.config.settings.content_scale.factor());
             theme.set_palette(match self.config.settings.accent {
                 Accent::Purple => PaletteChoice::Purple,
                 Accent::Sage => PaletteChoice::Sage,

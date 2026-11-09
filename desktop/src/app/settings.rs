@@ -5,7 +5,7 @@ use slint::ComponentHandle;
 use super::{App, with_app};
 use crate::{
     Actions, AppState, AppWindow, Strings, ToastKind,
-    config::{Accent, AppTheme, Settings, SoundModeView},
+    config::{Accent, AppTheme, ContentScale, Settings, SoundModeView},
     controller::Command,
     logs,
     model::{
@@ -44,6 +44,9 @@ pub(super) fn install_actions(window: &AppWindow) {
                 _ => Accent::Purple,
             };
         });
+    });
+    actions.on_set_content_scale(|index| {
+        change(|settings| settings.content_scale = ContentScale::from_index(index));
     });
     actions.on_set_device_color(|index| {
         change(|settings| {
@@ -113,6 +116,7 @@ impl App {
             Accent::Sage => 1,
             Accent::Rose => 2,
         });
+        state.set_app_content_scale(settings.content_scale.index());
         state.set_app_device_color(match settings.earbuds_color {
             None => 0,
             Some(EarbudsColor::Silver) => 1,

@@ -1017,6 +1017,12 @@ msgstr "בהירה"
 msgid "Dark"
 msgstr "כהה"
 
+msgid "Content scale"
+msgstr "קנה מידה של התוכן"
+
+msgid "Larger text and elements"
+msgstr "טקסט ורכיבים גדולים יותר"
+
 msgid "Palette"
 msgstr "לוח צבעים"
 

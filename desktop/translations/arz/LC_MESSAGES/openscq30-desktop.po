@@ -1029,6 +1029,12 @@ msgstr "فاتح"
 msgid "Dark"
 msgstr "غامق"
 
+msgid "Content scale"
+msgstr "حجم المحتوى"
+
+msgid "Larger text and elements"
+msgstr "نص وعناصر أكبر"
+
 msgid "Palette"
 msgstr "الألوان"
 

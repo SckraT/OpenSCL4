@@ -1014,6 +1014,12 @@ msgstr "Terang"
 msgid "Dark"
 msgstr "Gelap"
 
+msgid "Content scale"
+msgstr "Skala konten"
+
+msgid "Larger text and elements"
+msgstr "Teks dan elemen lebih besar"
+
 msgid "Palette"
 msgstr "Palet"
 
