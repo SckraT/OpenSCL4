@@ -10,6 +10,8 @@ mod equalizer;
 #[cfg(any(target_os = "linux", test))]
 mod linux_appearance;
 #[cfg(any(target_os = "linux", test))]
+mod linux_scale;
+#[cfg(any(target_os = "linux", test))]
 mod linux_tray;
 pub mod logs;
 pub mod model;
@@ -39,6 +41,9 @@ pub fn config_directory() -> anyhow::Result<std::path::PathBuf> {
 
 /// Opens the main window and runs until it is closed.
 pub fn run() -> anyhow::Result<()> {
+    // before the window: Slint reads the scale factor when it makes it
+    #[cfg(target_os = "linux")]
+    linux_scale::init();
     window_chrome::init(app::keep_title_bar)?;
     let config_dir = config_directory()?;
     let window = AppWindow::new()?;
