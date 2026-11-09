@@ -115,6 +115,11 @@
       ]
     }
   ],
+  "isTws": [
+    {"twsStatus": "Connected", "tws": true},
+    {"twsStatus": "Disconnected", "tws": true},
+    {"twsStatus": null, "tws": false}
+  ],
   "quickToggles": [
     {"stored": null, "available": ["wearingDetection", "ldac"], "expected": ["ldac"]},
     {"stored": null, "available": ["wearingDetection"], "expected": []},

@@ -110,6 +110,12 @@ pub fn battery_progress(raw: &str) -> Option<f32> {
         .then(|| (level / maximum).clamp(0.0, 1.0))
 }
 
+/// Whether the device is a pair of earbuds. Only a pair reports its TWS status, and only a pair can be down to one
+/// earbud, so choices that describe that state are offered for these alone. Over-ear headphones do not report it.
+pub fn is_tws(settings: &SettingMap) -> bool {
+    settings.contains_key(&SettingId::TwsStatus)
+}
+
 /// The earbuds report whether they are connected to each other. With one of them in the case, settings that need
 /// both, such as the equalizer, are not available.
 pub fn is_only_one_earbud_connected(settings: &SettingMap) -> bool {
@@ -218,6 +224,15 @@ mod tests {
         assert!(!is_only_one_earbud_connected(&status("Connected")));
         // devices without the status are not treated as one earbud
         assert!(!is_only_one_earbud_connected(&SettingMap::new()));
+    }
+
+    #[test]
+    fn a_pair_of_earbuds_is_told_by_the_tws_status() {
+        let status = |value| SettingMap::from([(SettingId::TwsStatus, information(value, value))]);
+        assert!(is_tws(&status("Disconnected")));
+        assert!(is_tws(&status("Connected")));
+        // over-ear headphones do not report it
+        assert!(!is_tws(&SettingMap::new()));
     }
 
     #[test]

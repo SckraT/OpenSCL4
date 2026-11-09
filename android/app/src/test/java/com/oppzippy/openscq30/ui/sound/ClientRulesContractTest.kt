@@ -79,6 +79,13 @@ class ClientRulesContractTest {
                 assertEquals(id, expected, settingAvailability(values, id))
             }
         }
+        fixtures.getValue("isTws").jsonArray.forEach { item ->
+            val case = item.jsonObject
+            val values = case["twsStatus"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
+                ?.let { mapOf("twsStatus" to Setting.InformationSetting(it, it)) }
+                .orEmpty()
+            assertEquals(case.getValue("tws").jsonPrimitive.boolean, isTws(values))
+        }
         fixtures.getValue("scale").jsonArray.forEach { item ->
             val case = item.jsonObject
             val values = soundModeScaleSettings(case.getValue("position").jsonPrimitive.int).toMap()

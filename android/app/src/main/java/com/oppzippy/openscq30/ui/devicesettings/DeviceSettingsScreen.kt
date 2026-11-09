@@ -99,6 +99,7 @@ import com.oppzippy.openscq30.ui.sound.SoundSettingsListPage
 import com.oppzippy.openscq30.ui.sound.equalizerOpensItsPage
 import com.oppzippy.openscq30.ui.sound.groupSettings
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
+import com.oppzippy.openscq30.ui.sound.isTws
 import com.oppzippy.openscq30.ui.sound.presetsUseBlockedSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
 import com.oppzippy.openscq30.ui.sound.settingAvailability
@@ -536,6 +537,7 @@ fun DeviceSettingsScreen(
                             embedded = true,
                             onNotificationSettings = { navController.navigate("notifications") },
                             soundModesViewApplies = modesViewApplies,
+                            oneEarbudBadgeApplies = isTws(settingsById),
                         )
                     }
                     composable(ALL_SETTINGS) {

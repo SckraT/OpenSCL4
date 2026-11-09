@@ -72,11 +72,14 @@ fun SettingsPage(
     onNotificationSettings: (() -> Unit)? = null,
     // only a device the scale can show has two views to choose between, and a choice needs a device
     soundModesViewApplies: Boolean = false,
+    // only a pair of earbuds can be down to one of them
+    oneEarbudBadgeApplies: Boolean = false,
 ) {
     if (embedded) {
         SettingsContent(
             onNotificationSettings = onNotificationSettings,
             soundModesViewApplies = soundModesViewApplies,
+            oneEarbudBadgeApplies = oneEarbudBadgeApplies,
         )
     } else {
         Scaffold(
@@ -100,6 +103,7 @@ fun SettingsPage(
                 SettingsContent(
                     onNotificationSettings = onNotificationSettings,
                     soundModesViewApplies = soundModesViewApplies,
+                    oneEarbudBadgeApplies = oneEarbudBadgeApplies,
                 )
             }
         }
@@ -110,6 +114,7 @@ fun SettingsPage(
 private fun SettingsContent(
     onNotificationSettings: (() -> Unit)?,
     soundModesViewApplies: Boolean,
+    oneEarbudBadgeApplies: Boolean,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val autoConnect by viewModel.autoConnect.collectAsState()
@@ -192,14 +197,16 @@ private fun SettingsContent(
                         )
                         SettingsDivider()
                     }
-                    SettingsToggle(
-                        title = stringResource(R.string.sound_one_earbud_badge_setting),
-                        description = stringResource(R.string.sound_one_earbud_badge_setting_description),
-                        icon = R.drawable.earbuds_2_24px,
-                        checked = showOneEarbudBadge,
-                        onCheckedChange = viewModel::setShowOneEarbudBadge,
-                    )
-                    SettingsDivider()
+                    if (oneEarbudBadgeApplies) {
+                        SettingsToggle(
+                            title = stringResource(R.string.sound_one_earbud_badge_setting),
+                            description = stringResource(R.string.sound_one_earbud_badge_setting_description),
+                            icon = R.drawable.earbuds_2_24px,
+                            checked = showOneEarbudBadge,
+                            onCheckedChange = viewModel::setShowOneEarbudBadge,
+                        )
+                        SettingsDivider()
+                    }
                     SettingsAction(
                         title = stringResource(R.string.sound_app_language),
                         description = locale.getDisplayName(locale).replaceFirstChar { it.titlecase(locale) },

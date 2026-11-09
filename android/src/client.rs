@@ -104,6 +104,11 @@ pub fn client_battery_progress(raw: String) -> Option<f32> {
 }
 
 #[uniffi::export]
+pub fn client_is_tws(values: HashMap<String, serializable::Setting>) -> bool {
+    battery::is_tws(&settings(values))
+}
+
+#[uniffi::export]
 pub fn client_is_only_one_earbud_connected(values: HashMap<String, serializable::Setting>) -> bool {
     battery::is_only_one_earbud_connected(&settings(values))
 }

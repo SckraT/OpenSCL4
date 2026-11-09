@@ -73,6 +73,23 @@ fn shared_client_contract() {
             );
         }
     }
+    for case in fixtures["isTws"].as_array().unwrap() {
+        let mut settings = SettingMap::new();
+        if let Some(tws_status) = case["twsStatus"].as_str() {
+            settings.insert(
+                SettingId::TwsStatus,
+                Setting::Information {
+                    value: tws_status.to_string(),
+                    translated_value: tws_status.to_string(),
+                },
+            );
+        }
+        assert_eq!(
+            case["tws"].as_bool().unwrap(),
+            battery::is_tws(&settings),
+            "{case}"
+        );
+    }
     for case in fixtures["scale"].as_array().unwrap() {
         let values =
             sound_mode::sound_mode_scale_settings(case["position"].as_i64().unwrap() as i32);
