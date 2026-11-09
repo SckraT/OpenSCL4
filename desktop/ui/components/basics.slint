@@ -234,12 +234,14 @@ export component PanelHeading inherits HorizontalLayout {
     in property <image> icon;
     spacing: 9px;
     padding-bottom: 15px;
+    // A fixed-size icon cannot stretch to the row's height, so without this the layout pins it to the top while the
+    // text fills the row and looks centred.
+    cross-axis-alignment: center;
     Icon {
         source: root.icon;
         tint: Theme.primary;
         width: 19px;
         height: 19px;
-        y: (parent.height - self.height) / 2;
     }
     Text {
         text: root.text;
