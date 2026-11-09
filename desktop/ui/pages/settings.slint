@@ -139,8 +139,9 @@ component AppearancePanel inherits Panel {
             chosen(i) => { Actions.set-mode-view(i); }
         }
     }
-    Divider { }
-    SettingLine {
+    // Only a pair of earbuds can be down to one of them, so the badge is offered for those alone.
+    if AppState.one-earbud-badge-applies: Divider { }
+    if AppState.one-earbud-badge-applies: SettingLine {
         title: @tr("One earbud badge");
         text: @tr("Show when only one earbud is connected");
         Toggle {

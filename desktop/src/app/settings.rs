@@ -1,5 +1,6 @@
 //! The app's own settings page: how it looks, its language, and copying the logs.
 
+use openscq30_lib::settings::SettingId;
 use slint::ComponentHandle;
 
 use super::{App, with_app};
@@ -132,6 +133,11 @@ impl App {
             let model: &'static str = snapshot.model.into();
             supports_sound_mode_scale(model, &snapshot.settings)
         }));
+        // Only a pair of earbuds can be down to one of them, so the badge choice is offered for those alone.
+        state.set_one_earbud_badge_applies(
+            self.snapshot()
+                .is_some_and(|snapshot| snapshot.settings.contains_key(&SettingId::TwsStatus)),
+        );
         state.set_app_language(
             settings
                 .language

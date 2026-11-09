@@ -313,6 +313,8 @@ export global AppState {
     in property <int> app-content-scale;
     // whether this device can be shown as the 1 to 11 scale, so the choice is worth offering
     in property <bool> app-mode-view-applies;
+    // Only a pair of earbuds can be down to one of them, so the badge choice is offered for those alone.
+    in property <bool> one-earbud-badge-applies;
     in property <int> app-language;
     in property <bool> app-tray;
     in property <bool> app-tray-available;
@@ -416,3 +418,4 @@ export global Actions {
     callback set-tray-item(int, bool);
     callback quit-app();
 }
+
