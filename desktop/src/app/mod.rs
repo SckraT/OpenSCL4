@@ -1,7 +1,12 @@
 //! The window's state and what happens when the user or the device does something. Runs on the UI thread; the
 //! controller's events are brought here with `slint::invoke_from_event_loop`.
 
-use std::{cell::RefCell, path::Path, str::FromStr, time::Duration};
+use std::{
+    cell::RefCell,
+    path::Path,
+    str::FromStr,
+    time::{Duration, Instant},
+};
 
 use i18n_embed::{DesktopLanguageRequester, unic_langid::LanguageIdentifier};
 use macaddr::MacAddr6;
@@ -9,7 +14,8 @@ use openscq30_i18n::Translate;
 use openscq30_lib::{
     DeviceModel,
     client::availability::{SettingAvailability, setting_availability},
-    connection::{ConnectionDescriptor, SessionFailureReason},
+    connection::{ConnectionDescriptor, RECOVERY_WINDOW, SessionFailureReason},
+    device::{SettingWriteOutcome, WriteOutcome},
     settings::SettingId,
     storage::PairedDevice,
 };
@@ -50,6 +56,61 @@ enum Connection {
     Failed(Failure),
 }
 
+/// How long a write cut off by a reconnect waits before its error is shown.
+///
+/// This is the shared session's recovery budget (`openscq30_lib::connection::RECOVERY_WINDOW`), which
+/// is also the window Android waits out before it reports the device lost: 30 s. An LDAC switch alone
+/// takes about 10 s, so reporting the write sooner would call a change failed while the session is
+/// still reconnecting.
+const RECONNECT_WAIT: Duration = RECOVERY_WINDOW;
+
+/// A write the device cut off by reconnecting. It is not final: the session retries for
+/// [`RECONNECT_WAIT`], and the refreshed snapshot shows what the device actually has.
+#[derive(Debug)]
+struct PendingWrite {
+    command: Command,
+    deadline: Instant,
+}
+
+impl PendingWrite {
+    fn is_due(&self, now: Instant) -> bool {
+        now >= self.deadline
+    }
+}
+
+/// What a write the device did not apply means for the error banner.
+#[derive(Debug)]
+enum WriteFailure {
+    /// The device answered, so the error is final.
+    Now(Command),
+    /// The link dropped mid-write; the error waits for the reconnect window.
+    AfterReconnect(PendingWrite),
+    /// Nothing to report.
+    Nothing,
+}
+
+fn write_failure(command: Command, outcomes: &[SettingWriteOutcome], now: Instant) -> WriteFailure {
+    let mut disconnected = false;
+    let mut final_failure = false;
+    for outcome in outcomes {
+        match outcome.outcome {
+            WriteOutcome::Applied { .. } => {}
+            WriteOutcome::Disconnected => disconnected = true,
+            _ => final_failure = true,
+        }
+    }
+    if final_failure {
+        WriteFailure::Now(command)
+    } else if disconnected {
+        WriteFailure::AfterReconnect(PendingWrite {
+            command,
+            deadline: now + RECONNECT_WAIT,
+        })
+    } else {
+        WriteFailure::Nothing
+    }
+}
+
 #[derive(Default)]
 struct AddFlow {
     model: Option<DeviceModel>,
@@ -73,6 +134,8 @@ pub struct App {
     /// Open the device's overview once it connects.
     open_on_connect: bool,
     failed_command: Option<Command>,
+    /// A write cut off by a reconnect; its error is shown only once its window has passed.
+    pending_write: Option<PendingWrite>,
     add: AddFlow,
     dark: bool,
     /// Whether Linux prefers dark, once the desktop portal has said; Windows is asked each time.
@@ -128,6 +191,7 @@ pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
         connection: Connection::Off,
         open_on_connect: false,
         failed_command: None,
+        pending_write: None,
         add: AddFlow::default(),
         dark: false,
         system_dark: None,
@@ -242,6 +306,7 @@ fn install_actions(window: &AppWindow) {
     actions.on_dismiss_error(|| {
         with_app(|app| {
             app.failed_command = None;
+            app.pending_write = None;
             app.render();
         });
     });
@@ -364,6 +429,7 @@ impl App {
                         .and_then(|mac| MacAddr6::from_str(mac).ok());
                     self.current = featured_device(&self.paired, None, last).map(|p| p.mac_address);
                     self.connection = Connection::Off;
+                    self.pending_write = None;
                 }
                 // open the device used last when the app starts
                 if !self.started {
@@ -417,11 +483,14 @@ impl App {
             Event::Connecting(mac) => {
                 self.current = Some(mac);
                 self.connection = Connection::Connecting;
+                self.pending_write = None;
             }
             Event::Connected(snapshot) | Event::Changed(snapshot) => {
                 if self.current == Some(snapshot.mac_address) {
                     self.equalizer_changed(&snapshot);
                     self.connection = Connection::Connected(snapshot);
+                    // the snapshot is newer than any write cut off by the reconnect it followed
+                    self.pending_write = None;
                     if std::mem::take(&mut self.open_on_connect) {
                         self.set_page(dev::start_page().unwrap_or(Page::Overview));
                     }
@@ -432,6 +501,7 @@ impl App {
                     self.equalizer_disconnected();
                     self.editing_preset = None;
                     self.connection = Connection::Off;
+                    self.pending_write = None;
                 }
             }
             Event::Recovering {
@@ -459,6 +529,10 @@ impl App {
                     self.equalizer_disconnected();
                     self.editing_preset = None;
                     self.connection = Connection::Lost(reason);
+                    // the session has used its whole recovery budget, so the cut-off write is final
+                    if let Some(pending) = self.pending_write.take() {
+                        self.failed_command = Some(pending.command);
+                    }
                 }
             }
             Event::ConnectFailed {
@@ -468,6 +542,7 @@ impl App {
                 if self.current == Some(mac_address) {
                     self.open_on_connect = false;
                     self.connection = Connection::Failed(failure);
+                    self.pending_write = None;
                 }
             }
             Event::CommandFailed { command, failure } => match command {
@@ -480,8 +555,28 @@ impl App {
             },
             Event::SettingsNotApplied { command, outcomes } => {
                 tracing::warn!("{command:?} was not confirmed by the device: {outcomes:?}");
-                self.equalizer_failed();
-                self.failed_command = Some(command);
+                match write_failure(command, &outcomes, Instant::now()) {
+                    WriteFailure::Now(command) => {
+                        self.equalizer_failed();
+                        self.failed_command = Some(command);
+                    }
+                    WriteFailure::AfterReconnect(pending) => {
+                        // The device dropped the link while applying the change (dual connections and
+                        // LDAC both reset it). The session reconnects on its own, so the error waits
+                        // instead of appearing while the user still sees a working connection.
+                        self.equalizer_failed();
+                        if matches!(self.connection, Connection::Lost(_)) {
+                            // the session used its budget before the write answered
+                            self.failed_command = Some(pending.command);
+                        } else {
+                            self.pending_write = Some(pending);
+                            slint::Timer::single_shot(RECONNECT_WAIT, || {
+                                with_app(Self::show_pending_write_error);
+                            });
+                        }
+                    }
+                    WriteFailure::Nothing => {}
+                }
             }
             Event::PresetApplied { mac_address, name } => {
                 if self.current == Some(mac_address) {
@@ -546,6 +641,7 @@ impl App {
             return;
         }
         self.failed_command = None;
+        self.pending_write = None;
         self.controller.send(command);
         self.render();
     }
@@ -614,6 +710,7 @@ impl App {
         self.current = Some(mac);
         self.open_on_connect = open;
         self.failed_command = None;
+        self.pending_write = None;
         self.config.settings.last_device = Some(mac.to_string());
         self.config.save();
         self.controller.send(Command::Connect(mac));
@@ -637,6 +734,26 @@ impl App {
         } else if let Some(mac) = self.current {
             self.connect(mac, false);
         }
+        self.render();
+    }
+
+    /// Shows the error of a write that a reconnect cut off, once its window has passed. A snapshot
+    /// that arrived first means the device is back and the write is no longer in doubt.
+    fn show_pending_write_error(&mut self) {
+        let Some(pending) = self.pending_write.take() else {
+            return;
+        };
+        if !pending.is_due(Instant::now()) {
+            // a newer write replaced this one and its own window is still running
+            self.pending_write = Some(pending);
+            return;
+        }
+        if !matches!(self.connection, Connection::Recovering(_, _)) {
+            // the device is back, or the session has already said it was lost
+            return;
+        }
+        self.equalizer_failed();
+        self.failed_command = Some(pending.command);
         self.render();
     }
 
@@ -1086,6 +1203,7 @@ fn connection_view(connection: &Connection, no_paired_devices: bool) -> Connecti
 mod tests {
     use super::*;
     use crate::model::SettingMap;
+    use openscq30_lib::settings::Value;
 
     fn snapshot() -> Box<DeviceSnapshot> {
         Box::new(DeviceSnapshot {
@@ -1116,6 +1234,71 @@ mod tests {
 
         assert!(snapshot_of(&connection).is_none());
         assert_eq!(ConnectionView::Lost, connection_view(&connection, false));
+    }
+
+    #[test]
+    fn a_write_cut_off_by_the_reconnect_waits_before_it_shows_an_error() {
+        let now = Instant::now();
+        let command = Command::SetSettings(vec![(SettingId::DualConnections, Value::Bool(true))]);
+        let outcomes = [SettingWriteOutcome {
+            setting_id: SettingId::DualConnections,
+            outcome: WriteOutcome::Disconnected,
+        }];
+
+        let WriteFailure::AfterReconnect(pending) = write_failure(command, &outcomes, now) else {
+            panic!("a write cut off by the reconnect must wait");
+        };
+        assert!(
+            !pending.is_due(now),
+            "the error showed right after the command"
+        );
+        assert!(
+            !pending.is_due(now + RECONNECT_WAIT - Duration::from_millis(1)),
+            "the error showed before the reconnect window ended"
+        );
+        assert!(
+            pending.is_due(now + RECONNECT_WAIT),
+            "the error never showed after the reconnect window"
+        );
+    }
+
+    #[test]
+    fn ldac_and_dual_connections_wait_the_same_way() {
+        for setting_id in [SettingId::DualConnections, SettingId::Ldac] {
+            let outcomes = [SettingWriteOutcome {
+                setting_id,
+                outcome: WriteOutcome::Disconnected,
+            }];
+
+            assert!(
+                matches!(
+                    write_failure(
+                        Command::SetSettings(vec![(setting_id, Value::Bool(true))]),
+                        &outcomes,
+                        Instant::now()
+                    ),
+                    WriteFailure::AfterReconnect(_)
+                ),
+                "{setting_id:?} reported its error at once"
+            );
+        }
+    }
+
+    #[test]
+    fn a_write_the_device_rejected_is_reported_at_once() {
+        let outcomes = [SettingWriteOutcome {
+            setting_id: SettingId::Ldac,
+            outcome: WriteOutcome::Rejected { observed: None },
+        }];
+
+        assert!(matches!(
+            write_failure(
+                Command::SetSettings(vec![(SettingId::Ldac, Value::Bool(true))]),
+                &outcomes,
+                Instant::now()
+            ),
+            WriteFailure::Now(_)
+        ));
     }
 }
 
