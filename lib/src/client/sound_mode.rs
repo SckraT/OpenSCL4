@@ -1,6 +1,8 @@
 //! The sound modes as one scale from 1 to 11, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/
 //! SoundModeScale.kt: 1 to 5 transparency (1 the strongest), 6 normal, 7 to 11 noise canceling (11 the strongest).
 
+use std::str::FromStr;
+
 use crate::settings::{Setting, SettingId, Value};
 
 use super::SettingMap;
@@ -72,6 +74,22 @@ pub fn shows_adaptive_noise_canceling(settings: &SettingMap) -> bool {
             Some(Setting::Select { value, .. }) => value == noise_canceling_mode::ADAPTIVE,
             _ => true,
         },
+    }
+}
+
+/// Whether the user sets the strength of the current mode. In the adaptive mode the device picks the level itself,
+/// and keeps reporting the level it last chose, so a strength editor there would change nothing. The modes where the
+/// user sets it are named `Manual` and `Custom`. A device without the mode setting has no adaptive mode, so its
+/// strength belongs to the user.
+pub fn strength_is_set_by_user(settings: &SettingMap, mode_id: &str) -> bool {
+    let Ok(mode_id) = SettingId::from_str(mode_id) else {
+        return true;
+    };
+    match settings.get(&mode_id) {
+        Some(Setting::Select { value, .. }) => noise_canceling_mode::STRENGTH_IS_SET_BY_USER
+            .iter()
+            .any(|name| value.as_ref() == *name),
+        _ => true,
     }
 }
 
@@ -228,6 +246,40 @@ mod tests {
         );
         assert_eq!(Some(7), sound_mode_scale_value(&nc));
         assert_eq!(Some(5), sound_mode_scale_value(&transparency));
+    }
+
+    #[test]
+    fn the_adaptive_mode_leaves_the_strength_to_the_device() {
+        let with_mode = |mode: &'static str| {
+            let mut settings = device(ambient_mode::NOISE_CANCELING, 3, 2);
+            settings.insert(
+                SettingId::NoiseCancelingMode,
+                select(
+                    &[noise_canceling_mode::MANUAL, noise_canceling_mode::ADAPTIVE],
+                    mode,
+                ),
+            );
+            settings
+        };
+        assert!(!strength_is_set_by_user(
+            &with_mode(noise_canceling_mode::ADAPTIVE),
+            "noiseCancelingMode"
+        ));
+        for mode in noise_canceling_mode::STRENGTH_IS_SET_BY_USER {
+            assert!(
+                strength_is_set_by_user(&with_mode(mode), "noiseCancelingMode"),
+                "{mode}"
+            );
+        }
+        // a device without the mode setting has no adaptive mode, so the user sets the strength
+        assert!(strength_is_set_by_user(
+            &device(ambient_mode::NOISE_CANCELING, 3, 2),
+            "noiseCancelingMode"
+        ));
+        assert!(strength_is_set_by_user(
+            &SettingMap::new(),
+            "noiseCancelingMode"
+        ));
     }
 
     #[test]

@@ -76,12 +76,14 @@ fun SoundModesPage(
                 when (id) {
                     "ambientSoundMode" -> false
 
-                    "manualNoiseCanceling" -> !useScale && ambient.value == "NoiseCanceling"
+                    "manualNoiseCanceling" -> !useScale && ambient.value == "NoiseCanceling" &&
+                        strengthIsSetByUser(values, "noiseCancelingMode")
 
                     "noiseCancelingMode", "customNoiseCanceling", "adaptiveNoiseCanceling" ->
                         ambient.value == "NoiseCanceling"
 
-                    "manualTransparency" -> !useScale && ambient.value == "Transparency"
+                    "manualTransparency" -> !useScale && ambient.value == "Transparency" &&
+                        strengthIsSetByUser(values, "transparencyMode")
 
                     "transparencyMode" -> ambient.value == "Transparency"
 

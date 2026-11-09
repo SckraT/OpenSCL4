@@ -81,6 +81,14 @@ pub fn client_shows_adaptive_noise_canceling(
 }
 
 #[uniffi::export]
+pub fn client_strength_is_set_by_user(
+    values: HashMap<String, serializable::Setting>,
+    mode_id: String,
+) -> bool {
+    sound_mode::strength_is_set_by_user(&settings(values), &mode_id)
+}
+
+#[uniffi::export]
 pub fn client_sound_mode_scale_value(
     values: HashMap<String, serializable::Setting>,
 ) -> Option<i32> {

@@ -136,5 +136,13 @@
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Normal", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": null, "shown": false}
+  ],
+  "strengthIsSetByUser": [
+    {"modeId": "noiseCancelingMode", "value": "Adaptive", "user": false},
+    {"modeId": "noiseCancelingMode", "value": "Manual", "user": true},
+    {"modeId": "noiseCancelingMode", "value": "Custom", "user": true},
+    {"modeId": "noiseCancelingMode", "value": null, "user": true},
+    {"modeId": "transparencyMode", "value": "Manual", "user": true},
+    {"modeId": "transparencyMode", "value": "VocalMode", "user": false}
   ]
 }

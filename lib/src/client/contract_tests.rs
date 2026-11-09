@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde_json::Value as Json;
 
 use super::{
@@ -237,6 +239,27 @@ fn shared_client_contract() {
         assert_eq!(
             case["shown"].as_bool().unwrap(),
             sound_mode::shows_adaptive_noise_canceling(&settings),
+            "{case}"
+        );
+    }
+    for case in fixtures["strengthIsSetByUser"].as_array().unwrap() {
+        let mode_id = case["modeId"].as_str().unwrap();
+        let mut settings = SettingMap::new();
+        if let Some(value) = case["value"].as_str() {
+            settings.insert(
+                SettingId::from_str(mode_id).unwrap(),
+                Setting::Select {
+                    setting: crate::settings::Select {
+                        options: vec![value.to_string().into()],
+                        localized_options: vec![value.to_string()],
+                    },
+                    value: value.to_string().into(),
+                },
+            );
+        }
+        assert_eq!(
+            case["user"].as_bool().unwrap(),
+            sound_mode::strength_is_set_by_user(&settings, mode_id),
             "{case}"
         );
     }

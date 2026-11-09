@@ -150,5 +150,14 @@ class ClientRulesContractTest {
                 showsAdaptiveNoiseCanceling(values),
             )
         }
+        fixtures.getValue("strengthIsSetByUser").jsonArray.forEach { item ->
+            val case = item.jsonObject
+            val modeId = case.getValue("modeId").jsonPrimitive.content
+            val value = case["value"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
+            val values = value?.let {
+                mapOf(modeId to Setting.SelectSetting(Select(listOf(it), listOf(it)), it))
+            }.orEmpty()
+            assertEquals(case.getValue("user").jsonPrimitive.boolean, strengthIsSetByUser(values, modeId))
+        }
     }
 }
