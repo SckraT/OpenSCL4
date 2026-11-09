@@ -383,14 +383,8 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
     // The strength is the user's to set unless the device picks it itself, which the mode names. Devices that let the
     // user set it call that mode either "Manual" or "Custom", and reading only one of the two left the Space One Pro
     // without a strength slider while the transparency page kept its own.
-    let strength_is_set_by_user = |mode_id: &str| {
-        !snapshot
-            .settings
-            .contains_key(&SettingId::from_str(mode_id).unwrap())
-            || sound_mode::noise_canceling_mode::STRENGTH_IS_SET_BY_USER
-                .iter()
-                .any(|option| is_option(&snapshot.settings, mode_id, option))
-    };
+    let strength_is_set_by_user =
+        |mode_id: &str| sound_mode::strength_is_set_by_user(&snapshot.settings, mode_id);
     let ids: Vec<&'static str> = match mode {
         "AirplaneMode" => vec!["airplaneMode"],
         _ if scale => Vec::new(),
