@@ -5,6 +5,7 @@ import { AppState, Actions, Page, SystemPage } from "../types.slint";
 import { Icon, Button, ButtonKind, Panel, PanelHeading, Note } from "../components/basics.slint";
 import { SettingsPanelView, Segmented } from "../components/settings.slint";
 import { ModesPanel } from "../components/modes.slint";
+import { ScrollArea } from "../components/scrollarea.slint";
 import { PageHeading } from "../shell.slint";
 
 component MainColumn inherits VerticalLayout {
@@ -295,30 +296,44 @@ export component SectionPage inherits VerticalLayout {
     in property <Page> page;
     in property <bool> wide;
     spacing: 0px;
+    // The heading names the page and stays outside the scrolling settings. The content is given its natural height,
+    // so a long device list pushes the note below it instead of the window squeezing the rows onto each other.
     PageHeading { page: root.page; }
-    if root.wide: HorizontalLayout {
-        spacing: 20px;
-        alignment: stretch;
-        // the settings take most of the width, the side column at most a third; set widths, so that what the
-        // settings say does not move the edge between them
-        MainColumn {
-            page: root.page;
-            width: parent.width - parent.spacing - aside.width;
-        }
-        aside := AsideColumn {
-            page: root.page;
-            width: max(280px, min(420px, parent.width * 0.36));
+    if root.wide: wide-scroll := ScrollArea {
+        content-width: wide-scroll.visible-width;
+        content-height: wide-content.preferred-height;
+        preferred-height: wide-content.preferred-height;
+        wide-content := HorizontalLayout {
+            width: wide-scroll.visible-width;
+            spacing: 20px;
+            alignment: stretch;
+            // the settings take most of the width, the side column at most a third; set widths, so that what the
+            // settings say does not move the edge between them
+            MainColumn {
+                page: root.page;
+                width: parent.width - parent.spacing - aside.width;
+            }
+            aside := AsideColumn {
+                page: root.page;
+                width: max(280px, min(420px, parent.width * 0.36));
+            }
         }
     }
-    if !root.wide: VerticalLayout {
-        spacing: 16px;
-        MainColumn {
-            page: root.page;
-            width: parent.width;
-        }
-        AsideColumn {
-            page: root.page;
-            width: parent.width;
+    if !root.wide: narrow-scroll := ScrollArea {
+        content-width: narrow-scroll.visible-width;
+        content-height: narrow-content.preferred-height;
+        preferred-height: narrow-content.preferred-height;
+        narrow-content := VerticalLayout {
+            width: narrow-scroll.visible-width;
+            spacing: 16px;
+            MainColumn {
+                page: root.page;
+                width: parent.width;
+            }
+            AsideColumn {
+                page: root.page;
+                width: parent.width;
+            }
         }
     }
 }

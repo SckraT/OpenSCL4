@@ -229,6 +229,8 @@ export component SettingRowView inherits Rectangle {
     in property <bool> copyable;
     private property <string> label: SettingText.short-label(setting.id) != "" ? SettingText.short-label(setting.id) : setting.label;
     private property <string> description: SettingText.description(setting.id, AppState.device-is-speaker);
+    // the rows of a list; empty for every other kind
+    private property <[string]> devices: root.setting.kind == RowKind.list ? root.setting.options : [];
     min-height: setting.kind == RowKind.list ? 0px : 64px;
     if !root.first: Rectangle {
         y: 0px;
@@ -352,15 +354,17 @@ export component SettingRowView inherits Rectangle {
             }
         }
     }
-    // the devices paired with the earbuds, each one can be forgotten
-    if root.setting.kind == RowKind.list: VerticalLayout {
+    // the devices paired with the earbuds, each one can be forgotten. This layout is not behind an `if`: a
+    // conditional layout child does not count towards this rectangle's preferred height, so the row would collapse
+    // to nothing and the note below it would be drawn on top of the devices.
+    VerticalLayout {
         spacing: 10px;
-        if root.setting.options.length == 0: Text {
+        if root.devices.length == 0 && root.setting.kind == RowKind.list: Text {
             text: @tr("No paired devices reported by your earbuds.");
             color: Theme.muted;
             font-size: Theme.font-small;
         }
-        for item[i] in root.setting.options: Rectangle {
+        for item[i] in root.devices: Rectangle {
             border-radius: 18px;
             border-width: 1px;
             border-color: Theme.line;
