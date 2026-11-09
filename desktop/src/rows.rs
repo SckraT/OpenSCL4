@@ -518,13 +518,13 @@ mod tests {
     }
 
     #[test]
-    fn the_adaptive_level_shows_only_while_the_device_is_adaptive() {
-        // In the custom mode the device keeps reporting the level it last chose, which never changes on its own.
+    fn the_adaptive_level_never_shows() {
+        // The device picks the level and reports the same number throughout, so the row only ever said "1/5".
         assert!(!shown(
             &adaptive_settings("Custom"),
             "adaptiveNoiseCanceling"
         ));
-        assert!(shown(
+        assert!(!shown(
             &adaptive_settings("Adaptive"),
             "adaptiveNoiseCanceling"
         ));
@@ -587,12 +587,6 @@ mod tests {
             "{:?}",
             row_ids(custom_mode_settings("Adaptive"))
         );
-    }
-
-    #[test]
-    fn the_adaptive_level_shows_where_there_is_no_mode_to_be_adaptive_in() {
-        let settings = SettingMap::from([(SettingId::AdaptiveNoiseCanceling, information("1/5"))]);
-        assert!(shown(&settings, "adaptiveNoiseCanceling"));
     }
 
     #[test]

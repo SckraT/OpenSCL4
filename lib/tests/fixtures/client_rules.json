@@ -131,8 +131,8 @@
   "adaptiveLevel": [
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Custom", "shown": false},
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Manual", "shown": false},
-    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": true},
-    {"noiseCancelingMode": null, "shown": true},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": false},
+    {"noiseCancelingMode": null, "shown": false},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Normal", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": null, "shown": false}

@@ -62,19 +62,12 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
         .all(|mode| options.iter().any(|o| o == mode))
 }
 
-/// Whether the adaptive noise canceling level is worth showing. The device picks that level itself, and only while
-/// it is in the adaptive mode; in the custom mode it keeps reporting the level it last chose, which never changes on
-/// its own. The level also belongs to noise cancelling alone: transparency and the normal mode have no level, and the
-/// device keeps reporting whatever it chose while noise cancelling was on. A device that has no mode to be adaptive
-/// in keeps showing it, since there the value is all there is.
-pub fn shows_adaptive_noise_canceling(settings: &SettingMap) -> bool {
-    match settings.get(&SettingId::AmbientSoundMode) {
-        Some(Setting::Select { value, .. }) if value != ambient_mode::NOISE_CANCELING => false,
-        _ => match settings.get(&SettingId::NoiseCancelingMode) {
-            Some(Setting::Select { value, .. }) => value == noise_canceling_mode::ADAPTIVE,
-            _ => true,
-        },
-    }
+/// Whether the adaptive noise canceling level is worth showing. It is not: the device picks the level itself and
+/// reports the same number for as long as it is in the adaptive mode, so the row said "1/5" no matter what the
+/// headphones were doing. The rule stays here, shared by both clients, so the row comes back in one place once a
+/// device is known to report a level that moves.
+pub fn shows_adaptive_noise_canceling(_settings: &SettingMap) -> bool {
+    false
 }
 
 /// Whether the user sets the strength of the current mode. In the adaptive mode the device picks the level itself,
