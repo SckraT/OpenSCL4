@@ -93,7 +93,7 @@ fun SoundOverview(
 ) {
     val values = remember(settings) { settings.toMap() }
     val availability = LocalSettingAvailability.current
-    val equalizerAvailability = availability[EQUALIZER_AVAILABILITY_ID] ?: ClientSettingAvailability.Available
+    val equalizerAvailability = settingAvailability(availability, EQUALIZER_AVAILABILITY_ID)
     val equalizerAvailable = equalizerAvailability.isAvailable()
     val oneEarbudOnly = isOnlyOneEarbudConnected(values)
     val showOneEarbudBadge by preferences.oneEarbudBadgeFlow.collectAsState()

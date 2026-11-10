@@ -330,6 +330,7 @@ alarm-n-snooze-duration-minutes = Отложить будильник { $number 
 
 setting-availability-requires-both-earbuds = Изменение доступно при обоих наушниках
 setting-availability-no-read-back = Устройство не подтверждает изменения
+setting-availability-no-device-state = Данных о состоянии устройства пока нет
 
 session-reason-transport-lost = Связь потеряна
 session-reason-connection-status-disconnected = Соединение закрыто
