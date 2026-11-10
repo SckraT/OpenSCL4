@@ -29,15 +29,6 @@ const LIMIT_HIGH_VOLUME: [&str; 3] = [
     "limitHighVolumeDbLimit",
     "limitHighVolumeRefreshRate",
 ];
-/// Shown with the sound mode itself rather than as rows below it.
-const WITH_THE_MODE: [&str; 6] = [
-    "ambientSoundMode",
-    "noiseCancelingMode",
-    "transparencyMode",
-    "manualNoiseCanceling",
-    "manualTransparency",
-    "airplaneMode",
-];
 
 fn id_of(id: SettingId) -> &'static str {
     id.into()
@@ -209,8 +200,20 @@ pub fn read_only(panels: Vec<SettingsPanel>) -> Vec<SettingsPanel> {
         .collect()
 }
 
-/// The settings of a page, split into the panels the mockup shows.
-pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<SettingsPanel> {
+/// Whether the device is drawn as one 1 to 11 scale: the user's choice, for a device that offers it.
+fn mode_scale(snapshot: &DeviceSnapshot, scale_preferred: bool) -> bool {
+    let model: &'static str = snapshot.model.into();
+    scale_preferred && supports_sound_mode_scale(model, &snapshot.settings)
+}
+
+/// The settings of a page, split into the panels the mockup shows. `scale_preferred` is the user's sound mode view,
+/// which the sound modes page applies the same way as the mode view on it.
+pub fn panels(
+    page: Page,
+    snapshot: &DeviceSnapshot,
+    side: ControlSide,
+    scale_preferred: bool,
+) -> Vec<SettingsPanel> {
     let groups = view::groups(snapshot);
     let Some(group) = groups
         .iter()
@@ -227,15 +230,20 @@ pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<S
     };
     let panels = match page {
         Page::SoundModes => {
+            let scale = mode_scale(snapshot, scale_preferred);
             let mut ids = if matches!(
                 snapshot.settings.get(&SettingId::AmbientSoundMode),
                 Some(Setting::Select { .. })
             ) {
-                rest(&WITH_THE_MODE)
+                rest(&sound_mode::visible_mode_setting_ids(
+                    &snapshot.settings,
+                    scale,
+                ))
             } else {
                 ids.to_vec()
             };
-            ids.retain(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, id, false));
+            // the mode view shows the visible mode settings; the page keeps the invisible ones out
+            ids.retain(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, id, scale));
             vec![panel(PanelKind::Plain, rows_for(snapshot, &ids))]
         }
         Page::Controls => {
@@ -333,8 +341,7 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
     else {
         return None;
     };
-    let model: &'static str = snapshot.model.into();
-    let scale = scale_preferred && supports_sound_mode_scale(model, &snapshot.settings);
+    let scale = mode_scale(snapshot, scale_preferred);
     let options = setting
         .options
         .iter()
@@ -344,10 +351,7 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
             label: label.clone().into(),
         })
         .collect();
-    let ids: Vec<_> = WITH_THE_MODE
-        .into_iter()
-        .filter(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, id, scale))
-        .collect();
+    let ids = sound_mode::visible_mode_setting_ids(&snapshot.settings, scale);
     Some(ModeView {
         options,
         index: setting
@@ -457,7 +461,7 @@ mod tests {
                     SettingId::AdaptiveNoiseCanceling,
                 ],
             )];
-            panels(Page::SoundModes, &snapshot, ControlSide::Left)
+            panels(Page::SoundModes, &snapshot, ControlSide::Left, false)
         };
         assert!(panels_for_mode("Custom").is_empty());
         let adaptive = panels_for_mode("Adaptive");
@@ -513,6 +517,119 @@ mod tests {
             "{:?}",
             row_ids(custom_mode_settings("Custom"))
         );
+    }
+
+    /// The sound modes page's settings, as the device reports them in its sound modes category.
+    fn sound_modes_snapshot(settings: SettingMap) -> DeviceSnapshot {
+        let mut snapshot = snapshot(settings);
+        snapshot.categories = vec![(
+            settings::CategoryId::SoundModes,
+            vec![
+                SettingId::AmbientSoundMode,
+                SettingId::NoiseCancelingMode,
+                SettingId::CustomNoiseCanceling,
+                SettingId::ManualNoiseCanceling,
+                SettingId::TransparencyMode,
+                SettingId::ManualTransparency,
+                SettingId::AirplaneMode,
+            ],
+        )];
+        snapshot
+    }
+
+    /// Every row the sound modes page shows: the ones with the mode itself and the panel below it.
+    fn sound_modes_page_ids(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Vec<String> {
+        let mode_rows = mode_view(snapshot, scale_preferred)
+            .map(|mode| {
+                mode.rows
+                    .iter()
+                    .map(|row| row.id.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let panel_rows = panels(
+            Page::SoundModes,
+            snapshot,
+            ControlSide::Left,
+            scale_preferred,
+        )
+        .into_iter()
+        .flat_map(|panel| {
+            panel
+                .rows
+                .iter()
+                .map(|row| row.id.to_string())
+                .collect::<Vec<_>>()
+        });
+        mode_rows.into_iter().chain(panel_rows).collect()
+    }
+
+    #[test]
+    fn the_scale_view_and_the_page_apply_the_same_visibility_rule() {
+        let with_strength = |mode: &'static str| {
+            let mut device = custom_mode_settings(mode);
+            device.insert(
+                SettingId::CustomNoiseCanceling,
+                Setting::I32Range {
+                    setting: settings::Range {
+                        range: 1..=5,
+                        step: 1,
+                    },
+                    value: 1,
+                },
+            );
+            sound_modes_snapshot(device)
+        };
+
+        // the scale already contains the manual strength, so no separate control is added
+        let scale = sound_modes_page_ids(&with_strength("Custom"), true);
+        assert!(
+            !scale.contains(&"manualNoiseCanceling".to_string()),
+            "{scale:?}"
+        );
+
+        // off the scale it appears once, with the mode itself
+        let tiles = sound_modes_page_ids(&with_strength("Custom"), false);
+        assert_eq!(
+            1,
+            tiles
+                .iter()
+                .filter(|id| *id == "manualNoiseCanceling")
+                .count(),
+            "{tiles:?}"
+        );
+        assert_eq!(
+            1,
+            tiles
+                .iter()
+                .filter(|id| *id == "customNoiseCanceling")
+                .count(),
+            "{tiles:?}"
+        );
+
+        // in a mode where the device sets the strength, neither the scale nor the page offers it
+        let adaptive = sound_modes_page_ids(&with_strength("Adaptive"), true);
+        assert!(
+            !adaptive.contains(&"manualNoiseCanceling".to_string()),
+            "{adaptive:?}"
+        );
+    }
+
+    #[test]
+    fn the_custom_noise_canceling_control_stays_with_the_mode() {
+        let mut device = custom_mode_settings("Custom");
+        device.insert(
+            SettingId::CustomNoiseCanceling,
+            Setting::I32Range {
+                setting: settings::Range {
+                    range: 1..=5,
+                    step: 1,
+                },
+                value: 1,
+            },
+        );
+        let ids = row_ids(device);
+        assert!(ids.contains(&"customNoiseCanceling".to_string()), "{ids:?}");
     }
 
     #[test]
