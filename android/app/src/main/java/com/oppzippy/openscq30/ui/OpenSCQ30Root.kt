@@ -42,6 +42,7 @@ import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
 import com.oppzippy.openscq30.ui.deviceselection.toAppControlSnapshot
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
 import com.oppzippy.openscq30.ui.devicesettings.DeviceSettingsScreen
+import com.oppzippy.openscq30.ui.settings.soundModesViewApplies
 import com.oppzippy.openscq30.ui.sound.SoundConnectionStateScreen
 import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
@@ -107,6 +108,10 @@ fun OpenSCQ30Root(
                                 val activeSettings by remember(deviceSettings) {
                                     deviceSettings?.allSettingsFlow ?: flowOf(emptyList())
                                 }.collectAsState(emptyList())
+                                // the app settings are about the device the app controls, wherever they are opened
+                                val modesViewApplies = remember(status, activeSettings) {
+                                    soundModesViewApplies(status, activeSettings)
+                                }
                                 val activeDevice = when (val current = status) {
                                     is ConnectionStatus.Connected -> (
                                         current.macAddress ?: requestedMacAddress
@@ -135,6 +140,7 @@ fun OpenSCQ30Root(
                                 }
                                 DeviceSelectionScreen(
                                     activeDevice = activeDevice,
+                                    soundModesViewApplies = modesViewApplies,
                                     onDeviceSelected = {
                                         navigation = navigation.openDevice(it.macAddress)
                                         viewModel.selectDevice(it.macAddress)

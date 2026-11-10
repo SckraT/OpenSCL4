@@ -530,8 +530,7 @@ fun DeviceSettingsScreen(
                         }
                     }
                     composable(APP_SETTINGS) {
-                        val modesViewApplies =
-                            soundModesViewApplies(deviceManager.device.model(), settings.toMap())
+                        val modesViewApplies = soundModesViewApplies(connectionStatus, settings)
                         SettingsPage(
                             onBackClick = { navController.popBackStack() },
                             embedded = true,

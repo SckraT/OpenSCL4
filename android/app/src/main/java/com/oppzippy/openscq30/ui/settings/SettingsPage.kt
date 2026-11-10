@@ -71,7 +71,7 @@ fun SettingsPage(
     embedded: Boolean = false,
     onNotificationSettings: (() -> Unit)? = null,
     // only a device the scale can show has two views to choose between, and a choice needs a device
-    soundModesViewApplies: Boolean = false,
+    soundModesViewApplies: Boolean,
     // only a pair of earbuds can be down to one of them
     oneEarbudBadgeApplies: Boolean = false,
 ) {
