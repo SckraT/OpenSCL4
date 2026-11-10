@@ -1,7 +1,7 @@
 //! What the quick presets page does: creating presets, choosing which settings they apply, and deleting them.
 
 use openscq30_lib::settings::SettingId;
-use slint::{ComponentHandle, Model, ModelRc, VecModel};
+use slint::{ComponentHandle, ModelRc, VecModel};
 
 use super::{App, with_app};
 use crate::{
@@ -99,16 +99,8 @@ impl App {
         let (on, off) = self.on_off();
         let words = presets::OnOff { on: &on, off: &off };
         let current = state.get_preset_cards();
-        let mut cards = presets::cards(snapshot, last_applied, words);
-        for (index, card) in cards.iter_mut().enumerate() {
-            if let Some(previous) = current.row_data(index)
-                && previous.name == card.name
-                && previous.fields.iter().eq(card.fields.iter())
-            {
-                card.fields = previous.fields;
-            }
-        }
-        if let Some(cards) = crate::models::updated(&current, cards) {
+        let cards = presets::cards(snapshot, last_applied, words);
+        if let Some(cards) = crate::models::updated_with(&current, cards, presets::same_card) {
             state.set_preset_cards(cards);
         }
         state.set_presets_need_both_earbuds(presets_use_blocked_settings(

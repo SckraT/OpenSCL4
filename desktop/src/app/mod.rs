@@ -1442,6 +1442,59 @@ mod tests {
     }
 
     #[test]
+    fn a_preset_card_keeps_its_fields_model_while_the_fields_do_not_change() {
+        with_headless_window(|window| {
+            let state = window.global::<AppState>();
+            with_app(|app| {
+                let mut snapshot = snapshot();
+                let id = SettingId::SpatialAudio;
+                snapshot
+                    .settings
+                    .insert(id, Setting::Toggle { value: true });
+                snapshot.presets.push(QuickPreset {
+                    name: "Commute".into(),
+                    fields: vec![QuickPresetField {
+                        setting_id: id,
+                        value: true.into(),
+                        is_enabled: true,
+                    }],
+                });
+                app.current = Some(snapshot.mac_address);
+                app.paired.push(PairedDevice {
+                    mac_address: snapshot.mac_address,
+                    model: snapshot.model,
+                    is_demo: true,
+                });
+                app.on_event(Event::Connected(snapshot));
+                app.navigate(Page::Presets);
+            });
+
+            let shown = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_eq!(1, shown.row_count());
+
+            with_app(|app| app.render());
+            let kept = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_eq!(
+                shown, kept,
+                "the card's field list was rebuilt even though it says the same"
+            );
+
+            with_app(|app| {
+                let Connection::Connected(snapshot) = &mut app.connection else {
+                    panic!("expected a connected demo device");
+                };
+                snapshot.presets[0].fields[0].value = false.into();
+                app.render();
+            });
+            let changed = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_ne!(
+                changed, shown,
+                "the card still shows the fields it had before"
+            );
+        });
+    }
+
+    #[test]
     fn recovering_keeps_the_snapshot_and_shows_a_banner() {
         let connection = Connection::Recovering(snapshot(), SessionFailureReason::TransportLost);
 
