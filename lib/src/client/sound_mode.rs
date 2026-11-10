@@ -65,48 +65,75 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
 /// The settings shown with the ambient sound mode itself rather than in the rest of the page. The scale shows the
 /// strengths itself, so these are the only settings [`mode_setting_is_visible`] decides; every other setting on the page
 /// stays visible.
-pub const MODE_SETTING_IDS: &[&str] = &[
-    "ambientSoundMode",
-    "noiseCancelingMode",
-    "customNoiseCanceling",
-    "manualNoiseCanceling",
-    "transparencyMode",
-    "manualTransparency",
-    "airplaneMode",
+pub const MODE_SETTING_IDS: &[SettingId] = &[
+    SettingId::AmbientSoundMode,
+    SettingId::NoiseCancelingMode,
+    SettingId::CustomNoiseCanceling,
+    SettingId::ManualNoiseCanceling,
+    SettingId::TransparencyMode,
+    SettingId::ManualTransparency,
+    SettingId::AirplaneMode,
 ];
 
+/// How one of [`MODE_SETTING_IDS`] follows the current ambient sound mode.
+enum ModeSettingRule {
+    AlwaysHidden,
+    InMode(&'static str),
+    ManualStrength {
+        mode: &'static str,
+        mode_setting: SettingId,
+    },
+}
+
+/// The rule for a setting in [`MODE_SETTING_IDS`], or None for a setting the mode does not govern. Every id in the
+/// shared set needs a rule; the test below keeps the two from drifting apart.
+fn mode_setting_rule(id: SettingId) -> Option<ModeSettingRule> {
+    Some(match id {
+        SettingId::AmbientSoundMode => ModeSettingRule::AlwaysHidden,
+        SettingId::NoiseCancelingMode | SettingId::CustomNoiseCanceling => {
+            ModeSettingRule::InMode(ambient_mode::NOISE_CANCELING)
+        }
+        SettingId::ManualNoiseCanceling => ModeSettingRule::ManualStrength {
+            mode: ambient_mode::NOISE_CANCELING,
+            mode_setting: SettingId::NoiseCancelingMode,
+        },
+        SettingId::TransparencyMode => ModeSettingRule::InMode(ambient_mode::TRANSPARENCY),
+        SettingId::ManualTransparency => ModeSettingRule::ManualStrength {
+            mode: ambient_mode::TRANSPARENCY,
+            mode_setting: SettingId::TransparencyMode,
+        },
+        SettingId::AirplaneMode => ModeSettingRule::InMode(ambient_mode::AIRPLANE),
+        _ => return None,
+    })
+}
+
 /// The settings of [`MODE_SETTING_IDS`] shown with the current mode and `scale`, in their shared order.
-pub fn visible_mode_setting_ids(settings: &SettingMap, scale: bool) -> Vec<&'static str> {
+pub fn visible_mode_setting_ids(settings: &SettingMap, scale: bool) -> Vec<SettingId> {
     MODE_SETTING_IDS
         .iter()
         .copied()
-        .filter(|id| mode_setting_is_visible(settings, id, scale))
+        .filter(|id| mode_setting_is_visible(settings, *id, scale))
         .collect()
 }
 
-/// Whether a setting belongs with the current mode. The scale already contains the manual strength controls.
-pub fn mode_setting_is_visible(settings: &SettingMap, id: &str, scale: bool) -> bool {
+/// Whether a setting belongs with the current mode. The scale already contains the manual strength controls. A
+/// setting outside [`MODE_SETTING_IDS`] is not the rule's business and stays visible.
+pub fn mode_setting_is_visible(settings: &SettingMap, id: SettingId, scale: bool) -> bool {
+    let Some(rule) = mode_setting_rule(id) else {
+        // a new id in the shared set without a rule of its own stays hidden instead of appearing where it may not
+        // belong; any other setting on the page is not the rule's business
+        return !MODE_SETTING_IDS.contains(&id);
+    };
     let Some((_, mode)) = ambient(settings) else {
         return true;
     };
-    match id {
-        "ambientSoundMode" => false,
-        "noiseCancelingMode" | "customNoiseCanceling" => mode == ambient_mode::NOISE_CANCELING,
-        "manualNoiseCanceling" => {
-            !scale
-                && mode == ambient_mode::NOISE_CANCELING
-                && strength_is_set_by_user(settings, SettingId::NoiseCancelingMode)
-        }
-        "transparencyMode" => mode == ambient_mode::TRANSPARENCY,
-        "manualTransparency" => {
-            !scale
-                && mode == ambient_mode::TRANSPARENCY
-                && strength_is_set_by_user(settings, SettingId::TransparencyMode)
-        }
-        "airplaneMode" => mode == ambient_mode::AIRPLANE,
-        // an id added to the shared set without a rule of its own stays hidden instead of appearing where it may
-        // not belong; any other setting on the page is not the rule's business
-        other => !MODE_SETTING_IDS.contains(&other),
+    match rule {
+        ModeSettingRule::AlwaysHidden => false,
+        ModeSettingRule::InMode(wanted) => mode == wanted,
+        ModeSettingRule::ManualStrength {
+            mode: wanted,
+            mode_setting,
+        } => !scale && mode == wanted && strength_is_set_by_user(settings, mode_setting),
     }
 }
 
@@ -198,6 +225,7 @@ pub fn sound_mode_scale_settings(position: i32) -> Vec<(SettingId, Value)> {
 #[cfg(test)]
 mod tests {
     use crate::settings::{Range, Select};
+    use strum::VariantArray;
 
     use super::*;
 
@@ -418,6 +446,17 @@ mod tests {
             ],
             sound_mode_scale_settings(7)
         );
+    }
+
+    #[test]
+    fn every_setting_with_a_mode_rule_is_in_the_shared_mode_setting_ids() {
+        for id in SettingId::VARIANTS {
+            assert_eq!(
+                MODE_SETTING_IDS.contains(id),
+                mode_setting_rule(*id).is_some(),
+                "{id:?}"
+            );
+        }
     }
 
     #[test]

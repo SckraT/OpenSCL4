@@ -1,10 +1,8 @@
 package com.oppzippy.openscq30.widget
 
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
-import com.oppzippy.openscq30.lib.bindings.ClientSettingsPresentation
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
-import com.oppzippy.openscq30.ui.sound.settingsPresentation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,7 +18,7 @@ class SettingWidgetSettingsTest {
     private fun rowsOf(
         selected: List<Pair<String, Setting?>>,
         values: Map<String, Setting>,
-    ): List<WidgetSetting> = widgetSettings(selected, settingsPresentation(values))
+    ): List<WidgetSetting> = widgetSettings(selected, values)
 
     private fun spatialAudio(musicMode: Boolean, mode: String): Map<String, Setting> = mapOf(
         "spatialAudio" to Setting.ToggleSetting(true),
@@ -36,7 +34,7 @@ class SettingWidgetSettingsTest {
             "spatialAudioMusicMode" to musicMode,
         )
 
-        assertTrue(widgetSettings(listOf("spatialAudioMusicMode" to musicMode), settingsPresentation(values)).isEmpty())
+        assertTrue(widgetSettings(listOf("spatialAudioMusicMode" to musicMode), values).isEmpty())
     }
 
     @Test
@@ -56,15 +54,34 @@ class SettingWidgetSettingsTest {
     }
 
     @Test
-    fun availabilityWithOneEarbudBlocksTheSettingWithItsReason() {
+    fun availabilityWithOneEarbudKeepsTheValueAndItsReason() {
         val settings = mapOf(
             "twsStatus" to Setting.InformationSetting("Disconnected", "Disconnected"),
             "ldac" to Setting.ToggleSetting(true),
         )
 
         assertEquals(
-            listOf(WidgetSetting.Blocked("ldac", AvailabilityReason.REQUIRES_BOTH_EARBUDS)),
+            listOf(
+                WidgetSetting.ReadOnly(
+                    "ldac",
+                    Setting.ToggleSetting(true),
+                    AvailabilityReason.REQUIRES_BOTH_EARBUDS,
+                ),
+            ),
             rowsOf(listOf("ldac" to Setting.ToggleSetting(true)), settings),
+        )
+    }
+
+    @Test
+    fun anUnavailableSettingShowsOnlyTheReason() {
+        val settings = mapOf(
+            "twsStatus" to Setting.InformationSetting("Disconnected", "Disconnected"),
+            "volumeAdjustments" to Setting.ToggleSetting(true),
+        )
+
+        assertEquals(
+            listOf(WidgetSetting.Blocked("volumeAdjustments", AvailabilityReason.REQUIRES_BOTH_EARBUDS)),
+            rowsOf(listOf("volumeAdjustments" to Setting.ToggleSetting(true)), settings),
         )
     }
 
@@ -73,10 +90,7 @@ class SettingWidgetSettingsTest {
         // the widget may be drawn before a snapshot provides availability: the setting must not look changeable
         assertEquals(
             listOf(WidgetSetting.Blocked("spatialAudioMusicMode", AvailabilityReason.NO_DEVICE_STATE)),
-            widgetSettings(
-                listOf("spatialAudioMusicMode" to musicMode),
-                ClientSettingsPresentation(emptyMap(), emptyMap()),
-            ),
+            widgetSettings(listOf("spatialAudioMusicMode" to musicMode), emptyMap()),
         )
     }
 
