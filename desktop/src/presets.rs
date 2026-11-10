@@ -153,15 +153,14 @@ pub fn editor_groups(
         let id: &'static str = field.setting_id.into();
         shown
             .iter()
-            .find(|(_, ids)| ids.contains(&id))
+            .find(|(_, ids)| ids.contains(&field.setting_id))
             .map_or_else(|| setting_group(id, None), |(group, _)| *group)
     };
     let position = |field: &QuickPresetField| {
-        let id: &'static str = field.setting_id.into();
         shown
             .iter()
             .flat_map(|(_, ids)| ids.iter())
-            .position(|other| *other == id)
+            .position(|other| *other == field.setting_id)
             .unwrap_or(usize::MAX)
     };
     SettingGroup::ALL

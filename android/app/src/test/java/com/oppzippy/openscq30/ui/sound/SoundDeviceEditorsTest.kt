@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.ui.sound
 
+import com.oppzippy.openscq30.lib.bindings.ControlSide
 import com.oppzippy.openscq30.lib.wrapper.Range
 import com.oppzippy.openscq30.lib.wrapper.Select
 import org.junit.Assert.assertEquals
@@ -42,10 +43,10 @@ class SoundDeviceEditorsTest {
 
     @Test
     fun sideTabsIncludeCallGesturesAndExcludeOtherCapabilities() {
-        assertTrue(isSideControl("leftSlideUp", "left"))
-        assertTrue(isSideControl("rightLongPressDuringCall", "right"))
-        assertFalse(isSideControl("rightSlideUp", "left"))
-        assertFalse(isSideControl("batteryLevelLeft", "left"))
-        assertFalse(isSideControl("leftFutureFeature", "left"))
+        assertTrue(isSideControl("leftSlideUp", ControlSide.LEFT))
+        assertTrue(isSideControl("rightLongPressDuringCall", ControlSide.RIGHT))
+        assertFalse(isSideControl("rightSlideUp", ControlSide.LEFT))
+        assertFalse(isSideControl("batteryLevelLeft", ControlSide.LEFT))
+        assertFalse(isSideControl("leftFutureFeature", ControlSide.LEFT))
     }
 }

@@ -15,7 +15,7 @@ use openscq30_lib::{
     DeviceModel,
     client::{
         availability::{SettingAvailability, setting_availability},
-        controls::ControlSide,
+        controls::ControlSide as LibControlSide,
     },
     connection::{ConnectionDescriptor, RECOVERY_WINDOW, SessionFailureReason},
     device::{SettingWriteOutcome, WriteOutcome},
@@ -32,8 +32,8 @@ mod tray;
 pub use tray::show_from_elsewhere;
 
 use crate::{
-    Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
-    PaletteChoice, Theme, ToastKind,
+    Actions, AppState, AppWindow, Connection as ConnectionView, ControlSide, FailureKind, Page,
+    PairedOption, PaletteChoice, Theme, ToastKind,
     config::{Accent, AppTheme, Config, SoundModeView},
     controller::{Command, Controller, DeviceSnapshot, Event, Failure},
     model::overview::{OverviewLayout, OverviewPreset},
@@ -1036,20 +1036,24 @@ impl App {
     /// The settings of the page that is open, and what its side column needs.
     fn render_section(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         let page = state.get_page();
-        let mut side = ControlSide::Left;
+        let mut side = LibControlSide::Left;
         if page == Page::Controls {
-            let has_controls = |side: ControlSide| {
+            let has_controls = |side: LibControlSide| {
                 side.settings()
                     .any(|id| snapshot.settings.contains_key(&id))
             };
-            let left = has_controls(ControlSide::Left);
-            let right = has_controls(ControlSide::Right);
+            let left = has_controls(LibControlSide::Left);
+            let right = has_controls(LibControlSide::Right);
             state.set_has_sides(left && right);
-            let show_right = right && (!left || state.get_controls_side() == "right");
+            let show_right = right && (!left || state.get_controls_side() == ControlSide::Right);
             if show_right {
-                side = ControlSide::Right;
+                side = LibControlSide::Right;
             }
-            state.set_controls_side(if show_right { "right" } else { "left" }.into());
+            state.set_controls_side(if show_right {
+                ControlSide::Right
+            } else {
+                ControlSide::Left
+            });
         }
         let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
         let panels = rows::panels(page, snapshot, side, scale_preferred);
@@ -1365,7 +1369,9 @@ mod tests {
             assert!(shows("leftDoublePress"));
             assert!(shows("leftDoublePressDuringCall"));
             assert!(!shows("rightDoublePress"));
-            window.global::<Actions>().invoke_set_side("right".into());
+            window
+                .global::<Actions>()
+                .invoke_set_side(ControlSide::Right);
             for id in [
                 "rightDoublePress",
                 "rightTriplePress",
