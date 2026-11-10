@@ -199,7 +199,7 @@ pub fn client_displayed_settings(
 pub fn client_sound_mode_setting_ids() -> Vec<String> {
     sound_mode::MODE_SETTING_IDS
         .iter()
-        .map(|id| (*id).to_owned())
+        .map(ToString::to_string)
         .collect()
 }
 
@@ -211,7 +211,10 @@ pub fn client_visible_sound_mode_settings(
 ) -> Vec<String> {
     let values = settings(values);
     ids.into_iter()
-        .filter(|id| sound_mode::mode_setting_is_visible(&values, id, scale))
+        .filter(|id| {
+            SettingId::from_str(id)
+                .is_ok_and(|id| sound_mode::mode_setting_is_visible(&values, id, scale))
+        })
         .collect()
 }
 

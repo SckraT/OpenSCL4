@@ -65,15 +65,14 @@ import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
-import com.oppzippy.openscq30.lib.bindings.ClientSettingsPresentation
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
+import com.oppzippy.openscq30.lib.bindings.translateValue
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
-import com.oppzippy.openscq30.lib.wrapper.blockedReason
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.sound.availabilityReasonText
 import com.oppzippy.openscq30.ui.sound.settingAvailability
@@ -107,7 +106,11 @@ sealed class SettingWidgetState {
     data class ConnectedUnconfigured(val deviceName: String) : SettingWidgetState()
 
     @Serializable
-    data class Connected(val deviceName: String, val settings: List<Pair<String, Setting?>>) : SettingWidgetState()
+    data class Connected(
+        val deviceName: String,
+        val settings: List<Pair<String, Setting?>>,
+        val snapshot: List<Pair<String, Setting>> = emptyList(),
+    ) : SettingWidgetState()
 }
 
 class SettingWidget : GlanceAppWidget() {
@@ -221,14 +224,14 @@ class SettingWidget : GlanceAppWidget() {
                                 deviceName = translateDeviceModel(device.model()),
                             )
                         } else {
+                            val snapshot = device.settingsByCategory()
+                                .flatMap { it.settings }
+                                .distinctBy { it.settingId }
+                                .associate { it.settingId to it.setting }
                             SettingWidgetState.Connected(
                                 deviceName = translateDeviceModel(device.model()),
-                                settings = settingIds.map { settingId ->
-                                    Pair(
-                                        settingId,
-                                        device.setting(settingId),
-                                    )
-                                },
+                                settings = settingIds.map { settingId -> settingId to snapshot[settingId] },
+                                snapshot = snapshot.toList(),
                             )
                         }
                     } catch (ex: IllegalStateException) {
@@ -355,6 +358,7 @@ private fun Content(
                     is SettingWidgetState.Connected -> Connected(
                         context = context,
                         settings = state.settings,
+                        snapshot = state.snapshot,
                         isCompactLayout = isCompactLayout,
                     )
                 }
@@ -446,42 +450,52 @@ private fun ConnectedUnconfigured(context: Context) {
     }
 }
 
-/** A selected setting the widget draws: its control, or the reason the shared rules do not let it be changed. */
+/**
+ * A selected setting the widget draws: its control, its value when it cannot be changed, or the reason it has no value
+ * to draw.
+ */
 internal sealed class WidgetSetting {
     data class Editable(val settingId: String, val setting: Setting) : WidgetSetting()
+
+    data class ReadOnly(val settingId: String, val setting: Setting, val reason: AvailabilityReason) : WidgetSetting()
 
     data class Blocked(val settingId: String, val reason: AvailabilityReason) : WidgetSetting()
 }
 
 /**
- * The selected settings the widget can draw. Dependency rules hide a setting whose parent is off, and availability
- * rules block a setting the device does not let change now, the same way the device settings screen treats them.
+ * The selected settings the widget can draw, decided from the [snapshot] the device reports. Dependency rules hide a
+ * setting whose parent is off, and availability rules keep a setting the device does not let change now, the same way
+ * the device settings screen treats them. Only the drawing is limited to [selected].
  */
 internal fun widgetSettings(
     selected: List<Pair<String, Setting?>>,
-    presentation: ClientSettingsPresentation,
-): List<WidgetSetting> = selected.mapNotNull { (settingId, selectedSetting) ->
-    val setting = selectedSetting ?: return@mapNotNull null
-    if (presentation.controls[settingId] == ClientSettingControl.HIDDEN ||
-        presentation.controls[settingId] == ClientSettingControl.DISABLED
-    ) {
-        return@mapNotNull null
-    }
-    val availability = settingAvailability(presentation.availability, settingId)
-    if (availability is ClientSettingAvailability.Available) {
-        WidgetSetting.Editable(settingId, setting)
-    } else {
-        WidgetSetting.Blocked(settingId, requireNotNull(availability.blockedReason()))
+    snapshot: Map<String, Setting>,
+): List<WidgetSetting> {
+    val presentation = settingsPresentation(snapshot)
+    return selected.mapNotNull { (settingId, selectedSetting) ->
+        val setting = selectedSetting ?: return@mapNotNull null
+        if (presentation.controls[settingId] == ClientSettingControl.HIDDEN ||
+            presentation.controls[settingId] == ClientSettingControl.DISABLED
+        ) {
+            return@mapNotNull null
+        }
+        when (val availability = settingAvailability(presentation.availability, settingId)) {
+            is ClientSettingAvailability.Available -> WidgetSetting.Editable(settingId, setting)
+            is ClientSettingAvailability.ReadOnly -> WidgetSetting.ReadOnly(settingId, setting, availability.reason)
+            is ClientSettingAvailability.Unavailable -> WidgetSetting.Blocked(settingId, availability.reason)
+        }
     }
 }
 
 @Composable
-private fun Connected(context: Context, settings: List<Pair<String, Setting?>>, isCompactLayout: Boolean) {
-    val presentation = settingsPresentation(
-        settings.mapNotNull { (settingId, setting) -> setting?.let { settingId to it } }.toMap(),
-    )
+private fun Connected(
+    context: Context,
+    settings: List<Pair<String, Setting?>>,
+    snapshot: List<Pair<String, Setting>>,
+    isCompactLayout: Boolean,
+) {
     LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-        items(widgetSettings(settings, presentation)) { row ->
+        items(widgetSettings(settings, snapshot.toMap())) { row ->
             Box(
                 modifier = GlanceModifier.let {
                     if (!isCompactLayout) it.padding(bottom = 6.dp) else it
@@ -489,6 +503,17 @@ private fun Connected(context: Context, settings: List<Pair<String, Setting?>>, 
             ) {
                 when (row) {
                     is WidgetSetting.Editable -> ShowSetting(context, row.settingId, row.setting, isCompactLayout)
+                    is WidgetSetting.ReadOnly -> Column(GlanceModifier.fillMaxWidth()) {
+                        ReadOnlySettingValue(
+                            row.settingId,
+                            translateValue(row.setting, row.setting.toValue()),
+                        )
+                        Text(
+                            context.getString(availabilityReasonText(row.reason)),
+                            style = defaultTextStyle(),
+                        )
+                    }
+
                     is WidgetSetting.Blocked -> ReadOnlySettingValue(
                         row.settingId,
                         context.getString(availabilityReasonText(row.reason)),

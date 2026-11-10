@@ -272,7 +272,8 @@ fn shared_client_contract() {
         let shown: Vec<_> = sound_mode::MODE_SETTING_IDS
             .iter()
             .copied()
-            .filter(|id| sound_mode::mode_setting_is_visible(&settings, id, scale))
+            .filter(|id| sound_mode::mode_setting_is_visible(&settings, *id, scale))
+            .map(|id| -> &'static str { id.into() })
             .collect();
         let expected: Vec<_> = case["shown"]
             .as_array()

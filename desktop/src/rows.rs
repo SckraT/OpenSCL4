@@ -232,19 +232,13 @@ pub fn panels(
             ) {
                 ids.iter()
                     .copied()
-                    .filter(|id| {
-                        let name: &'static str = (*id).into();
-                        !visible.contains(&name)
-                    })
+                    .filter(|id| !visible.contains(id))
                     .collect()
             } else {
                 ids.to_vec()
             };
             // the mode view shows the visible mode settings; the page keeps the invisible ones out
-            ids.retain(|id| {
-                let name: &'static str = (*id).into();
-                sound_mode::mode_setting_is_visible(&snapshot.settings, name, scale)
-            });
+            ids.retain(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, *id, scale));
             vec![panel(PanelKind::Plain, rows_for(snapshot, &ids))]
         }
         Page::Controls => {
@@ -349,16 +343,7 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
             label: label.clone().into(),
         })
         .collect();
-    let ids: Vec<SettingId> = sound_mode::visible_mode_setting_ids(&snapshot.settings, scale)
-        .into_iter()
-        .filter_map(|name| {
-            snapshot
-                .settings
-                .keys()
-                .copied()
-                .find(|id| <&'static str>::from(*id) == name)
-        })
-        .collect();
+    let ids = sound_mode::visible_mode_setting_ids(&snapshot.settings, scale);
     Some(ModeView {
         options,
         index: setting
