@@ -156,16 +156,10 @@ fn rows_for(snapshot: &DeviceSnapshot, ids: &[SettingId]) -> Vec<SettingRow> {
             if control == SettingControl::Hidden {
                 return None;
             }
-            let adaptive;
-            let setting = if id == SettingId::AdaptiveNoiseCanceling {
-                adaptive = sound_mode::adaptive_noise_canceling_display(&snapshot.settings)?;
-                &adaptive
-            } else {
-                snapshot.settings.get(&id)?
-            };
+            let setting = sound_mode::displayed_setting(&snapshot.settings, id)?;
             row(
                 id,
-                setting,
+                &setting,
                 control == SettingControl::Enabled,
                 setting_availability(&snapshot.settings, name),
             )

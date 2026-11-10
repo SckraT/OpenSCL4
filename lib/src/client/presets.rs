@@ -139,15 +139,6 @@ pub fn preset_summary<'a>(
     PresetSummary { fields, status }
 }
 
-/// Only the last preset the user applied can be applied, and its effective fields must still match.
-pub fn preset_status(
-    preset: &QuickPreset,
-    settings: &SettingMap,
-    last_applied: Option<&str>,
-) -> PresetStatus {
-    preset_summary(preset, settings, last_applied).status
-}
-
 #[cfg(test)]
 mod tests {
     use crate::settings::{Setting, SettingId};
@@ -284,15 +275,15 @@ mod tests {
     fn only_the_last_applied_preset_is_applied_when_several_match() {
         assert_eq!(
             PresetStatus::Applied,
-            preset_status(&anc(), &matching_both(), Some("ANC"))
+            preset_summary(&anc(), &matching_both(), Some("ANC")).status
         );
         assert_eq!(
             PresetStatus::MatchesCurrent,
-            preset_status(&equalizer(), &matching_both(), Some("ANC"))
+            preset_summary(&equalizer(), &matching_both(), Some("ANC")).status
         );
         assert_eq!(
             PresetStatus::MatchesCurrent,
-            preset_status(&anc(), &matching_both(), None)
+            preset_summary(&anc(), &matching_both(), None).status
         );
     }
 
@@ -301,17 +292,17 @@ mod tests {
         let changed = toggles(&[(WEAR, false), (VOLUME, false)]);
         assert_eq!(
             PresetStatus::NotApplied,
-            preset_status(&anc(), &changed, Some("ANC"))
+            preset_summary(&anc(), &changed, Some("ANC")).status
         );
         assert_eq!(
             PresetStatus::MatchesCurrent,
-            preset_status(&equalizer(), &changed, Some("ANC"))
+            preset_summary(&equalizer(), &changed, Some("ANC")).status
         );
         // changing a setting the preset does not use keeps it applied
         let other = toggles(&[(WEAR, true), (VOLUME, true)]);
         assert_eq!(
             PresetStatus::Applied,
-            preset_status(&anc(), &other, Some("ANC"))
+            preset_summary(&anc(), &other, Some("ANC")).status
         );
     }
 
