@@ -4,7 +4,7 @@ Sources for the **Standards** axis of `code-review`. Read the cited file before 
 
 ## Read before judging
 
-- `CLAUDE.md` — current project boundaries and which client is the release target.
+- `AGENTS.md` (imported by `CLAUDE.md`) — current project boundaries and which client is the release target.
 - `docs/development.md`, `docs/build-release.md`, `docs/device-development.md`, `docs/android-interface.md`.
 - `docs/adr/` — accepted decisions; cite the ADR number when a change contradicts one.
 - `GLOSSARY.md` — domain vocabulary (Russian); use its terms in findings.
