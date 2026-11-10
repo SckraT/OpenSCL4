@@ -3,7 +3,7 @@ package com.oppzippy.openscq30.ui.sound
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
-import com.oppzippy.openscq30.lib.bindings.clientAdaptiveNoiseCancelingDisplay
+import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.clientSettingsPresentation
 import com.oppzippy.openscq30.lib.bindings.clientSoundModeSettingIds
@@ -166,7 +166,7 @@ class ClientRulesContractTest {
             val values = modeValues(case) + ("adaptiveNoiseCanceling" to Setting.InformationSetting("1/5", "1/5"))
             assertEquals(
                 case.getValue("shown").jsonPrimitive.boolean,
-                clientAdaptiveNoiseCancelingDisplay(values) != null,
+                clientDisplayedSettings(values)["adaptiveNoiseCanceling"] != null,
             )
         }
         fixtures.getValue("soundModeRows").jsonArray.forEach { item ->

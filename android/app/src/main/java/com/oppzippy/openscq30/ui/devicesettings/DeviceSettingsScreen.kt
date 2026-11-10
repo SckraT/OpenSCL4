@@ -167,7 +167,7 @@ fun DeviceSettingsScreen(
     val presets by remember(deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
     val legacyProfiles by remember(deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     // every setting has one group, and the group's page is where it is shown
-    val grouped = remember(settingsById, byCategory) { groupSettings(settingsById, byCategory) }
+    val grouped = remember(byCategory) { groupSettings(byCategory) }
     fun groupSettingsOf(group: SettingGroup) = grouped[group].orEmpty()
     val modeSettings = groupSettingsOf(SettingGroup.SoundModes)
     val controlSettings = groupSettingsOf(SettingGroup.Controls)

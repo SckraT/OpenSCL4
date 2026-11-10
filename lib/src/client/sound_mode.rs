@@ -111,7 +111,7 @@ pub fn mode_setting_is_visible(settings: &SettingMap, id: &str, scale: bool) -> 
 }
 
 /// Devices can keep reporting the same level while adjusting it automatically. Show that status on both clients.
-pub fn adaptive_noise_canceling_display(settings: &SettingMap) -> Option<Setting> {
+fn adaptive_noise_canceling_display(settings: &SettingMap) -> Option<Setting> {
     if ambient(settings).is_some_and(|(_, mode)| mode != ambient_mode::NOISE_CANCELING)
         || !matches!(
             settings.get(&SettingId::NoiseCancelingMode),
@@ -128,6 +128,17 @@ pub fn adaptive_noise_canceling_display(settings: &SettingMap) -> Option<Setting
         value: value.clone(),
         translated_value: fl!("adaptive-noise-canceling-automatically"),
     })
+}
+
+/// The setting a client draws for `id`: everything is shown as the device reports it, except the adaptive noise
+/// canceling level, which reads as the status saying the device adjusts it automatically. A setting the device does not
+/// report has nothing to draw, which is also how the clients leave out the level while the mode is not adaptive.
+pub fn displayed_setting(settings: &SettingMap, id: SettingId) -> Option<Setting> {
+    if id == SettingId::AdaptiveNoiseCanceling {
+        adaptive_noise_canceling_display(settings)
+    } else {
+        settings.get(&id).cloned()
+    }
 }
 
 /// Whether the user sets the strength of the current mode. In the adaptive mode the device picks the level itself,
@@ -296,6 +307,52 @@ mod tests {
         );
         assert_eq!(Some(7), sound_mode_scale_value(&nc));
         assert_eq!(Some(5), sound_mode_scale_value(&transparency));
+    }
+
+    fn adaptive_settings(mode: &'static str) -> SettingMap {
+        let mut settings = device(ambient_mode::NOISE_CANCELING, 3, 2);
+        settings.insert(
+            SettingId::NoiseCancelingMode,
+            select(
+                &[noise_canceling_mode::MANUAL, noise_canceling_mode::ADAPTIVE],
+                mode,
+            ),
+        );
+        settings.insert(
+            SettingId::AdaptiveNoiseCanceling,
+            Setting::Information {
+                value: "1/5".into(),
+                translated_value: "1/5".into(),
+            },
+        );
+        settings
+    }
+
+    #[test]
+    fn the_adaptive_level_is_shown_as_the_status_saying_the_device_sets_it() {
+        let adaptive = adaptive_settings(noise_canceling_mode::ADAPTIVE);
+        assert_eq!(
+            Some(Setting::Information {
+                value: "1/5".into(),
+                translated_value: "Automatically".into(),
+            }),
+            displayed_setting(&adaptive, SettingId::AdaptiveNoiseCanceling)
+        );
+        // every other setting is shown as the device reports it
+        assert_eq!(
+            adaptive.get(&SettingId::AmbientSoundMode).cloned(),
+            displayed_setting(&adaptive, SettingId::AmbientSoundMode)
+        );
+        assert_eq!(None, displayed_setting(&adaptive, SettingId::SpatialAudio));
+    }
+
+    #[test]
+    fn the_adaptive_level_is_left_out_while_the_mode_is_not_adaptive() {
+        let manual = adaptive_settings(noise_canceling_mode::MANUAL);
+        assert_eq!(
+            None,
+            displayed_setting(&manual, SettingId::AdaptiveNoiseCanceling)
+        );
     }
 
     #[test]

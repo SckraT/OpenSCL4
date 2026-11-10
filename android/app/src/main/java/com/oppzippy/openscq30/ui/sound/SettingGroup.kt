@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
-import com.oppzippy.openscq30.lib.bindings.clientAdaptiveNoiseCancelingDisplay
+import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.Setting
@@ -54,21 +54,18 @@ fun SettingGroup.title(): String = when (this) {
         translateCategoryId(requireNotNull(libraryCategory))
 }
 
-/** The device's settings by group, each in the device's order. Groups without settings are left out. */
-internal fun groupSettings(
-    values: Map<String, Setting>,
-    byCategory: Map<String, List<Pair<String, Setting>>>,
-): Map<SettingGroup, List<Pair<String, Setting>>> {
-    val adaptive = if ("adaptiveNoiseCanceling" in values) clientAdaptiveNoiseCancelingDisplay(values) else null
+/**
+ * The device's settings by group, each in the device's order, drawn as the library says. Groups without settings are
+ * left out.
+ */
+internal fun groupSettings(byCategory: Map<String, List<Pair<String, Setting>>>): Map<SettingGroup, List<Pair<String, Setting>>> {
+    val categories = byCategory.map { (category, settings) ->
+        ClientSettingCategory(category, settings.map { it.first })
+    }
+    val displayed = clientDisplayedSettings(byCategory.values.flatten().toMap())
     return buildMap {
-        val categories = byCategory.map { (category, settings) ->
-            ClientSettingCategory(category, settings.map { it.first })
-        }
         for (group in clientGroupSettings(categories)) {
-            val shown = group.ids.mapNotNull { id ->
-                val setting = if (id == "adaptiveNoiseCanceling") adaptive else values[id]
-                setting?.let { id to it }
-            }
+            val shown = group.ids.mapNotNull { id -> displayed[id]?.let { id to it } }
             if (shown.isNotEmpty()) put(SettingGroup.valueOf(group.group), shown)
         }
     }

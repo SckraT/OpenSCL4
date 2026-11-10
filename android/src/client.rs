@@ -164,11 +164,20 @@ pub fn client_supports_sound_mode_scale(
     sound_mode::supports_sound_mode_scale(&model, &settings(values))
 }
 
+/// The settings a client draws, keyed by the id it reports them under. The adaptive noise canceling level reads as
+/// the status saying the device adjusts it automatically; a setting with nothing to draw is left out.
 #[uniffi::export]
-pub fn client_adaptive_noise_canceling_display(
+pub fn client_displayed_settings(
     values: HashMap<String, serializable::Setting>,
-) -> Option<serializable::Setting> {
-    sound_mode::adaptive_noise_canceling_display(&settings(values)).map(serializable::Setting)
+) -> HashMap<String, serializable::Setting> {
+    let values = settings(values);
+    values
+        .keys()
+        .filter_map(|id| {
+            let setting = sound_mode::displayed_setting(&values, *id)?;
+            Some((id.to_string(), serializable::Setting(setting)))
+        })
+        .collect()
 }
 
 /// The settings shown with the sound mode itself, in the order both clients use.
