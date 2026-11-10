@@ -1,7 +1,7 @@
 package com.oppzippy.openscq30
 
+import com.oppzippy.openscq30.lib.bindings.DeviceArt
 import com.oppzippy.openscq30.lib.bindings.deviceModels
-import com.oppzippy.openscq30.ui.sound.DeviceArt
 import com.oppzippy.openscq30.ui.sound.deviceArt
 import org.junit.Assert.assertEquals
 import org.junit.Test

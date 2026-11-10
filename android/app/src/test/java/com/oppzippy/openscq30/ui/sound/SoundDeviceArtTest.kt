@@ -2,6 +2,8 @@ package com.oppzippy.openscq30.ui.sound
 
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
+import com.oppzippy.openscq30.lib.bindings.DeviceArt
+import com.oppzippy.openscq30.lib.bindings.DeviceKind
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.theme.darkColorScheme
 import com.oppzippy.openscq30.ui.theme.lightColorScheme
@@ -14,43 +16,43 @@ import org.junit.Test
 class SoundDeviceArtTest {
     @Test
     fun lightThemeShowsTheSilverIllustration() {
-        assertEquals(R.drawable.sound_art_stem_premium_silver, deviceArtImage(DeviceArt.LibertyStem, lightColorScheme))
+        assertEquals(R.drawable.sound_art_stem_premium_silver, deviceArtImage(DeviceArt.LIBERTY_STEM, lightColorScheme))
     }
 
     @Test
     fun darkThemeShowsTheBlackIllustration() {
-        assertEquals(R.drawable.sound_art_stem_premium_black, deviceArtImage(DeviceArt.LibertyStem, darkColorScheme))
+        assertEquals(R.drawable.sound_art_stem_premium_black, deviceArtImage(DeviceArt.LIBERTY_STEM, darkColorScheme))
     }
 
     @Test
     fun chosenColorWinsOverTheTheme() {
         assertEquals(
             R.drawable.sound_art_motion_plus_black,
-            deviceArtImage(DeviceArt.MotionPlus, lightColorScheme, EarbudsColor.Black),
+            deviceArtImage(DeviceArt.MOTION_PLUS, lightColorScheme, EarbudsColor.Black),
         )
         assertEquals(
             R.drawable.sound_art_headphones_silver,
-            deviceArtImage(DeviceArt.Headphones, darkColorScheme, EarbudsColor.Silver),
+            deviceArtImage(DeviceArt.HEADPHONES, darkColorScheme, EarbudsColor.Silver),
         )
     }
 
     @Test
     fun modelsUseTheIllustrationOfTheirShape() {
-        assertEquals(DeviceArt.LibertyStem, deviceArt("SoundcoreA3954"))
-        assertEquals(DeviceArt.Headphones, deviceArt("SoundcoreA3028"))
-        assertEquals(DeviceArt.MotionPlus, deviceArt("SoundcoreA3116"))
-        assertEquals(DeviceArt.ClassicStem, deviceArt("SoundcoreD1202C"))
-        assertEquals(DeviceArt.OpenStem, deviceArt("SoundcoreA3945"))
+        assertEquals(DeviceArt.LIBERTY_STEM, deviceArt("SoundcoreA3954"))
+        assertEquals(DeviceArt.HEADPHONES, deviceArt("SoundcoreA3028"))
+        assertEquals(DeviceArt.MOTION_PLUS, deviceArt("SoundcoreA3116"))
+        assertEquals(DeviceArt.CLASSIC_STEM, deviceArt("SoundcoreD1202C"))
+        assertEquals(DeviceArt.OPEN_STEM, deviceArt("SoundcoreA3945"))
     }
 
     @Test
     fun modelsAreGroupedByKind() {
-        assertEquals(DeviceKind.Earbuds, deviceArt("SoundcoreA3954")?.kind)
-        assertEquals(DeviceKind.Earbuds, deviceArt("SoundcoreA3968")?.kind)
-        assertEquals(DeviceKind.OverEar, deviceArt("SoundcoreA3028")?.kind)
-        assertEquals(DeviceKind.OpenEar, deviceArt("SoundcoreA3330")?.kind)
-        assertEquals(DeviceKind.OpenEar, deviceArt("SoundcoreA3876")?.kind)
-        assertEquals(DeviceKind.Speaker, deviceArt("SoundcoreA3116")?.kind)
+        assertEquals(DeviceKind.EARBUDS, deviceArt("SoundcoreA3954")?.kind)
+        assertEquals(DeviceKind.EARBUDS, deviceArt("SoundcoreA3968")?.kind)
+        assertEquals(DeviceKind.OVER_EAR, deviceArt("SoundcoreA3028")?.kind)
+        assertEquals(DeviceKind.OPEN_EAR, deviceArt("SoundcoreA3330")?.kind)
+        assertEquals(DeviceKind.OPEN_EAR, deviceArt("SoundcoreA3876")?.kind)
+        assertEquals(DeviceKind.SPEAKER, deviceArt("SoundcoreA3116")?.kind)
     }
 
     @Test
