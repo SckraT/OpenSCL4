@@ -17,34 +17,45 @@ import androidx.compose.ui.res.painterResource
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.preferredEarbudsColor
+import com.oppzippy.openscq30.lib.bindings.DeviceArt
+import com.oppzippy.openscq30.lib.bindings.DeviceKind
 import com.oppzippy.openscq30.lib.bindings.clientDeviceArtCatalog
 
-/** What kind of device a model is, for filtering the model list. */
-enum class DeviceKind {
-    Earbuds,
-    OverEar,
-    OpenEar,
-    Speaker,
-}
-
 /** Unbranded illustrations drawn in one shared style. Visually similar models share one. */
-enum class DeviceArt(@DrawableRes val silver: Int, @DrawableRes val black: Int) {
-    Headphones(R.drawable.sound_art_headphones_silver, R.drawable.sound_art_headphones_black),
-    MotionPlus(R.drawable.sound_art_motion_plus_silver, R.drawable.sound_art_motion_plus_black),
-    OpenClip(R.drawable.sound_art_open_clip_silver, R.drawable.sound_art_open_clip_black),
-    OpenHook(R.drawable.sound_art_open_hook_silver, R.drawable.sound_art_open_hook_black),
-    SportHook(R.drawable.sound_art_sport_hook_silver, R.drawable.sound_art_sport_hook_black),
-    WingedBuds(R.drawable.sound_art_buds_winged_silver, R.drawable.sound_art_buds_winged_black),
-    CompactBuds(R.drawable.sound_art_buds_compact_silver, R.drawable.sound_art_buds_compact_black),
-    ClassicStem(R.drawable.sound_art_stem_classic_silver, R.drawable.sound_art_stem_classic_black),
-    LibertyStem(R.drawable.sound_art_stem_premium_silver, R.drawable.sound_art_stem_premium_black),
-    OpenStem(R.drawable.sound_art_stem_open_silver, R.drawable.sound_art_stem_open_black),
-    ;
+@get:DrawableRes
+private val DeviceArt.silver: Int
+    get() = when (this) {
+        DeviceArt.HEADPHONES -> R.drawable.sound_art_headphones_silver
+        DeviceArt.MOTION_PLUS -> R.drawable.sound_art_motion_plus_silver
+        DeviceArt.OPEN_CLIP -> R.drawable.sound_art_open_clip_silver
+        DeviceArt.OPEN_HOOK -> R.drawable.sound_art_open_hook_silver
+        DeviceArt.SPORT_HOOK -> R.drawable.sound_art_sport_hook_silver
+        DeviceArt.WINGED_BUDS -> R.drawable.sound_art_buds_winged_silver
+        DeviceArt.COMPACT_BUDS -> R.drawable.sound_art_buds_compact_silver
+        DeviceArt.CLASSIC_STEM -> R.drawable.sound_art_stem_classic_silver
+        DeviceArt.LIBERTY_STEM -> R.drawable.sound_art_stem_premium_silver
+        DeviceArt.OPEN_STEM -> R.drawable.sound_art_stem_open_silver
+    }
 
-    val kind: DeviceKind get() = DeviceKind.valueOf(deviceArtCatalog.getValue(this).kind)
-}
+@get:DrawableRes
+private val DeviceArt.black: Int
+    get() = when (this) {
+        DeviceArt.HEADPHONES -> R.drawable.sound_art_headphones_black
+        DeviceArt.MOTION_PLUS -> R.drawable.sound_art_motion_plus_black
+        DeviceArt.OPEN_CLIP -> R.drawable.sound_art_open_clip_black
+        DeviceArt.OPEN_HOOK -> R.drawable.sound_art_open_hook_black
+        DeviceArt.SPORT_HOOK -> R.drawable.sound_art_sport_hook_black
+        DeviceArt.WINGED_BUDS -> R.drawable.sound_art_buds_winged_black
+        DeviceArt.COMPACT_BUDS -> R.drawable.sound_art_buds_compact_black
+        DeviceArt.CLASSIC_STEM -> R.drawable.sound_art_stem_classic_black
+        DeviceArt.LIBERTY_STEM -> R.drawable.sound_art_stem_premium_black
+        DeviceArt.OPEN_STEM -> R.drawable.sound_art_stem_open_black
+    }
 
-private val deviceArtCatalog by lazy { clientDeviceArtCatalog().associateBy { DeviceArt.valueOf(it.art) } }
+/** What kind of device a model is, for filtering the model list. */
+val DeviceArt.kind: DeviceKind get() = deviceArtCatalog.getValue(this).kind
+
+private val deviceArtCatalog by lazy { clientDeviceArtCatalog().associateBy { it.art } }
 private val deviceArtByModel by lazy {
     deviceArtCatalog.flatMap { (art, entry) -> entry.models.map { it to art } }.toMap()
 }
