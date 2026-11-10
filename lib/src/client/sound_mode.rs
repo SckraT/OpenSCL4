@@ -62,6 +62,28 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
         .all(|mode| options.iter().any(|o| o == mode))
 }
 
+/// The settings shown with the ambient sound mode itself rather than in the rest of the page. The scale shows the
+/// strengths itself, so these are the only settings [`mode_setting_is_visible`] decides; every other setting on the page
+/// stays visible.
+pub const MODE_SETTING_IDS: &[&str] = &[
+    "ambientSoundMode",
+    "noiseCancelingMode",
+    "customNoiseCanceling",
+    "manualNoiseCanceling",
+    "transparencyMode",
+    "manualTransparency",
+    "airplaneMode",
+];
+
+/// The settings of [`MODE_SETTING_IDS`] shown with the current mode and `scale`, in their shared order.
+pub fn visible_mode_setting_ids(settings: &SettingMap, scale: bool) -> Vec<&'static str> {
+    MODE_SETTING_IDS
+        .iter()
+        .copied()
+        .filter(|id| mode_setting_is_visible(settings, id, scale))
+        .collect()
+}
+
 /// Whether a setting belongs with the current mode. The scale already contains the manual strength controls.
 pub fn mode_setting_is_visible(settings: &SettingMap, id: &str, scale: bool) -> bool {
     let Some((_, mode)) = ambient(settings) else {
@@ -82,7 +104,9 @@ pub fn mode_setting_is_visible(settings: &SettingMap, id: &str, scale: bool) -> 
                 && strength_is_set_by_user(settings, SettingId::TransparencyMode)
         }
         "airplaneMode" => mode == ambient_mode::AIRPLANE,
-        _ => true,
+        // an id added to the shared set without a rule of its own stays hidden instead of appearing where it may
+        // not belong; any other setting on the page is not the rule's business
+        other => !MODE_SETTING_IDS.contains(&other),
     }
 }
 
