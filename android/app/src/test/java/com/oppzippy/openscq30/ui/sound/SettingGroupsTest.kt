@@ -8,7 +8,7 @@ import org.junit.Test
 class SettingGroupsTest {
     private fun groupOf(id: String, category: String = "miscellaneous"): SettingGroup {
         val setting = Setting.ToggleSetting(false)
-        return groupSettings(mapOf(id to setting), mapOf(category to listOf(id to setting))).keys.single()
+        return groupSettings(mapOf(category to listOf(id to setting))).keys.single()
     }
 
     @Test
@@ -66,7 +66,7 @@ class SettingGroupsTest {
             "case" to listOf("spatialAudio" to toggle),
             "miscellaneous" to listOf("wearingDetection" to toggle, "ldac" to toggle, "spatialAudio" to toggle),
         )
-        val grouped = groupSettings(byCategory.values.flatten().toMap(), byCategory)
+        val grouped = groupSettings(byCategory)
         assertEquals(listOf("spatialAudio", "ldac"), grouped[SettingGroup.SoundEffects]?.map { it.first })
         assertEquals(listOf("wearingDetection"), grouped[SettingGroup.Comfort]?.map { it.first })
         assertEquals(null, grouped[SettingGroup.Case])
@@ -86,14 +86,14 @@ class SettingGroupsTest {
     @Test
     fun theAdaptiveLevelIsLeftOutWhileTheDeviceIsNotAdaptive() {
         val settings = adaptiveLevel("Custom")
-        val custom = groupSettings(settings.toMap(), mapOf("soundModes" to settings))
+        val custom = groupSettings(mapOf("soundModes" to settings))
         assertEquals(listOf("noiseCancelingMode"), custom[SettingGroup.SoundModes]?.map { it.first })
     }
 
     @Test
     fun theAdaptiveModeShowsAnAutomaticStatus() {
         val settings = adaptiveLevel("Adaptive")
-        val adaptive = groupSettings(settings.toMap(), mapOf("soundModes" to settings))
+        val adaptive = groupSettings(mapOf("soundModes" to settings))
         val (id, display) = adaptive.getValue(SettingGroup.SoundModes).last()
         assertEquals("adaptiveNoiseCanceling", id)
         assertEquals(

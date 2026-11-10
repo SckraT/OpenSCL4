@@ -741,7 +741,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn factory_profile_wins_over_volume_adjustments() {
-        use crate::client::presets::{PresetStatus, preset_status};
+        use crate::client::presets::{PresetStatus, preset_summary};
 
         let (device, database, handler) = connect_demo_a3954().await;
         device
@@ -788,7 +788,7 @@ mod tests {
                 .into_values()
                 .flatten()
                 .collect();
-            preset_status(&preset, &settings, activation.last_applied().as_deref())
+            preset_summary(&preset, &settings, activation.last_applied().as_deref()).status
         };
         assert_eq!(PresetStatus::Applied, status());
 

@@ -229,7 +229,7 @@ fn shared_client_contract() {
             case["status"].as_str().unwrap(),
             format!(
                 "{:?}",
-                presets::preset_status(&preset, &values, case["lastApplied"].as_str())
+                presets::preset_summary(&preset, &values, case["lastApplied"].as_str()).status
             )
         );
     }
@@ -262,7 +262,7 @@ fn shared_client_contract() {
         );
         assert_eq!(
             case["shown"].as_bool().unwrap(),
-            sound_mode::adaptive_noise_canceling_display(&settings).is_some(),
+            sound_mode::displayed_setting(&settings, SettingId::AdaptiveNoiseCanceling).is_some(),
             "{case}"
         );
     }
