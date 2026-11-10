@@ -5,7 +5,7 @@ use openscq30_lib::{
     settings::{Equalizer, Setting, SettingId, Value, localize_value},
     storage::{QuickPreset, QuickPresetField},
 };
-use slint::{ModelRc, VecModel};
+use slint::{Model, ModelRc, VecModel};
 
 use crate::{
     PresetCard, PresetFieldRow, PresetGroup,
@@ -122,6 +122,17 @@ pub fn cards(
             }
         })
         .collect()
+}
+
+/// Whether two cards say the same thing. The field lists are compared by what they show: each card is built with
+/// a fresh list on every render, so the shown list can stay only when its words have not changed.
+pub fn same_card(previous: &PresetCard, card: &PresetCard) -> bool {
+    previous.name == card.name
+        && previous.status == card.status
+        && previous.more == card.more
+        && previous.enabled_count == card.enabled_count
+        && previous.curve == card.curve
+        && previous.fields.iter().eq(card.fields.iter())
 }
 
 pub fn find<'a>(snapshot: &'a DeviceSnapshot, name: &str) -> Option<&'a QuickPreset> {
