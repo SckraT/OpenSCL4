@@ -5,7 +5,7 @@ Start with the [README](../README.md) for product scope and platform status. Bui
 ## Boundaries and device state
 
 - `lib/src/devices/` implements device protocols, packet parsing and per-model settings. `lib/src/api/` exposes device operations, equalizer transfer and quick preset activation; `lib/src/storage/` owns persisted data.
-- `lib/src/client/` contains shared availability/grouping rules, battery interpretation, sound-mode scales, equalizer input validation, quick toggles and preset matching. Both clients consume these rules; Bluetooth transports, permissions and UI lifecycle remain platform-specific.
+- `lib/src/client/` contains shared availability/grouping rules, battery interpretation, sound-mode scales, equalizer input validation, quick toggles, preset matching, and the mapping from each model to its device art and kind (`lib/src/client/device_art.rs`). Both clients consume it; the illustration files, Bluetooth transports, permissions and UI lifecycle remain platform-specific.
 - `android/src/` is the UniFFI adapter; `android/app/` contains Kotlin wrappers, Compose UI, services, notifications and widgets. Setting values still cross the binding as JSON inside the native API records.
 - `desktop/src/controller.rs` reads device snapshots and writes settings; `desktop/src/app/` applies them to Slint models, and `desktop/ui/` defines the interface. The desktop client ships on Windows and Linux: text that names the system, its settings or where a device is paired has each platform's wording through `AppState.linux`, and the system's own settings pages open through `desktop/src/system_settings.rs`.
 

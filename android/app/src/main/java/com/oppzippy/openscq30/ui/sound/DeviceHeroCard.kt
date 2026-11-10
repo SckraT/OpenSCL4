@@ -377,7 +377,7 @@ internal fun QuickToggleRow(
                 selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
             )
             toggles.forEach { (id, setting) ->
-                val enabled = availability[id]?.isAvailable() != false && !readOnly
+                val enabled = settingAvailability(availability, id).isAvailable() && !readOnly
                 FilterChip(
                     selected = setting.value,
                     onClick = { if (enabled) onToggle(id, !setting.value) },
@@ -399,7 +399,7 @@ internal fun QuickToggleRow(
         }
         // a disabled toggle keeps its current value and says why it cannot be changed
         toggles.forEach { (id, _) ->
-            availability[id]?.blockedReason()?.let { reason ->
+            settingAvailability(availability, id).blockedReason()?.let { reason ->
                 Text(
                     "${translateSettingId(id)}: ${stringResource(availabilityReasonText(reason))}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

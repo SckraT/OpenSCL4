@@ -67,6 +67,21 @@ class SettingAvailabilityTest {
     }
 
     @Test
+    fun withoutAProvidedSnapshotNoSettingLooksAvailable() {
+        val availability = settingAvailability(emptyMap(), EQUALIZER_AVAILABILITY_ID)
+
+        assertTrue(availability is ClientSettingAvailability.Unavailable)
+        assertEquals(AvailabilityReason.NO_DEVICE_STATE, availability.blockedReason())
+    }
+
+    @Test
+    fun providedAvailabilityIsUsedInsteadOfTheDefault() {
+        val availability = settingsPresentation(bothEarbuds).availability
+
+        assertTrue(settingAvailability(availability, EQUALIZER_AVAILABILITY_ID).isAvailable())
+    }
+
+    @Test
     fun presetsWithBlockedFieldsAreReported() {
         val preset = QuickPreset(
             "LDAC",

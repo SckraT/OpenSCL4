@@ -329,6 +329,7 @@ both-earbuds-must-be-connected = Both earbuds must be connected.
 
 setting-availability-requires-both-earbuds = Changing is available when both earbuds are connected
 setting-availability-no-read-back = The device cannot confirm changes
+setting-availability-no-device-state = The device state is not available yet
 
 session-reason-transport-lost = The connection was lost
 session-reason-connection-status-disconnected = The connection was closed
