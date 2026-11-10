@@ -6,6 +6,7 @@ import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
 import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.clientSettingsPresentation
+import com.oppzippy.openscq30.lib.bindings.clientSoundModeSettingIds
 import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
@@ -168,21 +169,12 @@ class ClientRulesContractTest {
                 clientDisplayedSettings(values)["adaptiveNoiseCanceling"] != null,
             )
         }
-        val modeIds = listOf(
-            "ambientSoundMode",
-            "noiseCancelingMode",
-            "customNoiseCanceling",
-            "manualNoiseCanceling",
-            "transparencyMode",
-            "manualTransparency",
-            "airplaneMode",
-        )
         fixtures.getValue("soundModeRows").jsonArray.forEach { item ->
             val case = item.jsonObject
             val scale = case["scale"]?.jsonPrimitive?.boolean ?: false
             assertEquals(
                 case.getValue("shown").jsonArray.map { it.jsonPrimitive.content },
-                clientVisibleSoundModeSettings(modeValues(case), modeIds, scale),
+                clientVisibleSoundModeSettings(modeValues(case), clientSoundModeSettingIds(), scale),
             )
         }
     }

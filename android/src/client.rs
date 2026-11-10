@@ -180,6 +180,15 @@ pub fn client_displayed_settings(
         .collect()
 }
 
+/// The settings shown with the sound mode itself, in the order both clients use.
+#[uniffi::export]
+pub fn client_sound_mode_setting_ids() -> Vec<String> {
+    sound_mode::MODE_SETTING_IDS
+        .iter()
+        .map(|id| (*id).to_owned())
+        .collect()
+}
+
 #[uniffi::export]
 pub fn client_visible_sound_mode_settings(
     values: HashMap<String, serializable::Setting>,

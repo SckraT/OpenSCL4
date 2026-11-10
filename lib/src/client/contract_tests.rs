@@ -269,17 +269,9 @@ fn shared_client_contract() {
     for case in fixtures["soundModeRows"].as_array().unwrap() {
         let settings = mode_values(case);
         let scale = case["scale"].as_bool().unwrap_or_default();
-        let ids = [
-            "ambientSoundMode",
-            "noiseCancelingMode",
-            "customNoiseCanceling",
-            "manualNoiseCanceling",
-            "transparencyMode",
-            "manualTransparency",
-            "airplaneMode",
-        ];
-        let shown: Vec<_> = ids
-            .into_iter()
+        let shown: Vec<_> = sound_mode::MODE_SETTING_IDS
+            .iter()
+            .copied()
             .filter(|id| sound_mode::mode_setting_is_visible(&settings, id, scale))
             .collect();
         let expected: Vec<_> = case["shown"]
