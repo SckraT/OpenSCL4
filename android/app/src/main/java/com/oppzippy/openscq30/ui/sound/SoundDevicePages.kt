@@ -44,6 +44,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
+import com.oppzippy.openscq30.lib.bindings.ControlSide
 import com.oppzippy.openscq30.lib.bindings.clientEarbudControlIds
 import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
@@ -131,16 +132,16 @@ internal fun SoundModeTiles(ambient: Setting.SelectSetting, compact: Boolean = f
 
 @Composable
 fun SoundControlsPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
-    val hasLeft = settings.any { isSideControl(it.first, "left") }
-    val hasRight = settings.any { isSideControl(it.first, "right") }
+    val hasLeft = settings.any { isSideControl(it.first, ControlSide.LEFT) }
+    val hasRight = settings.any { isSideControl(it.first, ControlSide.RIGHT) }
     var rightSelected by rememberSaveable { mutableStateOf(false) }
-    val selectedSide = if (hasRight && (!hasLeft || rightSelected)) "right" else "left"
+    val selectedSide = if (hasRight && (!hasLeft || rightSelected)) ControlSide.RIGHT else ControlSide.LEFT
     SoundDevicePage(headline = R.string.sound_device_controls_headline) {
         if (hasLeft || hasRight) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (hasLeft) {
                     FilterChip(
-                        selected = selectedSide == "left",
+                        selected = selectedSide == ControlSide.LEFT,
                         onClick = { rightSelected = false },
                         label = { Text(stringResource(R.string.sound_device_left_earbud)) },
                         modifier = Modifier.weight(1f).heightIn(min = 56.dp),
@@ -148,7 +149,7 @@ fun SoundControlsPage(settings: List<Pair<String, Setting>>, setSettings: (List<
                 }
                 if (hasRight) {
                     FilterChip(
-                        selected = selectedSide == "right",
+                        selected = selectedSide == ControlSide.RIGHT,
                         onClick = { rightSelected = true },
                         label = { Text(stringResource(R.string.sound_device_right_earbud)) },
                         modifier = Modifier.weight(1f).heightIn(min = 56.dp),
@@ -169,7 +170,7 @@ fun SoundControlsPage(settings: List<Pair<String, Setting>>, setSettings: (List<
                     Text(
                         stringResource(
                             if (selectedSide ==
-                                "right"
+                                ControlSide.RIGHT
                             ) {
                                 R.string.sound_device_right_earbud
                             } else {
@@ -184,19 +185,20 @@ fun SoundControlsPage(settings: List<Pair<String, Setting>>, setSettings: (List<
         settings.filter { (id, _) -> isSideControl(id, selectedSide) }.forEach { (id, setting) ->
             SoundSettingEditor(id, setting, setSettings)
         }
-        settings.filterNot { (id, _) -> isSideControl(id, "left") || isSideControl(id, "right") }
+        settings.filterNot { (id, _) -> isSideControl(id, ControlSide.LEFT) || isSideControl(id, ControlSide.RIGHT) }
             .forEach { (id, setting) -> SoundSettingEditor(id, setting, setSettings) }
     }
 }
 
 private val controlIdsBySide by lazy {
     mapOf(
-        "left" to clientEarbudControlIds(right = false).toSet(),
-        "right" to clientEarbudControlIds(right = true).toSet(),
+        ControlSide.LEFT to clientEarbudControlIds(side = ControlSide.LEFT).toSet(),
+        ControlSide.RIGHT to clientEarbudControlIds(side = ControlSide.RIGHT).toSet(),
     )
 }
 
-internal fun isSideControl(settingId: String, side: String): Boolean = settingId in controlIdsBySide[side].orEmpty()
+internal fun isSideControl(settingId: String, side: ControlSide): Boolean =
+    settingId in controlIdsBySide[side].orEmpty()
 
 @Composable
 fun SoundComfortPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {

@@ -170,11 +170,7 @@ fn summary(block: OverviewBlock, snapshot: &DeviceSnapshot) -> OverviewBlockData
             let comfort: Vec<SettingId> = groups
                 .iter()
                 .find(|(group, _)| view::page_of(*group) == Page::Comfort)
-                .map(|(_, ids)| {
-                    ids.iter()
-                        .filter_map(|id| SettingId::from_str(id).ok())
-                        .collect()
-                })
+                .map(|(_, ids)| ids.clone())
                 .unwrap_or_default();
             let toggles: Vec<SettingId> = comfort
                 .iter()

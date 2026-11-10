@@ -1,7 +1,7 @@
 // The device's section pages: the heading, the settings in panels, and on the side what helps to read them.
 import { Theme } from "../theme.slint";
 import { Icons } from "../icons.slint";
-import { AppState, Actions, Page, SystemPage } from "../types.slint";
+import { AppState, Actions, ControlSide, Page, SystemPage } from "../types.slint";
 import { Icon, Button, ButtonKind, Panel, PanelHeading, Note } from "../components/basics.slint";
 import { SettingsPanelView, Segmented } from "../components/settings.slint";
 import { ModesPanel } from "../components/modes.slint";
@@ -17,9 +17,9 @@ component MainColumn inherits VerticalLayout {
         alignment: start;
         Segmented {
             options: [@tr("Left earbud"), @tr("Right earbud")];
-            index: AppState.controls-side == "left" ? 0 : 1;
+            index: AppState.controls-side == ControlSide.left ? 0 : 1;
             label: @tr("Earbud");
-            chosen(i) => { Actions.set-side(i == 0 ? "left" : "right"); }
+            chosen(i) => { Actions.set-side(i == 0 ? ControlSide.left : ControlSide.right); }
         }
     }
     for panel in AppState.panels: SettingsPanelView { data: panel; }
@@ -215,7 +215,7 @@ component AsideColumn inherits VerticalLayout {
     }
     if root.page == Page.controls: DeviceCard {
         eyebrow: AppState.device-name;
-        title: !AppState.has-sides ? AppState.device-name : AppState.controls-side == "left" ? @tr("Left") : @tr("Right");
+        title: !AppState.has-sides ? AppState.device-name : AppState.controls-side == ControlSide.left ? @tr("Left") : @tr("Right");
         text: AppState.has-sides ? @tr("Actions for the chosen earbud.") : @tr("Actions of the buttons on the device.");
     }
     if root.page == Page.controls: Note {

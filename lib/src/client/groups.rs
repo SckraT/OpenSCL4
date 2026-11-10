@@ -168,8 +168,16 @@ pub fn setting_group(id: &str, category: Option<&str>) -> SettingGroup {
 /// The device's settings by group, each once and in the device's order; groups without settings are left out.
 /// `settings` lists each setting with the category it was found in, so a setting in two categories comes twice.
 pub fn group_settings<'a>(settings: &[(&'a str, &str)]) -> Vec<(SettingGroup, Vec<&'a str>)> {
+    group_settings_by(settings, |id| id)
+}
+
+/// The device's settings by group, keeping the caller's own setting type. `name` gives the library's name for an id.
+pub fn group_settings_by<'a, Id: Copy + Eq>(
+    settings: &[(Id, &str)],
+    name: impl Fn(Id) -> &'a str,
+) -> Vec<(SettingGroup, Vec<Id>)> {
     // as on Android, a setting listed in several categories goes by the last of them
-    let category_of = |id: &str| {
+    let category_of = |id: Id| {
         settings
             .iter()
             .rev()
@@ -177,16 +185,16 @@ pub fn group_settings<'a>(settings: &[(&'a str, &str)]) -> Vec<(SettingGroup, Ve
             .map(|(_, c)| *c)
     };
     let mut seen = Vec::new();
-    let mut grouped: Vec<(SettingGroup, Vec<&'a str>)> = Vec::new();
+    let mut grouped: Vec<(SettingGroup, Vec<Id>)> = Vec::new();
     for (id, _) in settings {
         if seen.contains(id) {
             continue;
         }
         seen.push(*id);
-        let group = setting_group(id, category_of(id));
+        let group = setting_group(name(*id), category_of(*id));
         match grouped.iter_mut().find(|(g, _)| *g == group) {
-            Some((_, ids)) => ids.push(id),
-            None => grouped.push((group, vec![id])),
+            Some((_, ids)) => ids.push(*id),
+            None => grouped.push((group, vec![*id])),
         }
     }
     grouped.sort_by_key(|(group, _)| *group);
@@ -208,6 +216,8 @@ pub fn equalizer_opens_its_page(category_setting_ids: &[&str], one_earbud_only: 
 
 #[cfg(test)]
 mod tests {
+    use crate::settings::SettingId;
+
     use super::*;
 
     fn group_of(id: &str) -> SettingGroup {
@@ -339,5 +349,26 @@ mod tests {
             &["volumeAdjustments", "someOtherSetting"],
             true
         ));
+    }
+
+    #[test]
+    fn typed_grouping_keeps_the_caller_ids() {
+        let settings = [
+            (SettingId::Ldac, "miscellaneous"),
+            (SettingId::Volume, "miscellaneous"),
+            (SettingId::WearingDetection, "miscellaneous"),
+        ];
+        let grouped = group_settings_by(&settings, |id| id.into());
+
+        assert_eq!(
+            vec![
+                (SettingGroup::SoundEffects, vec![SettingId::Ldac]),
+                (
+                    SettingGroup::Comfort,
+                    vec![SettingId::Volume, SettingId::WearingDetection]
+                ),
+            ],
+            grouped
+        );
     }
 }

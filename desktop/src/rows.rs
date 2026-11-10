@@ -24,19 +24,19 @@ pub const MODE_CYCLE: [SettingId; 3] = [
     SettingId::TransparencyModeInCycle,
     SettingId::NormalModeInCycle,
 ];
-const LIMIT_HIGH_VOLUME: [&str; 3] = [
-    "limitHighVolume",
-    "limitHighVolumeDbLimit",
-    "limitHighVolumeRefreshRate",
+const LIMIT_HIGH_VOLUME: [SettingId; 3] = [
+    SettingId::LimitHighVolume,
+    SettingId::LimitHighVolumeDbLimit,
+    SettingId::LimitHighVolumeRefreshRate,
 ];
 /// Shown with the sound mode itself rather than as rows below it.
-const WITH_THE_MODE: [&str; 6] = [
-    "ambientSoundMode",
-    "noiseCancelingMode",
-    "transparencyMode",
-    "manualNoiseCanceling",
-    "manualTransparency",
-    "airplaneMode",
+const WITH_THE_MODE: [SettingId; 6] = [
+    SettingId::AmbientSoundMode,
+    SettingId::NoiseCancelingMode,
+    SettingId::TransparencyMode,
+    SettingId::ManualNoiseCanceling,
+    SettingId::ManualTransparency,
+    SettingId::AirplaneMode,
 ];
 
 fn id_of(id: SettingId) -> &'static str {
@@ -157,26 +157,26 @@ pub fn row(
     Some(row)
 }
 
-fn rows_for(snapshot: &DeviceSnapshot, ids: &[&'static str]) -> Vec<SettingRow> {
+fn rows_for(snapshot: &DeviceSnapshot, ids: &[SettingId]) -> Vec<SettingRow> {
     ids.iter()
-        .filter_map(|id| {
-            let control = setting_control(&snapshot.settings, id);
+        .filter_map(|&id| {
+            let name: &'static str = id.into();
+            let control = setting_control(&snapshot.settings, name);
             if control == SettingControl::Hidden {
                 return None;
             }
-            let setting_id = SettingId::from_str(id).ok()?;
             let adaptive;
-            let setting = if setting_id == SettingId::AdaptiveNoiseCanceling {
+            let setting = if id == SettingId::AdaptiveNoiseCanceling {
                 adaptive = sound_mode::adaptive_noise_canceling_display(&snapshot.settings)?;
                 &adaptive
             } else {
-                snapshot.settings.get(&setting_id)?
+                snapshot.settings.get(&id)?
             };
             row(
-                setting_id,
+                id,
                 setting,
                 control == SettingControl::Enabled,
-                setting_availability(&snapshot.settings, id),
+                setting_availability(&snapshot.settings, name),
             )
         })
         .collect()
@@ -218,8 +218,8 @@ pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<S
     else {
         return Vec::new();
     };
-    let ids: &[&'static str] = &group.1;
-    let rest = |taken: &[&str]| -> Vec<&'static str> {
+    let ids: &[SettingId] = &group.1;
+    let rest = |taken: &[SettingId]| -> Vec<SettingId> {
         ids.iter()
             .copied()
             .filter(|id| !taken.contains(id))
@@ -235,34 +235,33 @@ pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<S
             } else {
                 ids.to_vec()
             };
-            ids.retain(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, id, false));
+            ids.retain(|id| {
+                let name: &'static str = (*id).into();
+                sound_mode::mode_setting_is_visible(&snapshot.settings, name, false)
+            });
             vec![panel(PanelKind::Plain, rows_for(snapshot, &ids))]
         }
         Page::Controls => {
-            let side_gestures: Vec<_> = side.gestures().iter().copied().map(id_of).collect();
-            let side_calls = side
-                .call_gestures()
-                .iter()
-                .copied()
-                .map(id_of)
-                .collect::<Vec<_>>();
-            let mut taken: Vec<_> = ControlSide::ALL
+            let side_gestures = side.gestures().to_vec();
+            let side_calls = side.call_gestures().to_vec();
+            let mut taken: Vec<SettingId> = ControlSide::ALL
                 .into_iter()
                 .flat_map(ControlSide::settings)
-                .map(id_of)
                 .collect();
-            let presses: Vec<_> = ids
+            let presses: Vec<SettingId> = ids
                 .iter()
                 .copied()
                 .filter(|id| {
+                    let name: &'static str = (*id).into();
                     side_calls.contains(id)
-                        || (!taken.contains(id) && (id.contains("Press") || id.contains("Slide")))
+                        || (!taken.contains(id)
+                            && (name.contains("Press") || name.contains("Slide")))
                 })
                 .collect();
-            let cycle = MODE_CYCLE.map(id_of);
+            let cycle = MODE_CYCLE;
             taken.extend(&presses);
             taken.extend(cycle);
-            taken.push("resetButtonsToDefault");
+            taken.push(SettingId::ResetButtonsToDefault);
             vec![
                 panel(PanelKind::Gestures, rows_for(snapshot, &side_gestures)),
                 panel(PanelKind::Presses, rows_for(snapshot, &presses)),
@@ -270,7 +269,7 @@ pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<S
                 panel(PanelKind::Plain, rows_for(snapshot, &rest(&taken))),
                 panel(
                     PanelKind::Reset,
-                    rows_for(snapshot, &["resetButtonsToDefault"]),
+                    rows_for(snapshot, &[SettingId::ResetButtonsToDefault]),
                 ),
             ]
         }
@@ -282,29 +281,30 @@ pub fn panels(page: Page, snapshot: &DeviceSnapshot, side: ControlSide) -> Vec<S
             panel(PanelKind::Volume, rows_for(snapshot, &LIMIT_HIGH_VOLUME)),
         ],
         Page::Power => vec![
-            panel(PanelKind::Plain, rows_for(snapshot, &rest(&["powerOff"]))),
-            panel(PanelKind::PowerOff, rows_for(snapshot, &["powerOff"])),
+            panel(
+                PanelKind::Plain,
+                rows_for(snapshot, &rest(&[SettingId::PowerOff])),
+            ),
+            panel(
+                PanelKind::PowerOff,
+                rows_for(snapshot, &[SettingId::PowerOff]),
+            ),
         ],
         Page::Connections => vec![
             panel(
                 PanelKind::Plain,
-                rows_for(snapshot, &rest(&["dualConnectionsDevices"])),
+                rows_for(snapshot, &rest(&[SettingId::DualConnectionsDevices])),
             ),
             panel(
                 PanelKind::DualDevices,
-                rows_for(snapshot, &["dualConnectionsDevices"]),
+                rows_for(snapshot, &[SettingId::DualConnectionsDevices]),
             ),
         ],
         Page::Case => {
-            let status: Vec<&'static str> = ids
+            let status: Vec<SettingId> = ids
                 .iter()
                 .copied()
-                .filter(|id| {
-                    matches!(
-                        snapshot.settings.get(&SettingId::from_str(id).unwrap()),
-                        Some(Setting::Information { .. })
-                    )
-                })
+                .filter(|id| matches!(snapshot.settings.get(id), Some(Setting::Information { .. })))
                 .collect();
             vec![
                 panel(PanelKind::CaseScreen, rows_for(snapshot, &rest(&status))),
@@ -346,7 +346,10 @@ pub fn mode_view(snapshot: &DeviceSnapshot, scale_preferred: bool) -> Option<Mod
         .collect();
     let ids: Vec<_> = WITH_THE_MODE
         .into_iter()
-        .filter(|id| sound_mode::mode_setting_is_visible(&snapshot.settings, id, scale))
+        .filter(|id| {
+            let name: &'static str = (*id).into();
+            sound_mode::mode_setting_is_visible(&snapshot.settings, name, scale)
+        })
         .collect();
     Some(ModeView {
         options,

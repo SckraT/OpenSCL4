@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use openscq30_lib::{
     client::{
         self, availability, battery,
-        controls::{ControlSide, SettingControl, setting_control},
+        controls::{ControlSide as LibControlSide, SettingControl, setting_control},
         device_art, equalizer, groups, presets, quick_toggles, sound_mode,
     },
     settings::SettingId,
@@ -18,14 +18,28 @@ fn settings(values: HashMap<String, serializable::Setting>) -> client::SettingMa
         .collect()
 }
 
+/// The earbud a configurable gesture belongs to, mirroring the shared type with generated bindings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum ControlSide {
+    Left,
+    Right,
+}
+
+impl From<ControlSide> for LibControlSide {
+    fn from(side: ControlSide) -> Self {
+        match side {
+            ControlSide::Left => Self::Left,
+            ControlSide::Right => Self::Right,
+        }
+    }
+}
+
 #[uniffi::export]
-pub fn client_earbud_control_ids(right: bool) -> Vec<String> {
-    let side = if right {
-        ControlSide::Right
-    } else {
-        ControlSide::Left
-    };
-    side.settings().map(|id| id.to_string()).collect()
+pub fn client_earbud_control_ids(side: ControlSide) -> Vec<String> {
+    LibControlSide::from(side)
+        .settings()
+        .map(|id| id.to_string())
+        .collect()
 }
 
 /// The illustration of a device model, mirroring the shared type with generated bindings.
@@ -545,6 +559,19 @@ mod tests {
             Some((DeviceArt::OpenClip, DeviceKind::OpenEar)),
             art_and_kind(&catalog, "SoundcoreA3330")
         );
+    }
+
+    #[test]
+    fn each_earbud_gets_its_own_control_ids() {
+        let left = client_earbud_control_ids(ControlSide::Left);
+        let right = client_earbud_control_ids(ControlSide::Right);
+
+        assert!(left.contains(&"leftSinglePress".to_string()));
+        assert!(left.contains(&"leftLongPressDuringCall".to_string()));
+        assert!(!left.contains(&"rightSinglePress".to_string()));
+        assert!(right.contains(&"rightSinglePress".to_string()));
+        assert!(right.contains(&"rightLongPressDuringCall".to_string()));
+        assert!(!right.contains(&"leftSinglePress".to_string()));
     }
 
     #[test]
