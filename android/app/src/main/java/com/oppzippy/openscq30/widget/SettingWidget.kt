@@ -62,6 +62,10 @@ import androidx.glance.text.TextStyle
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
+import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
+import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
+import com.oppzippy.openscq30.lib.bindings.ClientSettingsPresentation
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
@@ -69,7 +73,11 @@ import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
+import com.oppzippy.openscq30.lib.wrapper.blockedReason
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.sound.availabilityReasonText
+import com.oppzippy.openscq30.ui.sound.settingAvailability
+import com.oppzippy.openscq30.ui.sound.settingsPresentation
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30GlanceTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -438,16 +446,54 @@ private fun ConnectedUnconfigured(context: Context) {
     }
 }
 
+/** A selected setting the widget draws: its control, or the reason the shared rules do not let it be changed. */
+internal sealed class WidgetSetting {
+    data class Editable(val settingId: String, val setting: Setting) : WidgetSetting()
+
+    data class Blocked(val settingId: String, val reason: AvailabilityReason) : WidgetSetting()
+}
+
+/**
+ * The selected settings the widget can draw. Dependency rules hide a setting whose parent is off, and availability
+ * rules block a setting the device does not let change now, the same way the device settings screen treats them.
+ */
+internal fun widgetSettings(
+    selected: List<Pair<String, Setting?>>,
+    presentation: ClientSettingsPresentation,
+): List<WidgetSetting> = selected.mapNotNull { (settingId, selectedSetting) ->
+    val setting = selectedSetting ?: return@mapNotNull null
+    if (presentation.controls[settingId] == ClientSettingControl.HIDDEN ||
+        presentation.controls[settingId] == ClientSettingControl.DISABLED
+    ) {
+        return@mapNotNull null
+    }
+    val availability = settingAvailability(presentation.availability, settingId)
+    if (availability is ClientSettingAvailability.Available) {
+        WidgetSetting.Editable(settingId, setting)
+    } else {
+        WidgetSetting.Blocked(settingId, requireNotNull(availability.blockedReason()))
+    }
+}
+
 @Composable
 private fun Connected(context: Context, settings: List<Pair<String, Setting?>>, isCompactLayout: Boolean) {
+    val presentation = settingsPresentation(
+        settings.mapNotNull { (settingId, setting) -> setting?.let { settingId to it } }.toMap(),
+    )
     LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-        items(settings.filter { it.second != null }) { (settingId, setting) ->
+        items(widgetSettings(settings, presentation)) { row ->
             Box(
                 modifier = GlanceModifier.let {
                     if (!isCompactLayout) it.padding(bottom = 6.dp) else it
                 },
             ) {
-                ShowSetting(context, settingId, setting!!, isCompactLayout)
+                when (row) {
+                    is WidgetSetting.Editable -> ShowSetting(context, row.settingId, row.setting, isCompactLayout)
+                    is WidgetSetting.Blocked -> ReadOnlySettingValue(
+                        row.settingId,
+                        context.getString(availabilityReasonText(row.reason)),
+                    )
+                }
             }
         }
     }

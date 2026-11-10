@@ -102,7 +102,7 @@ val LocalSettingsReadOnly = staticCompositionLocalOf { false }
 internal fun isSettingEditorEnabled(settingId: String): Boolean = LocalSettingControls.current[settingId] == null &&
     LocalPendingSettingWrites.current[settingId] == null &&
     !LocalSettingsReadOnly.current &&
-    LocalSettingAvailability.current[settingId]?.isAvailable() != false
+    settingAvailability(LocalSettingAvailability.current, settingId).isAvailable()
 
 /** Renders the backend capability directly, including options unknown to this UI version. */
 @Composable
@@ -116,7 +116,7 @@ fun SoundSettingEditor(
     val name = translateSettingId(settingId)
     val pending = LocalPendingSettingWrites.current[settingId]
     val requested = pending?.requestedValue
-    val availability = LocalSettingAvailability.current[settingId]
+    val availability = settingAvailability(LocalSettingAvailability.current, settingId)
     val enabled = isSettingEditorEnabled(settingId)
     val onChange: (Value) -> Unit = { if (enabled) setSettings(listOf(settingId to it)) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -297,7 +297,7 @@ fun SoundSettingEditor(
                 }
             }
         }
-        availability?.blockedReason()?.let { reason ->
+        availability.blockedReason()?.let { reason ->
             Text(
                 stringResource(availabilityReasonText(reason)),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -338,6 +338,8 @@ internal fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
             stringResource(R.string.setting_write_unsupported_requires_both_earbuds)
 
         AvailabilityReason.NO_READ_BACK -> stringResource(R.string.setting_write_unsupported_no_read_back)
+
+        AvailabilityReason.NO_DEVICE_STATE -> stringResource(R.string.setting_availability_no_device_state)
     }
 
     is WriteOutcome.Applied -> ""
