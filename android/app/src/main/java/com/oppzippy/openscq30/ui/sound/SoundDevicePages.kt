@@ -46,6 +46,7 @@ import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
 import com.oppzippy.openscq30.lib.bindings.ControlSide
 import com.oppzippy.openscq30.lib.bindings.clientEarbudControlIds
+import com.oppzippy.openscq30.lib.bindings.clientSoundModeSettingIds
 import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
@@ -73,7 +74,10 @@ fun SoundModesPage(
         } else if (ambient != null) {
             SoundModeTiles(ambient) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
         }
-        clientVisibleSoundModeSettings(values, settings.map { it.first }, useScale).forEach { id ->
+        // only the mode's own settings depend on the mode; every other setting on the page always stays
+        val modeIds = clientSoundModeSettingIds()
+        val visibleModeIds = clientVisibleSoundModeSettings(values, modeIds, useScale).toSet()
+        settings.map { it.first }.filter { id -> id !in modeIds || id in visibleModeIds }.forEach { id ->
             SoundSettingEditor(id, values.getValue(id), setSettings)
         }
     }

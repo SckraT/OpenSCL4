@@ -1055,7 +1055,8 @@ impl App {
                 ControlSide::Left
             });
         }
-        let panels = rows::panels(page, snapshot, side);
+        let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
+        let panels = rows::panels(page, snapshot, side, scale_preferred);
         let panels = if matches!(self.connection, Connection::Recovering(_, _)) {
             rows::read_only(panels)
         } else {
