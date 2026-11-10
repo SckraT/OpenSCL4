@@ -89,10 +89,11 @@ class SettingGroupsTest {
     }
 
     @Test
-    fun theAdaptiveLevelStaysWhileTheDeviceIsAdaptive() {
+    fun theAdaptiveLevelNeverShows() {
+        // The device picks the level and reports the same number throughout, so the row only ever said "1/5".
         val adaptive = groupSettings(adaptiveLevel("Adaptive"), mapOf("soundModes" to adaptiveLevel("Adaptive")))
         assertEquals(
-            listOf("noiseCancelingMode", "adaptiveNoiseCanceling"),
+            listOf("noiseCancelingMode"),
             adaptive[SettingGroup.SoundModes]?.map { it.first },
         )
     }
