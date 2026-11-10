@@ -47,11 +47,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.lib.bindings.DeviceKind
 import com.oppzippy.openscq30.lib.bindings.deviceModels
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
-import com.oppzippy.openscq30.ui.sound.DeviceKind
 import com.oppzippy.openscq30.ui.sound.deviceArt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,10 +147,10 @@ fun SelectModelForPairingScreen(onModelSelected: (String) -> Unit, onBackClick: 
 @get:StringRes
 private val DeviceKind.label: Int
     get() = when (this) {
-        DeviceKind.Earbuds -> R.string.sound_kind_earbuds
-        DeviceKind.OverEar -> R.string.sound_kind_over_ear
-        DeviceKind.OpenEar -> R.string.sound_kind_open
-        DeviceKind.Speaker -> R.string.sound_kind_speakers
+        DeviceKind.EARBUDS -> R.string.sound_kind_earbuds
+        DeviceKind.OVER_EAR -> R.string.sound_kind_over_ear
+        DeviceKind.OPEN_EAR -> R.string.sound_kind_open
+        DeviceKind.SPEAKER -> R.string.sound_kind_speakers
     }
 
 @Composable

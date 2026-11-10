@@ -4,8 +4,7 @@ use openscq30_lib::{
     client::{
         self, availability, battery,
         controls::{ControlSide, SettingControl, setting_control},
-        device_art::DeviceArt,
-        equalizer, groups, presets, quick_toggles, sound_mode,
+        device_art, equalizer, groups, presets, quick_toggles, sound_mode,
     },
     settings::SettingId,
 };
@@ -29,20 +28,72 @@ pub fn client_earbud_control_ids(right: bool) -> Vec<String> {
     side.settings().map(|id| id.to_string()).collect()
 }
 
+/// The illustration of a device model, mirroring the shared type with generated bindings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum DeviceArt {
+    Headphones,
+    MotionPlus,
+    OpenClip,
+    OpenHook,
+    SportHook,
+    WingedBuds,
+    CompactBuds,
+    ClassicStem,
+    LibertyStem,
+    OpenStem,
+}
+
+impl From<device_art::DeviceArt> for DeviceArt {
+    fn from(art: device_art::DeviceArt) -> Self {
+        match art {
+            device_art::DeviceArt::Headphones => Self::Headphones,
+            device_art::DeviceArt::MotionPlus => Self::MotionPlus,
+            device_art::DeviceArt::OpenClip => Self::OpenClip,
+            device_art::DeviceArt::OpenHook => Self::OpenHook,
+            device_art::DeviceArt::SportHook => Self::SportHook,
+            device_art::DeviceArt::WingedBuds => Self::WingedBuds,
+            device_art::DeviceArt::CompactBuds => Self::CompactBuds,
+            device_art::DeviceArt::ClassicStem => Self::ClassicStem,
+            device_art::DeviceArt::LibertyStem => Self::LibertyStem,
+            device_art::DeviceArt::OpenStem => Self::OpenStem,
+        }
+    }
+}
+
+/// What kind of device a model is, for filtering the model list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum DeviceKind {
+    Earbuds,
+    OverEar,
+    OpenEar,
+    Speaker,
+}
+
+impl From<device_art::DeviceKind> for DeviceKind {
+    fn from(kind: device_art::DeviceKind) -> Self {
+        match kind {
+            device_art::DeviceKind::Earbuds => Self::Earbuds,
+            device_art::DeviceKind::OverEar => Self::OverEar,
+            device_art::DeviceKind::OpenEar => Self::OpenEar,
+            device_art::DeviceKind::Speaker => Self::Speaker,
+        }
+    }
+}
+
 #[derive(uniffi::Record)]
 pub struct ClientDeviceArt {
-    pub art: String,
-    pub kind: String,
+    pub art: DeviceArt,
+    pub kind: DeviceKind,
     pub models: Vec<String>,
 }
 
 #[uniffi::export]
 pub fn client_device_art_catalog() -> Vec<ClientDeviceArt> {
-    DeviceArt::ALL
+    device_art::DeviceArt::ALL
         .into_iter()
         .map(|art| ClientDeviceArt {
-            art: format!("{art:?}"),
-            kind: format!("{:?}", art.kind()),
+            art: art.into(),
+            kind: art.kind().into(),
             models: art.model_names().collect(),
         })
         .collect()
@@ -462,4 +513,53 @@ pub fn client_quick_toggle_ids(stored: Option<Vec<String>>, available: Vec<Strin
         stored.as_deref(),
         &available.iter().map(String::as_str).collect::<Vec<_>>(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn art_and_kind(catalog: &[ClientDeviceArt], model: &str) -> Option<(DeviceArt, DeviceKind)> {
+        catalog
+            .iter()
+            .find(|entry| entry.models.iter().any(|name| name == model))
+            .map(|entry| (entry.art, entry.kind))
+    }
+
+    #[test]
+    fn the_catalog_carries_the_shared_illustration_and_kind_as_variants() {
+        let catalog = client_device_art_catalog();
+        assert_eq!(
+            Some((DeviceArt::LibertyStem, DeviceKind::Earbuds)),
+            art_and_kind(&catalog, "SoundcoreA3954")
+        );
+        assert_eq!(
+            Some((DeviceArt::Headphones, DeviceKind::OverEar)),
+            art_and_kind(&catalog, "SoundcoreA3028")
+        );
+        assert_eq!(
+            Some((DeviceArt::MotionPlus, DeviceKind::Speaker)),
+            art_and_kind(&catalog, "SoundcoreA3116")
+        );
+        assert_eq!(
+            Some((DeviceArt::OpenClip, DeviceKind::OpenEar)),
+            art_and_kind(&catalog, "SoundcoreA3330")
+        );
+    }
+
+    #[test]
+    fn every_illustration_appears_once() {
+        let catalog = client_device_art_catalog();
+        assert_eq!(device_art::DeviceArt::ALL.len(), catalog.len());
+        for art in device_art::DeviceArt::ALL {
+            assert_eq!(
+                1,
+                catalog
+                    .iter()
+                    .filter(|entry| entry.art == art.into())
+                    .count(),
+                "{art:?}"
+            );
+        }
+    }
 }
