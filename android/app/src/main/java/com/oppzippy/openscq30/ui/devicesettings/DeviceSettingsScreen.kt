@@ -72,8 +72,10 @@ import com.oppzippy.openscq30.ui.devicesettings.screens.StatusNotificationScreen
 import com.oppzippy.openscq30.ui.settings.SettingsPage
 import com.oppzippy.openscq30.ui.settings.soundModesViewApplies
 import com.oppzippy.openscq30.ui.sound.BOTH_EARBUDS_SETTING_IDS
+import com.oppzippy.openscq30.ui.sound.EQUALIZER_AVAILABILITY_ID
 import com.oppzippy.openscq30.ui.sound.LocalPendingSettingWrites
 import com.oppzippy.openscq30.ui.sound.LocalSettingAvailability
+import com.oppzippy.openscq30.ui.sound.LocalSettingControls
 import com.oppzippy.openscq30.ui.sound.LocalSettingValueSetter
 import com.oppzippy.openscq30.ui.sound.LocalSettingWriteErrors
 import com.oppzippy.openscq30.ui.sound.LocalSettingsReadOnly
@@ -102,7 +104,7 @@ import com.oppzippy.openscq30.ui.sound.isOnlyOneEarbudConnected
 import com.oppzippy.openscq30.ui.sound.isTws
 import com.oppzippy.openscq30.ui.sound.presetsUseBlockedSettings
 import com.oppzippy.openscq30.ui.sound.rememberSavedProfiles
-import com.oppzippy.openscq30.ui.sound.settingAvailability
+import com.oppzippy.openscq30.ui.sound.settingsPresentation
 import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.utils.NavTransitions
 import kotlinx.coroutines.delay
@@ -158,15 +160,14 @@ fun DeviceSettingsScreen(
     val categories = byCategory.keys.toList()
     val settings = remember(byCategory) { byCategory.values.flatten().distinctBy { it.first } }
     val settingsById = remember(settings) { settings.toMap() }
-    val availability = remember(settingsById) { settingAvailability(settingsById) }
-    // the equalizer settings are not reported while one earbud is connected, so ask about the setting that describes it
-    val equalizerAvailability = remember(settingsById) { settingAvailability(settingsById, "volumeAdjustments") }
+    val presentation = remember(settingsById) { settingsPresentation(settingsById) }
+    val equalizerAvailability = presentation.availability.getValue(EQUALIZER_AVAILABILITY_ID)
     val equalizerAvailable = equalizerAvailability.isAvailable()
     val oneEarbudOnly = isOnlyOneEarbudConnected(settingsById)
     val presets by remember(deviceManager) { quickPresetsFlow }.collectAsState(emptyList())
     val legacyProfiles by remember(deviceManager) { legacyEqualizerProfilesFlow }.collectAsState(emptyList())
     // every setting has one group, and the group's page is where it is shown
-    val grouped = remember(settings, byCategory) { groupSettings(settings, byCategory) }
+    val grouped = remember(settingsById, byCategory) { groupSettings(settingsById, byCategory) }
     fun groupSettingsOf(group: SettingGroup) = grouped[group].orEmpty()
     val modeSettings = groupSettingsOf(SettingGroup.SoundModes)
     val controlSettings = groupSettingsOf(SettingGroup.Controls)
@@ -372,7 +373,8 @@ fun DeviceSettingsScreen(
                 LocalPendingSettingWrites provides pendingWrites,
                 LocalSettingWriteErrors provides settingWriteErrors,
                 LocalSettingsReadOnly provides readOnly,
-                LocalSettingAvailability provides availability,
+                LocalSettingAvailability provides presentation.availability,
+                LocalSettingControls provides presentation.controls,
             ) {
                 NavHost(
                     navController,

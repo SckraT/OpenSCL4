@@ -73,6 +73,7 @@ fully-transparent = Fully Transparent
 adaptive = Adaptive
 manual = Manual
 adaptive-noise-canceling = Adaptive Noise Canceling
+adaptive-noise-canceling-automatically = Automatically
 low-noise = Low Noise
 medium-noise = Medium Noise
 high-noise = High Noise

@@ -115,6 +115,52 @@
       ]
     }
   ],
+  "settingControls": [
+    {
+      "settings": {"easyChat": false, "limitHighVolume": false, "spatialAudio": false, "spatialAudioMode": "Music"},
+      "cases": {
+        "easyChatWaitTime": "Disabled",
+        "limitHighVolumeDbLimit": "Disabled",
+        "limitHighVolumeRefreshRate": "Disabled",
+        "spatialAudioMode": "Disabled",
+        "spatialAudioMusicMode": "Disabled",
+        "spatialAudio": "Enabled"
+      }
+    },
+    {
+      "settings": {"easyChat": true, "limitHighVolume": true, "spatialAudio": true, "spatialAudioMode": "Music"},
+      "cases": {
+        "easyChatWaitTime": "Enabled",
+        "limitHighVolumeDbLimit": "Enabled",
+        "limitHighVolumeRefreshRate": "Enabled",
+        "spatialAudioMode": "Enabled",
+        "spatialAudioMusicMode": "Enabled"
+      }
+    },
+    {
+      "settings": {"spatialAudio": true, "spatialAudioMode": "Movie"},
+      "cases": {"spatialAudioMode": "Enabled", "spatialAudioMusicMode": "Hidden"}
+    },
+    {
+      "settings": {"spatialAudio": false, "spatialAudioMode": "Movie"},
+      "cases": {"spatialAudioMode": "Disabled", "spatialAudioMusicMode": "Hidden"}
+    },
+    {
+      "settings": {"spatialAudio": true},
+      "cases": {"spatialAudioMusicMode": "Enabled"}
+    },
+    {
+      "settings": {},
+      "cases": {
+        "easyChatWaitTime": "Disabled",
+        "limitHighVolumeDbLimit": "Disabled",
+        "limitHighVolumeRefreshRate": "Disabled",
+        "spatialAudioMode": "Disabled",
+        "spatialAudioMusicMode": "Disabled",
+        "wearingDetection": "Enabled"
+      }
+    }
+  ],
   "isTws": [
     {"twsStatus": "Connected", "tws": true},
     {"twsStatus": "Disconnected", "tws": true},
@@ -131,18 +177,22 @@
   "adaptiveLevel": [
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Custom", "shown": false},
     {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Manual", "shown": false},
-    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": false},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": true},
     {"noiseCancelingMode": null, "shown": false},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Normal", "noiseCancelingMode": "Adaptive", "shown": false},
     {"ambientSoundMode": "Transparency", "noiseCancelingMode": null, "shown": false}
   ],
-  "strengthIsSetByUser": [
-    {"modeId": "noiseCancelingMode", "value": "Adaptive", "user": false},
-    {"modeId": "noiseCancelingMode", "value": "Manual", "user": true},
-    {"modeId": "noiseCancelingMode", "value": "Custom", "user": true},
-    {"modeId": "noiseCancelingMode", "value": null, "user": true},
-    {"modeId": "transparencyMode", "value": "Manual", "user": true},
-    {"modeId": "transparencyMode", "value": "VocalMode", "user": false}
+  "soundModeRows": [
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Adaptive", "shown": ["noiseCancelingMode", "customNoiseCanceling"]},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Manual", "shown": ["noiseCancelingMode", "customNoiseCanceling", "manualNoiseCanceling"]},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Custom", "shown": ["noiseCancelingMode", "customNoiseCanceling", "manualNoiseCanceling"]},
+    {"ambientSoundMode": "NoiseCanceling", "shown": ["noiseCancelingMode", "customNoiseCanceling", "manualNoiseCanceling"]},
+    {"ambientSoundMode": "NoiseCanceling", "noiseCancelingMode": "Manual", "scale": true, "shown": ["noiseCancelingMode", "customNoiseCanceling"]},
+    {"ambientSoundMode": "Transparency", "transparencyMode": "Manual", "shown": ["transparencyMode", "manualTransparency"]},
+    {"ambientSoundMode": "Transparency", "transparencyMode": "VocalMode", "shown": ["transparencyMode"]},
+    {"ambientSoundMode": "Transparency", "scale": true, "shown": ["transparencyMode"]},
+    {"ambientSoundMode": "Normal", "shown": []},
+    {"ambientSoundMode": "AirplaneMode", "scale": true, "shown": ["airplaneMode"]}
   ]
 }

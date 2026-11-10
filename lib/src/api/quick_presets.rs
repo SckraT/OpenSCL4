@@ -4,13 +4,14 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, watch};
 
 use crate::{
+    client::presets::fields_to_apply,
     connection::ConnectionStatus,
     storage::{self, OpenSCQ30Database, QuickPreset, QuickPresetField},
 };
 
 use super::{
     device::{self, OpenSCQ30Device, SettingWriteOutcome, WriteOutcome},
-    settings::{self, SettingId},
+    settings::SettingId,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -195,7 +196,14 @@ impl QuickPresetsHandler {
             .database
             .fetch_quick_preset(device.model(), name.into())
             .await?;
-        let settings = settings_to_apply(device, quick_preset.fields);
+        let settings: Vec<_> = fields_to_apply(&quick_preset, |id| {
+            device
+                .setting(&id)
+                .is_some_and(|setting| setting.is_action())
+        })
+        .into_iter()
+        .map(|field| (field.setting_id, field.value.clone()))
+        .collect();
         let mut outcomes = device.set_setting_values(settings.clone()).await?;
 
         let retryable = outcomes
@@ -214,7 +222,7 @@ impl QuickPresetsHandler {
                 retryable.contains(setting_id)
                     && device
                         .setting(setting_id)
-                        .is_some_and(|setting| settings::Value::from(setting) != *value)
+                        .is_some_and(|setting| !setting.matches_value(value))
             })
             .cloned()
             .collect::<Vec<_>>();
@@ -252,40 +260,6 @@ const EQUALIZER_SETTING_IDS: [SettingId; 3] = [
     SettingId::VolumeAdjustments,
 ];
 
-/// Picks the enabled fields that should be set when activating a quick preset, in the order they should be set.
-fn settings_to_apply(
-    device: &(dyn OpenSCQ30Device + Send + Sync),
-    fields: Vec<QuickPresetField>,
-) -> Vec<(SettingId, settings::Value)> {
-    let mut settings = fields
-        .into_iter()
-        .filter(|field| field.is_enabled)
-        // Presets saved by older versions may contain actions, which would run every time the preset is activated.
-        .filter(|field| {
-            !device
-                .setting(&field.setting_id)
-                .is_some_and(|setting| setting.is_action())
-        })
-        .map(|field| (field.setting_id, field.value))
-        .collect::<Vec<_>>();
-
-    // Setting the volume adjustments always switches to the custom profile, so if a factory profile and a curve are
-    // both enabled, applying both would undo the factory profile. Presets saved by older versions may do this.
-    let has_factory_profile = settings.iter().any(|(setting_id, value)| {
-        *setting_id == SettingId::PresetEqualizerProfile
-            && value.try_as_optional_str().is_ok_and(|name| name.is_some())
-    });
-    if has_factory_profile {
-        settings.retain(|(setting_id, _)| {
-            !matches!(
-                setting_id,
-                SettingId::CustomEqualizerProfile | SettingId::VolumeAdjustments
-            )
-        });
-    }
-    settings
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Mutex as StdMutex;
@@ -293,7 +267,7 @@ mod tests {
     use async_trait::async_trait;
     use tokio::sync::{mpsc, oneshot};
 
-    use crate::DeviceModel;
+    use crate::{DeviceModel, settings};
 
     use super::*;
 
@@ -767,6 +741,8 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn factory_profile_wins_over_volume_adjustments() {
+        use crate::client::presets::{PresetStatus, preset_status};
+
         let (device, database, handler) = connect_demo_a3954().await;
         device
             .set_setting_values(vec![(SettingId::VolumeAdjustments, vec![5i16; 8].into())])
@@ -792,12 +768,36 @@ mod tests {
             .await
             .unwrap();
 
-        handler.activate(device.as_ref(), "Acoustic").await.unwrap();
+        let activation = QuickPresetActivation::new(device.clone());
+        activation
+            .activate(&handler, "Acoustic".into())
+            .await
+            .unwrap();
 
         assert_eq!(
             settings::Value::from(Some("Acoustic")),
             current_value(device.as_ref(), SettingId::PresetEqualizerProfile),
         );
+        let preset = database
+            .fetch_quick_preset(DeviceModel::SoundcoreA3954, "Acoustic".into())
+            .await
+            .unwrap();
+        let status = || {
+            let settings = device
+                .settings_by_category()
+                .into_values()
+                .flatten()
+                .collect();
+            preset_status(&preset, &settings, activation.last_applied().as_deref())
+        };
+        assert_eq!(PresetStatus::Applied, status());
+
+        device
+            .set_setting_values(vec![(SettingId::VolumeAdjustments, vec![3i16; 8].into())])
+            .await
+            .unwrap();
+        assert_eq!(Some("Acoustic"), activation.last_applied().as_deref());
+        assert_eq!(PresetStatus::NotApplied, status());
     }
 
     #[tokio::test(start_paused = true)]
@@ -816,6 +816,12 @@ mod tests {
                 QuickPreset {
                     name: "Custom".into(),
                     fields: vec![
+                        // A legacy duplicate can name an earlier profile that the final value clears.
+                        field(
+                            SettingId::PresetEqualizerProfile,
+                            Some("Acoustic").into(),
+                            true,
+                        ),
                         field(
                             SettingId::PresetEqualizerProfile,
                             settings::Value::OptionalString(None),

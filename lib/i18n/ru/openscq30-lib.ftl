@@ -72,6 +72,7 @@ fully-transparent = Полная прозрачность
 adaptive = Адаптивный
 manual = Ручной
 adaptive-noise-canceling = Адаптивное шумоподавление
+adaptive-noise-canceling-automatically = Автоматически
 low-noise = Низкий уровень шума
 medium-noise = Средний уровень шума
 high-noise = Высокий уровень шума

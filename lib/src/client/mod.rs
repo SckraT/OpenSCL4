@@ -4,6 +4,8 @@ use crate::settings::{Setting, SettingId};
 
 pub mod availability;
 pub mod battery;
+pub mod controls;
+pub mod device_art;
 pub mod equalizer;
 pub mod groups;
 pub mod presets;

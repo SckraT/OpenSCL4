@@ -364,6 +364,23 @@ impl From<Setting> for Value {
 }
 
 impl Setting {
+    /// Plain strings written to optional selects are read back as optional strings.
+    pub(crate) fn read_back_form<'a>(&self, requested: &'a Value) -> Cow<'a, Value> {
+        match (self, requested) {
+            (
+                Self::OptionalSelect { .. }
+                | Self::PresetEqualizerProfileSelect { .. }
+                | Self::ModifiableSelect { .. },
+                Value::String(name),
+            ) => Cow::Owned(Value::OptionalString(Some(name.clone()))),
+            _ => Cow::Borrowed(requested),
+        }
+    }
+
+    pub(crate) fn matches_value(&self, requested: &Value) -> bool {
+        self.read_back_form(requested).as_ref() == &Value::from(self.clone())
+    }
+
     pub(crate) fn select_from_enum_all_variants<T>(value: T) -> Self
     where
         T: PartialEq + Into<&'static str> + IntoEnumIterator + Translate,

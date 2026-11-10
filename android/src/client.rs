@@ -1,7 +1,12 @@
 use std::{collections::HashMap, str::FromStr};
 
 use openscq30_lib::{
-    client::{self, availability, battery, equalizer, groups, presets, quick_toggles, sound_mode},
+    client::{
+        self, availability, battery,
+        controls::{ControlSide, SettingControl, setting_control},
+        device_art::DeviceArt,
+        equalizer, groups, presets, quick_toggles, sound_mode,
+    },
     settings::SettingId,
 };
 
@@ -15,28 +20,63 @@ fn settings(values: HashMap<String, serializable::Setting>) -> client::SettingMa
 }
 
 #[uniffi::export]
-pub fn client_setting_group(id: String, category: Option<String>) -> String {
-    format!("{:?}", groups::setting_group(&id, category.as_deref()))
+pub fn client_earbud_control_ids(right: bool) -> Vec<String> {
+    let side = if right {
+        ControlSide::Right
+    } else {
+        ControlSide::Left
+    };
+    side.settings().map(|id| id.to_string()).collect()
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientDeviceArt {
+    pub art: String,
+    pub kind: String,
+    pub models: Vec<String>,
 }
 
 #[uniffi::export]
-pub fn client_is_control(id: String) -> bool {
-    groups::is_control(&id)
-}
-
-#[uniffi::export]
-pub fn client_sound_mode_setting_ids() -> Vec<String> {
-    groups::SOUND_MODE_SETTING_IDS
-        .iter()
-        .map(|id| (*id).into())
+pub fn client_device_art_catalog() -> Vec<ClientDeviceArt> {
+    DeviceArt::ALL
+        .into_iter()
+        .map(|art| ClientDeviceArt {
+            art: format!("{art:?}"),
+            kind: format!("{:?}", art.kind()),
+            models: art.model_names().collect(),
+        })
         .collect()
 }
 
+#[derive(uniffi::Record)]
+pub struct ClientSettingCategory {
+    pub category: String,
+    pub ids: Vec<String>,
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientSettingGroup {
+    pub group: String,
+    pub ids: Vec<String>,
+}
+
 #[uniffi::export]
-pub fn client_case_setting_ids() -> Vec<String> {
-    groups::CASE_SETTING_IDS
+pub fn client_group_settings(categories: Vec<ClientSettingCategory>) -> Vec<ClientSettingGroup> {
+    let entries = categories
         .iter()
-        .map(|id| (*id).into())
+        .flat_map(|entry| {
+            entry
+                .ids
+                .iter()
+                .map(|id| (id.as_str(), entry.category.as_str()))
+        })
+        .collect::<Vec<_>>();
+    groups::group_settings(&entries)
+        .into_iter()
+        .map(|(group, ids)| ClientSettingGroup {
+            group: format!("{group:?}"),
+            ids: ids.into_iter().map(str::to_owned).collect(),
+        })
         .collect()
 }
 
@@ -74,18 +114,22 @@ pub fn client_supports_sound_mode_scale(
 }
 
 #[uniffi::export]
-pub fn client_shows_adaptive_noise_canceling(
+pub fn client_adaptive_noise_canceling_display(
     values: HashMap<String, serializable::Setting>,
-) -> bool {
-    sound_mode::shows_adaptive_noise_canceling(&settings(values))
+) -> Option<serializable::Setting> {
+    sound_mode::adaptive_noise_canceling_display(&settings(values)).map(serializable::Setting)
 }
 
 #[uniffi::export]
-pub fn client_strength_is_set_by_user(
+pub fn client_visible_sound_mode_settings(
     values: HashMap<String, serializable::Setting>,
-    mode_id: String,
-) -> bool {
-    sound_mode::strength_is_set_by_user(&settings(values), &mode_id)
+    ids: Vec<String>,
+    scale: bool,
+) -> Vec<String> {
+    let values = settings(values);
+    ids.into_iter()
+        .filter(|id| sound_mode::mode_setting_is_visible(&values, id, scale))
+        .collect()
 }
 
 #[uniffi::export]
@@ -152,6 +196,48 @@ pub fn client_setting_availability(
     setting_id: String,
 ) -> ClientSettingAvailability {
     availability::setting_availability(&settings(values), &setting_id).into()
+}
+
+#[derive(Clone, Copy, uniffi::Enum)]
+pub enum ClientSettingControl {
+    Disabled,
+    Hidden,
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientSettingsPresentation {
+    pub availability: HashMap<String, ClientSettingAvailability>,
+    /// Editors whose dependencies disable or hide them.
+    pub controls: HashMap<String, ClientSettingControl>,
+}
+
+/// Presentation for the snapshot, plus requested settings that may be absent from it.
+#[uniffi::export]
+pub fn client_settings_presentation(
+    values: HashMap<String, serializable::Setting>,
+    additional_ids: Vec<String>,
+) -> ClientSettingsPresentation {
+    let ids: Vec<_> = values.keys().cloned().chain(additional_ids).collect();
+    let values = settings(values);
+    let mut availability = HashMap::with_capacity(ids.len());
+    let mut controls = HashMap::new();
+    for id in ids {
+        let status = availability::setting_availability(&values, &id).into();
+        match setting_control(&values, &id) {
+            SettingControl::Enabled => {}
+            SettingControl::Disabled => {
+                controls.insert(id.clone(), ClientSettingControl::Disabled);
+            }
+            SettingControl::Hidden => {
+                controls.insert(id.clone(), ClientSettingControl::Hidden);
+            }
+        }
+        availability.insert(id, status);
+    }
+    ClientSettingsPresentation {
+        availability,
+        controls,
+    }
 }
 
 #[uniffi::export]
@@ -321,26 +407,28 @@ pub fn client_is_preset_applied(
     presets::is_preset_applied(&preset.0, &settings(values))
 }
 
-#[uniffi::export]
-pub fn client_presets_use_both_earbud_settings(values: Vec<serializable::QuickPreset>) -> bool {
-    presets::presets_use_both_earbud_settings(
-        &values
-            .into_iter()
-            .map(|preset| preset.0)
-            .collect::<Vec<_>>(),
-    )
+#[derive(uniffi::Record)]
+pub struct ClientPresetSummary {
+    pub status: String,
+    pub fields: Vec<serializable::QuickPresetField>,
 }
 
 #[uniffi::export]
-pub fn client_preset_status(
+pub fn client_preset_summary(
     preset: serializable::QuickPreset,
     values: HashMap<String, serializable::Setting>,
     last_applied: Option<String>,
-) -> String {
-    format!(
-        "{:?}",
-        presets::preset_status(&preset.0, &settings(values), last_applied.as_deref())
-    )
+) -> ClientPresetSummary {
+    let summary = presets::preset_summary(&preset.0, &settings(values), last_applied.as_deref());
+    ClientPresetSummary {
+        status: format!("{:?}", summary.status),
+        fields: summary
+            .fields
+            .into_iter()
+            .cloned()
+            .map(serializable::QuickPresetField)
+            .collect(),
+    }
 }
 
 #[uniffi::export]

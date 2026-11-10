@@ -5,19 +5,22 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
-import com.oppzippy.openscq30.lib.bindings.clientSettingAvailability
+import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
+import com.oppzippy.openscq30.lib.bindings.ClientSettingsPresentation
+import com.oppzippy.openscq30.lib.bindings.clientSettingsPresentation
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
-internal fun settingAvailability(values: Map<String, Setting>, settingId: String): ClientSettingAvailability =
-    clientSettingAvailability(values, settingId)
+internal const val EQUALIZER_AVAILABILITY_ID = "volumeAdjustments"
 
-/** Every setting's availability in the device's current state, by setting id. */
-internal fun settingAvailability(values: Map<String, Setting>): Map<String, ClientSettingAvailability> =
-    values.keys.associateWith { clientSettingAvailability(values, it) }
+/** Include the equalizer even when the device stops reporting its settings with one earbud connected. */
+internal fun settingsPresentation(values: Map<String, Setting>): ClientSettingsPresentation =
+    clientSettingsPresentation(values, listOf(EQUALIZER_AVAILABILITY_ID))
 
 internal val LocalSettingAvailability = staticCompositionLocalOf<Map<String, ClientSettingAvailability>> {
     emptyMap()
 }
+
+internal val LocalSettingControls = staticCompositionLocalOf<Map<String, ClientSettingControl>> { emptyMap() }
 
 @StringRes
 internal fun availabilityReasonText(reason: AvailabilityReason): Int = when (reason) {

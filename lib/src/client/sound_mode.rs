@@ -1,8 +1,7 @@
 //! The sound modes as one scale from 1 to 11, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/
 //! SoundModeScale.kt: 1 to 5 transparency (1 the strongest), 6 normal, 7 to 11 noise canceling (11 the strongest).
 
-use std::str::FromStr;
-
+use crate::i18n::fl;
 use crate::settings::{Setting, SettingId, Value};
 
 use super::SettingMap;
@@ -17,9 +16,10 @@ pub mod ambient_mode {
     pub const NOISE_CANCELING: &str = "NoiseCanceling";
     pub const TRANSPARENCY: &str = "Transparency";
     pub const NORMAL: &str = "Normal";
+    pub const AIRPLANE: &str = "AirplaneMode";
 
     /// Every name a rule may read. The shared examples must cover each one.
-    pub const ALL: &[&str] = &[NOISE_CANCELING, TRANSPARENCY, NORMAL];
+    pub const ALL: &[&str] = &[NOISE_CANCELING, TRANSPARENCY, NORMAL, AIRPLANE];
 }
 
 /// The names a device gives its noise canceling mode. The mode whose strength the user sets is called `Manual` on
@@ -62,22 +62,55 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
         .all(|mode| options.iter().any(|o| o == mode))
 }
 
-/// Whether the adaptive noise canceling level is worth showing. It is not: the device picks the level itself and
-/// reports the same number for as long as it is in the adaptive mode, so the row said "1/5" no matter what the
-/// headphones were doing. The rule stays here, shared by both clients, so the row comes back in one place once a
-/// device is known to report a level that moves.
-pub fn shows_adaptive_noise_canceling(_settings: &SettingMap) -> bool {
-    false
+/// Whether a setting belongs with the current mode. The scale already contains the manual strength controls.
+pub fn mode_setting_is_visible(settings: &SettingMap, id: &str, scale: bool) -> bool {
+    let Some((_, mode)) = ambient(settings) else {
+        return true;
+    };
+    match id {
+        "ambientSoundMode" => false,
+        "noiseCancelingMode" | "customNoiseCanceling" => mode == ambient_mode::NOISE_CANCELING,
+        "manualNoiseCanceling" => {
+            !scale
+                && mode == ambient_mode::NOISE_CANCELING
+                && strength_is_set_by_user(settings, SettingId::NoiseCancelingMode)
+        }
+        "transparencyMode" => mode == ambient_mode::TRANSPARENCY,
+        "manualTransparency" => {
+            !scale
+                && mode == ambient_mode::TRANSPARENCY
+                && strength_is_set_by_user(settings, SettingId::TransparencyMode)
+        }
+        "airplaneMode" => mode == ambient_mode::AIRPLANE,
+        _ => true,
+    }
+}
+
+/// Devices can keep reporting the same level while adjusting it automatically. Show that status on both clients.
+pub fn adaptive_noise_canceling_display(settings: &SettingMap) -> Option<Setting> {
+    if ambient(settings).is_some_and(|(_, mode)| mode != ambient_mode::NOISE_CANCELING)
+        || !matches!(
+            settings.get(&SettingId::NoiseCancelingMode),
+            Some(Setting::Select { value, .. }) if value == noise_canceling_mode::ADAPTIVE
+        )
+    {
+        return None;
+    }
+    let Setting::Information { value, .. } = settings.get(&SettingId::AdaptiveNoiseCanceling)?
+    else {
+        return None;
+    };
+    Some(Setting::Information {
+        value: value.clone(),
+        translated_value: fl!("adaptive-noise-canceling-automatically"),
+    })
 }
 
 /// Whether the user sets the strength of the current mode. In the adaptive mode the device picks the level itself,
 /// and keeps reporting the level it last chose, so a strength editor there would change nothing. The modes where the
 /// user sets it are named `Manual` and `Custom`. A device without the mode setting has no adaptive mode, so its
 /// strength belongs to the user.
-pub fn strength_is_set_by_user(settings: &SettingMap, mode_id: &str) -> bool {
-    let Ok(mode_id) = SettingId::from_str(mode_id) else {
-        return true;
-    };
+fn strength_is_set_by_user(settings: &SettingMap, mode_id: SettingId) -> bool {
     match settings.get(&mode_id) {
         Some(Setting::Select { value, .. }) => noise_canceling_mode::STRENGTH_IS_SET_BY_USER
             .iter()
@@ -256,22 +289,22 @@ mod tests {
         };
         assert!(!strength_is_set_by_user(
             &with_mode(noise_canceling_mode::ADAPTIVE),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
         for mode in noise_canceling_mode::STRENGTH_IS_SET_BY_USER {
             assert!(
-                strength_is_set_by_user(&with_mode(mode), "noiseCancelingMode"),
+                strength_is_set_by_user(&with_mode(mode), SettingId::NoiseCancelingMode),
                 "{mode}"
             );
         }
         // a device without the mode setting has no adaptive mode, so the user sets the strength
         assert!(strength_is_set_by_user(
             &device(ambient_mode::NOISE_CANCELING, 3, 2),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
         assert!(strength_is_set_by_user(
             &SettingMap::new(),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
     }
 

@@ -206,9 +206,10 @@ where
         let current_value = current_settings
             .get(&setting_id)
             .map(|s| Value::from(s.clone()));
-        let expected = current_settings
-            .get(&setting_id)
-            .map_or_else(|| requested.clone(), |s| read_back_form(s, &requested));
+        let expected = current_settings.get(&setting_id).map_or_else(
+            || requested.clone(),
+            |s| s.read_back_form(&requested).into_owned(),
+        );
         let mut candidate_state = target_state.clone();
         match module_collection
             .setting_manager
@@ -501,20 +502,6 @@ fn finish(entries: Vec<Entry>) -> Vec<SettingWriteOutcome> {
 
 fn is_command_only(setting: &Setting) -> bool {
     matches!(setting, Setting::Action | Setting::ImportString { .. })
-}
-
-/// Clients name the option of an optional select with a plain string (a custom equalizer profile accepts nothing
-/// else), but the setting reads back as an optional string. Compared directly, an applied option is never confirmed.
-fn read_back_form(setting: &Setting, requested: &Value) -> Value {
-    match (setting, requested) {
-        (
-            Setting::OptionalSelect { .. }
-            | Setting::PresetEqualizerProfileSelect { .. }
-            | Setting::ModifiableSelect { .. },
-            Value::String(name),
-        ) => Value::OptionalString(Some(name.clone())),
-        _ => requested.clone(),
-    }
 }
 
 fn local_error(setting_id: SettingId, error: SettingHandlerError) -> device::Error {

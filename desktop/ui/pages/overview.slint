@@ -33,7 +33,11 @@ export global BlockText {
     }
 
     public pure function summary(data: OverviewBlockData) -> string {
-        if data.kind == BlockKind.controls { return data.on ? @tr("Presses and slides") : @tr("Presses and switching modes"); }
+        if data.kind == BlockKind.controls {
+            if data.on { return @tr("Presses and slides"); }
+            if data.has-mode-cycle { return @tr("Presses and switching modes"); }
+            return @tr("Presses");
+        }
         if data.kind == BlockKind.comfort {
             if data.text != "" { return data.text + " · " + (data.on ? @tr("on") : @tr("off")); }
             if data.total > 0 { return @tr("On: {} of {}", data.number, data.total); }

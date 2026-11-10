@@ -1,7 +1,10 @@
 package com.oppzippy.openscq30.ui.sound
 
+import com.oppzippy.openscq30.lib.bindings.clientPresetSummary
+import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.QuickPresetField
+import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import org.junit.Assert.assertEquals
@@ -10,6 +13,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SoundPresetsTest {
+    @Test
+    fun aLegacyPresetCardShowsTheFactoryProfileAndIgnoresTheCustomCurve() {
+        val profile = QuickPresetField("presetEqualizerProfile", "Acoustic".toValue(), true)
+        val curve = QuickPresetField("volumeAdjustments", listOf(1.toShort()).toValue(), true)
+        val preset = QuickPreset("Legacy", listOf(curve, profile))
+        val equalizer = Equalizer(listOf(100u.toUShort()), fractionDigits = 1, min = -120, max = 134)
+        val factory = Setting.PresetEqualizerProfileSelect(
+            equalizer,
+            Select(listOf("Acoustic"), listOf("Acoustic")),
+            listOf(listOf(0.toShort())),
+            "Acoustic",
+        )
+        val settings = mapOf(
+            "presetEqualizerProfile" to factory,
+            "volumeAdjustments" to Setting.EqualizerSetting(equalizer, false, listOf(0.toShort())),
+        )
+        val summary = clientPresetSummary(preset, settings, preset.name)
+        assertEquals("Applied", summary.status)
+        assertEquals(listOf(profile), summary.fields)
+        assertEquals(
+            SoundPresetStatus.NotApplied,
+            soundPresetStatus(preset, settings + ("presetEqualizerProfile" to factory.copy(value = null)), preset.name),
+        )
+    }
+
     @Test
     fun emptyPresetIsNotApplied() {
         assertFalse(isSoundPresetApplied(QuickPreset("Empty", emptyList()), emptyMap()))

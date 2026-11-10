@@ -1,7 +1,7 @@
 //! What the quick presets page does: creating presets, choosing which settings they apply, and deleting them.
 
 use openscq30_lib::settings::SettingId;
-use slint::{ComponentHandle, ModelRc, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, VecModel};
 
 use super::{App, with_app};
 use crate::{
@@ -98,20 +98,37 @@ impl App {
         let last_applied = snapshot.last_applied_preset.as_deref();
         let (on, off) = self.on_off();
         let words = presets::OnOff { on: &on, off: &off };
-        state.set_preset_cards(ModelRc::new(VecModel::from(presets::cards(
-            snapshot,
-            last_applied,
-            words,
-        ))));
+        let current = state.get_preset_cards();
+        let mut cards = presets::cards(snapshot, last_applied, words);
+        for (index, card) in cards.iter_mut().enumerate() {
+            if let Some(previous) = current.row_data(index)
+                && previous.name == card.name
+                && previous.fields.iter().eq(card.fields.iter())
+            {
+                card.fields = previous.fields;
+            }
+        }
+        if let Some(cards) = crate::models::updated(&current, cards) {
+            state.set_preset_cards(cards);
+        }
         state.set_presets_need_both_earbuds(presets_use_blocked_settings(
             &snapshot.presets,
             &snapshot.settings,
         ));
+    }
+
+    pub(super) fn render_preset_editor(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         let editing = self.editing_preset.as_deref().unwrap_or_default();
-        state.set_editing_preset(editing.into());
-        let groups = presets::find(snapshot, editing)
-            .map(|preset| presets::editor_groups(snapshot, preset, words))
+        let groups = self
+            .editing_preset
+            .as_deref()
+            .and_then(|name| presets::find(snapshot, name))
+            .map(|preset| {
+                let (on, off) = self.on_off();
+                presets::editor_groups(snapshot, preset, presets::OnOff { on: &on, off: &off })
+            })
             .unwrap_or_default();
         state.set_preset_groups(ModelRc::new(VecModel::from(groups)));
+        state.set_editing_preset(editing.into());
     }
 }

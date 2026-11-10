@@ -3,10 +3,11 @@ use std::str::FromStr;
 use serde_json::Value as Json;
 
 use super::{
-    SettingMap, availability, battery, equalizer, groups, presets, quick_toggles, sound_mode,
+    SettingMap, availability, battery, controls, equalizer, groups, presets, quick_toggles,
+    sound_mode,
 };
 use crate::{
-    settings::{Equalizer, Setting, SettingId, Value},
+    settings::{Equalizer, Select, Setting, SettingId, Value},
     storage::{QuickPreset, QuickPresetField},
 };
 
@@ -72,6 +73,36 @@ fn shared_client_contract() {
                 availability::setting_availability(&settings, id),
                 "{id} with twsStatus {:?}",
                 scenario["twsStatus"],
+            );
+        }
+    }
+    for scenario in fixtures["settingControls"].as_array().unwrap() {
+        let settings = scenario["settings"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(id, value)| {
+                let setting = if let Some(value) = value.as_bool() {
+                    Setting::Toggle { value }
+                } else {
+                    let value = value.as_str().unwrap().to_owned();
+                    Setting::Select {
+                        setting: Select {
+                            options: vec![value.clone().into()],
+                            localized_options: vec![value.clone()],
+                        },
+                        value: value.into(),
+                    }
+                };
+                (SettingId::from_str(id).unwrap(), setting)
+            })
+            .collect();
+        for (id, expected) in scenario["cases"].as_object().unwrap() {
+            assert_eq!(
+                expected.as_str().unwrap(),
+                format!("{:?}", controls::setting_control(&settings, id)),
+                "{id} with settings {}",
+                scenario["settings"],
             );
         }
     }
@@ -202,68 +233,64 @@ fn shared_client_contract() {
             )
         );
     }
+    let mode_values = |case: &serde_json::Value| -> SettingMap {
+        ["ambientSoundMode", "noiseCancelingMode", "transparencyMode"]
+            .into_iter()
+            .filter_map(|id| {
+                let value = case[id].as_str()?.to_owned();
+                Some((
+                    SettingId::from_str(id).unwrap(),
+                    Setting::Select {
+                        setting: crate::settings::Select {
+                            options: vec![value.clone().into()],
+                            localized_options: vec![value.clone()],
+                        },
+                        value: value.into(),
+                    },
+                ))
+            })
+            .collect()
+    };
     for case in fixtures["adaptiveLevel"].as_array().unwrap() {
-        let mut settings = SettingMap::new();
-        if let Some(mode) = case["ambientSoundMode"].as_str() {
-            settings.insert(
-                SettingId::AmbientSoundMode,
-                Setting::Select {
-                    setting: crate::settings::Select {
-                        options: vec![
-                            "NoiseCanceling".into(),
-                            "Transparency".into(),
-                            "Normal".into(),
-                        ],
-                        localized_options: vec![
-                            "NoiseCanceling".into(),
-                            "Transparency".into(),
-                            "Normal".into(),
-                        ],
-                    },
-                    value: mode.to_string().into(),
-                },
-            );
-        }
-        if let Some(mode) = case["noiseCancelingMode"].as_str() {
-            settings.insert(
-                SettingId::NoiseCancelingMode,
-                Setting::Select {
-                    setting: crate::settings::Select {
-                        options: vec!["Custom".into(), "Adaptive".into()],
-                        localized_options: vec!["Custom".into(), "Adaptive".into()],
-                    },
-                    value: mode.to_string().into(),
-                },
-            );
-        }
+        let mut settings = mode_values(case);
+        settings.insert(
+            SettingId::AdaptiveNoiseCanceling,
+            Setting::Information {
+                value: "1/5".to_owned(),
+                translated_value: "1/5".to_owned(),
+            },
+        );
         assert_eq!(
             case["shown"].as_bool().unwrap(),
-            sound_mode::shows_adaptive_noise_canceling(&settings),
+            sound_mode::adaptive_noise_canceling_display(&settings).is_some(),
             "{case}"
         );
     }
-    for case in fixtures["strengthIsSetByUser"].as_array().unwrap() {
-        let mode_id = case["modeId"].as_str().unwrap();
-        let mut settings = SettingMap::new();
-        if let Some(value) = case["value"].as_str() {
-            settings.insert(
-                SettingId::from_str(mode_id).unwrap(),
-                Setting::Select {
-                    setting: crate::settings::Select {
-                        options: vec![value.to_string().into()],
-                        localized_options: vec![value.to_string()],
-                    },
-                    value: value.to_string().into(),
-                },
-            );
-        }
-        assert_eq!(
-            case["user"].as_bool().unwrap(),
-            sound_mode::strength_is_set_by_user(&settings, mode_id),
-            "{case}"
-        );
+    for case in fixtures["soundModeRows"].as_array().unwrap() {
+        let settings = mode_values(case);
+        let scale = case["scale"].as_bool().unwrap_or_default();
+        let ids = [
+            "ambientSoundMode",
+            "noiseCancelingMode",
+            "customNoiseCanceling",
+            "manualNoiseCanceling",
+            "transparencyMode",
+            "manualTransparency",
+            "airplaneMode",
+        ];
+        let shown: Vec<_> = ids
+            .into_iter()
+            .filter(|id| sound_mode::mode_setting_is_visible(&settings, id, scale))
+            .collect();
+        let expected: Vec<_> = case["shown"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|id| id.as_str().unwrap())
+            .collect();
+        assert_eq!(expected, shown, "{case}");
     }
-    assert_every_mode_name_is_exercised(&fixtures["adaptiveLevel"]);
+    assert_every_mode_name_is_exercised(&fixtures["soundModeRows"]);
 }
 
 /// A rule keyed on a setting value is only as good as the names the examples put in front of it: the Space One Pro

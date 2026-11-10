@@ -13,7 +13,7 @@ use crate::{
     equalizer::{self as eq_view},
     model::{
         groups::{SettingGroup, setting_group},
-        presets::{PresetStatus, preset_fields, preset_status},
+        presets::{PresetStatus, PresetSummary, preset_fields, preset_summary},
     },
     view,
 };
@@ -83,10 +83,10 @@ pub fn cards(
         .presets
         .iter()
         .map(|preset| {
-            let enabled: Vec<_> = preset_fields(preset)
-                .into_iter()
-                .filter(|f| f.is_enabled)
-                .collect();
+            let PresetSummary {
+                fields: enabled,
+                status,
+            } = preset_summary(preset, &snapshot.settings, last_applied);
             let named: Vec<slint::SharedString> = enabled
                 .iter()
                 .take(NAMED_FIELDS)
@@ -110,7 +110,7 @@ pub fn cards(
                 .unwrap_or_default();
             PresetCard {
                 name: preset.name.clone().into(),
-                status: match preset_status(preset, &snapshot.settings, last_applied) {
+                status: match status {
                     PresetStatus::NotApplied => 0,
                     PresetStatus::MatchesCurrent => 1,
                     PresetStatus::Applied => 2,

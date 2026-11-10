@@ -43,6 +43,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.SoundModesView
+import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
+import com.oppzippy.openscq30.lib.bindings.clientEarbudControlIds
+import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
@@ -69,32 +72,9 @@ fun SoundModesPage(
         } else if (ambient != null) {
             SoundModeTiles(ambient) { setSettings(listOf("ambientSoundMode" to it.toValue())) }
         }
-        settings.filter { (id, _) ->
-            if (ambient == null) {
-                true
-            } else {
-                when (id) {
-                    "ambientSoundMode" -> false
-
-                    "manualNoiseCanceling" ->
-                        !useScale && ambient.value == "NoiseCanceling" &&
-                            strengthIsSetByUser(values, "noiseCancelingMode")
-
-                    "noiseCancelingMode", "customNoiseCanceling", "adaptiveNoiseCanceling" ->
-                        ambient.value == "NoiseCanceling"
-
-                    "manualTransparency" ->
-                        !useScale && ambient.value == "Transparency" &&
-                            strengthIsSetByUser(values, "transparencyMode")
-
-                    "transparencyMode" -> ambient.value == "Transparency"
-
-                    "airplaneMode" -> ambient.value == "AirplaneMode"
-
-                    else -> true
-                }
-            }
-        }.forEach { (id, setting) -> SoundSettingEditor(id, setting, setSettings) }
+        clientVisibleSoundModeSettings(values, settings.map { it.first }, useScale).forEach { id ->
+            SoundSettingEditor(id, values.getValue(id), setSettings)
+        }
     }
 }
 
@@ -209,17 +189,14 @@ fun SoundControlsPage(settings: List<Pair<String, Setting>>, setSettings: (List<
     }
 }
 
-/** Use actual capability ids: an unrelated setting starting with 'left' is not a gesture. */
-internal fun isSideControl(settingId: String, side: String): Boolean = settingId in listOf(
-    "${side}SinglePress",
-    "${side}DoublePress",
-    "${side}TriplePress",
-    "${side}LongPress",
-    "${side}SlideUp",
-    "${side}SlideDown",
-    "${side}DoublePressDuringCall",
-    "${side}LongPressDuringCall",
-)
+private val controlIdsBySide by lazy {
+    mapOf(
+        "left" to clientEarbudControlIds(right = false).toSet(),
+        "right" to clientEarbudControlIds(right = true).toSet(),
+    )
+}
+
+internal fun isSideControl(settingId: String, side: String): Boolean = settingId in controlIdsBySide[side].orEmpty()
 
 @Composable
 fun SoundComfortPage(settings: List<Pair<String, Setting>>, setSettings: (List<Pair<String, Value>>) -> Unit) {
@@ -329,6 +306,9 @@ fun SoundEffectsPage(settings: List<Pair<String, Setting>>, setSettings: (List<P
         }
         settings.forEach { (id, setting) ->
             if (id == "spatialAudioMode" && setting is Setting.SelectSetting) {
+                if (LocalSettingControls.current[id] == ClientSettingControl.HIDDEN) return@forEach
+                val enabled = isSettingEditorEnabled(id)
+                val selected = selectValue(LocalPendingSettingWrites.current[id]?.requestedValue, setting.value)
                 Text(translateSettingId(id), style = MaterialTheme.typography.titleSmall)
                 FlowRow(
                     Modifier.fillMaxWidth().selectableGroup(),
@@ -337,8 +317,9 @@ fun SoundEffectsPage(settings: List<Pair<String, Setting>>, setSettings: (List<P
                 ) {
                     setting.setting.options.forEach { option ->
                         FilterChip(
-                            selected = setting.value == option,
-                            onClick = { setSettings(listOf(id to option.toValue())) },
+                            selected = selected == option,
+                            enabled = enabled,
+                            onClick = { if (enabled) setSettings(listOf(id to option.toValue())) },
                             label = { Text(setting.setting.localizedOption(option) ?: option) },
                             modifier = Modifier.heightIn(min = 48.dp),
                         )

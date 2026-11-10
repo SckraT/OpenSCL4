@@ -92,8 +92,8 @@ fun SoundOverview(
     preferences: DeviceUiPreferencesViewModel = hiltViewModel(),
 ) {
     val values = remember(settings) { settings.toMap() }
-    val availability = remember(values) { settingAvailability(values) }
-    val equalizerAvailability = remember(values) { settingAvailability(values, "volumeAdjustments") }
+    val availability = LocalSettingAvailability.current
+    val equalizerAvailability = availability[EQUALIZER_AVAILABILITY_ID] ?: ClientSettingAvailability.Available
     val equalizerAvailable = equalizerAvailability.isAvailable()
     val oneEarbudOnly = isOnlyOneEarbudConnected(values)
     val showOneEarbudBadge by preferences.oneEarbudBadgeFlow.collectAsState()

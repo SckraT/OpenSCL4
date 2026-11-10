@@ -1,14 +1,15 @@
 //! Quick preset states, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/SoundPresetsPage.kt.
 
+use indexmap::IndexMap;
+
 use crate::{
-    settings::Value,
+    settings::{Setting, SettingId},
     storage::{QuickPreset, QuickPresetField},
 };
 
 use super::{
     SettingMap,
     availability::{SettingAvailability, setting_availability},
-    battery::BOTH_EARBUDS_SETTING_IDS,
 };
 
 /// One field per setting. Old presets can repeat ids shared by categories; activation applies the last enabled
@@ -37,44 +38,67 @@ pub fn preset_fields(preset: &QuickPreset) -> Vec<&QuickPresetField> {
         .collect()
 }
 
-/// Whether the device currently has the values of the preset's enabled fields. Several presets can match at once,
-/// for example when they enable different subsets of the same settings, so this alone doesn't say which is applied.
-pub fn is_preset_applied(preset: &QuickPreset, settings: &SettingMap) -> bool {
-    let enabled: Vec<_> = preset_fields(preset)
-        .into_iter()
-        .filter(|f| f.is_enabled)
+/// Fields that will be written, in device write order. Later enabled duplicates replace the value at the first
+/// enabled occurrence. Resolve duplicates before choosing between a factory equalizer profile and custom settings.
+pub(crate) fn fields_to_apply(
+    preset: &QuickPreset,
+    mut is_action: impl FnMut(SettingId) -> bool,
+) -> Vec<&QuickPresetField> {
+    let mut fields: IndexMap<_, _> = preset
+        .fields
+        .iter()
+        .filter(|field| field.is_enabled)
+        .map(|field| (field.setting_id, field))
         .collect();
-    !enabled.is_empty()
-        && enabled.iter().all(|field| {
-            settings
-                .get(&field.setting_id)
-                .is_some_and(|setting| Value::from(setting.clone()) == field.value)
+    fields.retain(|id, _| !is_action(*id));
+    if fields
+        .get(&SettingId::PresetEqualizerProfile)
+        .is_some_and(|field| {
+            field
+                .value
+                .try_as_optional_str()
+                .is_ok_and(|name| name.is_some())
         })
+    {
+        // Writing a custom curve or profile would replace the factory profile.
+        fields.shift_remove(&SettingId::CustomEqualizerProfile);
+        fields.shift_remove(&SettingId::VolumeAdjustments);
+    }
+    fields.into_values().collect()
 }
 
-/// Whether any preset would change settings that are only available while both earbuds are connected.
-pub fn presets_use_both_earbud_settings(presets: &[QuickPreset]) -> bool {
-    presets.iter().any(|preset| {
-        preset_fields(preset).iter().any(|field| {
-            let id: &'static str = field.setting_id.into();
-            field.is_enabled && BOTH_EARBUDS_SETTING_IDS.contains(&id)
-        })
+fn effective_fields<'a>(
+    preset: &'a QuickPreset,
+    settings: &SettingMap,
+) -> Vec<&'a QuickPresetField> {
+    fields_to_apply(preset, |id| {
+        settings.get(&id).is_some_and(Setting::is_action)
     })
 }
 
-/// Whether a preset has enabled fields that cannot be changed in the device's current state, and so would not be
-/// applied.
-pub fn preset_uses_blocked_settings(preset: &QuickPreset, settings: &SettingMap) -> bool {
-    preset_fields(preset)
-        .into_iter()
-        .filter(|field| field.is_enabled)
-        .any(|field| {
-            let id: &'static str = field.setting_id.into();
-            !matches!(
-                setting_availability(settings, id),
-                SettingAvailability::Available
-            )
+fn matches_fields(fields: &[&QuickPresetField], settings: &SettingMap) -> bool {
+    !fields.is_empty()
+        && fields.iter().all(|field| {
+            settings
+                .get(&field.setting_id)
+                .is_some_and(|setting| setting.matches_value(&field.value))
         })
+}
+
+/// Whether the device currently has the values this preset would apply. Several presets can match at once.
+pub fn is_preset_applied(preset: &QuickPreset, settings: &SettingMap) -> bool {
+    matches_fields(&effective_fields(preset, settings), settings)
+}
+
+/// Whether a preset would write fields that cannot be changed in the device's current state.
+pub fn preset_uses_blocked_settings(preset: &QuickPreset, settings: &SettingMap) -> bool {
+    effective_fields(preset, settings).into_iter().any(|field| {
+        let id: &'static str = field.setting_id.into();
+        !matches!(
+            setting_availability(settings, id),
+            SettingAvailability::Available
+        )
+    })
 }
 
 /// Whether any preset has enabled fields that cannot be changed in the device's current state.
@@ -93,20 +117,35 @@ pub enum PresetStatus {
     NotApplied,
 }
 
-/// Only the last preset the user applied can be applied. It stops being applied as soon as one of its enabled
-/// settings changes, since then the device no longer has its values.
-pub fn preset_status(
-    preset: &QuickPreset,
+pub struct PresetSummary<'a> {
+    pub fields: Vec<&'a QuickPresetField>,
+    pub status: PresetStatus,
+}
+
+/// A card describes the fields that activation would write and whether the device has those values.
+pub fn preset_summary<'a>(
+    preset: &'a QuickPreset,
     settings: &SettingMap,
     last_applied: Option<&str>,
-) -> PresetStatus {
-    if !is_preset_applied(preset, settings) {
+) -> PresetSummary<'a> {
+    let fields = effective_fields(preset, settings);
+    let status = if !matches_fields(&fields, settings) {
         PresetStatus::NotApplied
     } else if last_applied == Some(preset.name.as_str()) {
         PresetStatus::Applied
     } else {
         PresetStatus::MatchesCurrent
-    }
+    };
+    PresetSummary { fields, status }
+}
+
+/// Only the last preset the user applied can be applied, and its effective fields must still match.
+pub fn preset_status(
+    preset: &QuickPreset,
+    settings: &SettingMap,
+    last_applied: Option<&str>,
+) -> PresetStatus {
+    preset_summary(preset, settings, last_applied).status
 }
 
 #[cfg(test)]
@@ -274,20 +313,6 @@ mod tests {
             PresetStatus::Applied,
             preset_status(&anc(), &other, Some("ANC"))
         );
-    }
-
-    #[test]
-    fn presets_with_an_enabled_equalizer_field_need_both_earbuds() {
-        let eq = QuickPreset {
-            name: "EQ".to_string(),
-            fields: vec![QuickPresetField {
-                setting_id: SettingId::VolumeAdjustments,
-                value: vec![0i16; 8].into(),
-                is_enabled: true,
-            }],
-        };
-        assert!(presets_use_both_earbud_settings(&[anc(), eq]));
-        assert!(!presets_use_both_earbud_settings(&[anc()]));
     }
 
     fn one_earbud() -> SettingMap {

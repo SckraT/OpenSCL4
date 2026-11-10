@@ -170,21 +170,16 @@ mod tests {
 
     #[test]
     fn writes_lines_to_the_file_it_is_given() {
-        // Inside the build directory rather than the system temporary one: the latter is not writable in every
-        // environment this suite runs in, and the test is about the file, not about where it lives.
-        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../target/test-logs")
-            .join(std::process::id().to_string());
-        let _ = fs::remove_dir_all(&directory);
-        open_file(&directory);
+        let directory = tempfile::tempdir().unwrap();
+        open_file(directory.path());
         write_to_file("a line that has to survive the process");
-        let text = fs::read_to_string(directory.join("logs/openscl4.log")).unwrap();
+        let text = fs::read_to_string(directory.path().join("logs/openscl4.log")).unwrap();
+        *LOG_FILE.lock().unwrap() = None;
         assert!(text.starts_with("OpenSCL4 "), "{text}");
         assert!(
             text.contains("a line that has to survive the process"),
             "{text}"
         );
-        let _ = fs::remove_dir_all(&directory);
     }
 
     #[test]

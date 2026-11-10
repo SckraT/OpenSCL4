@@ -14,7 +14,7 @@ use crate::{
     model::{
         battery::{BatteryLabel, device_batteries, with_missing_earbud},
         overview::{OverviewBlock, OverviewLayout},
-        presets::{PresetStatus, preset_fields, preset_status},
+        presets::{PresetStatus, PresetSummary, preset_summary},
         quick_toggles::quick_toggle_ids,
     },
     view,
@@ -151,7 +151,20 @@ fn summary(block: OverviewBlock, snapshot: &DeviceSnapshot) -> OverviewBlockData
     };
     let settings = &snapshot.settings;
     match block {
-        OverviewBlock::Controls => data.on = settings.contains_key(&SettingId::LeftSinglePress),
+        OverviewBlock::Controls => {
+            data.on = settings.keys().any(|id| {
+                matches!(
+                    id,
+                    SettingId::LeftSlideUp
+                        | SettingId::LeftSlideDown
+                        | SettingId::RightSlideUp
+                        | SettingId::RightSlideDown
+                )
+            });
+            data.has_mode_cycle = crate::rows::MODE_CYCLE
+                .iter()
+                .any(|id| settings.contains_key(id));
+        }
         OverviewBlock::Comfort => {
             let groups = view::groups(snapshot);
             let comfort: Vec<SettingId> = groups
@@ -272,10 +285,10 @@ pub fn presets(
         .presets
         .iter()
         .map(|preset| {
-            let enabled: Vec<_> = preset_fields(preset)
-                .into_iter()
-                .filter(|f| f.is_enabled)
-                .collect();
+            let PresetSummary {
+                fields: enabled,
+                status,
+            } = preset_summary(preset, &snapshot.settings, last_applied);
             let detail: Vec<String> = enabled
                 .iter()
                 .take(2)
@@ -285,7 +298,7 @@ pub fn presets(
             PresetItem {
                 name: preset.name.clone().into(),
                 detail: detail.join(" · ").into(),
-                status: match preset_status(preset, &snapshot.settings, last_applied) {
+                status: match status {
                     PresetStatus::NotApplied => 0,
                     PresetStatus::MatchesCurrent => 1,
                     PresetStatus::Applied => 2,
