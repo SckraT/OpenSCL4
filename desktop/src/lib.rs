@@ -29,6 +29,11 @@ use slint::ComponentHandle;
 
 slint::include_modules!();
 
+mod tray_ui {
+    include!(concat!(env!("OUT_DIR"), "/tray.rs"));
+}
+pub use tray_ui::{Tray, TrayPreset};
+
 /// Where the app keeps its database, settings and logs. `OPENSCL4_CONFIG_DIR` overrides it.
 pub fn config_directory() -> anyhow::Result<std::path::PathBuf> {
     match std::env::var_os("OPENSCL4_CONFIG_DIR") {

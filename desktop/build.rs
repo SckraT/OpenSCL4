@@ -8,6 +8,18 @@ fn main() {
         .with_style("material".into())
         .with_bundled_translations(concat!(env!("CARGO_MANIFEST_DIR"), "/translations"))
         .with_default_translation_context(slint_build::DefaultTranslationContext::None);
+    // Slint creates a window adapter for the tray if its compilation unit also exports a window.
+    let tray_output =
+        std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("tray.rs");
+    let tray_dependencies = slint_build::compile_with_output_path(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/ui/tray.slint"),
+        tray_output,
+        config.clone(),
+    )
+    .expect("the tray should compile");
+    for path in tray_dependencies {
+        println!("cargo:rerun-if-changed={}", path.display());
+    }
     slint_build::compile_with_config("ui/app.slint", config).expect("the UI should compile");
     println!("cargo:rerun-if-changed=translations");
 
