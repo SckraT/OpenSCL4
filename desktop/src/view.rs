@@ -2,7 +2,7 @@
 
 use macaddr::MacAddr6;
 use openscq30_i18n::Translate;
-use openscq30_lib::{DeviceModel, storage::PairedDevice};
+use openscq30_lib::{DeviceModel, settings::SettingId, storage::PairedDevice};
 use strum::VariantArray;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     model::{
         device_art::{self, DeviceArt, DeviceKind, EarbudsColor},
         devices::split_brand,
-        groups::{SettingGroup, group_settings},
+        groups::{SettingGroup, group_settings_by},
     },
 };
 
@@ -116,22 +116,21 @@ pub fn page_of(group: SettingGroup) -> Page {
 }
 
 /// The device's settings by group, each with the category it was found in.
-pub fn groups(snapshot: &DeviceSnapshot) -> Vec<(SettingGroup, Vec<&'static str>)> {
+pub fn groups(snapshot: &DeviceSnapshot) -> Vec<(SettingGroup, Vec<SettingId>)> {
     // categories are named by Display, as "deviceInformation"
-    let settings: Vec<(&'static str, String)> = snapshot
+    let settings: Vec<(SettingId, String)> = snapshot
         .categories
         .iter()
         .flat_map(|(category, ids)| {
             let category = category.to_string();
-            ids.iter()
-                .map(move |id| (<&'static str>::from(id), category.clone()))
+            ids.iter().map(move |id| (*id, category.clone()))
         })
         .collect();
-    let borrowed: Vec<(&'static str, &str)> = settings
+    let borrowed: Vec<(SettingId, &str)> = settings
         .iter()
         .map(|(id, category)| (*id, category.as_str()))
         .collect();
-    group_settings(&borrowed)
+    group_settings_by(&borrowed, |id| id.into())
 }
 
 /// The device's pages under "Sound" and under "Device" in the sidebar.

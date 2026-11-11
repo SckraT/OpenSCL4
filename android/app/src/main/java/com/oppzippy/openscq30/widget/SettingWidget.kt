@@ -62,14 +62,21 @@ import androidx.glance.text.TextStyle
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
+import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
+import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
+import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
+import com.oppzippy.openscq30.lib.bindings.translateValue
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.sound.availabilityReasonText
+import com.oppzippy.openscq30.ui.sound.settingAvailability
+import com.oppzippy.openscq30.ui.sound.settingsPresentation
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30GlanceTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -78,11 +85,13 @@ import dagger.hilt.components.SingletonComponent
 import java.math.BigDecimal
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 
 @Serializable
-sealed class SettingWidgetState {
+internal sealed class SettingWidgetState {
     @Serializable
     data class Disconnected(val pairedDevices: List<PairedDevice>) : SettingWidgetState()
 
@@ -99,7 +108,13 @@ sealed class SettingWidgetState {
     data class ConnectedUnconfigured(val deviceName: String) : SettingWidgetState()
 
     @Serializable
-    data class Connected(val deviceName: String, val settings: List<Pair<String, Setting?>>) : SettingWidgetState()
+    @OptIn(ExperimentalSerializationApi::class)
+    @JsonIgnoreUnknownKeys
+    data class Connected(
+        val deviceName: String,
+        // Older cached snapshots lack rows. Wait for fresh device data before offering controls.
+        val rows: List<WidgetSetting> = emptyList(),
+    ) : SettingWidgetState()
 }
 
 class SettingWidget : GlanceAppWidget() {
@@ -213,14 +228,13 @@ class SettingWidget : GlanceAppWidget() {
                                 deviceName = translateDeviceModel(device.model()),
                             )
                         } else {
+                            val snapshot = device.settingsByCategory()
+                                .flatMap { it.settings }
+                                .distinctBy { it.settingId }
+                                .associate { it.settingId to it.setting }
                             SettingWidgetState.Connected(
                                 deviceName = translateDeviceModel(device.model()),
-                                settings = settingIds.map { settingId ->
-                                    Pair(
-                                        settingId,
-                                        device.setting(settingId),
-                                    )
-                                },
+                                rows = widgetSettings(settingIds, snapshot),
                             )
                         }
                     } catch (ex: IllegalStateException) {
@@ -269,7 +283,7 @@ private fun Content(
 
                 // Smaller title bar with less padding when displaying multiple settings so that more fit without having
                 // to scroll down
-                if (state is SettingWidgetState.Connected && state.settings.size > 1) {
+                if (state is SettingWidgetState.Connected && state.rows.size > 1) {
                     Row(
                         modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -346,7 +360,7 @@ private fun Content(
 
                     is SettingWidgetState.Connected -> Connected(
                         context = context,
-                        settings = state.settings,
+                        rows = state.rows,
                         isCompactLayout = isCompactLayout,
                     )
                 }
@@ -438,16 +452,76 @@ private fun ConnectedUnconfigured(context: Context) {
     }
 }
 
+/**
+ * A selected setting the widget draws: its control, its value when it cannot be changed, or the reason it has no value
+ * to draw.
+ */
+@Serializable
+internal sealed class WidgetSetting {
+    @Serializable
+    data class Editable(val settingId: String, val setting: Setting) : WidgetSetting()
+
+    @Serializable
+    data class ReadOnly(val settingId: String, val setting: Setting, val reason: AvailabilityReason) : WidgetSetting()
+
+    @Serializable
+    data class Blocked(val settingId: String, val reason: AvailabilityReason) : WidgetSetting()
+}
+
+/**
+ * The selected settings the widget can draw, decided from the [snapshot] the device reports. Dependency rules hide a
+ * setting whose parent is off, and availability rules keep a setting the device does not let change now, the same way
+ * the device settings screen treats them.
+ */
+internal fun widgetSettings(selectedIds: Collection<String>, snapshot: Map<String, Setting>): List<WidgetSetting> {
+    val presentation = settingsPresentation(snapshot)
+    return selectedIds.mapNotNull { settingId ->
+        val setting = snapshot[settingId] ?: return@mapNotNull null
+        if (presentation.controls[settingId] == ClientSettingControl.HIDDEN ||
+            presentation.controls[settingId] == ClientSettingControl.DISABLED
+        ) {
+            return@mapNotNull null
+        }
+        when (val availability = settingAvailability(presentation.availability, settingId)) {
+            is ClientSettingAvailability.Available -> WidgetSetting.Editable(settingId, setting)
+            is ClientSettingAvailability.ReadOnly -> WidgetSetting.ReadOnly(settingId, setting, availability.reason)
+            is ClientSettingAvailability.Unavailable -> WidgetSetting.Blocked(settingId, availability.reason)
+        }
+    }
+}
+
 @Composable
-private fun Connected(context: Context, settings: List<Pair<String, Setting?>>, isCompactLayout: Boolean) {
+private fun Connected(context: Context, rows: List<WidgetSetting>, isCompactLayout: Boolean) {
     LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-        items(settings.filter { it.second != null }) { (settingId, setting) ->
+        items(rows) { row ->
             Box(
                 modifier = GlanceModifier.let {
                     if (!isCompactLayout) it.padding(bottom = 6.dp) else it
                 },
             ) {
-                ShowSetting(context, settingId, setting!!, isCompactLayout)
+                when (row) {
+                    is WidgetSetting.Editable -> ShowSetting(context, row.settingId, row.setting, isCompactLayout)
+
+                    is WidgetSetting.ReadOnly -> Column(GlanceModifier.fillMaxWidth()) {
+                        val value = when (val setting = row.setting) {
+                            is Setting.ToggleSetting -> context.getString(
+                                if (setting.value) R.string.sound_overview_on else R.string.sound_overview_off,
+                            )
+
+                            else -> translateValue(setting, setting.toValue())
+                        }
+                        ReadOnlySettingValue(row.settingId, value)
+                        Text(
+                            context.getString(availabilityReasonText(row.reason)),
+                            style = defaultTextStyle(),
+                        )
+                    }
+
+                    is WidgetSetting.Blocked -> ReadOnlySettingValue(
+                        row.settingId,
+                        context.getString(availabilityReasonText(row.reason)),
+                    )
+                }
             }
         }
     }

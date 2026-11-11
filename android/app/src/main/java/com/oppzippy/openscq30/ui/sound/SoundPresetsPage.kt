@@ -45,9 +45,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
-import com.oppzippy.openscq30.lib.bindings.clientIsPresetApplied
 import com.oppzippy.openscq30.lib.bindings.clientPresetFields
-import com.oppzippy.openscq30.lib.bindings.clientPresetStatus
+import com.oppzippy.openscq30.lib.bindings.clientPresetSummary
 import com.oppzippy.openscq30.lib.bindings.clientPresetsUseBlockedSettings
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.bindings.translateValue
@@ -57,19 +56,10 @@ import com.oppzippy.openscq30.lib.wrapper.Setting
 
 internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField> = clientPresetFields(quickPreset)
 
-internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean =
-    clientIsPresetApplied(quickPreset, settings)
-
 internal fun presetsUseBlockedSettings(quickPresets: List<QuickPreset>, settings: Map<String, Setting>): Boolean =
     clientPresetsUseBlockedSettings(quickPresets, settings)
 
 internal enum class SoundPresetStatus { Applied, MatchesCurrent, NotApplied }
-
-internal fun soundPresetStatus(
-    quickPreset: QuickPreset,
-    settings: Map<String, Setting>,
-    lastAppliedName: String?,
-): SoundPresetStatus = SoundPresetStatus.valueOf(clientPresetStatus(quickPreset, settings, lastAppliedName))
 
 @Composable
 fun SoundPresetsPage(
@@ -160,10 +150,14 @@ fun SoundPresetsPage(
             }
         } else {
             items(quickPresets, key = { it.name }) { preset ->
+                val summary = remember(preset, settingsById, lastAppliedName) {
+                    clientPresetSummary(preset, settingsById, lastAppliedName)
+                }
                 SoundPresetCard(
                     preset = preset,
                     settings = settingsById,
-                    status = soundPresetStatus(preset, settingsById, lastAppliedName),
+                    enabledFields = summary.fields,
+                    status = SoundPresetStatus.valueOf(summary.status),
                     onActivate = { onActivate(preset.name) },
                     onEdit = { onEdit(preset.name) },
                     onDelete = { deleteName = preset.name },
@@ -183,12 +177,12 @@ fun SoundPresetsPage(
 private fun SoundPresetCard(
     preset: QuickPreset,
     settings: Map<String, Setting>,
+    enabledFields: List<QuickPresetField>,
     status: SoundPresetStatus,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val enabledFields = remember(preset) { soundPresetFields(preset).filter { it.isEnabled } }
     val applied = status == SoundPresetStatus.Applied
     var showMenu by remember { mutableStateOf(false) }
     val menuDescription = stringResource(R.string.sound_preset_more, preset.name)

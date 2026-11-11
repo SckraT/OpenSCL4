@@ -4,7 +4,7 @@ Sources for the **Standards** axis of `code-review`. Read the cited file before 
 
 ## Read before judging
 
-- `CLAUDE.md` — current project boundaries and which client is the release target.
+- `AGENTS.md` (imported by `CLAUDE.md`) — current project boundaries and which client is the release target.
 - `docs/development.md`, `docs/build-release.md`, `docs/device-development.md`, `docs/android-interface.md`.
 - `docs/adr/` — accepted decisions; cite the ADR number when a change contradicts one.
 - `GLOSSARY.md` — domain vocabulary (Russian); use its terms in findings.
@@ -22,7 +22,7 @@ A finding must name something the tools cannot decide. Run the gate first; "form
 
 ## Project rules (cite the source)
 
-**Shared behavior.** Availability/grouping rules, battery interpretation, sound-mode scales, equalizer validation, quick toggles and preset matching live in `lib/src/client/` and are consumed by both clients (`docs/development.md`, ADR-0001). Duplicating them in `android/app/` or `desktop/src/` is a violation; platform transport, permissions and UI lifecycle staying platform-specific is not.
+**Shared behavior.** Availability/grouping rules, battery interpretation, sound-mode scales, equalizer validation, quick toggles, preset matching and the mapping from each model to its device art and kind (`lib/src/client/device_art.rs`) live in `lib/src/client/` and are consumed by both clients (`docs/development.md`, ADR-0001). Duplicating them in `android/app/` or `desktop/src/` is a violation; the illustration files, platform transport, permissions and UI lifecycle staying platform-specific is not.
 
 **Device state.** The device is the source of truth: read through `OpenSCQ30Device`, subscribe with `watch_for_changes`, write with `set_setting_values` (`docs/development.md`). A cached copy that can drift from the device is a finding. "Preset applied successfully" and "current settings match the preset" are different states; the applied mark clears on disconnect (`GLOSSARY.md`).
 

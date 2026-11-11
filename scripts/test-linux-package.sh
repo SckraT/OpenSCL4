@@ -3,6 +3,8 @@ set -euo pipefail
 
 export OPENSCL4_TEST_BINARY
 OPENSCL4_TEST_BINARY="$(readlink -f "${1:?application binary required}")"
+export OPENSCL4_TEST_TRAY_WATCHER
+OPENSCL4_TEST_TRAY_WATCHER="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/test-linux-tray-watcher.py"
 
 # A desktop session has a D-Bus session bus, which enforces one instance per data folder.
 dbus-run-session -- xvfb-run -a bash <<'X11'
@@ -165,6 +167,62 @@ test -n "$window"
 wmctrl -ic "$window"
 wait_exit "$restarted"
 wait "$restarted"
+pids=()
+
+# A registered tray keeps a closed window's app alive and losing the tray shows it again.
+config="$(mktemp -d)"
+printf 'tray = true\ncloseToTray = true\n' >"$config/openscl4-config.toml"
+python3 "$OPENSCL4_TEST_TRAY_WATCHER" >"$config/tray-watcher.log" &
+watcher=$!
+pids+=("$watcher")
+watcher_ready() {
+    dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus.NameHasOwner string:org.kde.StatusNotifierWatcher | grep -q 'boolean true'
+}
+for _ in {1..100}; do
+    if watcher_ready; then break; fi
+    kill -0 "$watcher"
+    sleep 0.1
+done
+watcher_ready
+start_app "$config"
+tray_app=$started
+pids+=("$tray_app")
+window=$(wait_window "$tray_app")
+for _ in {1..100}; do
+    if grep -Fxq 'registered tray observed' "$config/tray-watcher.log"; then break; fi
+    kill -0 "$watcher" "$tray_app"
+    sleep 0.1
+done
+if ! grep -Fxq 'registered tray observed' "$config/tray-watcher.log"; then
+    echo "The app did not observe a registered tray" >&2
+    cat "$config/tray-watcher.log" >&2
+    exit 1
+fi
+wmctrl -ic "$window"
+for _ in {1..100}; do
+    kill -0 "$tray_app"
+    if is_hidden "$window"; then break; fi
+    sleep 0.1
+done
+is_hidden "$window"
+kill -0 "$tray_app"
+kill "$watcher"
+wait "$watcher" 2>/dev/null || true
+pids=("$tray_app")
+for _ in {1..100}; do
+    kill -0 "$tray_app"
+    window=$(wmctrl -lp | awk -v pid="$tray_app" '$3 == pid { print $1; exit }')
+    if [ -n "$window" ] && shown "$window"; then break; fi
+    sleep 0.1
+done
+if [ -z "$window" ] || ! shown "$window"; then
+    echo "The window did not return after the tray disappeared" >&2
+    exit 1
+fi
+wmctrl -ic "$window"
+wait_exit "$tray_app"
+wait "$tray_app"
 pids=()
 
 # Without a session bus the app still starts.

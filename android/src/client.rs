@@ -1,7 +1,11 @@
 use std::{collections::HashMap, str::FromStr};
 
 use openscq30_lib::{
-    client::{self, availability, battery, equalizer, groups, presets, quick_toggles, sound_mode},
+    client::{
+        self, availability, battery,
+        controls::{ControlSide as LibControlSide, SettingControl, setting_control},
+        device_art, equalizer, groups, presets, quick_toggles, sound_mode,
+    },
     settings::SettingId,
 };
 
@@ -14,29 +18,130 @@ fn settings(values: HashMap<String, serializable::Setting>) -> client::SettingMa
         .collect()
 }
 
-#[uniffi::export]
-pub fn client_setting_group(id: String, category: Option<String>) -> String {
-    format!("{:?}", groups::setting_group(&id, category.as_deref()))
+/// The earbud a configurable gesture belongs to, mirroring the shared type with generated bindings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum ControlSide {
+    Left,
+    Right,
+}
+
+impl From<ControlSide> for LibControlSide {
+    fn from(side: ControlSide) -> Self {
+        match side {
+            ControlSide::Left => Self::Left,
+            ControlSide::Right => Self::Right,
+        }
+    }
 }
 
 #[uniffi::export]
-pub fn client_is_control(id: String) -> bool {
-    groups::is_control(&id)
-}
-
-#[uniffi::export]
-pub fn client_sound_mode_setting_ids() -> Vec<String> {
-    groups::SOUND_MODE_SETTING_IDS
-        .iter()
-        .map(|id| (*id).into())
+pub fn client_earbud_control_ids(side: ControlSide) -> Vec<String> {
+    LibControlSide::from(side)
+        .settings()
+        .map(|id| id.to_string())
         .collect()
 }
 
+/// The illustration of a device model, mirroring the shared type with generated bindings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum DeviceArt {
+    Headphones,
+    MotionPlus,
+    OpenClip,
+    OpenHook,
+    SportHook,
+    WingedBuds,
+    CompactBuds,
+    ClassicStem,
+    LibertyStem,
+    OpenStem,
+}
+
+impl From<device_art::DeviceArt> for DeviceArt {
+    fn from(art: device_art::DeviceArt) -> Self {
+        match art {
+            device_art::DeviceArt::Headphones => Self::Headphones,
+            device_art::DeviceArt::MotionPlus => Self::MotionPlus,
+            device_art::DeviceArt::OpenClip => Self::OpenClip,
+            device_art::DeviceArt::OpenHook => Self::OpenHook,
+            device_art::DeviceArt::SportHook => Self::SportHook,
+            device_art::DeviceArt::WingedBuds => Self::WingedBuds,
+            device_art::DeviceArt::CompactBuds => Self::CompactBuds,
+            device_art::DeviceArt::ClassicStem => Self::ClassicStem,
+            device_art::DeviceArt::LibertyStem => Self::LibertyStem,
+            device_art::DeviceArt::OpenStem => Self::OpenStem,
+        }
+    }
+}
+
+/// What kind of device a model is, for filtering the model list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum DeviceKind {
+    Earbuds,
+    OverEar,
+    OpenEar,
+    Speaker,
+}
+
+impl From<device_art::DeviceKind> for DeviceKind {
+    fn from(kind: device_art::DeviceKind) -> Self {
+        match kind {
+            device_art::DeviceKind::Earbuds => Self::Earbuds,
+            device_art::DeviceKind::OverEar => Self::OverEar,
+            device_art::DeviceKind::OpenEar => Self::OpenEar,
+            device_art::DeviceKind::Speaker => Self::Speaker,
+        }
+    }
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientDeviceArt {
+    pub art: DeviceArt,
+    pub kind: DeviceKind,
+    pub models: Vec<String>,
+}
+
 #[uniffi::export]
-pub fn client_case_setting_ids() -> Vec<String> {
-    groups::CASE_SETTING_IDS
+pub fn client_device_art_catalog() -> Vec<ClientDeviceArt> {
+    device_art::DeviceArt::ALL
+        .into_iter()
+        .map(|art| ClientDeviceArt {
+            art: art.into(),
+            kind: art.kind().into(),
+            models: art.model_names().collect(),
+        })
+        .collect()
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientSettingCategory {
+    pub category: String,
+    pub ids: Vec<String>,
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientSettingGroup {
+    pub group: String,
+    pub ids: Vec<String>,
+}
+
+#[uniffi::export]
+pub fn client_group_settings(categories: Vec<ClientSettingCategory>) -> Vec<ClientSettingGroup> {
+    let entries = categories
         .iter()
-        .map(|id| (*id).into())
+        .flat_map(|entry| {
+            entry
+                .ids
+                .iter()
+                .map(|id| (id.as_str(), entry.category.as_str()))
+        })
+        .collect::<Vec<_>>();
+    groups::group_settings(&entries)
+        .into_iter()
+        .map(|(group, ids)| ClientSettingGroup {
+            group: format!("{group:?}"),
+            ids: ids.into_iter().map(str::to_owned).collect(),
+        })
         .collect()
 }
 
@@ -73,19 +178,52 @@ pub fn client_supports_sound_mode_scale(
     sound_mode::supports_sound_mode_scale(&model, &settings(values))
 }
 
+/// The settings a client draws, keyed by the id it reports them under. The adaptive noise canceling level reads as
+/// the status saying the device adjusts it automatically; a setting with nothing to draw is left out.
 #[uniffi::export]
-pub fn client_shows_adaptive_noise_canceling(
+pub fn client_displayed_settings(
     values: HashMap<String, serializable::Setting>,
-) -> bool {
-    sound_mode::shows_adaptive_noise_canceling(&settings(values))
+) -> HashMap<String, serializable::Setting> {
+    let mut displayed = HashMap::new();
+    let known = values
+        .into_iter()
+        .filter_map(|(name, setting)| {
+            let Ok(id) = SettingId::from_str(&name) else {
+                displayed.insert(name, setting);
+                return None;
+            };
+            Some((id, setting.0))
+        })
+        .collect::<client::SettingMap>();
+    displayed.extend(known.keys().filter_map(|id| {
+        let setting = sound_mode::displayed_setting(&known, *id)?;
+        Some((id.to_string(), serializable::Setting(setting)))
+    }));
+    displayed
+}
+
+/// The settings shown with the sound mode itself, in the order both clients use.
+#[uniffi::export]
+pub fn client_sound_mode_setting_ids() -> Vec<String> {
+    sound_mode::MODE_SETTING_IDS
+        .iter()
+        .map(ToString::to_string)
+        .collect()
 }
 
 #[uniffi::export]
-pub fn client_strength_is_set_by_user(
+pub fn client_visible_sound_mode_settings(
     values: HashMap<String, serializable::Setting>,
-    mode_id: String,
-) -> bool {
-    sound_mode::strength_is_set_by_user(&settings(values), &mode_id)
+    ids: Vec<String>,
+    scale: bool,
+) -> Vec<String> {
+    let values = settings(values);
+    ids.into_iter()
+        .filter(|id| {
+            SettingId::from_str(id)
+                .is_ok_and(|id| sound_mode::mode_setting_is_visible(&values, id, scale))
+        })
+        .collect()
 }
 
 #[uniffi::export]
@@ -152,6 +290,48 @@ pub fn client_setting_availability(
     setting_id: String,
 ) -> ClientSettingAvailability {
     availability::setting_availability(&settings(values), &setting_id).into()
+}
+
+#[derive(Clone, Copy, uniffi::Enum)]
+pub enum ClientSettingControl {
+    Disabled,
+    Hidden,
+}
+
+#[derive(uniffi::Record)]
+pub struct ClientSettingsPresentation {
+    pub availability: HashMap<String, ClientSettingAvailability>,
+    /// Editors whose dependencies disable or hide them.
+    pub controls: HashMap<String, ClientSettingControl>,
+}
+
+/// Presentation for the snapshot, plus requested settings that may be absent from it.
+#[uniffi::export]
+pub fn client_settings_presentation(
+    values: HashMap<String, serializable::Setting>,
+    additional_ids: Vec<String>,
+) -> ClientSettingsPresentation {
+    let ids: Vec<_> = values.keys().cloned().chain(additional_ids).collect();
+    let values = settings(values);
+    let mut availability = HashMap::with_capacity(ids.len());
+    let mut controls = HashMap::new();
+    for id in ids {
+        let status = availability::setting_availability(&values, &id).into();
+        match setting_control(&values, &id) {
+            SettingControl::Enabled => {}
+            SettingControl::Disabled => {
+                controls.insert(id.clone(), ClientSettingControl::Disabled);
+            }
+            SettingControl::Hidden => {
+                controls.insert(id.clone(), ClientSettingControl::Hidden);
+            }
+        }
+        availability.insert(id, status);
+    }
+    ClientSettingsPresentation {
+        availability,
+        controls,
+    }
 }
 
 #[uniffi::export]
@@ -313,34 +493,28 @@ pub fn client_preset_fields(
         .collect()
 }
 
-#[uniffi::export]
-pub fn client_is_preset_applied(
-    preset: serializable::QuickPreset,
-    values: HashMap<String, serializable::Setting>,
-) -> bool {
-    presets::is_preset_applied(&preset.0, &settings(values))
+#[derive(uniffi::Record)]
+pub struct ClientPresetSummary {
+    pub status: String,
+    pub fields: Vec<serializable::QuickPresetField>,
 }
 
 #[uniffi::export]
-pub fn client_presets_use_both_earbud_settings(values: Vec<serializable::QuickPreset>) -> bool {
-    presets::presets_use_both_earbud_settings(
-        &values
-            .into_iter()
-            .map(|preset| preset.0)
-            .collect::<Vec<_>>(),
-    )
-}
-
-#[uniffi::export]
-pub fn client_preset_status(
+pub fn client_preset_summary(
     preset: serializable::QuickPreset,
     values: HashMap<String, serializable::Setting>,
     last_applied: Option<String>,
-) -> String {
-    format!(
-        "{:?}",
-        presets::preset_status(&preset.0, &settings(values), last_applied.as_deref())
-    )
+) -> ClientPresetSummary {
+    let summary = presets::preset_summary(&preset.0, &settings(values), last_applied.as_deref());
+    ClientPresetSummary {
+        status: format!("{:?}", summary.status),
+        fields: summary
+            .fields
+            .into_iter()
+            .cloned()
+            .map(serializable::QuickPresetField)
+            .collect(),
+    }
 }
 
 #[uniffi::export]
@@ -374,4 +548,66 @@ pub fn client_quick_toggle_ids(stored: Option<Vec<String>>, available: Vec<Strin
         stored.as_deref(),
         &available.iter().map(String::as_str).collect::<Vec<_>>(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn art_and_kind(catalog: &[ClientDeviceArt], model: &str) -> Option<(DeviceArt, DeviceKind)> {
+        catalog
+            .iter()
+            .find(|entry| entry.models.iter().any(|name| name == model))
+            .map(|entry| (entry.art, entry.kind))
+    }
+
+    #[test]
+    fn the_catalog_carries_the_shared_illustration_and_kind_as_variants() {
+        let catalog = client_device_art_catalog();
+        assert_eq!(
+            Some((DeviceArt::LibertyStem, DeviceKind::Earbuds)),
+            art_and_kind(&catalog, "SoundcoreA3954")
+        );
+        assert_eq!(
+            Some((DeviceArt::Headphones, DeviceKind::OverEar)),
+            art_and_kind(&catalog, "SoundcoreA3028")
+        );
+        assert_eq!(
+            Some((DeviceArt::MotionPlus, DeviceKind::Speaker)),
+            art_and_kind(&catalog, "SoundcoreA3116")
+        );
+        assert_eq!(
+            Some((DeviceArt::OpenClip, DeviceKind::OpenEar)),
+            art_and_kind(&catalog, "SoundcoreA3330")
+        );
+    }
+
+    #[test]
+    fn each_earbud_gets_its_own_control_ids() {
+        let left = client_earbud_control_ids(ControlSide::Left);
+        let right = client_earbud_control_ids(ControlSide::Right);
+
+        assert!(left.contains(&"leftSinglePress".to_string()));
+        assert!(left.contains(&"leftLongPressDuringCall".to_string()));
+        assert!(!left.contains(&"rightSinglePress".to_string()));
+        assert!(right.contains(&"rightSinglePress".to_string()));
+        assert!(right.contains(&"rightLongPressDuringCall".to_string()));
+        assert!(!right.contains(&"leftSinglePress".to_string()));
+    }
+
+    #[test]
+    fn every_illustration_appears_once() {
+        let catalog = client_device_art_catalog();
+        assert_eq!(device_art::DeviceArt::ALL.len(), catalog.len());
+        for art in device_art::DeviceArt::ALL {
+            assert_eq!(
+                1,
+                catalog
+                    .iter()
+                    .filter(|entry| entry.art == art.into())
+                    .count(),
+                "{art:?}"
+            );
+        }
+    }
 }

@@ -157,6 +157,7 @@ pub enum WriteOutcome {
 pub enum AvailabilityReason {
     RequiresBothEarbuds,
     NoReadBack,
+    NoDeviceState,
 }
 
 impl From<device::SettingWriteOutcome> for SettingWriteOutcome {
@@ -193,6 +194,7 @@ impl From<client::availability::AvailabilityReason> for AvailabilityReason {
                 Self::RequiresBothEarbuds
             }
             client::availability::AvailabilityReason::NoReadBack => Self::NoReadBack,
+            client::availability::AvailabilityReason::NoDeviceState => Self::NoDeviceState,
         }
     }
 }

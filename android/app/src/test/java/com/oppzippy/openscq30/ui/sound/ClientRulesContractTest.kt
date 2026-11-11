@@ -2,6 +2,13 @@ package com.oppzippy.openscq30.ui.sound
 
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
+import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
+import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
+import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
+import com.oppzippy.openscq30.lib.bindings.clientPresetSummary
+import com.oppzippy.openscq30.lib.bindings.clientSettingsPresentation
+import com.oppzippy.openscq30.lib.bindings.clientSoundModeSettingIds
+import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
 import com.oppzippy.openscq30.lib.wrapper.Equalizer
 import com.oppzippy.openscq30.lib.wrapper.QuickPreset
 import com.oppzippy.openscq30.lib.wrapper.QuickPresetField
@@ -47,7 +54,11 @@ class ClientRulesContractTest {
             val category = case.getValue("category").takeUnless { it == JsonNull }?.jsonPrimitive?.content
             assertEquals(
                 case.getValue("group").jsonPrimitive.content,
-                settingGroup(case.getValue("id").jsonPrimitive.content, category).name,
+                clientGroupSettings(
+                    listOf(
+                        ClientSettingCategory(category.orEmpty(), listOf(case.getValue("id").jsonPrimitive.content)),
+                    ),
+                ).single().group,
             )
         }
         fixtures.getValue("availability").jsonArray.forEach { item ->
@@ -60,8 +71,12 @@ class ClientRulesContractTest {
                     put("dualConnections", Setting.ToggleSetting(true))
                 }
             }
-            scenario.getValue("cases").jsonArray.forEach { caseElement ->
-                val case = caseElement.jsonObject
+            val cases = scenario.getValue("cases").jsonArray.map { it.jsonObject }
+            val availability = clientSettingsPresentation(
+                values,
+                cases.map { it.getValue("id").jsonPrimitive.content },
+            ).availability
+            cases.forEach { case ->
                 val id = case.getValue("id").jsonPrimitive.content
                 val reason = case.getValue("reason").takeUnless { it == JsonNull }
                 val expected = when (case.getValue("status").jsonPrimitive.content) {
@@ -76,7 +91,28 @@ class ClientRulesContractTest {
 
                     else -> error("unknown availability $case")
                 }
-                assertEquals(id, expected, settingAvailability(values, id))
+                assertEquals(id, expected, availability.getValue(id))
+            }
+        }
+        fixtures.getValue("settingControls").jsonArray.forEach { item ->
+            val scenario = item.jsonObject
+            val values = scenario.getValue("settings").jsonObject.mapValues { (_, value) ->
+                val primitive = value.jsonPrimitive
+                if (primitive.isString) {
+                    val mode = primitive.content
+                    Setting.SelectSetting(Select(listOf(mode), listOf(mode)), mode)
+                } else {
+                    Setting.ToggleSetting(primitive.boolean)
+                }
+            }
+            val cases = scenario.getValue("cases").jsonObject
+            val controls = clientSettingsPresentation(values, cases.keys.toList()).controls
+            cases.forEach { (id, expected) ->
+                assertEquals(
+                    "$id with settings $values",
+                    expected.jsonPrimitive.content.lowercase(),
+                    controls[id]?.name?.lowercase() ?: "enabled",
+                )
             }
         }
         fixtures.getValue("isTws").jsonArray.forEach { item ->
@@ -117,47 +153,30 @@ class ClientRulesContractTest {
             val lastApplied = case.getValue("lastApplied").takeUnless { it == JsonNull }?.jsonPrimitive?.content
             assertEquals(
                 case.getValue("status").jsonPrimitive.content,
-                soundPresetStatus(QuickPreset("p", fields), values, lastApplied).name,
+                clientPresetSummary(QuickPreset("p", fields), values, lastApplied).status,
             )
+        }
+        fun modeValues(case: Map<String, JsonElement>): Map<String, Setting> = buildMap {
+            listOf("ambientSoundMode", "noiseCancelingMode", "transparencyMode").forEach { id ->
+                val mode = case[id]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
+                if (mode != null) put(id, Setting.SelectSetting(Select(listOf(mode), listOf(mode)), mode))
+            }
         }
         fixtures.getValue("adaptiveLevel").jsonArray.forEach { item ->
             val case = item.jsonObject
-            val values = buildMap {
-                case["ambientSoundMode"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let { mode ->
-                    put(
-                        "ambientSoundMode",
-                        Setting.SelectSetting(
-                            Select(
-                                listOf("NoiseCanceling", "Transparency", "Normal"),
-                                listOf("NoiseCanceling", "Transparency", "Normal"),
-                            ),
-                            mode,
-                        ),
-                    )
-                }
-                case.getValue("noiseCancelingMode").takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let { mode ->
-                    put(
-                        "noiseCancelingMode",
-                        Setting.SelectSetting(
-                            Select(listOf("Custom", "Adaptive"), listOf("Custom", "Adaptive")),
-                            mode,
-                        ),
-                    )
-                }
-            }
+            val values = modeValues(case) + ("adaptiveNoiseCanceling" to Setting.InformationSetting("1/5", "1/5"))
             assertEquals(
                 case.getValue("shown").jsonPrimitive.boolean,
-                showsAdaptiveNoiseCanceling(values),
+                clientDisplayedSettings(values)["adaptiveNoiseCanceling"] != null,
             )
         }
-        fixtures.getValue("strengthIsSetByUser").jsonArray.forEach { item ->
+        fixtures.getValue("soundModeRows").jsonArray.forEach { item ->
             val case = item.jsonObject
-            val modeId = case.getValue("modeId").jsonPrimitive.content
-            val value = case["value"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
-            val values = value?.let {
-                mapOf(modeId to Setting.SelectSetting(Select(listOf(it), listOf(it)), it))
-            }.orEmpty()
-            assertEquals(case.getValue("user").jsonPrimitive.boolean, strengthIsSetByUser(values, modeId))
+            val scale = case["scale"]?.jsonPrimitive?.boolean ?: false
+            assertEquals(
+                case.getValue("shown").jsonArray.map { it.jsonPrimitive.content },
+                clientVisibleSoundModeSettings(modeValues(case), clientSoundModeSettingIds(), scale),
+            )
         }
     }
 }

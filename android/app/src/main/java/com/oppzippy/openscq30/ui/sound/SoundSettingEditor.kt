@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
+import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
 import com.oppzippy.openscq30.lib.bindings.WriteOutcome
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.MultiSelectWithRemoveCommandInner
@@ -97,6 +98,12 @@ val LocalSettingWriteErrors = staticCompositionLocalOf<Map<String, WriteOutcome>
 /** While the connection is recovering, controls show the last known values but cannot change them. */
 val LocalSettingsReadOnly = staticCompositionLocalOf { false }
 
+@Composable
+internal fun isSettingEditorEnabled(settingId: String): Boolean = LocalSettingControls.current[settingId] == null &&
+    LocalPendingSettingWrites.current[settingId] == null &&
+    !LocalSettingsReadOnly.current &&
+    settingAvailability(LocalSettingAvailability.current, settingId).isAvailable()
+
 /** Renders the backend capability directly, including options unknown to this UI version. */
 @Composable
 fun SoundSettingEditor(
@@ -105,12 +112,12 @@ fun SoundSettingEditor(
     setSettings: (List<Pair<String, Value>>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (LocalSettingControls.current[settingId] == ClientSettingControl.HIDDEN) return
     val name = translateSettingId(settingId)
     val pending = LocalPendingSettingWrites.current[settingId]
     val requested = pending?.requestedValue
-    val readOnly = LocalSettingsReadOnly.current
-    val availability = LocalSettingAvailability.current[settingId]
-    val enabled = pending == null && !readOnly && availability?.isAvailable() != false
+    val availability = settingAvailability(LocalSettingAvailability.current, settingId)
+    val enabled = isSettingEditorEnabled(settingId)
     val onChange: (Value) -> Unit = { if (enabled) setSettings(listOf(settingId to it)) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(
@@ -290,7 +297,7 @@ fun SoundSettingEditor(
                 }
             }
         }
-        availability?.blockedReason()?.let { reason ->
+        availability.blockedReason()?.let { reason ->
             Text(
                 stringResource(availabilityReasonText(reason)),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -312,7 +319,7 @@ fun SoundSettingEditor(
     }
 }
 
-private fun selectValue(requested: Value?, confirmed: String?): String? = when (requested) {
+internal fun selectValue(requested: Value?, confirmed: String?): String? = when (requested) {
     is Value.StringValue -> requested.value
     is Value.OptionalStringValue -> requested.value
     else -> confirmed
@@ -331,6 +338,8 @@ internal fun writeErrorText(outcome: WriteOutcome): String = when (outcome) {
             stringResource(R.string.setting_write_unsupported_requires_both_earbuds)
 
         AvailabilityReason.NO_READ_BACK -> stringResource(R.string.setting_write_unsupported_no_read_back)
+
+        AvailabilityReason.NO_DEVICE_STATE -> stringResource(R.string.setting_availability_no_device_state)
     }
 
     is WriteOutcome.Applied -> ""

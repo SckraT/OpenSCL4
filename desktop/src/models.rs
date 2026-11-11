@@ -11,6 +11,17 @@ pub fn updated<T: Clone + PartialEq + 'static>(
     current: &ModelRc<T>,
     rows: Vec<T>,
 ) -> Option<ModelRc<T>> {
+    updated_with(current, rows, |shown, row| shown == row)
+}
+
+/// Like [`updated`], but `same` decides whether the shown row can stay. A row that carries a model of its own, such
+/// as a card's list of fields, equals a freshly built one only by that model's identity, so the caller compares what
+/// the rows say and keeps the shown model when the words have not changed.
+pub fn updated_with<T: Clone + 'static>(
+    current: &ModelRc<T>,
+    rows: Vec<T>,
+    same: impl Fn(&T, &T) -> bool,
+) -> Option<ModelRc<T>> {
     let Some(model) = current
         .as_any()
         .downcast_ref::<VecModel<T>>()
@@ -19,7 +30,10 @@ pub fn updated<T: Clone + PartialEq + 'static>(
         return Some(ModelRc::new(VecModel::from(rows)));
     };
     for (index, row) in rows.into_iter().enumerate() {
-        if model.row_data(index).as_ref() != Some(&row) {
+        if !model
+            .row_data(index)
+            .is_some_and(|shown| same(&shown, &row))
+        {
             model.set_row_data(index, row);
         }
     }
@@ -71,5 +85,27 @@ mod tests {
         let longer = updated(&shown, vec![1, 2, 3, 4]).expect("a new model");
         assert_eq!(4, longer.row_count());
         assert!(updated(&ModelRc::default(), vec![1]).is_some());
+    }
+
+    #[test]
+    fn a_row_compared_as_the_same_keeps_the_one_the_window_shows() {
+        #[derive(Clone)]
+        struct Row {
+            list: ModelRc<i32>,
+        }
+
+        let shown_list = ModelRc::new(VecModel::from(vec![1, 2]));
+        let shown = ModelRc::new(VecModel::from(vec![Row {
+            list: shown_list.clone(),
+        }]));
+        let fresh_list = ModelRc::new(VecModel::from(vec![1, 2]));
+        let fresh = Row {
+            list: fresh_list.clone(),
+        };
+        let same = |old: &Row, new: &Row| old.list.iter().eq(new.list.iter());
+
+        assert!(updated_with(&shown, vec![fresh], same).is_none());
+        assert_ne!(shown_list, fresh_list, "the lists are different models");
+        assert_eq!(shown.row_data(0).unwrap().list, shown_list);
     }
 }

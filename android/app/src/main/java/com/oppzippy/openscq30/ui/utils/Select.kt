@@ -247,81 +247,6 @@ fun ModifiableSelect(
     }
 }
 
-@Composable
-fun MultiSelect(
-    modifier: Modifier = Modifier,
-    name: String,
-    options: List<String>,
-    selectedOptions: Set<Int>,
-    onChange: (Set<Int>) -> Unit,
-    onRemove: ((Int) -> Unit)? = null,
-) {
-    var removeOptionConfirmation by remember { mutableStateOf<Int?>(null) }
-    removeOptionConfirmation?.let { removeIndex ->
-        val optionName = options.getOrElse(removeIndex) { stringResource(R.string.unknown) }
-        AlertDialog(
-            onDismissRequest = { removeOptionConfirmation = null },
-            title = { Text(name) },
-            text = { Text(stringResource(R.string.delete_confirm, optionName)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        // this should always be true since the remove button will only show when onRemove is not null
-                        if (onRemove != null) {
-                            onRemove(removeIndex)
-                        }
-                        removeOptionConfirmation = null
-                    },
-                ) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                Button(onClick = { removeOptionConfirmation = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
-
-    Card(modifier.padding(vertical = 8.dp)) {
-        Column(Modifier.padding(8.dp)) {
-            Text(text = name)
-            if (options.isEmpty()) {
-                Text(stringResource(R.string.none))
-            } else {
-                options.forEachIndexed { index, value ->
-                    val isChecked = selectedOptions.contains(index)
-                    LabeledSwitch(
-                        label = value,
-                        isChecked = isChecked,
-                        onCheckedChange = { isChecked ->
-                            if (isChecked) {
-                                onChange(selectedOptions.toMutableSet().apply { add(index) })
-                            } else {
-                                onChange(selectedOptions.toMutableSet().apply { remove(index) })
-                            }
-                        },
-                        extraButtons = {
-                            Spacer(Modifier.height(48.dp))
-                            if (onRemove != null && !isChecked) {
-                                FilledIconButton(
-                                    onClick = { removeOptionConfirmation = index },
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.remove_24px),
-                                        contentDescription = stringResource(R.string.delete),
-                                    )
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun PreviewSelect() {
@@ -346,45 +271,6 @@ private fun PreviewModifiableSelect() {
             onSelect = {},
             onAddOption = {},
             onRemoveOption = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PreviewMultiSelectZeroSelections() {
-    OpenSCQ30Theme {
-        MultiSelect(
-            name = "Number",
-            options = listOf("One", "Two", "Three"),
-            selectedOptions = emptySet(),
-            onChange = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PreviewMultiSelectOneSelection() {
-    OpenSCQ30Theme {
-        MultiSelect(
-            name = "Number",
-            options = listOf("One", "Two", "Three"),
-            selectedOptions = setOf(0),
-            onChange = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PreviewMultiSelectMultipleSelections() {
-    OpenSCQ30Theme {
-        MultiSelect(
-            name = "Number",
-            options = listOf("One", "Two", "Three"),
-            selectedOptions = setOf(0, 2),
-            onChange = {},
         )
     }
 }

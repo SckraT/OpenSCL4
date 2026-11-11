@@ -26,7 +26,7 @@ class SettingAvailabilityTest {
 
     @Test
     fun ldacCanBeReadButNotChangedWithOneEarbud() {
-        val availability = settingAvailability(oneEarbud, "ldac")
+        val availability = settingsPresentation(oneEarbud).availability.getValue("ldac")
 
         assertFalse(availability.isAvailable())
         assertEquals(AvailabilityReason.REQUIRES_BOTH_EARBUDS, availability.blockedReason())
@@ -35,31 +35,50 @@ class SettingAvailabilityTest {
 
     @Test
     fun theEqualizerIsUnavailableWithOneEarbud() {
-        val availability = settingAvailability(oneEarbud, "volumeAdjustments")
+        val availability = settingsPresentation(oneEarbud).availability.getValue(EQUALIZER_AVAILABILITY_ID)
 
         assertTrue(availability is ClientSettingAvailability.Unavailable)
         assertEquals(AvailabilityReason.REQUIRES_BOTH_EARBUDS, availability.blockedReason())
         // the device stops reporting the equalizer settings entirely with one earbud
         val withoutEqualizerSettings = mapOf("twsStatus" to twsStatus("Disconnected"))
-        assertTrue(
-            settingAvailability(withoutEqualizerSettings, "volumeAdjustments") is ClientSettingAvailability.Unavailable,
+        assertEquals(
+            availability,
+            settingsPresentation(withoutEqualizerSettings).availability.getValue(EQUALIZER_AVAILABILITY_ID),
         )
     }
 
     @Test
     fun everySettingIsAvailableWithBothEarbuds() {
-        for (id in listOf("ldac", "volumeAdjustments", "wearingDetection")) {
-            assertTrue(id, settingAvailability(bothEarbuds, id).isAvailable())
+        val settings = bothEarbuds - EQUALIZER_AVAILABILITY_ID + ("wearingDetection" to Setting.ToggleSetting(true))
+        val availability = settingsPresentation(settings).availability
+        assertEquals(settings.keys + EQUALIZER_AVAILABILITY_ID, availability.keys)
+        for ((id, status) in availability) {
+            assertTrue(id, status.isAvailable())
         }
     }
 
     @Test
     fun theAvailabilityMapCoversEverySetting() {
-        val availability = settingAvailability(oneEarbud)
+        val availability = settingsPresentation(oneEarbud).availability
 
         assertEquals(oneEarbud.keys, availability.keys)
         assertTrue(availability.getValue("ldac") is ClientSettingAvailability.ReadOnly)
         assertTrue(availability.getValue("volumeAdjustments") is ClientSettingAvailability.Unavailable)
+    }
+
+    @Test
+    fun withoutAProvidedSnapshotNoSettingLooksAvailable() {
+        val availability = settingAvailability(emptyMap(), EQUALIZER_AVAILABILITY_ID)
+
+        assertTrue(availability is ClientSettingAvailability.Unavailable)
+        assertEquals(AvailabilityReason.NO_DEVICE_STATE, availability.blockedReason())
+    }
+
+    @Test
+    fun providedAvailabilityIsUsedInsteadOfTheDefault() {
+        val availability = settingsPresentation(bothEarbuds).availability
+
+        assertTrue(settingAvailability(availability, EQUALIZER_AVAILABILITY_ID).isAvailable())
     }
 
     @Test

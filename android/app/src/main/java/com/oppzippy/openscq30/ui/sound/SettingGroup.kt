@@ -4,8 +4,9 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
-import com.oppzippy.openscq30.lib.bindings.clientSettingGroup
-import com.oppzippy.openscq30.lib.bindings.clientShowsAdaptiveNoiseCanceling
+import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
+import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
+import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
@@ -53,22 +54,21 @@ fun SettingGroup.title(): String = when (this) {
         translateCategoryId(requireNotNull(libraryCategory))
 }
 
-internal fun settingGroup(settingId: String, categoryId: String?): SettingGroup =
-    SettingGroup.valueOf(clientSettingGroup(settingId, categoryId))
-
-/** The device's settings by group, each in the device's order. Groups without settings are left out. */
+/**
+ * The device's settings by group, each in the device's order, drawn as the library says. Groups without settings are
+ * left out.
+ */
 internal fun groupSettings(
-    settings: List<Pair<String, Setting>>,
     byCategory: Map<String, List<Pair<String, Setting>>>,
 ): Map<SettingGroup, List<Pair<String, Setting>>> {
-    val values = settings.toMap()
-    // the adaptive level is what the device picks itself, so it is left out while the device is not adaptive
-    val shown = settings.filter { (id, _) ->
-        id != "adaptiveNoiseCanceling" || showsAdaptiveNoiseCanceling(values)
+    val categories = byCategory.map { (category, settings) ->
+        ClientSettingCategory(category, settings.map { it.first })
     }
-    val categoryOf = byCategory.flatMap { (category, list) -> list.map { it.first to category } }.toMap()
-    return shown.groupBy { (id, _) -> settingGroup(id, categoryOf[id]) }
+    val displayed = clientDisplayedSettings(byCategory.values.flatten().toMap())
+    return buildMap {
+        for (group in clientGroupSettings(categories)) {
+            val shown = group.ids.mapNotNull { id -> displayed[id]?.let { id to it } }
+            if (shown.isNotEmpty()) put(SettingGroup.valueOf(group.group), shown)
+        }
+    }
 }
-
-internal fun showsAdaptiveNoiseCanceling(values: Map<String, Setting>): Boolean =
-    clientShowsAdaptiveNoiseCanceling(values)

@@ -52,23 +52,14 @@ pub fn init(keep_title_bar: fn()) -> anyhow::Result<()> {
     }
     let backend = slint::BackendSelector::new().backend_name("winit".into());
     #[cfg(target_os = "linux")]
-    let backend = backend.with_winit_window_attributes_hook(|attributes| {
-        use slint::winit_030::winit::platform::{
-            wayland::WindowAttributesExtWayland, x11::WindowAttributesExtX11,
-        };
-        let attributes = WindowAttributesExtWayland::with_name(
-            attributes,
-            "io.github.sckrat.openscl4",
-            "OpenSCL4",
-        );
-        WindowAttributesExtX11::with_name(attributes, "io.github.sckrat.openscl4", "OpenSCL4")
-    });
-    #[cfg(target_os = "linux")]
     let backend = backend.with_winit_custom_application_handler(KeepTitleBar(keep_title_bar));
     // Windows keeps the theme the app gives its title bar
     #[cfg(not(target_os = "linux"))]
     let _ = keep_title_bar;
     backend.select()?;
+    // Wayland recreates the native window when it is opened again from the tray.
+    #[cfg(target_os = "linux")]
+    slint::set_xdg_app_id("io.github.sckrat.openscl4")?;
     Ok(())
 }
 

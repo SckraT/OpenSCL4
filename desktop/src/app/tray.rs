@@ -5,7 +5,7 @@ use slint::{ComponentHandle, ModelRc, VecModel};
 
 use super::{App, Connection, with_app};
 use crate::{
-    Strings, Tray,
+    Strings, Tray, TrayPreset,
     controller::Command,
     model::battery::is_only_one_earbud_connected,
     overview,
@@ -143,17 +143,32 @@ impl App {
         match rows::mode_view(snapshot, scale_preferred) {
             Some(mode) => {
                 tray.set_mode_index(mode.index);
-                tray.set_modes(ModelRc::new(VecModel::from(mode.options)));
+                tray.set_modes(ModelRc::new(VecModel::from(
+                    mode.options
+                        .into_iter()
+                        .map(|option| option.label)
+                        .collect::<Vec<_>>(),
+                )));
             }
             None => tray.set_modes(ModelRc::default()),
         }
         let (on, off) = self.on_off();
         let last_preset = snapshot.last_applied_preset.as_deref();
-        tray.set_presets(ModelRc::new(VecModel::from(overview::presets(
+        let presets = overview::presets(
             snapshot,
             last_preset,
             crate::presets::OnOff { on: &on, off: &off },
-        ))));
+        );
+        tray.set_presets(ModelRc::new(VecModel::from(
+            presets
+                .into_iter()
+                .map(|preset| TrayPreset {
+                    name: preset.name,
+                    applied: preset.status == 2,
+                    enabled: preset.enabled_count > 0,
+                })
+                .collect::<Vec<_>>(),
+        )));
         let ldac = snapshot
             .settings
             .get(&openscq30_lib::settings::SettingId::Ldac);

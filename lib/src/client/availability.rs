@@ -15,6 +15,9 @@ pub enum AvailabilityReason {
     RequiresBothEarbuds,
     #[translate("setting-availability-no-read-back")]
     NoReadBack,
+    /// The client has no device state to decide from, such as before a snapshot reaches the client.
+    #[translate("setting-availability-no-device-state")]
+    NoDeviceState,
 }
 
 /// What a setting allows in the device's current state.

@@ -14,6 +14,3 @@ enum class ConnectionStatus {
     @SerialName("disconnected")
     Disconnected,
 }
-
-@Serializable
-data class DeviceDescriptor(val name: String, val macAddress: String, val model: String)

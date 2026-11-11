@@ -1,8 +1,7 @@
 //! The sound modes as one scale from 1 to 11, as android/app/src/main/java/com/oppzippy/openscq30/ui/sound/
 //! SoundModeScale.kt: 1 to 5 transparency (1 the strongest), 6 normal, 7 to 11 noise canceling (11 the strongest).
 
-use std::str::FromStr;
-
+use crate::i18n::fl;
 use crate::settings::{Setting, SettingId, Value};
 
 use super::SettingMap;
@@ -17,9 +16,10 @@ pub mod ambient_mode {
     pub const NOISE_CANCELING: &str = "NoiseCanceling";
     pub const TRANSPARENCY: &str = "Transparency";
     pub const NORMAL: &str = "Normal";
+    pub const AIRPLANE: &str = "AirplaneMode";
 
     /// Every name a rule may read. The shared examples must cover each one.
-    pub const ALL: &[&str] = &[NOISE_CANCELING, TRANSPARENCY, NORMAL];
+    pub const ALL: &[&str] = &[NOISE_CANCELING, TRANSPARENCY, NORMAL, AIRPLANE];
 }
 
 /// The names a device gives its noise canceling mode. The mode whose strength the user sets is called `Manual` on
@@ -62,22 +62,117 @@ pub fn supports_sound_mode_scale(model: &str, settings: &SettingMap) -> bool {
         .all(|mode| options.iter().any(|o| o == mode))
 }
 
-/// Whether the adaptive noise canceling level is worth showing. It is not: the device picks the level itself and
-/// reports the same number for as long as it is in the adaptive mode, so the row said "1/5" no matter what the
-/// headphones were doing. The rule stays here, shared by both clients, so the row comes back in one place once a
-/// device is known to report a level that moves.
-pub fn shows_adaptive_noise_canceling(_settings: &SettingMap) -> bool {
-    false
+/// The settings shown with the ambient sound mode itself rather than in the rest of the page. The scale shows the
+/// strengths itself, so these are the only settings [`mode_setting_is_visible`] decides; every other setting on the page
+/// stays visible.
+pub const MODE_SETTING_IDS: &[SettingId] = &[
+    SettingId::AmbientSoundMode,
+    SettingId::NoiseCancelingMode,
+    SettingId::CustomNoiseCanceling,
+    SettingId::ManualNoiseCanceling,
+    SettingId::TransparencyMode,
+    SettingId::ManualTransparency,
+    SettingId::AirplaneMode,
+];
+
+/// How one of [`MODE_SETTING_IDS`] follows the current ambient sound mode.
+enum ModeSettingRule {
+    AlwaysHidden,
+    InMode(&'static str),
+    ManualStrength {
+        mode: &'static str,
+        mode_setting: SettingId,
+    },
+}
+
+/// The rule for a setting in [`MODE_SETTING_IDS`], or None for a setting the mode does not govern. Every id in the
+/// shared set needs a rule; the test below keeps the two from drifting apart.
+fn mode_setting_rule(id: SettingId) -> Option<ModeSettingRule> {
+    Some(match id {
+        SettingId::AmbientSoundMode => ModeSettingRule::AlwaysHidden,
+        SettingId::NoiseCancelingMode | SettingId::CustomNoiseCanceling => {
+            ModeSettingRule::InMode(ambient_mode::NOISE_CANCELING)
+        }
+        SettingId::ManualNoiseCanceling => ModeSettingRule::ManualStrength {
+            mode: ambient_mode::NOISE_CANCELING,
+            mode_setting: SettingId::NoiseCancelingMode,
+        },
+        SettingId::TransparencyMode => ModeSettingRule::InMode(ambient_mode::TRANSPARENCY),
+        SettingId::ManualTransparency => ModeSettingRule::ManualStrength {
+            mode: ambient_mode::TRANSPARENCY,
+            mode_setting: SettingId::TransparencyMode,
+        },
+        SettingId::AirplaneMode => ModeSettingRule::InMode(ambient_mode::AIRPLANE),
+        _ => return None,
+    })
+}
+
+/// The settings of [`MODE_SETTING_IDS`] shown with the current mode and `scale`, in their shared order.
+pub fn visible_mode_setting_ids(settings: &SettingMap, scale: bool) -> Vec<SettingId> {
+    MODE_SETTING_IDS
+        .iter()
+        .copied()
+        .filter(|id| mode_setting_is_visible(settings, *id, scale))
+        .collect()
+}
+
+/// Whether a setting belongs with the current mode. The scale already contains the manual strength controls. A
+/// setting outside [`MODE_SETTING_IDS`] is not the rule's business and stays visible.
+pub fn mode_setting_is_visible(settings: &SettingMap, id: SettingId, scale: bool) -> bool {
+    let Some(rule) = mode_setting_rule(id) else {
+        // a new id in the shared set without a rule of its own stays hidden instead of appearing where it may not
+        // belong; any other setting on the page is not the rule's business
+        return !MODE_SETTING_IDS.contains(&id);
+    };
+    let Some((_, mode)) = ambient(settings) else {
+        return true;
+    };
+    match rule {
+        ModeSettingRule::AlwaysHidden => false,
+        ModeSettingRule::InMode(wanted) => mode == wanted,
+        ModeSettingRule::ManualStrength {
+            mode: wanted,
+            mode_setting,
+        } => !scale && mode == wanted && strength_is_set_by_user(settings, mode_setting),
+    }
+}
+
+/// Devices can keep reporting the same level while adjusting it automatically. Show that status on both clients.
+fn adaptive_noise_canceling_display(settings: &SettingMap) -> Option<Setting> {
+    if ambient(settings).is_some_and(|(_, mode)| mode != ambient_mode::NOISE_CANCELING)
+        || !matches!(
+            settings.get(&SettingId::NoiseCancelingMode),
+            Some(Setting::Select { value, .. }) if value == noise_canceling_mode::ADAPTIVE
+        )
+    {
+        return None;
+    }
+    let Setting::Information { value, .. } = settings.get(&SettingId::AdaptiveNoiseCanceling)?
+    else {
+        return None;
+    };
+    Some(Setting::Information {
+        value: value.clone(),
+        translated_value: fl!("adaptive-noise-canceling-automatically"),
+    })
+}
+
+/// The setting a client draws for `id`: everything is shown as the device reports it, except the adaptive noise
+/// canceling level, which reads as the status saying the device adjusts it automatically. A setting the device does not
+/// report has nothing to draw, which is also how the clients leave out the level while the mode is not adaptive.
+pub fn displayed_setting(settings: &SettingMap, id: SettingId) -> Option<Setting> {
+    if id == SettingId::AdaptiveNoiseCanceling {
+        adaptive_noise_canceling_display(settings)
+    } else {
+        settings.get(&id).cloned()
+    }
 }
 
 /// Whether the user sets the strength of the current mode. In the adaptive mode the device picks the level itself,
 /// and keeps reporting the level it last chose, so a strength editor there would change nothing. The modes where the
 /// user sets it are named `Manual` and `Custom`. A device without the mode setting has no adaptive mode, so its
 /// strength belongs to the user.
-pub fn strength_is_set_by_user(settings: &SettingMap, mode_id: &str) -> bool {
-    let Ok(mode_id) = SettingId::from_str(mode_id) else {
-        return true;
-    };
+fn strength_is_set_by_user(settings: &SettingMap, mode_id: SettingId) -> bool {
     match settings.get(&mode_id) {
         Some(Setting::Select { value, .. }) => noise_canceling_mode::STRENGTH_IS_SET_BY_USER
             .iter()
@@ -130,6 +225,7 @@ pub fn sound_mode_scale_settings(position: i32) -> Vec<(SettingId, Value)> {
 #[cfg(test)]
 mod tests {
     use crate::settings::{Range, Select};
+    use strum::VariantArray;
 
     use super::*;
 
@@ -241,6 +337,52 @@ mod tests {
         assert_eq!(Some(5), sound_mode_scale_value(&transparency));
     }
 
+    fn adaptive_settings(mode: &'static str) -> SettingMap {
+        let mut settings = device(ambient_mode::NOISE_CANCELING, 3, 2);
+        settings.insert(
+            SettingId::NoiseCancelingMode,
+            select(
+                &[noise_canceling_mode::MANUAL, noise_canceling_mode::ADAPTIVE],
+                mode,
+            ),
+        );
+        settings.insert(
+            SettingId::AdaptiveNoiseCanceling,
+            Setting::Information {
+                value: "1/5".into(),
+                translated_value: "1/5".into(),
+            },
+        );
+        settings
+    }
+
+    #[test]
+    fn the_adaptive_level_is_shown_as_the_status_saying_the_device_sets_it() {
+        let adaptive = adaptive_settings(noise_canceling_mode::ADAPTIVE);
+        assert_eq!(
+            Some(Setting::Information {
+                value: "1/5".into(),
+                translated_value: "Automatically".into(),
+            }),
+            displayed_setting(&adaptive, SettingId::AdaptiveNoiseCanceling)
+        );
+        // every other setting is shown as the device reports it
+        assert_eq!(
+            adaptive.get(&SettingId::AmbientSoundMode).cloned(),
+            displayed_setting(&adaptive, SettingId::AmbientSoundMode)
+        );
+        assert_eq!(None, displayed_setting(&adaptive, SettingId::SpatialAudio));
+    }
+
+    #[test]
+    fn the_adaptive_level_is_left_out_while_the_mode_is_not_adaptive() {
+        let manual = adaptive_settings(noise_canceling_mode::MANUAL);
+        assert_eq!(
+            None,
+            displayed_setting(&manual, SettingId::AdaptiveNoiseCanceling)
+        );
+    }
+
     #[test]
     fn the_adaptive_mode_leaves_the_strength_to_the_device() {
         let with_mode = |mode: &'static str| {
@@ -256,22 +398,22 @@ mod tests {
         };
         assert!(!strength_is_set_by_user(
             &with_mode(noise_canceling_mode::ADAPTIVE),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
         for mode in noise_canceling_mode::STRENGTH_IS_SET_BY_USER {
             assert!(
-                strength_is_set_by_user(&with_mode(mode), "noiseCancelingMode"),
+                strength_is_set_by_user(&with_mode(mode), SettingId::NoiseCancelingMode),
                 "{mode}"
             );
         }
         // a device without the mode setting has no adaptive mode, so the user sets the strength
         assert!(strength_is_set_by_user(
             &device(ambient_mode::NOISE_CANCELING, 3, 2),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
         assert!(strength_is_set_by_user(
             &SettingMap::new(),
-            "noiseCancelingMode"
+            SettingId::NoiseCancelingMode
         ));
     }
 
@@ -304,6 +446,17 @@ mod tests {
             ],
             sound_mode_scale_settings(7)
         );
+    }
+
+    #[test]
+    fn every_setting_with_a_mode_rule_is_in_the_shared_mode_setting_ids() {
+        for id in SettingId::VARIANTS {
+            assert_eq!(
+                MODE_SETTING_IDS.contains(id),
+                mode_setting_rule(*id).is_some(),
+                "{id:?}"
+            );
+        }
     }
 
     #[test]

@@ -36,15 +36,6 @@ imports = [
 into_custom = "Json.decodeFromString<ConnectionDescriptor>({})"
 from_custom = "Json.encodeToString({})"
 
-[bindings.kotlin.custom_types.DeviceDescriptor]
-type_name = "DeviceDescriptor"
-imports = [
-    "kotlinx.serialization.json.Json",
-    "com.oppzippy.openscq30.lib.wrapper.DeviceDescriptor",
-]
-into_custom = "Json.decodeFromString<DeviceDescriptor>({})"
-from_custom = "Json.encodeToString({})"
-
 [bindings.kotlin.custom_types.Setting]
 type_name = "Setting"
 imports = [

@@ -94,6 +94,7 @@
     <string name="compact_layout">Компактный вид</string>
     <string name="setting_availability_requires_both_earbuds">Изменение доступно при обоих наушниках</string>
     <string name="setting_availability_no_read_back">Устройство не подтверждает изменения</string>
+    <string name="setting_availability_no_device_state">Данных о состоянии устройства пока нет</string>
     <string name="setting_write_rejected">Устройство не применило настройку</string>
     <string name="setting_write_timed_out">Устройство не подтвердило настройку</string>
     <string name="setting_write_disconnected">Устройство отключилось</string>

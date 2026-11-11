@@ -6,7 +6,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SettingGroupsTest {
-    private fun groupOf(id: String, category: String = "miscellaneous") = settingGroup(id, category)
+    private fun groupOf(id: String, category: String = "miscellaneous"): SettingGroup {
+        val setting = Setting.ToggleSetting(false)
+        return groupSettings(mapOf(category to listOf(id to setting))).keys.single()
+    }
 
     @Test
     fun theLibertyFourProMiscellaneousSettingsAllFindAGroup() {
@@ -46,7 +49,6 @@ class SettingGroupsTest {
         assertEquals(SettingGroup.Equalizer, groupOf("importCustomEqualizerProfiles", "equalizerImportExport"))
         assertEquals(SettingGroup.Lights, groupOf("lightsColor", "lights"))
         assertEquals(SettingGroup.Other, groupOf("somethingNew"))
-        assertEquals(SettingGroup.Other, settingGroup("somethingNew", null))
     }
 
     @Test
@@ -60,13 +62,12 @@ class SettingGroupsTest {
     @Test
     fun everySettingIsShownOnceInTheDeviceOrder() {
         val toggle = Setting.ToggleSetting(false)
-        val settings = listOf("wearingDetection" to toggle, "ldac" to toggle, "spatialAudio" to toggle)
         val byCategory = mapOf(
             "case" to listOf("spatialAudio" to toggle),
             "miscellaneous" to listOf("wearingDetection" to toggle, "ldac" to toggle, "spatialAudio" to toggle),
         )
-        val grouped = groupSettings(settings, byCategory)
-        assertEquals(listOf("ldac", "spatialAudio"), grouped[SettingGroup.SoundEffects]?.map { it.first })
+        val grouped = groupSettings(byCategory)
+        assertEquals(listOf("spatialAudio", "ldac"), grouped[SettingGroup.SoundEffects]?.map { it.first })
         assertEquals(listOf("wearingDetection"), grouped[SettingGroup.Comfort]?.map { it.first })
         assertEquals(null, grouped[SettingGroup.Case])
     }
@@ -84,17 +85,20 @@ class SettingGroupsTest {
 
     @Test
     fun theAdaptiveLevelIsLeftOutWhileTheDeviceIsNotAdaptive() {
-        val custom = groupSettings(adaptiveLevel("Custom"), mapOf("soundModes" to adaptiveLevel("Custom")))
+        val settings = adaptiveLevel("Custom")
+        val custom = groupSettings(mapOf("soundModes" to settings))
         assertEquals(listOf("noiseCancelingMode"), custom[SettingGroup.SoundModes]?.map { it.first })
     }
 
     @Test
-    fun theAdaptiveLevelNeverShows() {
-        // The device picks the level and reports the same number throughout, so the row only ever said "1/5".
-        val adaptive = groupSettings(adaptiveLevel("Adaptive"), mapOf("soundModes" to adaptiveLevel("Adaptive")))
+    fun theAdaptiveModeShowsAnAutomaticStatus() {
+        val settings = adaptiveLevel("Adaptive")
+        val adaptive = groupSettings(mapOf("soundModes" to settings))
+        val (id, display) = adaptive.getValue(SettingGroup.SoundModes).last()
+        assertEquals("adaptiveNoiseCanceling", id)
         assertEquals(
-            listOf("noiseCancelingMode"),
-            adaptive[SettingGroup.SoundModes]?.map { it.first },
+            Setting.InformationSetting("1/5", "Automatically"),
+            display,
         )
     }
 }

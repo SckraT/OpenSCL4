@@ -219,7 +219,7 @@ pub(super) struct EqualizerState {
 }
 
 impl App {
-    fn numbers(&self) -> Numbers {
+    pub(super) fn numbers(&self) -> Numbers {
         Numbers {
             comma: crate::model::languages::find(self.language).is_some_and(|l| l.decimal_comma),
         }
@@ -394,7 +394,9 @@ impl App {
     pub(super) fn render_equalizer(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         let numbers = self.numbers();
         let (presets, preset, preset_count) = eq_view::presets(snapshot, self.equalizer.expanded);
-        state.set_eq_presets(ModelRc::new(VecModel::from(presets)));
+        if let Some(presets) = crate::models::updated(&state.get_eq_presets(), presets) {
+            state.set_eq_presets(presets);
+        }
         state.set_eq_preset(preset.into());
         state.set_eq_preset_count(preset_count as i32);
         state.set_eq_expanded(self.equalizer.expanded);
@@ -404,25 +406,20 @@ impl App {
         if let Some((equalizer, _, read_only)) = equalizer {
             let values = eq_view::shown_values(snapshot, self.equalizer.draft.as_deref());
             state.set_eq_read_only(read_only);
-            state.set_eq_bands(ModelRc::new(VecModel::from(eq_view::bands(
-                equalizer, values, numbers,
-            ))));
-            state.set_eq_lines(ModelRc::new(VecModel::from(eq_view::lines(
-                equalizer, numbers,
-            ))));
+            if let Some(bands) = crate::models::updated(
+                &state.get_eq_bands(),
+                eq_view::bands(equalizer, values, numbers),
+            ) {
+                state.set_eq_bands(bands);
+            }
+            if let Some(lines) =
+                crate::models::updated(&state.get_eq_lines(), eq_view::lines(equalizer, numbers))
+            {
+                state.set_eq_lines(lines);
+            }
             let (line, area) = eq_view::chart(values, equalizer.min, equalizer.max);
             state.set_eq_chart_line(line.into());
             state.set_eq_chart_area(area.into());
-            state.set_eq_min_text(
-                numbers
-                    .signed(equalizer.min, equalizer.fraction_digits)
-                    .into(),
-            );
-            state.set_eq_max_text(
-                numbers
-                    .signed(equalizer.max, equalizer.fraction_digits)
-                    .into(),
-            );
         } else {
             state.set_eq_bands(ModelRc::default());
         }

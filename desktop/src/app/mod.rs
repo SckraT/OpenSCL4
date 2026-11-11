@@ -13,7 +13,10 @@ use macaddr::MacAddr6;
 use openscq30_i18n::Translate;
 use openscq30_lib::{
     DeviceModel,
-    client::availability::{SettingAvailability, setting_availability},
+    client::{
+        availability::{SettingAvailability, setting_availability},
+        controls::ControlSide as LibControlSide,
+    },
     connection::{ConnectionDescriptor, RECOVERY_WINDOW, SessionFailureReason},
     device::{SettingWriteOutcome, WriteOutcome},
     settings::SettingId,
@@ -29,8 +32,8 @@ mod tray;
 pub use tray::show_from_elsewhere;
 
 use crate::{
-    Actions, AppState, AppWindow, Connection as ConnectionView, FailureKind, Page, PairedOption,
-    PaletteChoice, Theme, ToastKind,
+    Actions, AppState, AppWindow, Connection as ConnectionView, ControlSide, FailureKind, Page,
+    PairedOption, PaletteChoice, Theme, ToastKind,
     config::{Accent, AppTheme, Config, SoundModeView},
     controller::{Command, Controller, DeviceSnapshot, Event, Failure},
     model::overview::{OverviewLayout, OverviewPreset},
@@ -171,16 +174,24 @@ fn with_app(f: impl FnOnce(&mut App)) {
 }
 
 pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
+    start_with_dispatch(window, config_dir, |event| {
+        if slint::invoke_from_event_loop(move || with_app(|app| app.on_event(event))).is_err() {
+            tracing::debug!("the window is gone");
+        }
+    })
+}
+
+fn start_with_dispatch(
+    window: &AppWindow,
+    config_dir: &Path,
+    dispatch: impl Fn(Event) + Send + Sync + 'static,
+) -> anyhow::Result<()> {
     let config = Config::load(config_dir.join("openscl4-config.toml"));
     let weak = window.as_weak();
     let controller = Controller::start(
         config_dir.join("database.sqlite"),
         config_dir.to_path_buf(),
-        move |event| {
-            if slint::invoke_from_event_loop(move || with_app(|app| app.on_event(event))).is_err() {
-                tracing::debug!("the window is gone");
-            }
-        },
+        dispatch,
     )?;
     let app = App {
         window: weak,
@@ -337,6 +348,14 @@ fn install_actions(window: &AppWindow) {
     });
     actions.on_copy(|text| with_app(|app| app.copy(&text)));
     actions.on_choose_toggle(|id, on| with_app(|app| app.choose_toggle(&id, on)));
+    actions.on_edit_layout(|| {
+        with_app(|app| {
+            if let Some(window) = app.window() {
+                window.global::<AppState>().set_editing_layout(true);
+                app.render();
+            }
+        });
+    });
     actions.on_layout_visible(|index, visible| {
         with_app(|app| {
             app.change_layout(|layout, blocks| {
@@ -887,11 +906,6 @@ impl App {
             .map(|s| s.model)
             .or(current.map(|p| p.model));
 
-        state.set_devices(ModelRc::new(VecModel::from(view::device_cards(
-            &self.paired,
-            self.current,
-            color,
-        ))));
         state.set_device_name(model.map(view::model_name).unwrap_or_default().into());
         state.set_device_code(model.map(view::model_code).unwrap_or_default().into());
         state.set_device_art(model.map_or_else(
@@ -935,14 +949,52 @@ impl App {
         if self.paired.is_empty() && device_page {
             state.set_page(Page::Devices);
         }
-        state.set_sound_pages(ModelRc::new(VecModel::from(sound)));
-        state.set_device_pages(ModelRc::new(VecModel::from(device)));
-        if let Some(snapshot) = self.snapshot() {
-            self.render_section(&state, snapshot);
+        let page = state.get_page();
+        if page == Page::Devices {
+            state.set_devices(ModelRc::new(VecModel::from(view::device_cards(
+                &self.paired,
+                self.current,
+                color,
+            ))));
         }
-        if self.snapshot().is_none() {
+        if let Some(snapshot) = self.snapshot() {
+            state.set_has_spatial(snapshot.settings.contains_key(&SettingId::SpatialAudio));
+            if !matches!(
+                page,
+                Page::Devices | Page::Settings | Page::Overview | Page::Equalizer | Page::Presets
+            ) {
+                self.render_section(&state, snapshot);
+            }
+            if page == Page::Overview || state.get_editing_layout() || state.get_choosing_toggles()
+            {
+                self.render_overview(&state, snapshot, one_earbud, &sound, &device);
+            }
+            if matches!(page, Page::Overview | Page::SoundModes) {
+                self.render_sound_modes(&state, snapshot);
+            }
+            if matches!(page, Page::Overview | Page::Equalizer) {
+                self.render_equalizer_summary(&state, snapshot);
+            }
+            // The import dialog also reads the band's count from the detailed equalizer model.
+            if page == Page::Equalizer || state.get_importing() {
+                self.render_equalizer(&state, snapshot);
+            }
+            if page == Page::Presets {
+                self.render_presets(&state, snapshot);
+            }
+            if self.editing_preset.is_some() || !state.get_editing_preset().is_empty() {
+                self.render_preset_editor(&state, snapshot);
+            }
+        } else {
             state.set_editing_preset("".into());
         }
+        if let Some(pages) = crate::models::updated(&state.get_sound_pages(), sound) {
+            state.set_sound_pages(pages);
+        }
+        if let Some(pages) = crate::models::updated(&state.get_device_pages(), device) {
+            state.set_device_pages(pages);
+        }
+        state.set_show_one_earbud_badge(self.config.settings.one_earbud_badge);
 
         state.set_error_label(
             self.failed_command
@@ -1000,9 +1052,27 @@ impl App {
     /// The settings of the page that is open, and what its side column needs.
     fn render_section(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         let page = state.get_page();
-        state.set_has_sides(snapshot.settings.contains_key(&SettingId::LeftSinglePress));
-        let side = state.get_controls_side().to_string();
-        let panels = rows::panels(page, snapshot, &side);
+        let mut side = LibControlSide::Left;
+        if page == Page::Controls {
+            let has_controls = |side: LibControlSide| {
+                side.settings()
+                    .any(|id| snapshot.settings.contains_key(&id))
+            };
+            let left = has_controls(LibControlSide::Left);
+            let right = has_controls(LibControlSide::Right);
+            state.set_has_sides(left && right);
+            let show_right = right && (!left || state.get_controls_side() == ControlSide::Right);
+            if show_right {
+                side = LibControlSide::Right;
+            }
+            state.set_controls_side(if show_right {
+                ControlSide::Right
+            } else {
+                ControlSide::Left
+            });
+        }
+        let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
+        let panels = rows::panels(page, snapshot, side, scale_preferred);
         let panels = if matches!(self.connection, Connection::Recovering(_, _)) {
             rows::read_only(panels)
         } else {
@@ -1012,7 +1082,6 @@ impl App {
             state.set_panels(panels);
         }
         state.set_has_ldac(snapshot.settings.contains_key(&SettingId::Ldac));
-        state.set_has_spatial(snapshot.settings.contains_key(&SettingId::SpatialAudio));
         let information = |id: SettingId| match snapshot.settings.get(&id) {
             Some(openscq30_lib::settings::Setting::Information {
                 translated_value, ..
@@ -1020,10 +1089,16 @@ impl App {
             _ => String::new(),
         };
         state.set_case_battery(information(SettingId::CaseBatteryLevel).into());
+    }
 
-        // the overview
-        let one_earbud = is_only_one_earbud_connected(&snapshot.settings);
-        let (sound, device) = view::pages(snapshot, one_earbud);
+    fn render_overview(
+        &self,
+        state: &AppState<'_>,
+        snapshot: &DeviceSnapshot,
+        one_earbud: bool,
+        sound: &[Page],
+        device: &[Page],
+    ) {
         let layout = self.layout();
         state.set_batteries(ModelRc::new(VecModel::from(overview::batteries(
             snapshot, one_earbud,
@@ -1045,10 +1120,10 @@ impl App {
         state.set_quick_toggles(ModelRc::new(VecModel::from(shown)));
         state.set_all_toggles(ModelRc::new(VecModel::from(all)));
         state.set_overview_rows(ModelRc::new(VecModel::from(overview::rows(
-            &layout, snapshot, &sound, &device,
+            &layout, snapshot, sound, device,
         ))));
         state.set_layout_blocks(ModelRc::new(VecModel::from(overview::layout_blocks(
-            &layout, snapshot, &sound, &device,
+            &layout, snapshot, sound, device,
         ))));
         state.set_layout_preset(
             layout
@@ -1056,7 +1131,6 @@ impl App {
                 .and_then(|p| OverviewPreset::ALL.iter().position(|q| *q == p))
                 .map_or(-1, |i| i as i32),
         );
-        state.set_show_one_earbud_badge(self.config.settings.one_earbud_badge);
         let last_preset = snapshot.last_applied_preset.as_deref();
         let (on, off) = self.on_off();
         state.set_presets(ModelRc::new(VecModel::from(overview::presets(
@@ -1064,10 +1138,9 @@ impl App {
             last_preset,
             crate::presets::OnOff { on: &on, off: &off },
         ))));
-        self.render_equalizer_summary(state, snapshot);
-        self.render_equalizer(state, snapshot);
-        self.render_presets(state, snapshot);
+    }
 
+    fn render_sound_modes(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         let scale_preferred = self.config.settings.sound_mode_view == SoundModeView::Scale;
         if let Some(mode) = rows::mode_view(snapshot, scale_preferred) {
             let label = |value: &str| {
@@ -1093,13 +1166,15 @@ impl App {
             if let Some(rows) = crate::models::updated(&state.get_mode_rows(), mode.rows) {
                 state.set_mode_rows(rows);
             }
-            state.set_modes(ModelRc::new(VecModel::from(mode.options)));
+            if let Some(modes) = crate::models::updated(&state.get_modes(), mode.options) {
+                state.set_modes(modes);
+            }
         } else {
             state.set_modes(ModelRc::default());
         }
     }
 
-    /// The equalizer's current profile and curve, for the overview.
+    /// The profile and limits used by both the overview and the equalizer page.
     fn render_equalizer_summary(&self, state: &AppState<'_>, snapshot: &DeviceSnapshot) {
         use openscq30_lib::settings::Setting;
         let name = match (
@@ -1131,10 +1206,15 @@ impl App {
         if let Some(Setting::Equalizer { setting, value, .. }) =
             snapshot.settings.get(&SettingId::VolumeAdjustments)
         {
-            state.set_eq_curve(
-                overview::curve(value, setting.min, setting.max, 600.0, 100.0).into(),
-            );
-            state.set_eq_band_count(value.len() as i32);
+            if state.get_page() == Page::Overview {
+                state.set_eq_curve(
+                    overview::curve(value, setting.min, setting.max, 600.0, 100.0).into(),
+                );
+                state.set_eq_band_count(value.len() as i32);
+            }
+            let numbers = self.numbers();
+            state.set_eq_min_text(numbers.signed(setting.min, setting.fraction_digits).into());
+            state.set_eq_max_text(numbers.signed(setting.max, setting.fraction_digits).into());
             state.set_eq_min(i32::from(setting.min));
             state.set_eq_max(i32::from(setting.max));
         }
@@ -1203,7 +1283,17 @@ fn connection_view(connection: &Connection, no_paired_devices: bool) -> Connecti
 mod tests {
     use super::*;
     use crate::model::SettingMap;
-    use openscq30_lib::settings::Value;
+    use openscq30_lib::{
+        settings::{CategoryId, Equalizer, Setting, Value},
+        storage::{QuickPreset, QuickPresetField},
+    };
+    use slint::{
+        Model,
+        platform::{
+            Platform, PlatformError, WindowAdapter,
+            software_renderer::{MinimalSoftwareWindow, RepaintBufferType},
+        },
+    };
 
     fn snapshot() -> Box<DeviceSnapshot> {
         Box::new(DeviceSnapshot {
@@ -1215,6 +1305,324 @@ mod tests {
             presets: Vec::new(),
             last_applied_preset: None,
         })
+    }
+
+    fn with_headless_window(test: impl FnOnce(&AppWindow, &std::sync::mpsc::Receiver<Event>)) {
+        struct Headless;
+        impl Platform for Headless {
+            fn create_window_adapter(
+                &self,
+            ) -> Result<std::rc::Rc<dyn WindowAdapter>, PlatformError> {
+                Ok(MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer))
+            }
+        }
+        slint::platform::set_platform(Box::new(Headless)).unwrap();
+        let window = AppWindow::new().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("openscl4-config.toml"),
+            "tray = false\nlanguage = \"en\"",
+        )
+        .unwrap();
+        let (dispatch, events) = std::sync::mpsc::channel();
+        start_with_dispatch(&window, dir.path(), move |event| {
+            let _ = dispatch.send(event);
+        })
+        .unwrap();
+        test(&window, &events);
+        stop();
+    }
+
+    #[test]
+    fn a_preset_card_follows_the_device_values_and_current_connection() {
+        use std::time::Instant;
+
+        const PRESET: &str = "Commute";
+        const WEARING: &str = "wearingDetection";
+        const NOT_APPLIED: i32 = 0;
+        const MATCHES_CURRENT: i32 = 1;
+        const APPLIED: i32 = 2;
+
+        with_headless_window(|window, events| {
+            let actions = window.global::<Actions>();
+            let state = window.global::<AppState>();
+            let wait = |description: &str, ready: &dyn Fn() -> bool| {
+                let deadline = Instant::now() + Duration::from_secs(10);
+                while !ready() {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|err| panic!("waiting for {description}: {err}"));
+                    with_app(|app| app.on_event(event));
+                }
+            };
+            let card = || {
+                state
+                    .get_preset_cards()
+                    .iter()
+                    .find(|card| card.name == PRESET)
+            };
+            let wearing = || {
+                state.get_panels().iter().find_map(|panel| {
+                    panel
+                        .rows
+                        .iter()
+                        .find(|row| row.id == WEARING)
+                        .map(|row| row.checked)
+                })
+            };
+
+            actions.invoke_open_add_device();
+            actions.invoke_set_demo(true);
+            actions.invoke_choose_model("A3954".into());
+            wait("the demo device", &|| {
+                state.get_paired_options().row_count() > 0
+            });
+            let mac = state.get_paired_options().row_data(0).unwrap().mac;
+            actions.invoke_pair(mac.clone(), "".into());
+            wait("connection to the demo device", &|| {
+                state.get_connection() == ConnectionView::Connected
+            });
+            actions.invoke_navigate(Page::Comfort);
+            let saved_value = wearing().expect("the demo device has wearing detection");
+
+            actions.invoke_navigate(Page::Presets);
+            actions.invoke_preset_create(PRESET.into(), false);
+            wait("the saved preset", &|| card().is_some());
+            actions.invoke_preset_toggle(PRESET.into(), WEARING.into(), true);
+            wait("the matching preset", &|| {
+                card().is_some_and(|card| card.status == MATCHES_CURRENT)
+            });
+            actions.invoke_preset_edit("".into());
+            actions.invoke_apply_preset(PRESET.into());
+            wait("the applied preset", &|| {
+                card().is_some_and(|card| card.status == APPLIED)
+            });
+
+            actions.invoke_navigate(Page::Comfort);
+            actions.invoke_set_toggle(WEARING.into(), !saved_value);
+            wait("the confirmed setting change", &|| {
+                wearing() == Some(!saved_value)
+            });
+            actions.invoke_navigate(Page::Presets);
+            assert_eq!(card().unwrap().status, NOT_APPLIED);
+
+            actions.invoke_apply_preset(PRESET.into());
+            wait("the applied preset again", &|| {
+                card().is_some_and(|card| card.status == APPLIED)
+            });
+            actions.invoke_disconnect();
+            wait("disconnect", &|| {
+                state.get_connection() == ConnectionView::Off
+            });
+            actions.invoke_connect(mac);
+            wait("reconnect", &|| {
+                state.get_connection() == ConnectionView::Connected
+            });
+            actions.invoke_navigate(Page::Presets);
+            assert_ne!(
+                card().expect("the saved preset survives reconnect").status,
+                APPLIED
+            );
+        });
+    }
+
+    #[test]
+    fn c30i_exposes_controls_for_both_earbuds() {
+        use openscq30_lib::OpenSCQ30Session;
+
+        let model = DeviceModel::SoundcoreA3330;
+        let mac_address = model.demo_mac_address();
+        let paired = PairedDevice {
+            mac_address,
+            model,
+            is_demo: true,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let by_category = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                let session = OpenSCQ30Session::new(dir.path().join("demo.sqlite"))
+                    .await
+                    .unwrap();
+                session.pair(paired).await.unwrap();
+                session
+                    .connect(mac_address)
+                    .await
+                    .unwrap()
+                    .settings_by_category()
+            });
+        let mut snapshot = snapshot();
+        snapshot.mac_address = mac_address;
+        snapshot.model = model;
+        snapshot.categories = by_category
+            .iter()
+            .map(|(category, settings)| (*category, settings.keys().copied().collect()))
+            .collect();
+        snapshot.settings = by_category.into_values().flatten().collect();
+        assert!(!snapshot.settings.contains_key(&SettingId::LeftSinglePress));
+        assert!(!snapshot.settings.contains_key(&SettingId::RightSinglePress));
+
+        with_headless_window(|window, _| {
+            with_app(|app| {
+                app.paired.push(paired);
+                app.current = Some(mac_address);
+                app.on_event(Event::Connected(snapshot));
+                app.navigate(Page::Controls);
+            });
+            let state = window.global::<AppState>();
+            assert!(state.get_has_sides(), "the earbud selector must be visible");
+            let shows = |id: &str| {
+                state
+                    .get_panels()
+                    .iter()
+                    .any(|panel| panel.rows.iter().any(|row| row.id.as_str() == id))
+            };
+            assert!(shows("leftDoublePress"));
+            assert!(shows("leftDoublePressDuringCall"));
+            assert!(!shows("rightDoublePress"));
+            window
+                .global::<Actions>()
+                .invoke_set_side(ControlSide::Right);
+            for id in [
+                "rightDoublePress",
+                "rightTriplePress",
+                "rightLongPress",
+                "rightDoublePressDuringCall",
+                "rightLongPressDuringCall",
+            ] {
+                assert!(shows(id), "{id} is missing");
+            }
+            assert!(!shows("leftDoublePress"));
+            assert!(!shows("leftDoublePressDuringCall"));
+        });
+    }
+
+    #[test]
+    fn renders_the_current_page_and_open_dialogs_from_the_latest_snapshot() {
+        with_headless_window(|window, _| {
+            let state = window.global::<AppState>();
+            let eq_id = SettingId::VolumeAdjustments;
+            let eq = |value| Setting::Equalizer {
+                setting: Equalizer {
+                    band_hz: vec![100].into(),
+                    fraction_digits: 1,
+                    min: -120,
+                    max: 134,
+                },
+                value: vec![value],
+                read_only: false,
+            };
+
+            with_app(|app| {
+                let mut snapshot = snapshot();
+                snapshot.categories = vec![(CategoryId::Equalizer, vec![eq_id])];
+                snapshot.settings.insert(eq_id, eq(0));
+                snapshot.presets.push(QuickPreset {
+                    name: "Test".into(),
+                    fields: vec![QuickPresetField {
+                        setting_id: eq_id,
+                        value: vec![0i16].into(),
+                        is_enabled: true,
+                    }],
+                });
+                app.current = Some(snapshot.mac_address);
+                app.paired.push(PairedDevice {
+                    mac_address: snapshot.mac_address,
+                    model: snapshot.model,
+                    is_demo: true,
+                });
+                app.navigate(Page::Settings);
+                app.on_event(Event::Connected(snapshot));
+                assert_eq!(state.get_page(), Page::Settings);
+                assert_eq!(state.get_layout_blocks().row_count(), 0);
+            });
+
+            window.global::<Actions>().invoke_edit_layout();
+            assert!(state.get_editing_layout());
+            assert!(state.get_layout_blocks().row_count() > 0);
+            state.set_editing_layout(false);
+
+            with_app(|app| {
+                app.navigate(Page::Overview);
+                assert_eq!(state.get_eq_band_count(), 1);
+                assert_eq!(state.get_eq_bands().row_count(), 0);
+                assert_eq!(state.get_preset_cards().row_count(), 0);
+
+                app.navigate(Page::Equalizer);
+                let bands = state.get_eq_bands();
+                assert_eq!(bands.row_data(0).unwrap().value, 0);
+                app.navigate(Page::Overview);
+                let Connection::Connected(snapshot) = &mut app.connection else {
+                    panic!("expected a connected demo device");
+                };
+                snapshot.settings.insert(eq_id, eq(15));
+                app.render();
+                assert_eq!(bands.row_data(0).unwrap().value, 0);
+
+                state.set_importing(true);
+                app.editing_preset = Some("Test".into());
+                app.render();
+                assert_eq!(bands.row_data(0).unwrap().value, 15);
+                assert_eq!(state.get_preset_groups().row_count(), 1);
+                app.navigate(Page::Presets);
+                assert_eq!(state.get_preset_cards().row_count(), 1);
+            });
+        });
+    }
+
+    #[test]
+    fn a_preset_card_keeps_its_fields_model_while_the_fields_do_not_change() {
+        with_headless_window(|window, _| {
+            let state = window.global::<AppState>();
+            with_app(|app| {
+                let mut snapshot = snapshot();
+                let id = SettingId::SpatialAudio;
+                snapshot
+                    .settings
+                    .insert(id, Setting::Toggle { value: true });
+                snapshot.presets.push(QuickPreset {
+                    name: "Commute".into(),
+                    fields: vec![QuickPresetField {
+                        setting_id: id,
+                        value: true.into(),
+                        is_enabled: true,
+                    }],
+                });
+                app.current = Some(snapshot.mac_address);
+                app.paired.push(PairedDevice {
+                    mac_address: snapshot.mac_address,
+                    model: snapshot.model,
+                    is_demo: true,
+                });
+                app.on_event(Event::Connected(snapshot));
+                app.navigate(Page::Presets);
+            });
+
+            let shown = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_eq!(1, shown.row_count());
+
+            with_app(|app| app.render());
+            let kept = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_eq!(
+                shown, kept,
+                "the card's field list was rebuilt even though it says the same"
+            );
+
+            with_app(|app| {
+                let Connection::Connected(snapshot) = &mut app.connection else {
+                    panic!("expected a connected demo device");
+                };
+                snapshot.presets[0].fields[0].value = false.into();
+                app.render();
+            });
+            let changed = state.get_preset_cards().row_data(0).unwrap().fields;
+            assert_ne!(
+                changed, shown,
+                "the card still shows the fields it had before"
+            );
+        });
     }
 
     #[test]

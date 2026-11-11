@@ -72,6 +72,7 @@ fully-transparent = Полная прозрачность
 adaptive = Адаптивный
 manual = Ручной
 adaptive-noise-canceling = Адаптивное шумоподавление
+adaptive-noise-canceling-automatically = Автоматически
 low-noise = Низкий уровень шума
 medium-noise = Средний уровень шума
 high-noise = Высокий уровень шума
@@ -329,6 +330,7 @@ alarm-n-snooze-duration-minutes = Отложить будильник { $number 
 
 setting-availability-requires-both-earbuds = Изменение доступно при обоих наушниках
 setting-availability-no-read-back = Устройство не подтверждает изменения
+setting-availability-no-device-state = Данных о состоянии устройства пока нет
 
 session-reason-transport-lost = Связь потеряна
 session-reason-connection-status-disconnected = Соединение закрыто

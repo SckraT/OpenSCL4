@@ -264,7 +264,7 @@ component AsideColumn inherits VerticalLayout {
             has-icon: true;
             icon: Icons.edit;
             enabled: AppState.connection == Connection.connected;
-            clicked => { AppState.editing-layout = true; }
+            clicked => { Actions.edit-layout(); }
         }
     }
     AsidePanel {

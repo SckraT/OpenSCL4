@@ -5,7 +5,7 @@ use openscq30_lib::{
     settings::{Equalizer, Setting, SettingId, Value, localize_value},
     storage::{QuickPreset, QuickPresetField},
 };
-use slint::{ModelRc, VecModel};
+use slint::{Model, ModelRc, VecModel};
 
 use crate::{
     PresetCard, PresetFieldRow, PresetGroup,
@@ -13,7 +13,7 @@ use crate::{
     equalizer::{self as eq_view},
     model::{
         groups::{SettingGroup, setting_group},
-        presets::{PresetStatus, preset_fields, preset_status},
+        presets::{PresetStatus, PresetSummary, preset_fields, preset_summary},
     },
     view,
 };
@@ -83,10 +83,10 @@ pub fn cards(
         .presets
         .iter()
         .map(|preset| {
-            let enabled: Vec<_> = preset_fields(preset)
-                .into_iter()
-                .filter(|f| f.is_enabled)
-                .collect();
+            let PresetSummary {
+                fields: enabled,
+                status,
+            } = preset_summary(preset, &snapshot.settings, last_applied);
             let named: Vec<slint::SharedString> = enabled
                 .iter()
                 .take(NAMED_FIELDS)
@@ -110,7 +110,7 @@ pub fn cards(
                 .unwrap_or_default();
             PresetCard {
                 name: preset.name.clone().into(),
-                status: match preset_status(preset, &snapshot.settings, last_applied) {
+                status: match status {
                     PresetStatus::NotApplied => 0,
                     PresetStatus::MatchesCurrent => 1,
                     PresetStatus::Applied => 2,
@@ -122,6 +122,17 @@ pub fn cards(
             }
         })
         .collect()
+}
+
+/// Whether two cards say the same thing. The field lists are compared by what they show: each card is built with
+/// a fresh list on every render, so the shown list can stay only when its words have not changed.
+pub fn same_card(previous: &PresetCard, card: &PresetCard) -> bool {
+    previous.name == card.name
+        && previous.status == card.status
+        && previous.more == card.more
+        && previous.enabled_count == card.enabled_count
+        && previous.curve == card.curve
+        && previous.fields.iter().eq(card.fields.iter())
 }
 
 pub fn find<'a>(snapshot: &'a DeviceSnapshot, name: &str) -> Option<&'a QuickPreset> {
@@ -142,15 +153,14 @@ pub fn editor_groups(
         let id: &'static str = field.setting_id.into();
         shown
             .iter()
-            .find(|(_, ids)| ids.contains(&id))
+            .find(|(_, ids)| ids.contains(&field.setting_id))
             .map_or_else(|| setting_group(id, None), |(group, _)| *group)
     };
     let position = |field: &QuickPresetField| {
-        let id: &'static str = field.setting_id.into();
         shown
             .iter()
             .flat_map(|(_, ids)| ids.iter())
-            .position(|other| *other == id)
+            .position(|other| *other == field.setting_id)
             .unwrap_or(usize::MAX)
     };
     SettingGroup::ALL

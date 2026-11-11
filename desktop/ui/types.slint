@@ -22,6 +22,9 @@ export enum Page {
 
 export enum Connection { no-device, off, connecting, connected, recovering, lost, bluetooth-off, failed }
 
+// the earbud whose controls the controls page shows
+export enum ControlSide { left, right }
+
 export enum FailureKind { none, not-found, timed-out, other }
 
 // short messages at the bottom of the window; some say how many with AppState.toast-count
@@ -109,6 +112,7 @@ export struct OverviewBlockData {
     total: int,
     text: string,
     on: bool,
+    has-mode-cycle: bool,
 }
 
 export struct OverviewRow {
@@ -231,7 +235,7 @@ export global AppState {
 
     // the current page's settings
     in property <[SettingsPanel]> panels;
-    in-out property <string> controls-side: "left";
+    in-out property <ControlSide> controls-side: ControlSide.left;
     in property <bool> has-sides;
 
     // the sound mode: tiles, or the 1 to 11 scale
@@ -368,9 +372,10 @@ export global Actions {
     callback press(string);
     callback remove-item(string, int);
     callback set-scale(int);
-    callback set-side(string);
+    callback set-side(ControlSide);
     callback copy(string);
     callback choose-toggle(string, bool);
+    callback edit-layout();
     callback layout-visible(int, bool);
     callback layout-move(int, int);
     callback layout-use(int);
