@@ -5,6 +5,7 @@ import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
 import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
 import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
+import com.oppzippy.openscq30.lib.bindings.clientPresetSummary
 import com.oppzippy.openscq30.lib.bindings.clientSettingsPresentation
 import com.oppzippy.openscq30.lib.bindings.clientSoundModeSettingIds
 import com.oppzippy.openscq30.lib.bindings.clientVisibleSoundModeSettings
@@ -152,7 +153,7 @@ class ClientRulesContractTest {
             val lastApplied = case.getValue("lastApplied").takeUnless { it == JsonNull }?.jsonPrimitive?.content
             assertEquals(
                 case.getValue("status").jsonPrimitive.content,
-                soundPresetStatus(QuickPreset("p", fields), values, lastApplied).name,
+                clientPresetSummary(QuickPreset("p", fields), values, lastApplied).status,
             )
         }
         fun modeValues(case: Map<String, JsonElement>): Map<String, Setting> = buildMap {

@@ -45,7 +45,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oppzippy.openscq30.R
-import com.oppzippy.openscq30.lib.bindings.clientIsPresetApplied
 import com.oppzippy.openscq30.lib.bindings.clientPresetFields
 import com.oppzippy.openscq30.lib.bindings.clientPresetSummary
 import com.oppzippy.openscq30.lib.bindings.clientPresetsUseBlockedSettings
@@ -57,19 +56,10 @@ import com.oppzippy.openscq30.lib.wrapper.Setting
 
 internal fun soundPresetFields(quickPreset: QuickPreset): List<QuickPresetField> = clientPresetFields(quickPreset)
 
-internal fun isSoundPresetApplied(quickPreset: QuickPreset, settings: Map<String, Setting>): Boolean =
-    clientIsPresetApplied(quickPreset, settings)
-
 internal fun presetsUseBlockedSettings(quickPresets: List<QuickPreset>, settings: Map<String, Setting>): Boolean =
     clientPresetsUseBlockedSettings(quickPresets, settings)
 
 internal enum class SoundPresetStatus { Applied, MatchesCurrent, NotApplied }
-
-internal fun soundPresetStatus(
-    quickPreset: QuickPreset,
-    settings: Map<String, Setting>,
-    lastAppliedName: String?,
-): SoundPresetStatus = SoundPresetStatus.valueOf(clientPresetSummary(quickPreset, settings, lastAppliedName).status)
 
 @Composable
 fun SoundPresetsPage(

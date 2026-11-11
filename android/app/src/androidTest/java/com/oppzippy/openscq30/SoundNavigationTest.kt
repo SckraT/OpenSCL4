@@ -16,6 +16,8 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isEnabled
+import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -37,6 +39,7 @@ import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.OpenSCQ30RootViewModel
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
+import com.oppzippy.openscq30.ui.sound.localizedOption
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -108,6 +111,36 @@ class SoundNavigationTest : OpenSCQ30RootTestBase() {
             .performScrollTo().performClick()
         waitForNode(hasText(getString(R.string.sound_device_power_headline)))
         composeRule.onNodeWithText(translateSettingId("autoPowerOff")).assertExists()
+    }
+
+    @Test
+    fun spatialAudioModeCanOnlyBeChangedWhileSpatialAudioIsOn() {
+        val device = connectLiberty4Pro().device
+        composeRule.onNodeWithText(getString(R.string.sound_overview_all_settings)).performScrollTo().performClick()
+        val effects = hasText(getString(R.string.sound_overview_effects)) and hasClickAction()
+        waitForNode(effects)
+        composeRule.onNode(effects).performScrollTo().performClick()
+        waitForNode(hasText(getString(R.string.sound_device_spatial_headline)))
+
+        val spatial = hasText(translateSettingId("spatialAudio")) and isToggleable()
+        val musicLabel = requireNotNull(
+            (device.setting("spatialAudioMode") as Setting.SelectSetting).setting.localizedOption("Music"),
+        )
+        val music = hasText(musicLabel) and isSelectable()
+        waitForNode(spatial)
+        val toggle = composeRule.onNode(spatial).performScrollTo()
+        if (toggle.fetchSemanticsNode().config[SemanticsProperties.ToggleableState] == ToggleableState.Off) {
+            toggle.performClick()
+        }
+        waitForNode(music and isEnabled())
+
+        toggle.performScrollTo().performClick()
+        waitForNode(music and isNotEnabled())
+        composeRule.onNode(music).assertIsNotEnabled()
+
+        toggle.performScrollTo().performClick()
+        waitForNode(music and isEnabled())
+        composeRule.onNode(music).assertIsEnabled()
     }
 
     @Test

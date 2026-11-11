@@ -184,14 +184,22 @@ pub fn client_supports_sound_mode_scale(
 pub fn client_displayed_settings(
     values: HashMap<String, serializable::Setting>,
 ) -> HashMap<String, serializable::Setting> {
-    let values = settings(values);
-    values
-        .keys()
-        .filter_map(|id| {
-            let setting = sound_mode::displayed_setting(&values, *id)?;
-            Some((id.to_string(), serializable::Setting(setting)))
+    let mut displayed = HashMap::new();
+    let known = values
+        .into_iter()
+        .filter_map(|(name, setting)| {
+            let Ok(id) = SettingId::from_str(&name) else {
+                displayed.insert(name, setting);
+                return None;
+            };
+            Some((id, setting.0))
         })
-        .collect()
+        .collect::<client::SettingMap>();
+    displayed.extend(known.keys().filter_map(|id| {
+        let setting = sound_mode::displayed_setting(&known, *id)?;
+        Some((id.to_string(), serializable::Setting(setting)))
+    }));
+    displayed
 }
 
 /// The settings shown with the sound mode itself, in the order both clients use.
@@ -483,14 +491,6 @@ pub fn client_preset_fields(
         .cloned()
         .map(serializable::QuickPresetField)
         .collect()
-}
-
-#[uniffi::export]
-pub fn client_is_preset_applied(
-    preset: serializable::QuickPreset,
-    values: HashMap<String, serializable::Setting>,
-) -> bool {
-    presets::is_preset_applied(&preset.0, &settings(values))
 }
 
 #[derive(uniffi::Record)]

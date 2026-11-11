@@ -53,6 +53,7 @@ import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.sound.DeviceArtOrIcon
 import com.oppzippy.openscq30.ui.sound.deviceArt
+import com.oppzippy.openscq30.ui.sound.kind
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

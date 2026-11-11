@@ -85,11 +85,6 @@ fn matches_fields(fields: &[&QuickPresetField], settings: &SettingMap) -> bool {
         })
 }
 
-/// Whether the device currently has the values this preset would apply. Several presets can match at once.
-pub fn is_preset_applied(preset: &QuickPreset, settings: &SettingMap) -> bool {
-    matches_fields(&effective_fields(preset, settings), settings)
-}
-
 /// Whether a preset would write fields that cannot be changed in the device's current state.
 pub fn preset_uses_blocked_settings(preset: &QuickPreset, settings: &SettingMap) -> bool {
     effective_fields(preset, settings).into_iter().any(|field| {
@@ -145,6 +140,10 @@ mod tests {
 
     use super::*;
 
+    fn matches_current(preset: &QuickPreset, settings: &SettingMap) -> bool {
+        preset_summary(preset, settings, None).status == PresetStatus::MatchesCurrent
+    }
+
     const WEAR: SettingId = SettingId::WearingDetection;
     const VOLUME: SettingId = SettingId::LimitHighVolume;
     const SPATIAL: SettingId = SettingId::SpatialAudio;
@@ -173,7 +172,7 @@ mod tests {
 
     #[test]
     fn an_empty_preset_is_not_applied() {
-        assert!(!is_preset_applied(
+        assert!(!matches_current(
             &preset("Empty", vec![]),
             &SettingMap::new()
         ));
@@ -182,15 +181,15 @@ mod tests {
     #[test]
     fn a_preset_with_only_disabled_fields_is_not_applied() {
         let p = preset("Disabled", vec![field(WEAR, true, false)]);
-        assert!(!is_preset_applied(&p, &toggles(&[(WEAR, true)])));
+        assert!(!matches_current(&p, &toggles(&[(WEAR, true)])));
     }
 
     #[test]
     fn an_enabled_field_must_be_available_and_match() {
         let p = preset("Matching", vec![field(WEAR, true, true)]);
-        assert!(!is_preset_applied(&p, &SettingMap::new()));
-        assert!(!is_preset_applied(&p, &toggles(&[(WEAR, false)])));
-        assert!(is_preset_applied(&p, &toggles(&[(WEAR, true)])));
+        assert!(!matches_current(&p, &SettingMap::new()));
+        assert!(!matches_current(&p, &toggles(&[(WEAR, false)])));
+        assert!(matches_current(&p, &toggles(&[(WEAR, true)])));
     }
 
     #[test]
@@ -199,7 +198,7 @@ mod tests {
             "Partial",
             vec![field(WEAR, true, true), field(VOLUME, false, false)],
         );
-        assert!(is_preset_applied(
+        assert!(matches_current(
             &p,
             &toggles(&[(WEAR, true), (VOLUME, true)])
         ));
@@ -211,7 +210,7 @@ mod tests {
             "Multiple",
             vec![field(WEAR, true, true), field(VOLUME, true, true)],
         );
-        assert!(!is_preset_applied(
+        assert!(!matches_current(
             &p,
             &toggles(&[(WEAR, true), (VOLUME, false)])
         ));
@@ -234,8 +233,8 @@ mod tests {
         let last = field(SPATIAL, false, true);
         let p = preset("Ordered values", vec![first, last.clone()]);
         assert_eq!(vec![&last], preset_fields(&p));
-        assert!(is_preset_applied(&p, &toggles(&[(SPATIAL, false)])));
-        assert!(!is_preset_applied(&p, &toggles(&[(SPATIAL, true)])));
+        assert!(matches_current(&p, &toggles(&[(SPATIAL, false)])));
+        assert!(!matches_current(&p, &toggles(&[(SPATIAL, true)])));
     }
 
     #[test]
@@ -246,7 +245,7 @@ mod tests {
             vec![enabled.clone(), field(SPATIAL, false, false)],
         );
         assert_eq!(vec![&enabled], preset_fields(&p));
-        assert!(is_preset_applied(&p, &toggles(&[(SPATIAL, true)])));
+        assert!(matches_current(&p, &toggles(&[(SPATIAL, true)])));
     }
 
     #[test]
@@ -257,7 +256,7 @@ mod tests {
             vec![field(SPATIAL, true, false), last.clone()],
         );
         assert_eq!(vec![&last], preset_fields(&p));
-        assert!(!is_preset_applied(&p, &toggles(&[(SPATIAL, false)])));
+        assert!(!matches_current(&p, &toggles(&[(SPATIAL, false)])));
     }
 
     // two presets that enable different settings can both match the device at the same time

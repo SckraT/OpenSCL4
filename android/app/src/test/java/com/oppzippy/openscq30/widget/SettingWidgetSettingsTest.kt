@@ -3,6 +3,7 @@ package com.oppzippy.openscq30.widget
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,11 +15,6 @@ class SettingWidgetSettingsTest {
     )
 
     private val musicMode = Setting.ToggleSetting(true)
-
-    private fun rowsOf(
-        selected: List<Pair<String, Setting?>>,
-        values: Map<String, Setting>,
-    ): List<WidgetSetting> = widgetSettings(selected, values)
 
     private fun spatialAudio(musicMode: Boolean, mode: String): Map<String, Setting> = mapOf(
         "spatialAudio" to Setting.ToggleSetting(true),
@@ -34,21 +30,21 @@ class SettingWidgetSettingsTest {
             "spatialAudioMusicMode" to musicMode,
         )
 
-        assertTrue(widgetSettings(listOf("spatialAudioMusicMode" to musicMode), values).isEmpty())
+        assertTrue(widgetSettings(listOf("spatialAudioMusicMode"), values).isEmpty())
     }
 
     @Test
     fun theMusicModeIsEditableWhileSpatialAudioIsOn() {
         assertEquals(
             listOf(WidgetSetting.Editable("spatialAudioMusicMode", musicMode)),
-            rowsOf(listOf("spatialAudioMusicMode" to musicMode), spatialAudio(musicMode = true, mode = "Music")),
+            widgetSettings(listOf("spatialAudioMusicMode"), spatialAudio(musicMode = true, mode = "Music")),
         )
     }
 
     @Test
     fun theMusicModeIsHiddenWhenTheAudioModeIsNotMusic() {
         assertTrue(
-            rowsOf(listOf("spatialAudioMusicMode" to musicMode), spatialAudio(musicMode = true, mode = "Podcast"))
+            widgetSettings(listOf("spatialAudioMusicMode"), spatialAudio(musicMode = true, mode = "Podcast"))
                 .isEmpty(),
         )
     }
@@ -68,7 +64,7 @@ class SettingWidgetSettingsTest {
                     AvailabilityReason.REQUIRES_BOTH_EARBUDS,
                 ),
             ),
-            rowsOf(listOf("ldac" to Setting.ToggleSetting(true)), settings),
+            widgetSettings(listOf("ldac"), settings),
         )
     }
 
@@ -81,16 +77,24 @@ class SettingWidgetSettingsTest {
 
         assertEquals(
             listOf(WidgetSetting.Blocked("volumeAdjustments", AvailabilityReason.REQUIRES_BOTH_EARBUDS)),
-            rowsOf(listOf("volumeAdjustments" to Setting.ToggleSetting(true)), settings),
+            widgetSettings(listOf("volumeAdjustments"), settings),
         )
     }
 
     @Test
-    fun availabilityOutsideTheDeviceScreenBlocksTheSetting() {
-        // the widget may be drawn before a snapshot provides availability: the setting must not look changeable
+    fun aCachedSnapshotFromAnOlderVersionOffersNoControls() {
+        val oldState = """
+            {
+              "type": "com.oppzippy.openscq30.widget.SettingWidgetState.Connected",
+              "deviceName": "Liberty 4 Pro",
+              "settings": [],
+              "snapshot": []
+            }
+        """.trimIndent()
+
         assertEquals(
-            listOf(WidgetSetting.Blocked("spatialAudioMusicMode", AvailabilityReason.NO_DEVICE_STATE)),
-            widgetSettings(listOf("spatialAudioMusicMode" to musicMode), emptyMap()),
+            SettingWidgetState.Connected("Liberty 4 Pro"),
+            Json.decodeFromString<SettingWidgetState>(oldState),
         )
     }
 
@@ -100,12 +104,27 @@ class SettingWidgetSettingsTest {
 
         assertEquals(
             listOf(WidgetSetting.Editable("wearingDetection", Setting.ToggleSetting(true))),
-            rowsOf(listOf("wearingDetection" to Setting.ToggleSetting(true)), settings),
+            widgetSettings(listOf("wearingDetection"), settings),
         )
     }
 
     @Test
     fun settingsTheDeviceDoesNotReportAreSkipped() {
-        assertTrue(rowsOf(listOf("somethingNew" to null), spatialAudio(musicMode = true, mode = "Music")).isEmpty())
+        assertTrue(widgetSettings(listOf("somethingNew"), spatialAudio(musicMode = true, mode = "Music")).isEmpty())
+    }
+
+    @Test
+    fun cachedRowsKeepAvailabilityAndIgnoreUnrelatedSettings() {
+        val snapshot = mapOf(
+            "twsStatus" to Setting.InformationSetting("Disconnected", "Disconnected"),
+            "ldac" to Setting.ToggleSetting(true),
+            "wearingDetection" to Setting.ToggleSetting(true),
+        )
+        val rows = widgetSettings(listOf("ldac"), snapshot)
+        val changed = snapshot + ("wearingDetection" to Setting.ToggleSetting(false))
+        assertEquals(rows, widgetSettings(listOf("ldac"), changed))
+
+        val state: SettingWidgetState = SettingWidgetState.Connected("Liberty 4 Pro", rows)
+        assertEquals(state, Json.decodeFromString<SettingWidgetState>(Json.encodeToString(state)))
     }
 }

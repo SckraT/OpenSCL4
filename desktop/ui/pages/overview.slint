@@ -452,7 +452,7 @@ export component OverviewPage inherits VerticalLayout {
             text: @tr("Edit device screen");
             has-icon: true;
             icon: Icons.edit;
-            clicked => { AppState.editing-layout = true; }
+            clicked => { Actions.edit-layout(); }
         }
     }
     DeviceHero { wide: root.wide; }

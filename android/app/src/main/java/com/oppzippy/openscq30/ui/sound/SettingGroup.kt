@@ -58,7 +58,9 @@ fun SettingGroup.title(): String = when (this) {
  * The device's settings by group, each in the device's order, drawn as the library says. Groups without settings are
  * left out.
  */
-internal fun groupSettings(byCategory: Map<String, List<Pair<String, Setting>>>): Map<SettingGroup, List<Pair<String, Setting>>> {
+internal fun groupSettings(
+    byCategory: Map<String, List<Pair<String, Setting>>>,
+): Map<SettingGroup, List<Pair<String, Setting>>> {
     val categories = byCategory.map { (category, settings) ->
         ClientSettingCategory(category, settings.map { it.first })
     }

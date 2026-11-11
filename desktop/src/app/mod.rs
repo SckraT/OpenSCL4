@@ -174,16 +174,24 @@ fn with_app(f: impl FnOnce(&mut App)) {
 }
 
 pub fn start(window: &AppWindow, config_dir: &Path) -> anyhow::Result<()> {
+    start_with_dispatch(window, config_dir, |event| {
+        if slint::invoke_from_event_loop(move || with_app(|app| app.on_event(event))).is_err() {
+            tracing::debug!("the window is gone");
+        }
+    })
+}
+
+fn start_with_dispatch(
+    window: &AppWindow,
+    config_dir: &Path,
+    dispatch: impl Fn(Event) + Send + Sync + 'static,
+) -> anyhow::Result<()> {
     let config = Config::load(config_dir.join("openscl4-config.toml"));
     let weak = window.as_weak();
     let controller = Controller::start(
         config_dir.join("database.sqlite"),
         config_dir.to_path_buf(),
-        move |event| {
-            if slint::invoke_from_event_loop(move || with_app(|app| app.on_event(event))).is_err() {
-                tracing::debug!("the window is gone");
-            }
-        },
+        dispatch,
     )?;
     let app = App {
         window: weak,
@@ -340,6 +348,14 @@ fn install_actions(window: &AppWindow) {
     });
     actions.on_copy(|text| with_app(|app| app.copy(&text)));
     actions.on_choose_toggle(|id, on| with_app(|app| app.choose_toggle(&id, on)));
+    actions.on_edit_layout(|| {
+        with_app(|app| {
+            if let Some(window) = app.window() {
+                window.global::<AppState>().set_editing_layout(true);
+                app.render();
+            }
+        });
+    });
     actions.on_layout_visible(|index, visible| {
         with_app(|app| {
             app.change_layout(|layout, blocks| {
@@ -1291,7 +1307,7 @@ mod tests {
         })
     }
 
-    fn with_headless_window(test: impl FnOnce(&AppWindow)) {
+    fn with_headless_window(test: impl FnOnce(&AppWindow, &std::sync::mpsc::Receiver<Event>)) {
         struct Headless;
         impl Platform for Headless {
             fn create_window_adapter(
@@ -1308,9 +1324,106 @@ mod tests {
             "tray = false\nlanguage = \"en\"",
         )
         .unwrap();
-        start(&window, dir.path()).unwrap();
-        test(&window);
+        let (dispatch, events) = std::sync::mpsc::channel();
+        start_with_dispatch(&window, dir.path(), move |event| {
+            let _ = dispatch.send(event);
+        })
+        .unwrap();
+        test(&window, &events);
         stop();
+    }
+
+    #[test]
+    fn a_preset_card_follows_the_device_values_and_current_connection() {
+        use std::time::Instant;
+
+        const PRESET: &str = "Commute";
+        const WEARING: &str = "wearingDetection";
+        const NOT_APPLIED: i32 = 0;
+        const MATCHES_CURRENT: i32 = 1;
+        const APPLIED: i32 = 2;
+
+        with_headless_window(|window, events| {
+            let actions = window.global::<Actions>();
+            let state = window.global::<AppState>();
+            let wait = |description: &str, ready: &dyn Fn() -> bool| {
+                let deadline = Instant::now() + Duration::from_secs(10);
+                while !ready() {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|err| panic!("waiting for {description}: {err}"));
+                    with_app(|app| app.on_event(event));
+                }
+            };
+            let card = || {
+                state
+                    .get_preset_cards()
+                    .iter()
+                    .find(|card| card.name == PRESET)
+            };
+            let wearing = || {
+                state.get_panels().iter().find_map(|panel| {
+                    panel
+                        .rows
+                        .iter()
+                        .find(|row| row.id == WEARING)
+                        .map(|row| row.checked)
+                })
+            };
+
+            actions.invoke_open_add_device();
+            actions.invoke_set_demo(true);
+            actions.invoke_choose_model("A3954".into());
+            wait("the demo device", &|| {
+                state.get_paired_options().row_count() > 0
+            });
+            let mac = state.get_paired_options().row_data(0).unwrap().mac;
+            actions.invoke_pair(mac.clone(), "".into());
+            wait("connection to the demo device", &|| {
+                state.get_connection() == ConnectionView::Connected
+            });
+            actions.invoke_navigate(Page::Comfort);
+            let saved_value = wearing().expect("the demo device has wearing detection");
+
+            actions.invoke_navigate(Page::Presets);
+            actions.invoke_preset_create(PRESET.into(), false);
+            wait("the saved preset", &|| card().is_some());
+            actions.invoke_preset_toggle(PRESET.into(), WEARING.into(), true);
+            wait("the matching preset", &|| {
+                card().is_some_and(|card| card.status == MATCHES_CURRENT)
+            });
+            actions.invoke_preset_edit("".into());
+            actions.invoke_apply_preset(PRESET.into());
+            wait("the applied preset", &|| {
+                card().is_some_and(|card| card.status == APPLIED)
+            });
+
+            actions.invoke_navigate(Page::Comfort);
+            actions.invoke_set_toggle(WEARING.into(), !saved_value);
+            wait("the confirmed setting change", &|| {
+                wearing() == Some(!saved_value)
+            });
+            actions.invoke_navigate(Page::Presets);
+            assert_eq!(card().unwrap().status, NOT_APPLIED);
+
+            actions.invoke_apply_preset(PRESET.into());
+            wait("the applied preset again", &|| {
+                card().is_some_and(|card| card.status == APPLIED)
+            });
+            actions.invoke_disconnect();
+            wait("disconnect", &|| {
+                state.get_connection() == ConnectionView::Off
+            });
+            actions.invoke_connect(mac);
+            wait("reconnect", &|| {
+                state.get_connection() == ConnectionView::Connected
+            });
+            actions.invoke_navigate(Page::Presets);
+            assert_ne!(
+                card().expect("the saved preset survives reconnect").status,
+                APPLIED
+            );
+        });
     }
 
     #[test]
@@ -1351,7 +1464,7 @@ mod tests {
         assert!(!snapshot.settings.contains_key(&SettingId::LeftSinglePress));
         assert!(!snapshot.settings.contains_key(&SettingId::RightSinglePress));
 
-        with_headless_window(|window| {
+        with_headless_window(|window, _| {
             with_app(|app| {
                 app.paired.push(paired);
                 app.current = Some(mac_address);
@@ -1388,23 +1501,23 @@ mod tests {
 
     #[test]
     fn renders_the_current_page_and_open_dialogs_from_the_latest_snapshot() {
-        with_headless_window(|window| {
+        with_headless_window(|window, _| {
             let state = window.global::<AppState>();
+            let eq_id = SettingId::VolumeAdjustments;
+            let eq = |value| Setting::Equalizer {
+                setting: Equalizer {
+                    band_hz: vec![100].into(),
+                    fraction_digits: 1,
+                    min: -120,
+                    max: 134,
+                },
+                value: vec![value],
+                read_only: false,
+            };
 
             with_app(|app| {
                 let mut snapshot = snapshot();
-                let eq_id = SettingId::VolumeAdjustments;
                 snapshot.categories = vec![(CategoryId::Equalizer, vec![eq_id])];
-                let eq = |value| Setting::Equalizer {
-                    setting: Equalizer {
-                        band_hz: vec![100].into(),
-                        fraction_digits: 1,
-                        min: -120,
-                        max: 134,
-                    },
-                    value: vec![value],
-                    read_only: false,
-                };
                 snapshot.settings.insert(eq_id, eq(0));
                 snapshot.presets.push(QuickPreset {
                     name: "Test".into(),
@@ -1420,7 +1533,18 @@ mod tests {
                     model: snapshot.model,
                     is_demo: true,
                 });
+                app.navigate(Page::Settings);
                 app.on_event(Event::Connected(snapshot));
+                assert_eq!(state.get_page(), Page::Settings);
+                assert_eq!(state.get_layout_blocks().row_count(), 0);
+            });
+
+            window.global::<Actions>().invoke_edit_layout();
+            assert!(state.get_editing_layout());
+            assert!(state.get_layout_blocks().row_count() > 0);
+            state.set_editing_layout(false);
+
+            with_app(|app| {
                 app.navigate(Page::Overview);
                 assert_eq!(state.get_eq_band_count(), 1);
                 assert_eq!(state.get_eq_bands().row_count(), 0);
@@ -1450,7 +1574,7 @@ mod tests {
 
     #[test]
     fn a_preset_card_keeps_its_fields_model_while_the_fields_do_not_change() {
-        with_headless_window(|window| {
+        with_headless_window(|window, _| {
             let state = window.global::<AppState>();
             with_app(|app| {
                 let mut snapshot = snapshot();

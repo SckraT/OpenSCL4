@@ -13,6 +13,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SoundPresetsTest {
+    private fun soundPresetStatus(
+        preset: QuickPreset,
+        settings: Map<String, Setting>,
+        lastAppliedName: String? = null,
+    ): SoundPresetStatus = SoundPresetStatus.valueOf(clientPresetSummary(preset, settings, lastAppliedName).status)
+
     @Test
     fun aLegacyPresetCardShowsTheFactoryProfileAndIgnoresTheCustomCurve() {
         val profile = QuickPresetField("presetEqualizerProfile", "Acoustic".toValue(), true)
@@ -40,31 +46,40 @@ class SoundPresetsTest {
 
     @Test
     fun emptyPresetIsNotApplied() {
-        assertFalse(isSoundPresetApplied(QuickPreset("Empty", emptyList()), emptyMap()))
+        assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(QuickPreset("Empty", emptyList()), emptyMap()))
     }
 
     @Test
     fun presetWithOnlyDisabledFieldsIsNotApplied() {
         val preset = QuickPreset("Disabled", listOf(QuickPresetField("wearingDetection", true.toValue(), false)))
-        assertFalse(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))))
+        assertEquals(
+            SoundPresetStatus.NotApplied,
+            soundPresetStatus(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))),
+        )
     }
 
     @Test
     fun enabledFieldMustBeAvailable() {
         val preset = QuickPreset("Missing", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
-        assertFalse(isSoundPresetApplied(preset, emptyMap()))
+        assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(preset, emptyMap()))
     }
 
     @Test
     fun enabledFieldMustMatchCurrentDeviceValue() {
         val preset = QuickPreset("Different", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
-        assertFalse(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(false))))
+        assertEquals(
+            SoundPresetStatus.NotApplied,
+            soundPresetStatus(preset, mapOf("wearingDetection" to Setting.ToggleSetting(false))),
+        )
     }
 
     @Test
     fun matchingEnabledFieldIsApplied() {
         val preset = QuickPreset("Matching", listOf(QuickPresetField("wearingDetection", true.toValue(), true)))
-        assertTrue(isSoundPresetApplied(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))))
+        assertEquals(
+            SoundPresetStatus.MatchesCurrent,
+            soundPresetStatus(preset, mapOf("wearingDetection" to Setting.ToggleSetting(true))),
+        )
     }
 
     @Test
@@ -80,7 +95,7 @@ class SoundPresetsTest {
             "wearingDetection" to Setting.ToggleSetting(true),
             "limitHighVolume" to Setting.ToggleSetting(true),
         )
-        assertTrue(isSoundPresetApplied(preset, settings))
+        assertEquals(SoundPresetStatus.MatchesCurrent, soundPresetStatus(preset, settings))
     }
 
     @Test
@@ -96,7 +111,7 @@ class SoundPresetsTest {
             "wearingDetection" to Setting.ToggleSetting(true),
             "limitHighVolume" to Setting.ToggleSetting(false),
         )
-        assertFalse(isSoundPresetApplied(preset, settings))
+        assertEquals(SoundPresetStatus.NotApplied, soundPresetStatus(preset, settings))
     }
 
     @Test
@@ -119,8 +134,14 @@ class SoundPresetsTest {
         val preset = QuickPreset("Ordered values", listOf(first, last))
 
         assertEquals(listOf(last), soundPresetFields(preset))
-        assertTrue(isSoundPresetApplied(preset, mapOf("spatialAudio" to Setting.ToggleSetting(false))))
-        assertFalse(isSoundPresetApplied(preset, mapOf("spatialAudio" to Setting.ToggleSetting(true))))
+        assertEquals(
+            SoundPresetStatus.MatchesCurrent,
+            soundPresetStatus(preset, mapOf("spatialAudio" to Setting.ToggleSetting(false))),
+        )
+        assertEquals(
+            SoundPresetStatus.NotApplied,
+            soundPresetStatus(preset, mapOf("spatialAudio" to Setting.ToggleSetting(true))),
+        )
     }
 
     @Test
@@ -130,7 +151,10 @@ class SoundPresetsTest {
         val preset = QuickPreset("Mixed flags", listOf(enabled, disabled))
 
         assertEquals(listOf(enabled), soundPresetFields(preset))
-        assertTrue(isSoundPresetApplied(preset, mapOf("spatialAudio" to Setting.ToggleSetting(true))))
+        assertEquals(
+            SoundPresetStatus.MatchesCurrent,
+            soundPresetStatus(preset, mapOf("spatialAudio" to Setting.ToggleSetting(true))),
+        )
     }
 
     @Test
@@ -140,7 +164,10 @@ class SoundPresetsTest {
         val preset = QuickPreset("Disabled duplicates", listOf(first, last))
 
         assertEquals(listOf(last), soundPresetFields(preset))
-        assertFalse(isSoundPresetApplied(preset, mapOf("spatialAudio" to Setting.ToggleSetting(false))))
+        assertEquals(
+            SoundPresetStatus.NotApplied,
+            soundPresetStatus(preset, mapOf("spatialAudio" to Setting.ToggleSetting(false))),
+        )
     }
 
     // Two presets that enable different settings can both match the device at the same time
