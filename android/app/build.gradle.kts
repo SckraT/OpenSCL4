@@ -65,7 +65,8 @@ android {
         applicationId = "io.github.sckrat.openscl4"
         minSdk = 26
         targetSdk = buildTools.getValue("android-sdk").toInt()
-        versionCode = versionParts[0] * 1_000_000 + versionParts[1] * 1_000 + versionParts[2]
+        // Keep Android updates above the 2.x builds that used upstream version numbers.
+        versionCode = 2_000_000 + versionParts[0] * 1_000_000 + versionParts[1] * 1_000 + versionParts[2]
         versionName = "$majorVersion.$minorVersion.$patchVersion"
 
         testInstrumentationRunner = "com.oppzippy.openscq30.HiltTestRunner"

@@ -23,10 +23,10 @@ The executable is `target/debug/openscl4[.exe]`. Set `OPENSCL4_CONFIG_DIR` to is
 
 ## Version and platform builds
 
-Choose the first published version during release preparation; the source version in `Cargo.toml` is not proof of publication. Do not reset it without accounting for Android's monotonically increasing version codes. Change the common version with:
+The source version in `Cargo.toml` is not proof of publication. Starting at OpenSCL4 1.0.0, Android adds 2,000,000 to the encoded product version, so 1.0.0 has `versionCode` 3,000,000 and can update the signed 2.x builds. Keep this offset for future releases. Change the common version with:
 
 ```text
-python scripts/release.py set-version 2.14.0
+python scripts/release.py set-version 1.0.0
 cargo check -p openscq30-desktop -p openscq30-android
 ```
 
