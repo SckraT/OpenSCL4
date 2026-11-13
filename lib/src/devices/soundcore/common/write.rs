@@ -184,6 +184,7 @@ where
         .setting_manager
         .settings_map(&current_state);
     let mut target_state = current_state.clone();
+    let mut has_planned_settings = false;
 
     let mut entries = Vec::<Entry>::with_capacity(setting_values.len());
     for (setting_id, requested) in setting_values {
@@ -219,6 +220,16 @@ where
             None => return Err(local_error(setting_id, SettingHandlerError::DoesNotExist)),
             Some(Err(err)) => return Err(err.into_settings_error(setting_id).into()),
             Some(Ok(())) => {}
+        }
+        if matches!(&requested, Value::ModifiableSelectCommand(_))
+            && let Some(Setting::ModifiableSelect { value, .. }) = module_collection
+                .setting_manager
+                .get(&state_sender.borrow(), &setting_id)
+        {
+            // The handler has saved or removed the profile. Read its effect on the current
+            // selection without counting any unconfirmed changes in the same batch.
+            entries.push(Entry::applied(setting_id, Value::OptionalString(value)));
+            continue;
         }
         let Some(target_setting) = module_collection
             .setting_manager
@@ -264,6 +275,7 @@ where
             continue;
         }
         target_state = candidate_state;
+        has_planned_settings = true;
 
         let readable = current_settings
             .get(&setting_id)
@@ -299,6 +311,10 @@ where
             last_observed: None,
             outcome: None,
         });
+    }
+
+    if !has_planned_settings {
+        return Ok(finish(entries));
     }
 
     for index in 0..entries.len() {
@@ -714,8 +730,9 @@ mod tests {
     use crate::{
         api::{
             connection::{ConnectionStatus, RfcommConnection},
-            settings::{CategoryId, Setting, SettingId, Value},
+            settings::{CategoryId, ModifiableSelectCommand, Setting, SettingId, Value},
         },
+        devices::DeviceModel,
         devices::soundcore::common::{
             modules::{
                 ModuleCollection, ModuleCollectionSpawnPacketHandlerExt,
@@ -731,6 +748,7 @@ mod tests {
                 WearingDetection, WearingTone,
             },
         },
+        storage::OpenSCQ30Database,
     };
 
     use super::*;
@@ -797,8 +815,11 @@ mod tests {
         }
     }
 
-    /// Like the custom equalizer profile: an option is requested by its name and reads back as an optional name.
-    struct ProfileSettingHandler;
+    /// The selected profile is read from device state and looked up in the saved profiles.
+    #[derive(Default)]
+    struct ProfileSettingHandler {
+        removed: Mutex<Option<usize>>,
+    }
 
     #[async_trait]
     impl SettingHandler<TestState> for ProfileSettingHandler {
@@ -807,13 +828,20 @@ mod tests {
         }
 
         fn get(&self, state: &TestState, _setting_id: &SettingId) -> Option<Setting> {
+            let removed = *self.removed.lock().unwrap();
+            let profiles = PROFILES
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| Some(*index) != removed)
+                .map(|(_, name)| *name);
             Some(Setting::ModifiableSelect {
                 setting: crate::api::settings::Select {
-                    options: PROFILES.iter().map(|name| (*name).into()).collect(),
-                    localized_options: PROFILES.iter().map(ToString::to_string).collect(),
+                    options: profiles.clone().map(Into::into).collect(),
+                    localized_options: profiles.map(str::to_owned).collect(),
                 },
                 value: state
                     .profile
+                    .filter(|index| Some(*index) != removed)
                     .and_then(|index| PROFILES.get(index))
                     .map(|name| (*name).into()),
             })
@@ -825,6 +853,14 @@ mod tests {
             _setting_id: &SettingId,
             value: Value,
         ) -> SettingHandlerResult<()> {
+            if let Value::ModifiableSelectCommand(ModifiableSelectCommand::Remove(name)) = &value {
+                let index = PROFILES
+                    .iter()
+                    .position(|profile| *profile == name.as_ref())
+                    .ok_or(SettingHandlerError::DoesNotExist)?;
+                *self.removed.lock().unwrap() = Some(index);
+                return Ok(());
+            }
             let name = value.try_as_str()?;
             if let Some(index) = PROFILES.iter().position(|profile| *profile == name) {
                 state.profile = Some(index);
@@ -990,7 +1026,7 @@ mod tests {
                 .add_handler(CategoryId::Miscellaneous, UnverifiableSettingHandler);
             modules
                 .setting_manager
-                .add_handler(CategoryId::Equalizer, ProfileSettingHandler);
+                .add_handler(CategoryId::Equalizer, ProfileSettingHandler::default());
             modules
                 .packet_handlers
                 .set_handler(packet::inbound::STATE_COMMAND, Box::new(BulkStateHandler));
@@ -1629,6 +1665,87 @@ mod tests {
         );
         assert_eq!(Value::OptionalString(Some("Treble".into())), observed);
         assert_eq!(WriteOutcome::Applied { observed }, outcomes[0].outcome);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn saving_an_unselected_profile_is_applied_and_adds_it_to_the_list() {
+        let model = DeviceModel::SoundcoreA3027;
+        let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
+        let registry = model.demo_device_registry(database).await.unwrap();
+        let device = registry.connect(model.demo_mac_address()).await.unwrap();
+        let id = SettingId::CustomEqualizerProfile;
+
+        let outcomes = device
+            .set_setting_values(vec![(
+                id,
+                Value::ModifiableSelectCommand(ModifiableSelectCommand::Add("Bass".into())),
+            )])
+            .await
+            .unwrap();
+
+        assert_eq!(
+            vec![SettingWriteOutcome {
+                setting_id: id,
+                outcome: WriteOutcome::Applied {
+                    observed: Value::OptionalString(None),
+                },
+            }],
+            outcomes
+        );
+        let Some(Setting::ModifiableSelect { setting, value }) = device.setting(&id) else {
+            panic!("custom equalizer profiles should be available");
+        };
+        assert_eq!(vec!["Bass"], setting.options);
+        assert_eq!(None, value);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn removing_the_selected_profile_is_applied_without_device_read_back() {
+        let mut harness = Harness::new(TestState {
+            profile: Some(0),
+            ..Default::default()
+        })
+        .await;
+        let id = SettingId::CustomEqualizerProfile;
+        let write = harness.spawn_write(vec![(
+            id,
+            Value::ModifiableSelectCommand(ModifiableSelectCommand::Remove("Bass".into())),
+        )]);
+
+        let outcomes = tokio::time::timeout(Duration::from_millis(10), write)
+            .await
+            .expect("removing a saved profile should not wait for the device")
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            vec![SettingWriteOutcome {
+                setting_id: id,
+                outcome: WriteOutcome::Applied {
+                    observed: Value::OptionalString(None),
+                },
+            }],
+            outcomes
+        );
+        assert!(matches!(
+            harness.outbound.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_rejected_profile_command_returns_the_handler_error() {
+        let harness = Harness::new(TestState::default()).await;
+        let id = SettingId::CustomEqualizerProfile;
+        let error = harness
+            .spawn_write(vec![(
+                id,
+                Value::ModifiableSelectCommand(ModifiableSelectCommand::Remove("Unknown".into())),
+            )])
+            .await
+            .unwrap()
+            .unwrap_err();
+
+        assert!(matches!(error, device::Error::SettingError { source } if source.setting_id == id));
     }
 
     #[tokio::test(start_paused = true)]
