@@ -33,6 +33,13 @@ python scripts/release.py build windows
 
 This builds the explicit Windows x64 target and writes a portable EXE, per-user installer and `build-windows.json` under `build-output/`. The names include the workspace version: `openscl4-VERSION-windows-x86_64.exe` and `openscl4-VERSION-windows-x86_64-setup.exe`. Use `--allow-dirty` only for a local preview.
 
+The installer does not update a running OpenSCL4: the app holds `Local\OpenSCL4-Setup`, which `AppMutex` checks, so Setup asks for the app to be closed before it replaces `openscl4.exe`. In silent mode the same prompt can block the run, so stop the app before an unattended install. A build released before this check holds no mutex and cannot be detected; close it by hand before the first update over it. To check a running app without the installer:
+
+```powershell
+$mutex = $null
+[System.Threading.Mutex]::TryOpenExisting('Local\OpenSCL4-Setup', [ref]$mutex)
+```
+
 The installer and application have their own OpenSCL4 identity. Initial Windows packages do not have Authenticode signatures. See [release preparation](build-release.md) for versioning, checksums and publication gates.
 
 ## Data and testing

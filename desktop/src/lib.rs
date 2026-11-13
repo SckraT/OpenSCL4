@@ -52,6 +52,8 @@ pub fn run() -> anyhow::Result<()> {
     window_chrome::init(app::keep_title_bar)?;
     let config_dir = config_directory()?;
     let window = AppWindow::new()?;
+    #[cfg(windows)]
+    single_instance::hold_setup_mutex();
     if !single_instance::claim(&config_dir, app::show_from_elsewhere) {
         return Ok(());
     }

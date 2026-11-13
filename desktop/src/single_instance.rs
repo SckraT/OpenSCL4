@@ -2,7 +2,8 @@
 //! start asks the first to show its window, which may be hidden in the notification area, and ends. Apps with another
 //! config folder, such as for tests, run beside it. Windows uses a named mutex and event; Linux uses a name on the
 //! session bus, which the bus releases when the app exits or crashes, so no stale lock is left behind. Without a
-//! session bus Linux allows the start instead.
+//! session bus Linux allows the start instead. On Windows the app also holds a fixed mutex that the installer checks, so
+//! an update asks for the app to be closed instead of failing on the running executable.
 
 use std::path::Path;
 
@@ -56,6 +57,23 @@ fn normalized(config_dir: &Path) -> std::path::PathBuf {
 #[cfg(any(target_os = "linux", test))]
 fn instance_name(key: &str) -> String {
     format!("io.github.sckrat.openscl4.Instance.f{key}")
+}
+
+/// The mutex the Windows installer checks before it replaces files. `packaging/windows/setup.iss` names it in
+/// `AppMutex`, so both sides must keep the same name.
+#[cfg(any(windows, test))]
+const SETUP_MUTEX_NAME: &str = r"Local\OpenSCL4-Setup";
+
+/// Creates the mutex the installer checks to see that the app runs, so an update asks for the app to be closed instead
+/// of failing on the running executable. The handle is never closed on purpose: the object has to exist for as long as
+/// the process does. A failure is ignored, since an installer that cannot see the app must not keep it from starting.
+#[cfg(windows)]
+pub fn hold_setup_mutex() {
+    use windows::{Win32::System::Threading::CreateMutexW, core::HSTRING};
+
+    let name = HSTRING::from(SETUP_MUTEX_NAME);
+    // SAFETY: plain call with a name that lives through it; leaving the handle open is the point.
+    let _ = unsafe { CreateMutexW(None, false, &name) };
 }
 
 /// Whether this is the only app running for the config folder. If it is, a later start makes it call `show`; if not,
@@ -236,6 +254,72 @@ pub fn claim(_config_dir: &Path, _show: fn()) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn setup_iss() -> String {
+        std::fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../packaging/windows/setup.iss"),
+        )
+        .unwrap()
+    }
+
+    /// The value of a `[Setup]` directive, whatever its case and the spaces around its name.
+    fn setup_directive<'a>(setup: &'a str, name: &str) -> Option<&'a str> {
+        setup
+            .lines()
+            .filter_map(|line| line.split_once('='))
+            .find(|(directive, _)| directive.trim().eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.trim())
+    }
+
+    #[test]
+    fn the_installer_checks_the_mutex_the_app_holds() {
+        let setup = setup_iss();
+        let checked = setup_directive(&setup, "AppMutex").expect("setup.iss must set AppMutex");
+        assert!(
+            checked
+                .split(',')
+                .any(|name| name.trim() == SETUP_MUTEX_NAME),
+            "setup.iss must check {SETUP_MUTEX_NAME:?}, or an update over a running app fails on the executable"
+        );
+    }
+
+    #[test]
+    fn the_installer_does_not_close_applications_itself() {
+        let setup = setup_iss();
+        let closes = setup_directive(&setup, "CloseApplications");
+        assert!(
+            closes.is_some_and(|value| value.eq_ignore_ascii_case("no")),
+            "setup.iss must leave closing to the mutex prompt: Restart Manager cannot see a Slint app"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn holding_the_setup_mutex_creates_the_object_the_installer_checks() {
+        use windows::{
+            Win32::{
+                Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError},
+                System::Threading::CreateMutexW,
+            },
+            core::HSTRING,
+        };
+
+        hold_setup_mutex();
+
+        // SAFETY: plain calls with a name that lives through them; the handle opened here is closed below.
+        let (opened, already) = unsafe {
+            let name = HSTRING::from(SETUP_MUTEX_NAME);
+            let opened = CreateMutexW(None, false, &name);
+            (opened, GetLastError())
+        };
+        let handle = opened.expect("the app should hold the setup mutex");
+        assert_eq!(
+            ERROR_ALREADY_EXISTS, already,
+            "the setup mutex should exist once the app holds it"
+        );
+        // SAFETY: the handle was just opened and is not used again
+        let _ = unsafe { CloseHandle(handle) };
+    }
 
     #[cfg(windows)]
     #[test]

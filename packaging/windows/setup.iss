@@ -25,6 +25,9 @@ UninstallDisplayIcon={app}\{#AppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
+; the app holds this mutex; Restart Manager cannot see a Slint app, so checking the mutex is the reliable test
+AppMutex=Local\OpenSCL4-Setup
+CloseApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

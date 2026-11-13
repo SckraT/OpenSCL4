@@ -9,6 +9,7 @@ on:
       - rust-toolchain.toml
       - lib/**
       - desktop/**
+      - packaging/**
       - .github/workflows/test-windows.yml
   pull_request:
     paths: *push_paths
