@@ -16,6 +16,32 @@ fn native_battery_value(value: &str) -> String {
     value.replace(['\u{2068}', '\u{2069}'], "")
 }
 
+#[cfg(windows)]
+fn windows_tray_icon_size() -> u32 {
+    use windows::Win32::UI::{
+        HiDpi::{GetDpiForSystem, GetDpiForWindow, GetSystemMetricsForDpi},
+        WindowsAndMessaging::{FindWindowW, SM_CXSMICON},
+    };
+    use windows::core::{PCWSTR, w};
+
+    // SAFETY: FindWindowW takes static strings, and these calls only query window and system metrics.
+    unsafe {
+        let dpi = FindWindowW(w!("Shell_TrayWnd"), PCWSTR::null())
+            .map(|taskbar| GetDpiForWindow(taskbar))
+            .unwrap_or_default();
+        let dpi = if dpi == 0 { GetDpiForSystem() } else { dpi };
+        GetSystemMetricsForDpi(SM_CXSMICON, dpi).max(16) as u32
+    }
+}
+
+#[cfg(windows)]
+fn rasterize_tray_icon(icon: &slint::Image, size: u32) -> Option<slint::Image> {
+    use slint::private_unstable_api::re_exports::{IntSize, image_to_rgba8_with_target_size};
+
+    // Slint's Windows tray converts the image at its intrinsic size before handing it to Explorer.
+    image_to_rgba8_with_target_size(icon, IntSize::new(size, size)).map(slint::Image::from_rgba8)
+}
+
 fn new_tray() -> Option<Tray> {
     let tray = match Tray::new() {
         Ok(tray) => tray,
@@ -24,6 +50,10 @@ fn new_tray() -> Option<Tray> {
             return None;
         }
     };
+    #[cfg(windows)]
+    if let Some(icon) = rasterize_tray_icon(&tray.get_app_icon(), windows_tray_icon_size()) {
+        tray.set_app_icon(icon);
+    }
     tray.on_open(|| with_app(App::open_window));
     tray.on_quit(|| with_app(App::quit));
     tray.on_connect(|| {
@@ -188,6 +218,23 @@ pub fn show_from_elsewhere() {
 #[cfg(test)]
 mod tests {
     use super::native_battery_value;
+
+    #[cfg(windows)]
+    #[test]
+    fn tray_svg_rasterizes_at_the_requested_physical_size() {
+        let svg = slint::Image::load_from_svg_data(include_bytes!("../../ui/icons/app.svg"))
+            .expect("the app icon should be valid SVG");
+
+        for size in [16, 20, 24, 32] {
+            let icon = super::rasterize_tray_icon(&svg, size).expect("the SVG should rasterize");
+            let pixels = icon
+                .to_rgba8()
+                .expect("the tray icon should contain pixels");
+            assert_eq!((pixels.width(), pixels.height()), (size, size));
+            assert!(pixels.as_slice()[0].a < 255);
+            assert!(pixels.as_slice().iter().any(|pixel| pixel.a == 255));
+        }
+    }
 
     #[test]
     fn native_battery_values_omit_fluent_direction_markers() {

@@ -8,6 +8,7 @@ export struct TrayPreset {
 }
 
 export component Tray inherits SystemTrayIcon {
+    in-out property <image> app-icon: @image-url("icons/app.svg");
     in property <bool> has-device;
     in property <string> device-name;
     in property <bool> connected;
@@ -32,7 +33,7 @@ export component Tray inherits SystemTrayIcon {
     callback apply-preset(string);
     callback set-ldac(bool);
 
-    icon: @image-url("icons/app.svg");
+    icon: root.app-icon;
     title: "OpenSCL4";
     tooltip: !root.has-device ? "OpenSCL4"
         : root.connected && root.battery != "" ? "OpenSCL4 · " + root.device-name + "\n" + root.battery
