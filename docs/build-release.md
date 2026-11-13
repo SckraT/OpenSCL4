@@ -23,7 +23,7 @@ The executable is `target/debug/openscl4[.exe]`. Set `OPENSCL4_CONFIG_DIR` to is
 
 ## Version and platform builds
 
-The source version in `Cargo.toml` is not proof of publication. Starting at OpenSCL4 1.0.0, Android adds 2,000,000 to the encoded product version, so 1.0.0 has `versionCode` 3,000,000 and can update the signed 2.x builds. Keep this offset for future releases. Change the common version with:
+The source version in `Cargo.toml` is not proof of publication. OpenSCL4 1.0.0 starts the stable line with Android `versionCode` 1,000,000. If an earlier 2.x test build is installed, export any equalizer profiles you want to keep, uninstall the test build, then install the 1.0.0 APK. Uninstalling removes local app data. Future releases must increase the version code. Change the common version with:
 
 ```text
 python scripts/release.py set-version 1.0.0
