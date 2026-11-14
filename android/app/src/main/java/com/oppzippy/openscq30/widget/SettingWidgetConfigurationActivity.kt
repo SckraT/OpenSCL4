@@ -6,41 +6,44 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -50,10 +53,12 @@ import androidx.lifecycle.lifecycleScope
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
+import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
-import com.oppzippy.openscq30.lib.bindings.translateCategoryId
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.ui.DeviceServiceConnection
+import com.oppzippy.openscq30.ui.sound.availabilityReasonText
+import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
 import com.oppzippy.openscq30.ui.utils.LabeledSwitch
 import dagger.hilt.android.AndroidEntryPoint
@@ -63,6 +68,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
+/**
+ * Chooses which settings the home screen widget shows, grouped and explained by the shared client rules.
+ *
+ * The result contract is inherited from the widget provider: [RESULT_OK] with the app widget id when the widget exists,
+ * [RESULT_CANCELED] when the user cancels the configuration.
+ */
 @AndroidEntryPoint
 class SettingWidgetConfigurationActivity : ComponentActivity() {
     @Inject
@@ -121,8 +132,8 @@ class SettingWidgetConfigurationActivity : ComponentActivity() {
             }
             widget.update(applicationContext, glanceId)
 
-            // we want to exit this activity as quickly as possible, so do this in the background rather than waiting for
-            // the service to bind
+            // we want to exit this activity as quickly as possible, so do this in the background rather than
+            // waiting for the service to bind
             sendBroadcast(
                 Intent().apply {
                     `package` = packageName
@@ -138,6 +149,7 @@ class SettingWidgetConfigurationActivity : ComponentActivity() {
             Content(
                 connectionStatus = deviceServiceConnection.connectionStatusFlow.collectAsState().value,
                 enabledSettingIds = enabledSettingIds.collectAsState().value,
+                isCompactLayout = isCompactLayout.collectAsState().value ?: false,
                 onCancel = { cancel(appWidgetId) },
                 onFinish = { finish() },
                 onSetSettingIdEnabled = { deviceModel, settingId, isEnabled ->
@@ -148,7 +160,6 @@ class SettingWidgetConfigurationActivity : ComponentActivity() {
                         isEnabled,
                     )
                 },
-                isCompactLayout = isCompactLayout.collectAsState().value ?: false,
                 onCompactLayoutChange = { newValue ->
                     val context = this
                     lifecycleScope.launch {
@@ -187,14 +198,7 @@ class SettingWidgetConfigurationActivity : ComponentActivity() {
             val settingIdsKey = SettingWidget.settingIdsKey(deviceModel)
 
             updateAppWidgetState(context, glanceId) { state ->
-                val settingIds = state[SettingWidget.settingIdsKey(deviceModel)]
-                val newSettingIds = if (isEnabled) {
-                    settingIds?.toMutableSet()?.apply { add(settingId) } ?: setOf(settingId)
-                } else {
-                    settingIds?.toMutableSet()?.apply { remove(settingId) } ?: emptySet()
-                }
-
-                state[SettingWidget.settingIdsKey(deviceModel)] = newSettingIds
+                state[settingIdsKey] = toggledSettingIds(state[settingIdsKey], settingId, isEnabled)
             }
             val preferences = widget.getAppWidgetState<Preferences>(context, glanceId)
             enabledSettingIds.value = preferences[settingIdsKey] ?: emptySet()
@@ -209,24 +213,18 @@ class SettingWidgetConfigurationActivity : ComponentActivity() {
     }
 }
 
-enum class Screen {
-    EnabledSettings,
-    Appearance,
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
     connectionStatus: ConnectionStatus,
     enabledSettingIds: Set<String>?,
+    isCompactLayout: Boolean,
     onCancel: () -> Unit,
     onFinish: () -> Unit,
     onSetSettingIdEnabled: (deviceModel: String, settingId: String, isEnabled: Boolean) -> Unit,
-    isCompactLayout: Boolean,
     onCompactLayoutChange: (Boolean) -> Unit,
 ) {
-    var screen by remember { mutableStateOf(Screen.EnabledSettings) }
-    val isConnected = connectionStatus is ConnectionStatus.Connected
+    val connectedDevice = (connectionStatus as? ConnectionStatus.Connected)?.deviceManager?.device
     OpenSCQ30Theme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -235,9 +233,18 @@ private fun Content(
                     title = {
                         Text(text = stringResource(R.string.configure_widget))
                     },
+                    navigationIcon = {
+                        // the client's top bars navigate with the back arrow; here it cancels the configuration
+                        IconButton(onClick = onCancel) {
+                            Icon(
+                                painter = painterResource(R.drawable.arrow_back_24px),
+                                contentDescription = stringResource(R.string.cancel),
+                            )
+                        }
+                    },
                     actions = {
-                        if (connectionStatus is ConnectionStatus.Connected) {
-                            IconButton(onClick = { onFinish() }) {
+                        if (connectedDevice != null) {
+                            IconButton(onClick = onFinish) {
                                 Icon(
                                     painter = painterResource(R.drawable.check_24px),
                                     contentDescription = stringResource(R.string.confirm),
@@ -247,81 +254,27 @@ private fun Content(
                     },
                 )
             },
-            bottomBar = {
-                if (isConnected) {
-                    NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
-                        NavigationBarItem(
-                            selected = screen == Screen.EnabledSettings,
-                            onClick = { screen = Screen.EnabledSettings },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.visibility_24px),
-                                    contentDescription = stringResource(R.string.visible_settings),
-                                )
-                            },
-                            label = { Text(stringResource(R.string.visible_settings)) },
-                        )
-                        NavigationBarItem(
-                            selected = screen == Screen.Appearance,
-                            onClick = { screen = Screen.Appearance },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.view_agenda_24px),
-                                    contentDescription = stringResource(R.string.appearance),
-                                )
-                            },
-                            label = { Text(stringResource(R.string.appearance)) },
-                        )
-                    }
-                }
-            },
         ) { contentPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
             ) {
-                if (isConnected) {
-                    when (screen) {
-                        Screen.EnabledSettings -> {
-                            if (enabledSettingIds != null) {
-                                val device = connectionStatus.deviceManager.device
-                                SettingToggles(
-                                    enabledSettingIds = enabledSettingIds,
-                                    settingCategories = device.categories()
-                                        .map { categoryId ->
-                                            Pair(categoryId, device.settingsInCategory(categoryId))
-                                        },
-                                    onToggle = { settingId, isEnabled ->
-                                        onSetSettingIdEnabled(device.model(), settingId, isEnabled)
-                                    },
-                                )
-                            } else {
-                                Box(contentAlignment = Alignment.Center) { Text(stringResource(R.string.loading)) }
-                            }
-                        }
+                when {
+                    // With API <28, this will be shown initially when adding a widget (if not connected)
+                    // since android:widgetFeatures="configuration_optional" is not available.
+                    // Otherwise, the user won't be prompted for configuration until they connect to a device
+                    connectedDevice == null -> DisconnectedCard(onCancel = onCancel, onFinish = onFinish)
 
-                        Screen.Appearance -> AppearanceSettings(
-                            isCompactLayout = isCompactLayout,
-                            onCompactLayoutChange = onCompactLayoutChange,
-                        )
-                    }
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        // With API <28, this will be shown initially when adding a widget (if not connected)
-                        // since android:widgetFeatures="configuration_optional" is not available.
-                        // Otherwise, the user won't be prompted for configuration until they connect to a device
-                        Text(stringResource(R.string.connect_to_a_device_to_configure_the_widget))
-                        Row {
-                            Button(onClick = { onCancel() }) { Text(stringResource(R.string.cancel)) }
-                            Spacer(Modifier.width(8.dp))
-                            Button(onClick = { onFinish() }) { Text(stringResource(R.string.configure_later)) }
-                        }
-                    }
+                    enabledSettingIds == null -> Loading()
+
+                    else -> ConnectedConfiguration(
+                        device = connectedDevice,
+                        enabledSettingIds = enabledSettingIds,
+                        isCompactLayout = isCompactLayout,
+                        onSetSettingIdEnabled = onSetSettingIdEnabled,
+                        onCompactLayoutChange = onCompactLayoutChange,
+                    )
                 }
             }
         }
@@ -329,28 +282,86 @@ private fun Content(
 }
 
 @Composable
-private fun SettingToggles(
+private fun ConnectedConfiguration(
+    device: OpenScq30Device,
     enabledSettingIds: Set<String>,
-    settingCategories: List<Pair<String, List<String>>>,
+    isCompactLayout: Boolean,
+    onSetSettingIdEnabled: (deviceModel: String, settingId: String, isEnabled: Boolean) -> Unit,
+    onCompactLayoutChange: (Boolean) -> Unit,
+) {
+    val deviceModel = device.model()
+    val categories = device.settingsByCategory()
+    val snapshot = categories
+        .flatMap { it.settings }
+        .distinctBy { it.settingId }
+        .associate { it.settingId to it.setting }
+    val groups = widgetConfigurationGroups(categories, snapshot)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        HelpCard()
+        groups.forEach { group ->
+            ConfigurationGroupSection(
+                group = group,
+                enabledSettingIds = enabledSettingIds,
+                onToggle = { settingId, isSelected -> onSetSettingIdEnabled(deviceModel, settingId, isSelected) },
+            )
+        }
+        AppearanceSection(
+            isCompactLayout = isCompactLayout,
+            onCompactLayoutChange = onCompactLayoutChange,
+        )
+    }
+}
+
+@Composable
+private fun HelpCard() {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(stringResource(R.string.sound_widget), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.sound_widget_help), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun ConfigurationGroupSection(
+    group: WidgetConfigurationGroup,
+    enabledSettingIds: Set<String>,
     onToggle: (settingId: String, isEnabled: Boolean) -> Unit,
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-    ) {
-        settingCategories.forEach { (categoryId, settingIds) ->
-            Column {
-                TitledCard(translateCategoryId(categoryId)) {
-                    Column {
-                        settingIds.forEach { settingId ->
-                            SettingToggle(
-                                name = translateSettingId(settingId),
-                                isEnabled = enabledSettingIds.contains(settingId),
-                                onChange = { onToggle(settingId, it) },
-                            )
-                        }
-                    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GroupHeading(icon = group.group.icon, title = group.group.title())
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                group.settings.forEach { setting ->
+                    SettingRow(
+                        label = translateSettingId(setting.settingId),
+                        note = setting.note?.let { noteText(it) },
+                        isChecked = setting.settingId in enabledSettingIds,
+                        isSelectable = setting.canShow,
+                        onCheckedChange = { isSelected -> onToggle(setting.settingId, isSelected) },
+                    )
                 }
             }
         }
@@ -358,40 +369,139 @@ private fun SettingToggles(
 }
 
 @Composable
-private fun TitledCard(title: String, body: @Composable () -> Unit) {
-    Column {
-        Text(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Card {
-            body()
+private fun AppearanceSection(isCompactLayout: Boolean, onCompactLayoutChange: (Boolean) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GroupHeading(icon = R.drawable.view_agenda_24px, title = stringResource(R.string.appearance))
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            LabeledSwitch(
+                label = stringResource(R.string.compact_layout),
+                isChecked = isCompactLayout,
+                onCheckedChange = onCompactLayoutChange,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 16.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun SettingToggle(name: String, isEnabled: Boolean, onChange: (Boolean) -> Unit) {
+private fun GroupHeading(@DrawableRes icon: Int, title: String) {
     Row(
         modifier = Modifier
-            .toggleable(value = isEnabled, onValueChange = { onChange(it) })
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 12.dp),
+            .padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(name)
-        Switch(
-            checked = isEnabled,
-            onCheckedChange = null,
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.semantics { heading() },
         )
     }
 }
 
 @Composable
-private fun AppearanceSettings(isCompactLayout: Boolean, onCompactLayoutChange: (Boolean) -> Unit) {
-    Column {
-        LabeledSwitch(stringResource(R.string.compact_layout), isCompactLayout, onCompactLayoutChange)
+private fun SettingRow(
+    label: String,
+    note: String?,
+    isChecked: Boolean,
+    isSelectable: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(
+                value = isChecked,
+                enabled = isSelectable,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .alpha(if (isSelectable) 1f else 0.6f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(text = label, style = MaterialTheme.typography.titleMedium)
+            if (note != null) {
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Switch(checked = isChecked, enabled = isSelectable, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun noteText(note: WidgetConfigurationNote): String = when (note) {
+    is WidgetConfigurationNote.Availability -> stringResource(availabilityReasonText(note.reason))
+    WidgetConfigurationNote.DependsOnOtherSetting -> stringResource(R.string.widget_config_depends_on_other_setting)
+}
+
+@Composable
+private fun DisconnectedCard(onCancel: () -> Unit, onFinish: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.connect_to_a_device_to_configure_the_widget),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+                    Button(onClick = onFinish) { Text(stringResource(R.string.configure_later)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Loading() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(stringResource(R.string.loading))
     }
 }
