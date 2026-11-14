@@ -123,5 +123,61 @@
         </activity>
 
 
+        <receiver
+            android:name=".widget.BatteryWidgetReceiver"
+            android:label="@string/widget_battery_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/battery_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ModeToggleWidgetReceiver"
+            android:label="@string/widget_mode_toggle_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mode_toggle_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.SoundModesWidgetReceiver"
+            android:label="@string/widget_sound_modes_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sound_modes_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.DevicePanelWidgetReceiver"
+            android:label="@string/widget_device_panel_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/device_panel_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".widget.DevicePanelWidgetConfigurationActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
     </application>
 </manifest>

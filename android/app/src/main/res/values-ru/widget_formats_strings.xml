@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_battery_title">Заряд</string>
+    <string name="widget_battery_description">Заряд левого наушника, правого и кейса</string>
+    <string name="widget_mode_toggle_title">Переключатель режима</string>
+    <string name="widget_mode_toggle_description">Переключение шумоподавления и прозрачности</string>
+    <string name="widget_sound_modes_title">Заряд и режимы звука</string>
+    <string name="widget_sound_modes_description">Заряд и режимы звука одним нажатием</string>
+    <string name="widget_device_panel_title">Панель устройства</string>
+    <string name="widget_device_panel_description">Устройство, заряд, режимы звука и быстрые пресеты</string>
+    <string name="widget_battery_cell_description">%1$s: %2$s</string>
+    <string name="widget_battery_unknown_cell">%1$s: заряд неизвестен</string>
+    <string name="widget_next_noise_canceling">Включить шумоподавление</string>
+    <string name="widget_next_transparency">Включить прозрачность</string>
+    <string name="widget_mode_noise_canceling_short">Шумоподав</string>
+    <string name="widget_last_preset">Последний: %1$s</string>
+    <string name="widget_presets_empty">Пресеты не выбраны</string>
+    <string name="widget_presets_configure">Настроить</string>
+    <string name="widget_open_device">Открыть в OpenSCL4</string>
+    <string name="widget_switch_description">Переключить режим звука: сейчас %1$s, следующее действие — %2$s</string>
+    <string name="widget_switch_description_unavailable">%1$s. %2$s</string>
+    <string name="widget_connection_waiting">Ждём ответа наушников</string>
+    <string name="widget_connection_check">Проверьте Bluetooth и повторите подключение.</string>
+    <string name="widget_connection_no_device">Нет активного устройства.</string>
+    <string name="widget_presets_config_title">Пресеты виджета</string>
+    <string name="widget_presets_config_help">Выберите до двух сохранённых пресетов для этого виджета.</string>
+    <string name="widget_presets_config_max">Выберите не больше двух пресетов</string>
+    <string name="widget_presets_config_empty">У этого устройства нет сохранённых пресетов.</string>
+    <string name="widget_presets_config_connected">Подключитесь к наушникам, чтобы выбрать их пресеты</string>
+</resources>

@@ -33,6 +33,7 @@ import com.oppzippy.openscq30.lib.bindings.clientSettingAvailability
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.widget.SettingWidget
+import com.oppzippy.openscq30.widget.updateDeviceWidgets
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -67,6 +68,7 @@ class DeviceService : LifecycleService() {
         const val NOTIFICATION_ID = 1
 
         const val ACTION_QUICK_PRESET = BuildConfig.APPLICATION_ID + ".broadcast.QuickPreset"
+        const val ACTION_ACTIVATE_PRESET = BuildConfig.APPLICATION_ID + ".broadcast.ActivatePreset"
         const val ACTION_DISCONNECT = BuildConfig.APPLICATION_ID + ".broadcast.Disconnect"
         const val ACTION_RETRY = BuildConfig.APPLICATION_ID + ".broadcast.Retry"
         const val ACTION_SEND_NOTIFICATION = BuildConfig.APPLICATION_ID + ".broadcast.SendNotification"
@@ -75,9 +77,13 @@ class DeviceService : LifecycleService() {
 
         private const val LOST_RETENTION_MILLIS = 5 * 60 * 1000L
 
+        /** How long one sound mode command blocks the next until the device reports the confirmed mode. */
+        private const val SOUND_MODE_COMMAND_SETTLE_MILLIS = 1500L
+
         private val ACTIONS = listOf(
             ACTION_DISCONNECT,
             ACTION_QUICK_PRESET,
+            ACTION_ACTIVATE_PRESET,
             ACTION_RETRY,
             ACTION_SEND_NOTIFICATION,
             ACTION_SET_SETTING_VALUE,
@@ -85,6 +91,7 @@ class DeviceService : LifecycleService() {
         )
 
         const val INTENT_EXTRA_PRESET_SLOT_INDEX = "com.oppzippy.openscq30.presetNumber"
+        const val INTENT_EXTRA_PRESET_NAME = "com.oppzippy.openscq30.presetName"
         const val INTENT_EXTRA_SETTING_ID = "com.oppzippy.openscq30.settingId"
         const val INTENT_EXTRA_SETTING_VALUE = "com.oppzippy.openscq30.settingValue"
 
@@ -146,6 +153,10 @@ class DeviceService : LifecycleService() {
             flowOf(emptyList())
         }
     }.stateIn(lifecycleScope, SharingStarted.Lazily, emptyList())
+
+    // One sound mode command at a time: a second tap before the device confirms the first would fight the first write.
+    private val lastSoundModeCommandAt = java.util.concurrent.atomic.AtomicLong(0L)
+
     private var featuredSettingIds = connectionStatusFlow.flatMapLatest { connectionStatus ->
         if (connectionStatus is ConnectionStatus.Connected) {
             val device = connectionStatus.deviceManager.device
@@ -207,11 +218,49 @@ class DeviceService : LifecycleService() {
                     }
                 }
 
+                ACTION_ACTIVATE_PRESET -> {
+                    val presetName = intent.getStringExtra(INTENT_EXTRA_PRESET_NAME)
+                    if (presetName == null) {
+                        Log.e(TAG, "got $ACTION_ACTIVATE_PRESET, but INTENT_EXTRA_PRESET_NAME is not specified")
+                        return
+                    }
+                    lifecycleScope.launch {
+                        val status = connectionStatusFlow.value
+                        if (status is ConnectionStatus.Connected) {
+                            val device = status.deviceManager.device
+                            session.quickPresetHandler().use { quickPresetHandler ->
+                                try {
+                                    if (quickPresetHandler.quickPresets(device).any { it.name == presetName }) {
+                                        quickPresetHandler.activate(device, presetName)
+                                    } else {
+                                        Log.w(TAG, "quick preset $presetName does not exist any more")
+                                        showQuickPresetError()
+                                    }
+                                } catch (ex: OpenScq30Exception) {
+                                    Log.e(TAG, "error activating quick preset $presetName", ex)
+                                    showQuickPresetError()
+                                }
+                            }
+                            updateDeviceWidgets(applicationContext, session, connectionStatusFlow.value)
+                        }
+                    }
+                }
+
                 ACTION_SEND_NOTIFICATION -> {
                     sendNotification()
                 }
 
                 ACTION_SET_SETTING_VALUE -> {
+                    val requestedSettingId = intent.getStringExtra(INTENT_EXTRA_SETTING_ID)
+                    if (requestedSettingId == "ambientSoundMode") {
+                        val now = System.currentTimeMillis()
+                        val previous = lastSoundModeCommandAt.get()
+                        if (now - previous < SOUND_MODE_COMMAND_SETTLE_MILLIS) {
+                            Log.i(TAG, "ignoring a sound mode command until the device confirms the previous one")
+                            return
+                        }
+                        lastSoundModeCommandAt.set(now)
+                    }
                     lifecycleScope.launch {
                         val settingId = intent.getStringExtra(INTENT_EXTRA_SETTING_ID)
                         val value =
@@ -243,6 +292,9 @@ class DeviceService : LifecycleService() {
                                         ).show()
                                     }
                                     LdacTileService.requestUpdate(applicationContext)
+                                    if (settingId == "ambientSoundMode") {
+                                        updateDeviceWidgets(applicationContext, session, connectionStatusFlow.value)
+                                    }
                                 }
                             }
                         } else {
@@ -252,6 +304,9 @@ class DeviceService : LifecycleService() {
                 }
 
                 ACTION_UPDATE_WIDGET -> {
+                    lifecycleScope.launch {
+                        updateDeviceWidgets(applicationContext, session, connectionStatusFlow.value)
+                    }
                     val appWidgetId =
                         intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
                     if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -360,9 +415,11 @@ class DeviceService : LifecycleService() {
             val widget = SettingWidget()
             connectionStatusFlow.collectLatest { connectionStatus ->
                 widget.updateAllConnectionStatus(applicationContext, session, connectionStatus)
+                updateDeviceWidgets(applicationContext, session, connectionStatus)
                 if (connectionStatus is ConnectionStatus.Connected) {
                     connectionStatus.deviceManager.watchForChangeNotification.collectLatest {
                         widget.updateAllConnectionStatus(applicationContext, session, connectionStatus)
+                        updateDeviceWidgets(applicationContext, session, connectionStatus)
                     }
                 }
             }
@@ -430,6 +487,7 @@ class DeviceService : LifecycleService() {
         connectionController.close()
         MainScope().launch {
             SettingWidget().updateAllConnectionStatus(applicationContext, session, ConnectionStatus.Disconnected)
+            updateDeviceWidgets(applicationContext, session, ConnectionStatus.Disconnected)
         }
         _ldacState.value = null
         LdacTileService.requestUpdate(applicationContext)
