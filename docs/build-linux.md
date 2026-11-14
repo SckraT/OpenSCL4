@@ -75,7 +75,7 @@ It requires the same runtime dependencies as the archive and is tested on Ubuntu
 
 All Linux packages use the same data folder, described below, so a running copy from one package also counts as the running instance for another.
 
-A working tray is optional. Without a registered tray, closing the window exits. Hiding is allowed only when the tray is available; losing it should restore a hidden window. This behavior is implemented and still needs validation on the target sessions. GNOME may need an AppIndicator extension to provide a tray host; it is not required for windowed operation.
+A working tray is optional. Without a registered tray, closing the window exits. Hiding is allowed only when the tray is available; losing it restores a hidden window. This behavior is covered by the supported session checks. GNOME may need an AppIndicator extension to provide a tray host; it is not required for windowed operation.
 
 Data is kept in the system configuration directory under `openscl4/`, separately from OpenSCQ30. Use `OPENSCL4_CONFIG_DIR` for an isolated test.
 
