@@ -1,7 +1,9 @@
 package com.oppzippy.openscq30.ui.sound
 
+import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
@@ -31,28 +33,35 @@ enum class SettingGroup(val id: String, @DrawableRes val icon: Int, val libraryC
 }
 
 @Composable
-fun SettingGroup.title(): String = when (this) {
-    SettingGroup.SoundModes -> stringResource(R.string.sound_overview_sound_mode)
+fun SettingGroup.title(): String = title(LocalContext.current)
 
-    SettingGroup.Equalizer -> stringResource(R.string.equalizer)
+/** The group's name outside a composition, such as on the home screen widget. */
+fun SettingGroup.title(context: Context): String = when (this) {
+    SettingGroup.SoundModes -> context.getString(R.string.sound_overview_sound_mode)
 
-    SettingGroup.SoundEffects -> stringResource(R.string.sound_overview_effects)
+    SettingGroup.Equalizer -> context.getString(R.string.equalizer)
 
-    SettingGroup.Controls -> stringResource(R.string.sound_overview_controls)
+    SettingGroup.SoundEffects -> context.getString(R.string.sound_overview_effects)
 
-    SettingGroup.Comfort -> stringResource(R.string.sound_overview_comfort)
+    SettingGroup.Controls -> context.getString(R.string.sound_overview_controls)
 
-    SettingGroup.Power -> stringResource(R.string.sound_overview_power)
+    SettingGroup.Comfort -> context.getString(R.string.sound_overview_comfort)
 
-    SettingGroup.Connections -> stringResource(R.string.sound_overview_connections)
+    SettingGroup.Power -> context.getString(R.string.sound_overview_power)
 
-    SettingGroup.Case -> stringResource(R.string.sound_overview_case)
+    SettingGroup.Connections -> context.getString(R.string.sound_overview_connections)
 
-    SettingGroup.Sleep -> stringResource(R.string.sound_overview_sleep)
+    SettingGroup.Case -> context.getString(R.string.sound_overview_case)
+
+    SettingGroup.Sleep -> context.getString(R.string.sound_overview_sleep)
 
     SettingGroup.Lights, SettingGroup.Alarms, SettingGroup.About, SettingGroup.Other ->
         translateCategoryId(requireNotNull(libraryCategory))
 }
+
+/** The shared group with the library's name, or [SettingGroup.Other] for a group this client does not know yet. */
+internal fun settingGroup(name: String): SettingGroup = SettingGroup.entries.firstOrNull { it.name == name }
+    ?: SettingGroup.Other
 
 /**
  * The device's settings by group, each in the device's order, drawn as the library says. Groups without settings are
@@ -68,7 +77,7 @@ internal fun groupSettings(
     return buildMap {
         for (group in clientGroupSettings(categories)) {
             val shown = group.ids.mapNotNull { id -> displayed[id]?.let { id to it } }
-            if (shown.isNotEmpty()) put(SettingGroup.valueOf(group.group), shown)
+            if (shown.isNotEmpty()) put(settingGroup(group.group), shown)
         }
     }
 }

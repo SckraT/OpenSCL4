@@ -62,9 +62,6 @@ import androidx.glance.text.TextStyle
 import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
-import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
-import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
-import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
@@ -75,8 +72,6 @@ import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.sound.availabilityReasonText
-import com.oppzippy.openscq30.ui.sound.settingAvailability
-import com.oppzippy.openscq30.ui.sound.settingsPresentation
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30GlanceTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -114,6 +109,10 @@ internal sealed class SettingWidgetState {
         val deviceName: String,
         // Older cached snapshots lack rows. Wait for fresh device data before offering controls.
         val rows: List<WidgetSetting> = emptyList(),
+        // Older cached snapshots lack the model, the batteries and the one-earbud flag; a fresh update adds them.
+        val deviceModel: String = "",
+        val batteryValues: List<String> = emptyList(),
+        val oneEarbudOnly: Boolean = false,
     ) : SettingWidgetState()
 }
 
@@ -143,8 +142,11 @@ class SettingWidget : GlanceAppWidget() {
 
         provideContent {
             val widgetPreferences = currentState<Preferences>()
-            val state: SettingWidgetState? =
-                widgetPreferences[STATE_KEY]?.let { Json.decodeFromString<SettingWidgetState?>(it) }
+            val cachedState = widgetPreferences[STATE_KEY]
+            val state: SettingWidgetState? = decodeWidgetState(cachedState)
+            if (cachedState != null && state == null) {
+                Log.w(TAG, "error decoding widget state")
+            }
             val prefersDynamicColor by applicationPreferences.dynamicColorFlow.collectAsState()
             val isCompactLayout = widgetPreferences[COMPACT_LAYOUT_KEY] ?: false
 
@@ -221,20 +223,26 @@ class SettingWidget : GlanceAppWidget() {
                 is ConnectionStatus.Connected -> {
                     try {
                         val device = connectionStatus.deviceManager.device
-                        val settingIds = preferences[settingIdsKey(device.model())]
+                        val model = device.model()
+                        val settingIds = preferences[settingIdsKey(model)]
 
                         if (settingIds.isNullOrEmpty()) {
                             SettingWidgetState.ConnectedUnconfigured(
-                                deviceName = translateDeviceModel(device.model()),
+                                deviceName = translateDeviceModel(model),
                             )
                         } else {
-                            val snapshot = device.settingsByCategory()
+                            val categories = device.settingsByCategory()
+                            val snapshot = categories
                                 .flatMap { it.settings }
                                 .distinctBy { it.settingId }
                                 .associate { it.settingId to it.setting }
+                            val header = widgetHeader(snapshot)
                             SettingWidgetState.Connected(
-                                deviceName = translateDeviceModel(device.model()),
-                                rows = widgetSettings(settingIds, snapshot),
+                                deviceName = translateDeviceModel(model),
+                                rows = widgetSettings(settingIds, categories, snapshot),
+                                deviceModel = model,
+                                batteryValues = header.batteryValues,
+                                oneEarbudOnly = header.oneEarbudOnly,
                             )
                         }
                     } catch (ex: IllegalStateException) {
@@ -449,44 +457,6 @@ private fun ConnectedUnconfigured(context: Context) {
                 },
             ),
         )
-    }
-}
-
-/**
- * A selected setting the widget draws: its control, its value when it cannot be changed, or the reason it has no value
- * to draw.
- */
-@Serializable
-internal sealed class WidgetSetting {
-    @Serializable
-    data class Editable(val settingId: String, val setting: Setting) : WidgetSetting()
-
-    @Serializable
-    data class ReadOnly(val settingId: String, val setting: Setting, val reason: AvailabilityReason) : WidgetSetting()
-
-    @Serializable
-    data class Blocked(val settingId: String, val reason: AvailabilityReason) : WidgetSetting()
-}
-
-/**
- * The selected settings the widget can draw, decided from the [snapshot] the device reports. Dependency rules hide a
- * setting whose parent is off, and availability rules keep a setting the device does not let change now, the same way
- * the device settings screen treats them.
- */
-internal fun widgetSettings(selectedIds: Collection<String>, snapshot: Map<String, Setting>): List<WidgetSetting> {
-    val presentation = settingsPresentation(snapshot)
-    return selectedIds.mapNotNull { settingId ->
-        val setting = snapshot[settingId] ?: return@mapNotNull null
-        if (presentation.controls[settingId] == ClientSettingControl.HIDDEN ||
-            presentation.controls[settingId] == ClientSettingControl.DISABLED
-        ) {
-            return@mapNotNull null
-        }
-        when (val availability = settingAvailability(presentation.availability, settingId)) {
-            is ClientSettingAvailability.Available -> WidgetSetting.Editable(settingId, setting)
-            is ClientSettingAvailability.ReadOnly -> WidgetSetting.ReadOnly(settingId, setting, availability.reason)
-            is ClientSettingAvailability.Unavailable -> WidgetSetting.Blocked(settingId, availability.reason)
-        }
     }
 }
 
@@ -766,6 +736,13 @@ private fun ReadOnlySettingValue(settingId: String, value: String) {
 
 @Composable
 private fun defaultTextStyle(): TextStyle = TextStyle(color = GlanceTheme.colors.onSurface)
+
+/** Reads the state cached in the widget; a snapshot from another version is dropped instead of crashing the widget. */
+internal fun decodeWidgetState(json: String?): SettingWidgetState? = try {
+    json?.let { Json.decodeFromString<SettingWidgetState>(it) }
+} catch (_: Exception) {
+    null
+}
 
 internal fun recoveryWidgetState(connectionStatus: ConnectionStatus, deviceName: String): SettingWidgetState? =
     when (connectionStatus) {
