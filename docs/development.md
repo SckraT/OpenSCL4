@@ -48,7 +48,7 @@ This existing generator requires bash, Rust/Cargo, `jq`, `sd` and Prettier. It r
 
 The lightweight Python suite checks that each checked-in README matches its template and that both catalogs match the core model declarations. It also checks release scripts, how the release workflow hands the Linux packages to their checks, and that push, pull request and manual runs of one branch fall into different concurrency groups (see the CI rules above). Documentation CI runs it without rebuilding the apps.
 
-Screenshots in `docs/images/` are captures from the release packages with a demo device, not generated assets; replace them when the interface or the shown version changes, and keep the version in the README caption. Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
+Screenshots in `docs/images/` are captures from the release packages, not generated assets; replace them when the interface or the shown version changes, and keep the version in the README caption. Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
 
 ## Historical material
 

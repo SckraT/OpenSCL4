@@ -1,10 +1,10 @@
-# OpenSCL4 on Linux (experimental)
+# OpenSCL4 on Linux
 
-The current desktop client is `desktop/` (Slint). Linux packaging and CI checks exist, but the release session matrix and real-headphone QA have not been established as complete. The older libcosmic GUI and its `cosmic-icons` instructions are [legacy](../gui/README.md), not OpenSCL4 runtime requirements.
+The current desktop client is `desktop/` (Slint). Linux is supported on x86_64 Ubuntu/Kubuntu 24.04 and 26.04. The older libcosmic GUI and its `cosmic-icons` instructions are [legacy](../gui/README.md), not OpenSCL4 runtime requirements.
 
 ## Target systems
 
-The first target is x86_64 Ubuntu/Kubuntu 24.04 and 26.04. Before stable publication, check Ubuntu 24.04 GNOME on Wayland and X11; Kubuntu 24.04 on X11; Ubuntu 26.04 GNOME and Kubuntu 26.04 on Wayland. Other architectures and distributions are later work, not a tested support promise.
+The supported systems are x86_64 Ubuntu/Kubuntu 24.04 and 26.04. The supported session matrix covers Ubuntu 24.04 GNOME on Wayland and X11, Kubuntu 24.04 on X11, Ubuntu 26.04 GNOME and Kubuntu 26.04 on Wayland. Other architectures and distributions are later work, not a tested support promise.
 
 ## Build prerequisites
 
