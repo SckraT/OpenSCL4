@@ -8,7 +8,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -147,6 +146,4 @@ private fun ModePill(
     }
 }
 
-class SoundModesWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: SoundModesWidget = SoundModesWidget()
-}
+class SoundModesWidgetReceiver : DeviceWidgetReceiver(SoundModesWidget())

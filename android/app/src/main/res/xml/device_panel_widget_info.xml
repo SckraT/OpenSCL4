@@ -2,6 +2,8 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewImage="@drawable/widget_preview_device_panel"
+    android:configure="com.oppzippy.openscq30.widget.DevicePanelWidgetConfigurationActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_device_panel_description"
     android:minWidth="280dp"
     android:minHeight="220dp"

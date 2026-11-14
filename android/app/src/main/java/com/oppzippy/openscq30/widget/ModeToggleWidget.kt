@@ -10,7 +10,6 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -124,6 +123,4 @@ private fun switchHint(context: Context, state: DeviceWidgetState?, target: Stri
     else -> context.getString(R.string.widget_connection_no_device)
 }
 
-class ModeToggleWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: ModeToggleWidget = ModeToggleWidget()
-}
+class ModeToggleWidgetReceiver : DeviceWidgetReceiver(ModeToggleWidget())

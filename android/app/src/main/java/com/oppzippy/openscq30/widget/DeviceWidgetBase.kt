@@ -61,6 +61,29 @@ abstract class DeviceWidget : GlanceAppWidget() {
     protected abstract fun DeviceContent(context: Context, state: DeviceWidgetState?, palette: WidgetPalette)
 }
 
+/**
+ * A receiver of one device widget: when the launcher adds or rebinds it, the device service is asked for a fresh state
+ * in case the widget was added while a device is already connected.
+ */
+abstract class DeviceWidgetReceiver(private val widget: DeviceWidget) :
+    androidx.glance.appwidget.GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = widget
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: android.appwidget.AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        context.sendBroadcast(
+            Intent().apply {
+                `package` = context.packageName
+                action = DeviceService.ACTION_UPDATE_WIDGET
+            },
+        )
+    }
+}
+
 /** The widget state key; each widget instance has its own preferences, so one key is enough. */
 internal val STATE_KEY = stringPreferencesKey("widgetState")
 internal val LAST_MODEL_KEY = stringPreferencesKey("lastDeviceModel")

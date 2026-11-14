@@ -304,6 +304,9 @@ class DeviceService : LifecycleService() {
                 }
 
                 ACTION_UPDATE_WIDGET -> {
+                    lifecycleScope.launch {
+                        updateDeviceWidgets(applicationContext, session, connectionStatusFlow.value)
+                    }
                     val appWidgetId =
                         intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
                     if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {

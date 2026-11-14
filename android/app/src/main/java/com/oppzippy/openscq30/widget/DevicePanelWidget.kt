@@ -7,7 +7,6 @@ import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -211,6 +210,4 @@ private fun statusLabel(context: Context, state: DeviceWidgetState?): String = w
     else -> context.getString(R.string.disconnected)
 }
 
-class DevicePanelWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: DevicePanelWidget = DevicePanelWidget()
-}
+class DevicePanelWidgetReceiver : DeviceWidgetReceiver(DevicePanelWidget())

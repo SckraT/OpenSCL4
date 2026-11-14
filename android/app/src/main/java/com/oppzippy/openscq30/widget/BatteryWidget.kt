@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.background
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
@@ -20,6 +19,7 @@ class BatteryWidget : DeviceWidget() {
                 .fillMaxSize()
                 .background(ColorProvider(palette.background))
                 .padding(7.dp),
+            verticalAlignment = androidx.glance.layout.Alignment.CenterVertically,
         ) {
             val cells = (state as? DeviceWidgetState.Connected)?.batteryCells ?: disconnectedBatteryCells()
             WidgetBatteryCells(context, cells, palette)
@@ -34,6 +34,4 @@ private fun disconnectedBatteryCells(): List<WidgetBattery> = listOf(
     WidgetBattery(WidgetBatteryCell.Case, WIDGET_UNKNOWN_VALUE),
 )
 
-class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: BatteryWidget = BatteryWidget()
-}
+class BatteryWidgetReceiver : DeviceWidgetReceiver(BatteryWidget())

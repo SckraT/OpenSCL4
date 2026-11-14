@@ -141,6 +141,7 @@ internal fun WidgetBatteryCellView(context: Context, battery: WidgetBattery, pal
     }
     Column(
         modifier = GlanceModifier
+            .fillMaxWidth()
             .semantics { contentDescription = description }
             .background(ColorProvider(palette.battery))
             .cornerRadius(13.dp)
