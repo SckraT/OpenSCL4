@@ -64,8 +64,8 @@ and disconnects it; tapping the name opens the app. The compact-layout preferenc
 the rows short, and a short widget drops the header and the group headings.
 
 The configuration screen groups the settings by purpose, explains why a setting cannot
-be shown now, and applies every change to the widget immediately. The last saved
-selection stays visible while the device is not connected; without a connection the
+be shown now, and applies every change to the widget immediately. The selection is kept
+per device model, so it is ready when the device reconnects; without a connection the
 widget lists the saved devices, and connecting, reconnecting and lost sessions keep
 their status and the retry action.
 

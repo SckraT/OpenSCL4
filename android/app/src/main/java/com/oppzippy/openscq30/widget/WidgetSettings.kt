@@ -122,7 +122,6 @@ internal fun widgetHeader(snapshot: Map<String, Setting>): WidgetHeader {
 /** One setting the configuration screen offers, and why it cannot be shown now. */
 internal data class WidgetConfigurationSetting(
     val settingId: String,
-    val setting: Setting,
     /** The widget can draw this setting now; false means selecting it would show nothing. */
     val canShow: Boolean,
     /** The reason shown beside the switch, or null when the setting is available and independent. */
@@ -164,7 +163,6 @@ internal fun widgetConfigurationGroups(
                 presentation.controls[settingId] == ClientSettingControl.DISABLED ->
                     WidgetConfigurationSetting(
                         settingId,
-                        setting,
                         canShow = false,
                         note = WidgetConfigurationNote.DependsOnOtherSetting,
                     )
@@ -172,7 +170,6 @@ internal fun widgetConfigurationGroups(
                 availability is ClientSettingAvailability.Unavailable ->
                     WidgetConfigurationSetting(
                         settingId,
-                        setting,
                         canShow = false,
                         note = WidgetConfigurationNote.Availability(availability.reason),
                     )
@@ -180,12 +177,11 @@ internal fun widgetConfigurationGroups(
                 availability is ClientSettingAvailability.ReadOnly ->
                     WidgetConfigurationSetting(
                         settingId,
-                        setting,
                         canShow = true,
                         note = WidgetConfigurationNote.Availability(availability.reason),
                     )
 
-                else -> WidgetConfigurationSetting(settingId, setting, canShow = true)
+                else -> WidgetConfigurationSetting(settingId, canShow = true)
             }
         }
         if (settings.isEmpty()) {
