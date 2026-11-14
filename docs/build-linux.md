@@ -57,16 +57,16 @@ tar -xf openscl4-VERSION-linux-x86_64.tar.gz
 ./openscl4-VERSION/usr/bin/openscl4
 ```
 
-### AppImage (preview)
+### AppImage
 
-The AppImage is a single file that runs without installation:
+The AppImage is the portable package for Linux distributions outside the Debian family. It is a single file that runs without installation:
 
 ```sh
 chmod +x openscl4-VERSION-linux-x86_64.AppImage
 ./openscl4-VERSION-linux-x86_64.AppImage
 ```
 
-It is a later format, not part of the first release stage, and does not replace the `.deb` as the main package. CI builds, checksums and starts it, as described [below](#verification), but only with `--appimage-extract-and-run`. It has not been through the `.deb` package checks or the session checks, and its default start through FUSE on a desktop system is left to the manual QA in SckraT/OpenSCL4#48. Its limits:
+It requires the same runtime dependencies as the archive and is tested on Ubuntu; if it does not work on your distribution, please open an issue. If FUSE is unavailable, run it with `--appimage-extract-and-run`. Its limits:
 
 - **Dependencies.** It needs the same system libraries as the `.tar.gz`: the runtime dependencies in [`packaging/linux/control`](../packaging/linux/control), including glibc 2.39 or newer, BlueZ and `xdg-desktop-portal`. Systems older than Ubuntu 24.04 do not have a new enough glibc.
 - **FUSE.** The AppImage mounts itself with FUSE through `fusermount3` or `fusermount`, from the `fuse3` package that Ubuntu Desktop installs; the older `libfuse2` is not needed. Without FUSE, for example in a container, run it with `--appimage-extract-and-run`, which unpacks it to a temporary folder on each start.
