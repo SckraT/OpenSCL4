@@ -1,49 +1,117 @@
 # OpenSCL4
 
-OpenSCL4 controls supported Soundcore headphones, earbuds and speakers. It is an independent fork of [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30) by Kyle Scheuing and contributors, developed in [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4).
+**English** · [Русский](README.ru.md)
 
-The current clients are **Jetpack Compose on Android** and **Slint on desktop**, sharing device protocols and client rules in Rust. Features depend on the model, firmware and connection state; the application reads the device's reported settings rather than assuming a write succeeded.
+OpenSCL4 controls supported Soundcore headphones, earbuds and speakers on Windows, Linux and Android. It is free, open source and works without an account.
 
-## What has changed from upstream
+![OpenSCL4 1.0.0 on Windows and Android, showing the sound mode screen](docs/images/openscl4-hero-en.png)
 
-- A Slint desktop interface for device settings, sound modes, equalizer profiles and quick presets, with Windows tray controls.
-- An Android interface with device, preset and application settings pages, a foreground connection service, notifications and widgets.
-- Shared Rust rules for setting availability, battery readings, sound mode scales, equalizer validation and preset matching. Equalizer profile transfer and quick preset activation also use the common core.
-- Grouped setting snapshots for desktop and Android; the last successfully applied quick preset is remembered only for the current connection.
-- A separate application identity, signing key and data storage, plus a common build script for Android, Windows and experimental Linux packages.
+_OpenSCL4 1.0.0 from the published packages, on Windows and Android. The Liberty 4 Pro in the screenshots is a demo device; no headphones were connected._
 
-Internal Rust crate names and Kotlin packages still use `openscq30` / `com.oppzippy.openscq30`. These are implementation names, not the identity of the installed OpenSCL4 application. The old libcosmic client in `gui/` and the `openscq30` CLI remain development/legacy tools; they are not the current desktop release.
+[Download 1.0.0](https://github.com/SckraT/OpenSCL4/releases/tag/v1.0.0) · [Install](#install) · [Supported devices](#supported-devices) · [Development](#development)
 
-## Platform status
+## What it does
 
-Status at the documentation audit on **2026-10-19**:
+OpenSCL4 is a desktop and Android client for the settings Soundcore devices expose over Bluetooth. Change the modes and controls you use every day, see the state the device reports, and keep your own equalizer profiles and quick presets.
 
-| Platform     | Implemented and checked                                                                      | Remaining before a stable common release                                                                            |
-| ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Android 8.0+ | Compose client; native/JVM checks; a locally built, signed ARM64 preview APK                 | Release coverage for all four ABIs and physical-device/upgrade QA                                                   |
-| Windows x64  | Slint client; tray integration; locally built portable EXE and installer                     | Final device and installer/upgrade QA; packages initially have no Authenticode signature                            |
-| Linux x86_64 | Slint integration, `.deb`/`.tar.gz` packaging, and CI package/session checks are implemented | Experimental: successful Linux builds, the agreed GNOME/KDE session matrix and real-headphone QA are still required |
-| macOS        | A later goal                                                                                 | No release build or validated support matrix yet                                                                    |
+- **Sound modes.** Noise cancelling, transparency, normal mode and, where the model supports it, the strength of the current mode and wind-noise suppression.
+- **Equalizer.** A multi-band equalizer (eight bands on Liberty 4 Pro), Soundcore preset profiles, your own curves, and import/export of equalizer profiles.
+- **Quick presets.** Save a combination of settings and choose which of them a preset applies, so one click can switch several device settings at once.
+- **Device state.** Left, right and case battery where available, charging state, firmware and serial number, and the controls the exact model exposes.
+- **Everyday settings.** Button actions, wearing detection, a second connection (multipoint), LDAC, auto power off, case lights and other model-specific options.
+- **Desktop comforts.** A tray menu, close-to-tray, light and dark themes, content scaling, and an overview you can rearrange.
+- **Android integration.** A foreground connection service, notification controls, a home-screen widget, an LDAC quick-settings tile and optional automatic reconnection.
 
-The first Linux target is Ubuntu/Kubuntu 24.04 and 26.04; this is a validation target, not a claim that every session has passed. See the [implementation log](docs/implementation-status-2026-10-19.md), [accepted plan](docs/cross-platform-release-plan.md) and [release gates](docs/build-release.md#ci-and-verification). AppImage, Flatpak, stores and automatic updates are outside the first release stage. Performance measurements exist, but a general improvement in startup time, CPU or memory has not been established.
+![The OpenSCL4 equalizer showing the Bass Booster profile](docs/images/openscl4-equalizer-en.png)
 
-## Install or try a build
+_The equalizer with a Soundcore profile selected. Custom profiles can be saved, imported and exported._
 
-[GitHub Releases](https://github.com/SckraT/OpenSCL4/releases) is the publication location for OpenSCL4. **No GitHub releases were published at the audit above.** Local test packages do not establish a published release; until packages are available there, use the source build guides below. A successful release workflow run can also provide preview artifacts, without publishing a release.
+The interface is available in 16 languages, including Russian. Features depend on the model, firmware and connection state: OpenSCL4 reads the values the device reports and disables a setting when the current state does not allow changing it.
 
-When packages are published:
+## Platforms
 
-- **Android:** choose the APK matching your device ABI. The release application ID is `io.github.sckrat.openscl4`; debug builds use `.debug`. Updates within OpenSCL4 must keep its signing key.
-- **Windows:** use the x64 installer or portable `openscl4` executable. The initial packages are unsigned by Authenticode.
-- **Linux (preview):** use the `.deb` on the target Ubuntu systems or the `.tar.gz` with the same runtime dependencies. See [Linux installation and build notes](docs/build-linux.md).
+OpenSCL4 1.0.0 is built from the same Rust device core for every client. The desktop client uses Slint; the Android client uses Jetpack Compose.
 
-Verify downloads against the accompanying `SHA256SUMS`. Pair the headphones in the operating system's Bluetooth settings, then add/connect the matching model in OpenSCL4. Demo devices can be used to explore the interface without headphones.
+| Platform                         | Status in 1.0.0 | Packages                                              |
+| -------------------------------- | --------------- | ----------------------------------------------------- |
+| Windows 10/11 x64                | Supported       | Per-user installer, portable `openscl4.exe`           |
+| Android 8.0+                     | Supported       | APK for `arm64-v8a`, `armeabi-v7a`, `x86_64` or `x86` |
+| Linux x86_64, Ubuntu 24.04/26.04 | Preview         | `.deb`, `.tar.gz`, AppImage                           |
+| macOS                            | Not yet         | —                                                     |
 
-OpenSCL4 installs alongside OpenSCQ30 and starts with its own settings and presets. It does not automatically import the old application's data. Upstream store listings and signatures are not OpenSCL4 distribution channels.
+Linux is an experimental target in this release: the packages and CI checks exist, but the full GNOME/KDE session matrix and real-headphone checks are still being recorded. The first Linux target is Ubuntu/Kubuntu 24.04 and 26.04 on X11 and Wayland.
 
-## Supported device implementations
+## Install
 
-This catalog is generated from the Rust device model list. It means a protocol implementation exists; it is not a guarantee that every setting, firmware version and platform combination has been physically tested. Liberty 4 Pro is the primary device for the current cross-platform work; other inherited models remain available.
+The packages are published on the [OpenSCL4 1.0.0 release page](https://github.com/SckraT/OpenSCL4/releases/tag/v1.0.0). Download the file for your platform and check it against `SHA256SUMS` before running it.
+
+> The 1.0.0 package set is published. If GitHub shows it as a pre-release, the label reflects the remaining Linux-session and real-device checks; the downloads and checksums are complete.
+
+### Windows
+
+Download **`openscl4-1.0.0-windows-x86_64-setup.exe`** for the per-user installer, or **`openscl4-1.0.0-windows-x86_64.exe`** for the portable version. Close a running OpenSCL4 before installing an update; the installer will otherwise ask you to close it.
+
+The first Windows packages are not signed with an Authenticode certificate, so Windows SmartScreen may show a warning. Choose **More info → Run anyway** only after verifying the SHA-256 checksum. The app connects to headphones through the normal Windows Bluetooth stack; no driver is installed.
+
+### Android
+
+Download the APK that matches your device:
+
+- `openscl4-1.0.0-android-arm64-v8a.apk` — most phones and tablets from the last few years;
+- `openscl4-1.0.0-android-armeabi-v7a.apk` — older 32-bit devices;
+- `openscl4-1.0.0-android-x86_64.apk` or `openscl4-1.0.0-android-x86.apk` — emulators and x86 tablets.
+
+Android 8.0 or newer is required. Allow your browser or file manager to install unknown apps, open the APK and confirm the installation. The release application ID is `io.github.sckrat.openscl4`; debug builds use a `.debug` suffix.
+
+The app asks for Bluetooth/nearby-devices access and, on older Android versions, location access for Bluetooth scanning. It uses a foreground service for the active connection and notifications for its controls. Notification permission lets the connection controls appear in the notification shade.
+
+OpenSCL4 is signed with its own key and installs alongside OpenSCQ30. It does not import OpenSCQ30 data, and it cannot update an OpenSCQ30 installation.
+
+<details>
+<summary>Upgrading from a 2.x test build</summary>
+
+The stable line starts at Android `versionCode` 1,000,000. If you installed a 2.x test build, export any equalizer profiles you want to keep, uninstall the test build, then install 1.0.0. Uninstalling removes the app's local data.
+
+</details>
+
+### Linux (preview)
+
+The first Linux target is Ubuntu/Kubuntu 24.04 and 26.04 on x86_64.
+
+With the `.deb`:
+
+```sh
+sudo apt install ./openscl4_1.0.0_amd64.deb
+```
+
+With the archive, install the same runtime dependencies, extract it and run the binary:
+
+```sh
+tar -xf openscl4-1.0.0-linux-x86_64.tar.gz
+./openscl4-1.0.0/usr/bin/openscl4
+```
+
+The AppImage is a single-file preview:
+
+```sh
+chmod +x openscl4-1.0.0-linux-x86_64.AppImage
+./openscl4-1.0.0-linux-x86_64.AppImage
+```
+
+The AppImage needs FUSE (or `--appimage-extract-and-run`) and the same system libraries as the archive. It does not add a launcher entry and does not update itself. The `.deb` is the main Linux package. See [Linux installation and build notes](docs/build-linux.md) for dependencies, Wayland/X11 details and tray behavior.
+
+## First start
+
+1. Pair the headphones, earbuds or speaker in your operating system's Bluetooth settings.
+2. Open OpenSCL4, choose **Add device**, select the exact model and then the device paired with the system.
+3. If the model is missing from the list, check [Supported devices](#supported-devices) and the [device request guide](docs/request-soundcore-device.md).
+4. To explore the interface without headphones, enable **Demo mode** after choosing a model. Demo devices simulate the device state and never control real hardware.
+
+The device is the source of truth. After a change, OpenSCL4 reads the reported value back and keeps the previous value visible if the device rejects or does not confirm the write.
+
+## Supported devices
+
+The table lists models with a protocol implementation in the Rust core. It does not guarantee that every setting, firmware version and platform combination has been tested with physical hardware. Liberty 4 Pro is the primary device for the current cross-platform work; other models from the shared codebase remain available.
 
 | Model  | Name                         |
 | ------ | ---------------------------- |
@@ -90,42 +158,64 @@ This catalog is generated from the Rust device model list. It means a protocol i
 
 For a missing model, search [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues) and follow the [device request guide](docs/request-soundcore-device.md).
 
-## Build and develop
+## Data and privacy
 
-Use the [common build and release guide](docs/build-release.md) for pinned tools, signing, package verification and publication. Platform setup:
+OpenSCL4 does not require an account and does not have its own cloud sync service. Devices, equalizer profiles, quick presets and app settings are stored locally:
 
-- [Windows](docs/build-windows.md)
-- [Android](docs/build-android.md)
-- [Linux](docs/build-linux.md)
+- **Windows:** `%APPDATA%\openscl4` (the `OPENSCL4_CONFIG_DIR` environment variable overrides it);
+- **Linux:** `~/.config/openscl4`;
+- **Android:** the app's private storage.
 
-The workspace contains:
+Android removes the app's data when you uninstall it. Export any equalizer profiles you want to keep first. On Windows and Linux, back up the data directory before uninstalling if you want to keep your profiles and presets.
+
+OpenSCL4 installs separately from OpenSCQ30 and never imports OpenSCQ30 data automatically. The original project's store listings, signing keys and support channels are not OpenSCL4 distribution or support services.
+
+## If something does not work
+
+- **The device is not listed.** Make sure it is paired in the system Bluetooth settings, turned on and not connected to another phone or computer. Reopen or refresh the paired-device list in OpenSCL4.
+- **A setting is greyed out.** The model, firmware or current connection state does not allow changing it. With one earbud connected, settings that need both earbuds are unavailable; put the second earbud in and let the device reconnect.
+- **Windows shows a SmartScreen warning.** The 1.0.0 Windows packages do not have an Authenticode signature. Verify the checksum and use **More info → Run anyway** if you trust the download.
+- **The Linux window closes instead of hiding.** Hiding needs a registered tray. GNOME may need an AppIndicator extension; without a tray, closing the window exits.
+- **You need to report a bug.** Include the OpenSCL4 version or commit, package source, operating system, device model, steps to reproduce and, for Linux, the desktop environment and Wayland/X11 session. See [Bluetooth log capture](docs/capture-bluetooth-logs.md) before attaching a capture; logs can contain device identifiers.
+
+## Development
+
+The workspace shares device protocols, storage and client rules in Rust:
 
 | Path                               | Role                                                                   |
 | ---------------------------------- | ---------------------------------------------------------------------- |
 | `lib/`                             | Device protocols, settings API, SQLite storage and shared client rules |
+| `desktop/`                         | Slint desktop client; executable `openscl4`                            |
 | `android/`                         | Rust/UniFFI adapter and Kotlin/Compose application                     |
-| `desktop/`                         | Current Slint desktop client; executable `openscl4`                    |
-| `cli/`, `gui/`                     | Retained CLI and legacy libcosmic GUI                                  |
+| `cli/`, `gui/`                     | Retained CLI and legacy libcosmic GUI, not the current desktop release |
 | `scripts/release.py`, `packaging/` | Common release entry point and platform packages                       |
 
-For a desktop development build, with the platform prerequisites installed:
+For a desktop development build:
 
-```text
+```sh
 cargo build --locked -p openscq30-desktop
+./target/debug/openscl4
 ```
 
-The output is `target/debug/openscl4` (or `openscl4.exe`). The root `build-gui` and `install` recipes target the legacy GUI; use the current release script for OpenSCL4 packages. See [development and checks](docs/development.md) for architecture, test commands and README generation.
+For Android, open `android/` in Android Studio or build one ABI with `./gradlew assembleArm64-v8aDebug`. The current checks are:
 
-## Support and contributions
+```sh
+cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
+cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android --all-targets -- -D warnings
+cargo fmt --all --check
+python3 -m unittest discover -s scripts/tests -v
+```
 
-Report problems and send pull requests to [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4). Include the OpenSCL4 version/commit, package source, OS, device model and reproduction steps. Linux reports should also name the desktop environment and Wayland/X11 session.
+See [development and checks](docs/development.md) for architecture, the Android interface, README generation and CI. Release and packaging details are in [the common build and release guide](docs/build-release.md), with platform guides for [Windows](docs/build-windows.md), [Android](docs/build-android.md) and [Linux](docs/build-linux.md).
 
-[Bluetooth log capture](docs/capture-bluetooth-logs.md) explains what information a capture can contain. Review logs before attaching them. This fork does not designate the upstream author's email as a private support channel.
+## Contributing
 
-Translation updates should be submitted here as pull requests. Existing translations are inherited from upstream; its translation service does not automatically update this fork. See [development](docs/development.md) and [Android interface behavior](docs/android-interface.md).
+Bug reports, feature requests and pull requests belong in [SckraT/OpenSCL4](https://github.com/SckraT/OpenSCL4). Translation updates are welcome as pull requests here; the fork is not connected to the original project's translation service.
 
-## Origin and license
+Please keep signing keys, passwords, signing backups and captured logs with personal data out of commits and public attachments. If you change a device protocol, include the model, firmware and a safe log or capture where possible.
 
-OpenSCL4 is maintained by SckraT and builds on OpenSCQ30 by **Kyle Scheuing and contributors**. Original authorship, copyright notices and dependency licenses are retained. The project is licensed under **GPL-3.0-or-later**; see [LICENSE.txt](LICENSE.txt).
+## License and credits
 
-The [upstream history and asset notes](docs/history/upstream.md) identify retained screenshots, old release notes and legacy metadata. They are historical references, not previews or release records for the current OpenSCL4 clients.
+OpenSCL4 is licensed under **GPL-3.0-or-later**; see [LICENSE.txt](LICENSE.txt). It is an independent fork of [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30) by **Kyle Scheuing and contributors**, maintained by SckraT. Original copyright notices and dependency licenses are retained. The bundled Onest font is licensed under the SIL Open Font License.
+
+Soundcore is a trademark of Anker Innovations. OpenSCL4 is an independent project and is not affiliated with or endorsed by Anker.
