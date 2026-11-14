@@ -63,16 +63,29 @@ private val deviceArtByModel by lazy {
 /** The illustration of a device model such as "SoundcoreA3954", or null for models without one. */
 fun deviceArt(model: String): DeviceArt? = deviceArtByModel[model]
 
+/** The drawing of this illustration in [color]. */
+@DrawableRes
+private fun DeviceArt.drawable(color: EarbudsColor): Int = when (color) {
+    EarbudsColor.Silver -> silver
+    EarbudsColor.Black -> black
+}
+
 /**
  * The illustration in the color chosen in the settings, or, when following the theme, silver in light themes and black
  * in dark themes, so it stands out from the card.
  */
 @DrawableRes
 internal fun deviceArtImage(art: DeviceArt, scheme: ColorScheme, color: EarbudsColor? = null): Int =
-    when (color ?: if (scheme.surface.luminance() >= 0.5f) EarbudsColor.Silver else EarbudsColor.Black) {
-        EarbudsColor.Silver -> art.silver
-        EarbudsColor.Black -> art.black
-    }
+    art.drawable(color ?: if (scheme.surface.luminance() >= 0.5f) EarbudsColor.Silver else EarbudsColor.Black)
+
+/**
+ * The illustration drawn on the widget's sage header card. The large hero card shows the silver drawing in light
+ * themes, but at 30 dp on the sage card it loses its contrast, so the widget uses the black drawing on a light card
+ * and the silver one on a dark card unless the user picked a colour.
+ */
+@DrawableRes
+internal fun deviceArtOnCard(art: DeviceArt, color: EarbudsColor?, darkHeader: Boolean): Int =
+    art.drawable(color ?: if (darkHeader) EarbudsColor.Silver else EarbudsColor.Black)
 
 /** Decorative illustration of the device for the device overview and the device list. */
 @Composable

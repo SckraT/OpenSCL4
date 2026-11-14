@@ -80,7 +80,6 @@
     <string name="dark">Scuro</string>
     <string name="dynamic_color">Colori dinamici</string>
     <string name="copy_logs_to_clipboard_unfiltered">Copia log negli appunti (senza filtri)</string>
-    <string name="visible_settings">Impostazioni visibili</string>
     <string name="appearance">Aspetto</string>
     <string name="compact_layout">Layout compatto</string>
     <string name="in_effect">In uso</string>
