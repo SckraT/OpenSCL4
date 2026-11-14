@@ -9,12 +9,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.glance.Button
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -34,9 +32,6 @@ import androidx.glance.appwidget.Switch
 import androidx.glance.appwidget.action.actionSendBroadcast
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.action.actionStartService
-import androidx.glance.appwidget.components.CircleIconButton
-import androidx.glance.appwidget.components.Scaffold
-import androidx.glance.appwidget.components.TitleBar
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
@@ -47,6 +42,7 @@ import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -55,11 +51,12 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
+import com.oppzippy.openscq30.MainActivity
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.DeviceService
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
@@ -71,8 +68,13 @@ import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.lib.wrapper.Value
 import com.oppzippy.openscq30.lib.wrapper.toValue
+import com.oppzippy.openscq30.ui.sound.SettingGroup
 import com.oppzippy.openscq30.ui.sound.availabilityReasonText
+import com.oppzippy.openscq30.ui.sound.deviceArt
+import com.oppzippy.openscq30.ui.sound.deviceArtOnCard
+import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30GlanceTheme
+import com.oppzippy.openscq30.ui.theme.prefersDarkTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -148,12 +150,16 @@ class SettingWidget : GlanceAppWidget() {
                 Log.w(TAG, "error decoding widget state")
             }
             val prefersDynamicColor by applicationPreferences.dynamicColorFlow.collectAsState()
+            val earbudsColor by applicationPreferences.earbudsColorFlow.collectAsState()
+            val theme by applicationPreferences.themeFlow.collectAsState()
             val isCompactLayout = widgetPreferences[COMPACT_LAYOUT_KEY] ?: false
 
             Content(
                 context = context,
                 state = state,
                 prefersDynamicColor = prefersDynamicColor,
+                earbudsColor = earbudsColor,
+                isDarkTheme = theme.prefersDarkTheme(),
                 isCompactLayout = isCompactLayout,
             )
         }
@@ -238,7 +244,7 @@ class SettingWidget : GlanceAppWidget() {
                                 .associate { it.settingId to it.setting }
                             val header = widgetHeader(snapshot)
                             SettingWidgetState.Connected(
-                                deviceName = translateDeviceModel(model),
+                                deviceName = deviceShortName(model),
                                 rows = widgetSettings(settingIds, categories, snapshot),
                                 deviceModel = model,
                                 batteryValues = header.batteryValues,
@@ -274,348 +280,580 @@ private fun Content(
     context: Context,
     state: SettingWidgetState?,
     prefersDynamicColor: Boolean,
+    earbudsColor: EarbudsColor?,
+    isDarkTheme: Boolean,
     isCompactLayout: Boolean,
 ) {
-    OpenSCQ30GlanceTheme(dynamicColor = prefersDynamicColor) {
-        Scaffold(
-            modifier = GlanceModifier.fillMaxSize(),
-            titleBar = {
-                val titleText = when (state) {
-                    is SettingWidgetState.Connected -> state.deviceName
-                    is SettingWidgetState.ConnectedUnconfigured -> state.deviceName
-                    is SettingWidgetState.Connecting -> state.deviceName
-                    is SettingWidgetState.Recovering -> state.deviceName
-                    is SettingWidgetState.Lost -> state.deviceName
-                    is SettingWidgetState.Disconnected, null -> context.getString(R.string.disconnected)
-                }
+    OpenSCQ30GlanceTheme(dynamicColor = prefersDynamicColor, darkTheme = isDarkTheme) {
+        val isShort = LocalSize.current.height < WidgetDimens.shortHeight
+        val compact = isCompactLayout || isShort
+        val padding = if (compact) WidgetDimens.compactRootPadding else WidgetDimens.rootPadding
 
-                // Smaller title bar with less padding when displaying multiple settings so that more fit without having
-                // to scroll down
-                if (state is SettingWidgetState.Connected && state.rows.size > 1) {
-                    Row(
-                        modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Image(
-                            modifier = GlanceModifier.size(24.dp),
-                            provider = ImageProvider(R.drawable.openscq30_logo_foreground),
-                            contentDescription = "",
-                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurface),
-                        )
-                        Spacer(GlanceModifier.width(4.dp))
-                        Text(
-                            titleText,
-                            modifier = GlanceModifier.defaultWeight(),
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSurface,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                            ),
-                            maxLines = 1,
-                        )
-                        CircleIconButton(
-                            modifier = GlanceModifier.size(32.dp),
-                            imageProvider = ImageProvider(R.drawable.arrow_back_24px),
-                            contentDescription = context.getString(R.string.disconnect),
-                            backgroundColor = null,
-                            // Not sure why, but for some reason actions don't seem to work when the CircleIconButton
-                            // is in the TitleBar. If I copy the button from here and put it somewhere else, it works in
-                            // the other location, but not here. As a workaround, we can pass a function instead and
-                            // directly call context.sendBroadcast. It's a very strange issue, so it's possible I'm
-                            // doing something wrong.
-                            onClick = { sendDisconnect(context) },
-                        )
-                    }
-                } else {
-                    TitleBar(
-                        startIcon = ImageProvider(R.drawable.openscq30_logo_foreground),
-                        title = titleText,
-                    ) {
-                        if (state is SettingWidgetState.Connected ||
-                            state is SettingWidgetState.ConnectedUnconfigured ||
-                            state is SettingWidgetState.Recovering ||
-                            state is SettingWidgetState.Lost
-                        ) {
-                            CircleIconButton(
-                                imageProvider = ImageProvider(R.drawable.arrow_back_24px),
-                                contentDescription = context.getString(R.string.disconnect),
-                                backgroundColor = null,
-                                // Not sure why, but for some reason actions don't seem to work when the CircleIconButton
-                                // is in the TitleBar. If I copy the button from here and put it somewhere else, it works in
-                                // the other location, but not here. As a workaround, we can pass a function instead and
-                                // directly call context.sendBroadcast. It's a very strange issue, so it's possible I'm
-                                // doing something wrong.
-                                onClick = { sendDisconnect(context) },
-                            )
-                        }
-                    }
-                }
-            },
+        Column(
+            GlanceModifier
+                .fillMaxSize()
+                .background(GlanceTheme.colors.background)
+                .padding(padding),
         ) {
-            if (state == null) {
-                Disconnected(context, emptyList())
-            } else {
-                when (state) {
-                    is SettingWidgetState.Disconnected -> Disconnected(context, state.pairedDevices)
+            when (state) {
+                null -> DisconnectedScreen(context, emptyList(), compact, isShort, isDarkTheme)
 
-                    is SettingWidgetState.Connecting -> Connecting(context, state.deviceName)
+                is SettingWidgetState.Disconnected ->
+                    DisconnectedScreen(context, state.pairedDevices, compact, isShort, isDarkTheme)
 
-                    is SettingWidgetState.Recovering -> Recovering(context)
-
-                    is SettingWidgetState.Lost -> Lost(context)
-
-                    is SettingWidgetState.ConnectedUnconfigured -> ConnectedUnconfigured(context)
-
-                    is SettingWidgetState.Connected -> Connected(
+                is SettingWidgetState.Connecting ->
+                    MessageScreen(
                         context = context,
-                        rows = state.rows,
-                        isCompactLayout = isCompactLayout,
+                        title = state.deviceName,
+                        message = context.getString(R.string.connecting_to, state.deviceName),
+                        compact = compact,
+                        isShort = isShort,
+                        isDarkTheme = isDarkTheme,
+                        showDisconnect = true,
                     )
-                }
-            }
-        }
-    }
-}
 
-@Composable
-private fun Disconnected(context: Context, pairedDevices: List<PairedDevice>) {
-    LazyColumn {
-        items(pairedDevices) { pairedDevice ->
-            Column {
-                Row(
-                    modifier = GlanceModifier
-                        .clickable(actionConnectToPairedDevice(context, pairedDevice.macAddress))
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                        .background(GlanceTheme.colors.surfaceVariant)
-                        .cornerRadius(8.dp),
+                is SettingWidgetState.Recovering -> MessageScreen(
+                    context = context,
+                    title = state.deviceName,
+                    message = context.getString(R.string.sound_overview_reconnecting),
+                    compact = compact,
+                    isShort = isShort,
+                    isDarkTheme = isDarkTheme,
+                    showDisconnect = true,
+                )
+
+                is SettingWidgetState.Lost -> MessageScreen(
+                    context = context,
+                    title = state.deviceName,
+                    message = context.getString(R.string.sound_overview_disconnected),
+                    compact = compact,
+                    isShort = isShort,
+                    isDarkTheme = isDarkTheme,
+                    showDisconnect = true,
                 ) {
-                    val textStyle = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
+                    WidgetButton(
+                        text = context.getString(R.string.sound_overview_retry),
+                        onClick = actionSendBroadcast(
+                            Intent().apply {
+                                `package` = context.packageName
+                                action = DeviceService.ACTION_RETRY
+                            },
+                        ),
                     )
-                    Text(translateDeviceModel(pairedDevice.model), style = textStyle)
-                    Spacer(GlanceModifier.defaultWeight())
-                    Text(pairedDevice.macAddress, style = textStyle)
                 }
-                Spacer(GlanceModifier.height(4.dp))
+
+                is SettingWidgetState.ConnectedUnconfigured -> MessageScreen(
+                    context = context,
+                    title = state.deviceName,
+                    message = context.getString(R.string.widget_configure_hint),
+                    compact = compact,
+                    isShort = isShort,
+                    isDarkTheme = isDarkTheme,
+                    showDisconnect = true,
+                ) {
+                    WidgetButton(
+                        text = context.getString(R.string.configure_widget),
+                        onClick = actionConfigure(context),
+                    )
+                }
+
+                is SettingWidgetState.Connected -> ConnectedScreen(
+                    context = context,
+                    state = state,
+                    compact = compact,
+                    isShort = isShort,
+                    earbudsColor = earbudsColor,
+                    isDarkTheme = isDarkTheme,
+                )
             }
         }
     }
 }
 
-@Composable
-private fun Connecting(context: Context, deviceName: String) {
-    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(context.getString(R.string.connecting_to, deviceName))
-    }
-}
+/** The device name without the manufacturer, as the client's device card shows it. */
+private fun deviceShortName(model: String): String = translateDeviceModel(model).removePrefix("Soundcore ")
 
 @Composable
-private fun Recovering(context: Context) {
-    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(context.getString(R.string.sound_overview_reconnecting))
-    }
-}
-
-@Composable
-private fun Lost(context: Context) {
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(context.getString(R.string.sound_overview_disconnected))
-        Spacer(GlanceModifier.height(8.dp))
-        Button(
-            text = context.getString(R.string.sound_overview_retry),
-            onClick = actionSendBroadcast(
-                Intent().apply {
-                    `package` = context.packageName
-                    action = DeviceService.ACTION_RETRY
-                },
-            ),
+private fun ColumnScope.DisconnectedScreen(
+    context: Context,
+    pairedDevices: List<PairedDevice>,
+    compact: Boolean,
+    isShort: Boolean,
+    isDarkTheme: Boolean,
+) {
+    if (!isShort) {
+        WidgetHeader(
+            context = context,
+            model = null,
+            title = context.getString(R.string.disconnected),
+            batteryValues = emptyList(),
+            oneEarbudOnly = false,
+            showDisconnect = false,
+            earbudsColor = null,
+            isDarkTheme = isDarkTheme,
+            compact = compact,
         )
+        Spacer(GlanceModifier.height(WidgetDimens.sectionGap))
     }
-}
-
-@Composable
-private fun ConnectedUnconfigured(context: Context) {
-    val glanceId = LocalGlanceId.current
-    val appWidgetId = GlanceAppWidgetManager(LocalContext.current).getAppWidgetId(glanceId)
-
-    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Button(
-            text = context.getString(R.string.configure_widget),
-            onClick = actionStartActivity(
-                Intent(context, SettingWidgetConfigurationActivity::class.java).apply {
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    setPackage(context.packageName)
-
-                    addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
-
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                },
-            ),
-        )
-    }
-}
-
-@Composable
-private fun Connected(context: Context, rows: List<WidgetSetting>, isCompactLayout: Boolean) {
-    LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-        items(rows) { row ->
-            Box(
-                modifier = GlanceModifier.let {
-                    if (!isCompactLayout) it.padding(bottom = 6.dp) else it
-                },
-            ) {
-                when (row) {
-                    is WidgetSetting.Editable -> ShowSetting(context, row.settingId, row.setting, isCompactLayout)
-
-                    is WidgetSetting.ReadOnly -> Column(GlanceModifier.fillMaxWidth()) {
-                        val value = when (val setting = row.setting) {
-                            is Setting.ToggleSetting -> context.getString(
-                                if (setting.value) R.string.sound_overview_on else R.string.sound_overview_off,
-                            )
-
-                            else -> translateValue(setting, setting.toValue())
-                        }
-                        ReadOnlySettingValue(row.settingId, value)
-                        Text(
-                            context.getString(availabilityReasonText(row.reason)),
-                            style = defaultTextStyle(),
-                        )
-                    }
-
-                    is WidgetSetting.Blocked -> ReadOnlySettingValue(
-                        row.settingId,
-                        context.getString(availabilityReasonText(row.reason)),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ShowSetting(context: Context, settingId: String, setting: Setting, isCompactLayout: Boolean) {
-    when (setting) {
-        is Setting.Action -> {
-            Button(
-                translateSettingId(settingId),
-                onClick = actionSetSettingValue(context, settingId, true.toValue()),
+    if (pairedDevices.isEmpty()) {
+        CenteredContent(GlanceModifier.fillMaxWidth().defaultWeight()) {
+            Text(
+                context.getString(R.string.sound_device_not_connected_hint),
+                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+            )
+            Spacer(GlanceModifier.height(10.dp))
+            WidgetButton(
+                text = context.getString(R.string.widget_open_app),
+                onClick = actionOpenApp(context),
             )
         }
-
-        is Setting.EqualizerSetting -> {
-            val divisor = BigDecimal.ONE.scaleByPowerOfTen(setting.setting.fractionDigits.toInt())
-            val scaledValues = setting.value.map { BigDecimal(it.toInt()).divide(divisor) }
-            ReadOnlySettingValue(settingId, scaledValues.joinToString(separator = ", ", prefix = "[", postfix = "]"))
-        }
-
-        is Setting.I32RangeSetting -> {
-            Row {
-                Text(translateSettingId(settingId), style = defaultTextStyle())
-                Text(setting.value.toString(), style = defaultTextStyle())
+    } else {
+        LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
+            items(pairedDevices) { pairedDevice ->
+                PairDeviceRow(context, pairedDevice)
             }
         }
+    }
+}
 
-        is Setting.ImportStringSetting -> ReadOnlySettingValue(settingId, "")
+@Composable
+private fun PairDeviceRow(context: Context, pairedDevice: PairedDevice) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(bottom = WidgetDimens.rowGap)
+            .clickable(actionConnectToPairedDevice(context, pairedDevice.macAddress))
+            .background(GlanceTheme.colors.surface)
+            .cornerRadius(WidgetDimens.rowRadius)
+            .padding(horizontal = WidgetDimens.rowPaddingHorizontal, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(GlanceModifier.defaultWeight()) {
+            Text(
+                translateDeviceModel(pairedDevice.model),
+                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+                maxLines = 1,
+            )
+            Text(
+                pairedDevice.macAddress,
+                style = WidgetText.headerDetail.tinted(GlanceTheme.colors.onSurfaceVariant),
+                maxLines = 1,
+            )
+        }
+    }
+}
 
-        is Setting.InformationSetting -> ReadOnlySettingValue(settingId, setting.value)
+@Composable
+private fun ColumnScope.MessageScreen(
+    context: Context,
+    title: String,
+    message: String,
+    compact: Boolean,
+    isShort: Boolean,
+    isDarkTheme: Boolean,
+    showDisconnect: Boolean,
+    action: (@Composable () -> Unit)? = null,
+) {
+    if (!isShort) {
+        WidgetHeader(
+            context = context,
+            model = null,
+            title = title,
+            batteryValues = emptyList(),
+            oneEarbudOnly = false,
+            showDisconnect = showDisconnect,
+            earbudsColor = null,
+            isDarkTheme = isDarkTheme,
+            compact = compact,
+        )
+        Spacer(GlanceModifier.height(WidgetDimens.sectionGap))
+    }
+    CenteredContent(GlanceModifier.fillMaxWidth().defaultWeight()) {
+        Text(message, style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface), maxLines = 3)
+        if (action != null) {
+            Spacer(GlanceModifier.height(10.dp))
+            action()
+        }
+    }
+}
+
+@Composable
+private fun CenteredContent(modifier: GlanceModifier, content: @Composable () -> Unit) {
+    Box(modifier = modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.ConnectedScreen(
+    context: Context,
+    state: SettingWidgetState.Connected,
+    compact: Boolean,
+    isShort: Boolean,
+    earbudsColor: EarbudsColor?,
+    isDarkTheme: Boolean,
+) {
+    if (!isShort) {
+        WidgetHeader(
+            context = context,
+            model = state.deviceModel.takeIf { it.isNotEmpty() },
+            title = state.deviceName,
+            batteryValues = state.batteryValues,
+            oneEarbudOnly = state.oneEarbudOnly,
+            showDisconnect = true,
+            earbudsColor = earbudsColor,
+            isDarkTheme = isDarkTheme,
+            compact = compact,
+        )
+        Spacer(GlanceModifier.height(WidgetDimens.sectionGap))
+    }
+    if (state.rows.isEmpty()) {
+        CenteredContent(GlanceModifier.fillMaxWidth().defaultWeight()) {
+            Text(
+                context.getString(R.string.widget_configure_hint),
+                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+            )
+            Spacer(GlanceModifier.height(10.dp))
+            WidgetButton(
+                text = context.getString(R.string.configure_widget),
+                onClick = actionConfigure(context),
+            )
+        }
+    } else {
+        LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
+            items(state.rows.groups()) { (group, groupRows) ->
+                Column {
+                    if (!compact) {
+                        GroupHeading(context, group)
+                    }
+                    groupRows.forEach { row ->
+                        SettingCard(context, row, compact)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupHeading(context: Context, group: SettingGroup) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(
+                start = WidgetDimens.groupHeadingPaddingStart,
+                top = WidgetDimens.groupHeadingPaddingTop,
+                bottom = WidgetDimens.groupHeadingPaddingBottom,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            provider = ImageProvider(group.icon),
+            contentDescription = null,
+            modifier = GlanceModifier.size(WidgetDimens.groupIconSize),
+            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(
+            group.title(context).uppercase(),
+            style = WidgetText.groupHeading.tinted(GlanceTheme.colors.onSurfaceVariant),
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun WidgetHeader(
+    context: Context,
+    model: String?,
+    title: String,
+    batteryValues: List<String>,
+    oneEarbudOnly: Boolean,
+    showDisconnect: Boolean,
+    earbudsColor: EarbudsColor?,
+    isDarkTheme: Boolean,
+    compact: Boolean,
+) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .background(GlanceTheme.colors.secondaryContainer)
+            .cornerRadius(WidgetDimens.headerRadius)
+            .padding(
+                horizontal = WidgetDimens.headerPaddingHorizontal,
+                vertical = WidgetDimens.headerPaddingVertical,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val artSize = if (compact) WidgetDimens.compactHeaderArtSize else WidgetDimens.headerArtSize
+        val art = model?.let { deviceArt(it) }
+        if (art != null) {
+            Image(
+                provider = ImageProvider(deviceArtOnCard(art, earbudsColor, darkHeader = isDarkTheme)),
+                contentDescription = null,
+                modifier = GlanceModifier.size(artSize),
+            )
+        } else {
+            Image(
+                provider = ImageProvider(R.drawable.openscq30_logo_foreground),
+                contentDescription = null,
+                modifier = GlanceModifier.size(22.dp),
+                colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+            )
+        }
+        Spacer(GlanceModifier.width(6.dp))
+        Column(
+            modifier = GlanceModifier
+                .defaultWeight()
+                .clickable(actionOpenApp(context)),
+        ) {
+            Text(
+                title,
+                style = WidgetText.headerName.tinted(GlanceTheme.colors.onSecondaryContainer),
+                maxLines = 1,
+            )
+            if (batteryValues.isNotEmpty()) {
+                Text(
+                    batteryValues.joinToString(" · "),
+                    style = WidgetText.headerDetail.tinted(GlanceTheme.colors.onSecondaryContainer),
+                    maxLines = 1,
+                )
+            }
+        }
+        if (oneEarbudOnly) {
+            Spacer(GlanceModifier.width(4.dp))
+            Box(
+                modifier = GlanceModifier
+                    .background(GlanceTheme.colors.tertiaryContainer)
+                    .cornerRadius(WidgetDimens.badgeRadius)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    context.getString(R.string.sound_one_earbud_badge),
+                    style = WidgetText.badge.tinted(GlanceTheme.colors.onTertiaryContainer),
+                    maxLines = 1,
+                )
+            }
+        }
+        if (showDisconnect) {
+            Spacer(GlanceModifier.width(2.dp))
+            Box(
+                modifier = GlanceModifier
+                    .size(WidgetDimens.disconnectSize)
+                    .clickable(actionDisconnect(context)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    provider = ImageProvider(R.drawable.baseline_headset_off_24),
+                    contentDescription = context.getString(R.string.disconnect),
+                    modifier = GlanceModifier.size(WidgetDimens.disconnectIconSize),
+                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingCard(context: Context, row: WidgetSetting, compact: Boolean) {
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(bottom = WidgetDimens.rowGap)
+            .background(GlanceTheme.colors.surface)
+            .cornerRadius(WidgetDimens.rowRadius)
+            .padding(
+                horizontal = WidgetDimens.rowPaddingHorizontal,
+                vertical = if (compact) WidgetDimens.compactRowPaddingVertical else WidgetDimens.rowPaddingVertical,
+            ),
+    ) {
+        when (row) {
+            is WidgetSetting.Editable -> ShowSetting(context, row.settingId, row.setting, compact)
+
+            is WidgetSetting.ReadOnly -> Column(GlanceModifier.fillMaxWidth()) {
+                val value = when (val setting = row.setting) {
+                    is Setting.ToggleSetting -> context.getString(
+                        if (setting.value) R.string.sound_overview_on else R.string.sound_overview_off,
+                    )
+
+                    else -> translateValue(setting, setting.toValue())
+                }
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        modifier = GlanceModifier.defaultWeight(),
+                        text = translateSettingId(row.settingId),
+                        style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+                    )
+                    Text(value, style = WidgetText.value.tinted(GlanceTheme.colors.onSurfaceVariant))
+                }
+                Spacer(GlanceModifier.height(2.dp))
+                Text(
+                    context.getString(availabilityReasonText(row.reason)),
+                    style = WidgetText.reason.tinted(GlanceTheme.colors.onSurfaceVariant),
+                )
+            }
+
+            is WidgetSetting.Blocked -> Column(GlanceModifier.fillMaxWidth()) {
+                Text(
+                    translateSettingId(row.settingId),
+                    style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+                )
+                Spacer(GlanceModifier.height(4.dp))
+                Box(
+                    GlanceModifier
+                        .fillMaxWidth()
+                        .background(GlanceTheme.colors.tertiaryContainer)
+                        .cornerRadius(WidgetDimens.noticeRadius)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        context.getString(availabilityReasonText(row.reason)),
+                        style = WidgetText.reason.tinted(GlanceTheme.colors.onTertiaryContainer),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WidgetButton(text: String, onClick: Action) {
+    Box(
+        modifier = GlanceModifier
+            .clickable(onClick)
+            .background(GlanceTheme.colors.primary)
+            .cornerRadius(WidgetDimens.buttonRadius)
+            .padding(
+                horizontal = WidgetDimens.buttonPaddingHorizontal,
+                vertical = WidgetDimens.buttonPaddingVertical,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = WidgetText.button.tinted(GlanceTheme.colors.onPrimary), maxLines = 1)
+    }
+}
+
+@Composable
+private fun ShowSetting(context: Context, settingId: String, setting: Setting, compact: Boolean) {
+    when (setting) {
+        is Setting.Action -> WidgetButton(
+            text = translateSettingId(settingId),
+            onClick = actionSetSettingValue(context, settingId, true.toValue()),
+        )
+
+        is Setting.EqualizerSetting -> ReadOnlyValueRow(context, settingId, equalizerSummary(setting))
+
+        is Setting.I32RangeSetting -> ReadOnlyValueRow(context, settingId, setting.value.toString())
+
+        is Setting.ImportStringSetting -> ReadOnlyValueRow(context, settingId, "")
+
+        is Setting.InformationSetting -> ReadOnlyValueRow(context, settingId, setting.value)
 
         is Setting.SelectSetting -> Select(
-            context,
-            settingId,
-            setting.setting,
-            setting.value,
+            context = context,
+            settingId = settingId,
+            setting = setting.setting,
+            value = setting.value,
             isOptional = false,
-            isCompactLayout = isCompactLayout,
+            compact = compact,
         )
 
         is Setting.OptionalSelectSetting -> Select(
-            context,
-            settingId,
-            setting.setting,
-            setting.value,
+            context = context,
+            settingId = settingId,
+            setting = setting.setting,
+            value = setting.value,
             isOptional = true,
-            isCompactLayout = isCompactLayout,
+            compact = compact,
         )
 
         is Setting.PresetEqualizerProfileSelect -> Select(
-            context,
-            settingId,
-            setting.select,
-            setting.value,
+            context = context,
+            settingId = settingId,
+            setting = setting.select,
+            value = setting.value,
             isOptional = true,
-            isCompactLayout = isCompactLayout,
+            compact = compact,
         )
 
         is Setting.ModifiableSelectSetting -> Select(
-            context,
-            settingId,
-            setting.setting,
-            setting.value,
+            context = context,
+            settingId = settingId,
+            setting = setting.setting,
+            value = setting.value,
             isOptional = true,
-            isCompactLayout = isCompactLayout,
+            compact = compact,
         )
 
-        is Setting.MultiSelectSetting -> {
-            val valueSet = setting.values.toHashSet()
-            val values = setting.setting.options.mapIndexed { index, option ->
-                if (valueSet.contains(option)) {
-                    setting.setting.localizedOptions[index]
-                } else {
-                    null
-                }
-            }.filterNotNull().joinToString(", ")
-            ReadOnlySettingValue(settingId, values)
+        is Setting.MultiSelectSetting -> ReadOnlyValueRow(
+            context,
+            settingId,
+            multiSelectSummary(setting.setting, setting.values),
+        )
+
+        is Setting.MultiSelectWithRemoveSetting ->
+            ReadOnlyValueRow(context, settingId, multiSelectSummary(setting.setting, setting.values))
+
+        is Setting.ToggleSetting -> Row(
+            GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                translateSettingId(settingId),
+                modifier = GlanceModifier.defaultWeight(),
+                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+            )
+            Spacer(GlanceModifier.width(8.dp))
+            Switch(
+                checked = setting.value,
+                onCheckedChange = actionSetSettingValue(context, settingId, (!setting.value).toValue()),
+            )
         }
 
-        is Setting.MultiSelectWithRemoveSetting -> {
-            // option removal is intentionally not implemented here since the button would take up space
-            val valueSet = setting.values.toHashSet()
-            val values = setting.setting.options.mapIndexed { index, option ->
-                if (valueSet.contains(option)) {
-                    setting.setting.localizedOptions[index]
-                } else {
-                    null
-                }
-            }.filterNotNull().joinToString(", ")
-            ReadOnlySettingValue(settingId, values)
-        }
-
-        is Setting.ToggleSetting -> {
-            Row(GlanceModifier.fillMaxWidth()) {
-                Text(translateSettingId(settingId), style = defaultTextStyle())
-                Spacer(GlanceModifier.defaultWeight())
-                Switch(
-                    checked = setting.value,
-                    onCheckedChange = actionSetSettingValue(context, settingId, (!setting.value).toValue()),
-                )
-                // The scroll bar can get in the way of the switch, so the spacer moves it out of the way
-                if (!isCompactLayout) {
-                    Spacer(GlanceModifier.width(8.dp))
-                }
-            }
-        }
-
-        is Setting.HueColorPicker -> {
-            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(translateSettingId(settingId), style = defaultTextStyle())
-                Spacer(GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.background(Color.hsv(setting.hue, 1f, 1f)).size(16.dp))
-            }
+        is Setting.HueColorPicker -> Row(
+            GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                translateSettingId(settingId),
+                modifier = GlanceModifier.defaultWeight(),
+                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+            )
+            Box(GlanceModifier.background(Color.hsv(setting.hue, 1f, 1f)).size(16.dp)) {}
         }
 
         is Setting.TimeOfDay -> {
-            Row(GlanceModifier.fillMaxWidth()) {
-                Text(translateSettingId(settingId), style = defaultTextStyle())
-
-                val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                Text(setting.getLocalTime().format(formatter), style = defaultTextStyle())
-            }
+            val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            ReadOnlyValueRow(context, settingId, setting.getLocalTime().format(formatter))
         }
+    }
+}
+
+private fun equalizerSummary(setting: Setting.EqualizerSetting): String {
+    val divisor = BigDecimal.ONE.scaleByPowerOfTen(setting.setting.fractionDigits.toInt())
+    val scaledValues = setting.value.map { BigDecimal(it.toInt()).divide(divisor) }
+    return scaledValues.joinToString(separator = ", ", prefix = "[", postfix = "]")
+}
+
+private fun multiSelectSummary(setting: Select, values: List<String>): String {
+    val valueSet = values.toHashSet()
+    return setting.options.mapIndexedNotNull { index, option ->
+        setting.localizedOptions.getOrNull(index).takeIf { valueSet.contains(option) }
+    }.joinToString(", ")
+}
+
+@Composable
+private fun ReadOnlyValueRow(context: Context, settingId: String, value: String) {
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            modifier = GlanceModifier.defaultWeight(),
+            text = translateSettingId(settingId),
+            style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(value, style = WidgetText.value.tinted(GlanceTheme.colors.onSurfaceVariant))
     }
 }
 
@@ -626,23 +864,29 @@ private fun Select(
     setting: Select,
     value: String?,
     isOptional: Boolean,
-    isCompactLayout: Boolean,
+    compact: Boolean,
 ) {
     val size = LocalSize.current
+    val roomForButtons = size.width >= 80.dp * (setting.options.size + if (isOptional) 1 else 0)
 
     Column(GlanceModifier.fillMaxWidth()) {
-        Text(translateSettingId(settingId), style = defaultTextStyle())
-        if (size.width >= 80.dp * setting.options.size) {
+        Text(
+            translateSettingId(settingId),
+            style = WidgetText.selectLabel.tinted(GlanceTheme.colors.onSurfaceVariant),
+            maxLines = 1,
+        )
+        Spacer(GlanceModifier.height(4.dp))
+        if (roomForButtons) {
             Row(GlanceModifier.fillMaxWidth()) {
                 val buttonModifier = GlanceModifier.defaultWeight()
                 if (isOptional) {
-                    SelectableButton(
+                    OptionPill(
                         modifier = buttonModifier.clickable(
                             actionSetSettingValue(context, settingId, Value.OptionalStringValue(null)),
                         ),
                         text = context.getString(R.string.none),
                         isSelected = value == null,
-                        isCompactLayout = isCompactLayout,
+                        compact = compact,
                     )
                 }
                 var sawFirst = isOptional
@@ -652,12 +896,13 @@ private fun Select(
                     } else {
                         sawFirst = true
                     }
-                    SelectableButton(
-                        modifier = buttonModifier
-                            .clickable(actionSetSettingValue(context, settingId, option.toValue())),
+                    OptionPill(
+                        modifier = buttonModifier.clickable(
+                            actionSetSettingValue(context, settingId, option.toValue()),
+                        ),
                         text = localizedOption,
                         isSelected = value == option,
-                        isCompactLayout = isCompactLayout,
+                        compact = compact,
                     )
                 }
             }
@@ -666,21 +911,19 @@ private fun Select(
                 if (isOptional) {
                     RadioButton(
                         text = context.getString(R.string.none),
-                        style = defaultTextStyle(),
+                        style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
                         onClick = actionSetSettingValue(context, settingId, Value.OptionalStringValue(null)),
                         checked = value == null,
                     )
                 }
                 // Columns can have a maximum of 10 children, so chunk into groups of 10 to allow for up to 90 children
                 // (not 100 since the preceding None button takes up 1 slot).
-                // In the future, consider passing the LazyColumn context to this function so we can make all of the
-                // select options lazy.
                 setting.options.zip(setting.localizedOptions).chunked(10).forEach { chunk ->
                     Column {
                         chunk.forEach { (option, localizedOption) ->
                             RadioButton(
                                 text = localizedOption,
-                                style = defaultTextStyle(),
+                                style = WidgetText.rowLabel.tinted(GlanceTheme.colors.onSurface),
                                 onClick = actionSetSettingValue(context, settingId, option.toValue()),
                                 checked = value == option,
                             )
@@ -696,46 +939,26 @@ private fun Select(
  * Use GlanceModifier.clickable to specify the on click action
  */
 @Composable
-private fun SelectableButton(
+private fun OptionPill(
     modifier: GlanceModifier = GlanceModifier,
     text: String,
     isSelected: Boolean,
-    isCompactLayout: Boolean,
+    compact: Boolean,
 ) {
-    val backgroundColor =
-        if (isSelected) GlanceTheme.colors.primary else GlanceTheme.colors.secondaryContainer
-    val textStyle = if (isSelected) {
-        TextStyle(color = GlanceTheme.colors.onPrimary, textAlign = TextAlign.Center)
-    } else {
-        TextStyle(color = GlanceTheme.colors.onSecondaryContainer, textAlign = TextAlign.Center)
-    }
+    val backgroundColor = if (isSelected) GlanceTheme.colors.primary else GlanceTheme.colors.surfaceVariant
+    val textColor = if (isSelected) GlanceTheme.colors.onPrimary else GlanceTheme.colors.onSurfaceVariant
     Box(
         // Minimal horizontal padding to reduce the likelihood of truncation due to text wrapping
         modifier = modifier
-            .padding(horizontal = 2.dp, vertical = if (isCompactLayout) 4.dp else 8.dp)
-            .cornerRadius(4.dp)
-            .background(backgroundColor),
+            .padding(horizontal = 2.dp, vertical = if (compact) 2.dp else 4.dp)
+            .background(backgroundColor)
+            .cornerRadius(WidgetDimens.pillRadius)
+            .padding(horizontal = 6.dp, vertical = WidgetDimens.pillPaddingVertical),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = textStyle, maxLines = 1)
+        Text(text, style = WidgetText.pill.copy(color = textColor), maxLines = 1)
     }
 }
-
-@Composable
-private fun ReadOnlySettingValue(settingId: String, value: String) {
-    Row(GlanceModifier.fillMaxWidth()) {
-        Text(
-            modifier = GlanceModifier.defaultWeight(),
-            text = translateSettingId(settingId),
-            style = defaultTextStyle(),
-        )
-        Spacer(GlanceModifier.width(4.dp))
-        Text(modifier = GlanceModifier.defaultWeight(), text = value, style = defaultTextStyle())
-    }
-}
-
-@Composable
-private fun defaultTextStyle(): TextStyle = TextStyle(color = GlanceTheme.colors.onSurface)
 
 /** Reads the state cached in the widget; a snapshot from another version is dropped instead of crashing the widget. */
 internal fun decodeWidgetState(json: String?): SettingWidgetState? = try {
@@ -754,13 +977,37 @@ internal fun recoveryWidgetState(connectionStatus: ConnectionStatus, deviceName:
 private fun connectionDeviceName(connectionStatus: ConnectionStatus): String {
     val model = connectionStatus.deviceManager?.let { manager ->
         try {
-            translateDeviceModel(manager.device.model())
+            deviceShortName(manager.device.model())
         } catch (ex: IllegalStateException) {
             Log.w("SettingWidget", "device was closed, using the address as its name", ex)
             null
         }
     }
     return model ?: connectionStatus.macAddress.orEmpty()
+}
+
+private fun TextStyle.tinted(color: ColorProvider): TextStyle = copy(color = color)
+
+private fun actionOpenApp(context: Context): Action = actionStartActivity(
+    Intent(context, MainActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    },
+)
+
+@Composable
+private fun actionConfigure(context: Context): Action {
+    val glanceId = LocalGlanceId.current
+    val appWidgetId = GlanceAppWidgetManager(LocalContext.current).getAppWidgetId(glanceId)
+    return actionStartActivity(
+        Intent(context, SettingWidgetConfigurationActivity::class.java).apply {
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+            setPackage(context.packageName)
+
+            addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        },
+    )
 }
 
 private fun actionConnectToPairedDevice(context: Context, macAddress: String): Action = actionStartService(
@@ -770,14 +1017,12 @@ private fun actionConnectToPairedDevice(context: Context, macAddress: String): A
     isForegroundService = true,
 )
 
-private fun sendDisconnect(context: Context) {
-    context.sendBroadcast(
-        Intent().apply {
-            `package` = context.packageName
-            action = DeviceService.ACTION_DISCONNECT
-        },
-    )
-}
+private fun actionDisconnect(context: Context): Action = actionSendBroadcast(
+    Intent().apply {
+        `package` = context.packageName
+        action = DeviceService.ACTION_DISCONNECT
+    },
+)
 
 private fun actionSetSettingValue(context: Context, settingId: String, value: Value): Action = actionSendBroadcast(
     Intent().apply {

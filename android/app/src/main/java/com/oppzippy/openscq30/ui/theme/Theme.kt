@@ -1,5 +1,7 @@
 package com.oppzippy.openscq30.ui.theme
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,7 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceTheme
-import androidx.glance.material3.ColorProviders
+import androidx.glance.color.colorProviders
+import androidx.glance.unit.ColorProvider
 
 internal val lightColorScheme = lightColorScheme(
     primary = primaryLight,
@@ -135,13 +138,87 @@ fun OpenSCQ30Theme(
     )
 }
 
+// Glance themes expose fewer roles than a Compose ColorScheme, and the home screen widget reads as a set of cards on
+// the app background: the OpenSCL4 surface-container tokens are mapped onto the roles a widget can use, so the widget
+// keeps the warm background, white cards and lavender pills of the client.
+private val widgetLightColorProviders = colorProviders(
+    primary = ColorProvider(primaryLight),
+    onPrimary = ColorProvider(onPrimaryLight),
+    primaryContainer = ColorProvider(primaryContainerLight),
+    onPrimaryContainer = ColorProvider(onPrimaryContainerLight),
+    secondary = ColorProvider(secondaryLight),
+    onSecondary = ColorProvider(onSecondaryLight),
+    secondaryContainer = ColorProvider(secondaryContainerLight),
+    onSecondaryContainer = ColorProvider(onSecondaryContainerLight),
+    tertiary = ColorProvider(tertiaryLight),
+    onTertiary = ColorProvider(onTertiaryLight),
+    tertiaryContainer = ColorProvider(tertiaryContainerLight),
+    onTertiaryContainer = ColorProvider(onTertiaryContainerLight),
+    error = ColorProvider(errorLight),
+    onError = ColorProvider(onErrorLight),
+    errorContainer = ColorProvider(errorContainerLight),
+    onErrorContainer = ColorProvider(onErrorContainerLight),
+    background = ColorProvider(backgroundLight),
+    onBackground = ColorProvider(onBackgroundLight),
+    surface = ColorProvider(surfaceContainerLowestLight),
+    onSurface = ColorProvider(onSurfaceLight),
+    surfaceVariant = ColorProvider(surfaceContainerHighLight),
+    onSurfaceVariant = ColorProvider(onSurfaceVariantLight),
+    outline = ColorProvider(outlineLight),
+    inverseOnSurface = ColorProvider(inverseOnSurfaceLight),
+    inverseSurface = ColorProvider(inverseSurfaceLight),
+    inversePrimary = ColorProvider(inversePrimaryLight),
+    widgetBackground = ColorProvider(backgroundLight),
+)
+
+private val widgetDarkColorProviders = colorProviders(
+    primary = ColorProvider(primaryDark),
+    onPrimary = ColorProvider(onPrimaryDark),
+    primaryContainer = ColorProvider(primaryContainerDark),
+    onPrimaryContainer = ColorProvider(onPrimaryContainerDark),
+    secondary = ColorProvider(secondaryDark),
+    onSecondary = ColorProvider(onSecondaryDark),
+    secondaryContainer = ColorProvider(secondaryContainerDark),
+    onSecondaryContainer = ColorProvider(onSecondaryContainerDark),
+    tertiary = ColorProvider(tertiaryDark),
+    onTertiary = ColorProvider(onTertiaryDark),
+    tertiaryContainer = ColorProvider(tertiaryContainerDark),
+    onTertiaryContainer = ColorProvider(onTertiaryContainerDark),
+    error = ColorProvider(errorDark),
+    onError = ColorProvider(onErrorDark),
+    errorContainer = ColorProvider(errorContainerDark),
+    onErrorContainer = ColorProvider(onErrorContainerDark),
+    background = ColorProvider(backgroundDark),
+    onBackground = ColorProvider(onBackgroundDark),
+    surface = ColorProvider(surfaceContainerDark),
+    onSurface = ColorProvider(onSurfaceDark),
+    surfaceVariant = ColorProvider(surfaceContainerHighestDark),
+    onSurfaceVariant = ColorProvider(onSurfaceVariantDark),
+    outline = ColorProvider(outlineDark),
+    inverseOnSurface = ColorProvider(inverseOnSurfaceDark),
+    inverseSurface = ColorProvider(inverseSurfaceDark),
+    inversePrimary = ColorProvider(inversePrimaryDark),
+    widgetBackground = ColorProvider(backgroundDark),
+)
+
+/** Whether the system is in its dark theme, for the widget theme that has no composition-level theme preference. */
+private fun isDarkTheme(context: Context): Boolean =
+    (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+        Configuration.UI_MODE_NIGHT_YES
+
 @Composable
-fun OpenSCQ30GlanceTheme(dynamicColor: Boolean = true, content: @Composable () -> Unit) {
+fun OpenSCQ30GlanceTheme(
+    dynamicColor: Boolean = true,
+    darkTheme: Boolean = isDarkTheme(LocalContext.current),
+    content: @Composable () -> Unit,
+) {
     GlanceTheme(
         colors = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dynamicColor) {
             GlanceTheme.colors
+        } else if (darkTheme) {
+            widgetDarkColorProviders
         } else {
-            ColorProviders(light = lightColorScheme, dark = darkColorScheme)
+            widgetLightColorProviders
         },
     ) {
         content()
