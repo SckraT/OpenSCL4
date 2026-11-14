@@ -1,9 +1,6 @@
 package com.oppzippy.openscq30.widget
 
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
-import com.oppzippy.openscq30.lib.bindings.SettingCategory
-import com.oppzippy.openscq30.lib.bindings.SettingIdSettingPair
-import com.oppzippy.openscq30.lib.wrapper.Select
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.sound.SettingGroup
 import kotlinx.serialization.json.Json
@@ -13,23 +10,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingWidgetSettingsTest {
-    private fun select(vararg options: String, value: String): Setting =
-        Setting.SelectSetting(Select(options.toList(), options.toList()), value)
-
-    private fun categories(vararg entries: Pair<String, List<String>>): List<SettingCategory> =
-        entries.map { (category, settingIds) ->
-            SettingCategory(category, settingIds.map { SettingIdSettingPair(it, Setting.ToggleSetting(false)) })
-        }
-
     private val musicMode = Setting.ToggleSetting(true)
 
     private fun spatialAudio(musicMode: Boolean, mode: String): Map<String, Setting> = mapOf(
         "spatialAudio" to Setting.ToggleSetting(true),
         "spatialAudioMusicMode" to Setting.ToggleSetting(musicMode),
-        "spatialAudioMode" to select("Music", "Podcast", value = mode),
+        "spatialAudioMode" to selectSetting("Music", "Podcast", value = mode),
     )
 
-    private val spatialAudioCategories = categories(
+    private val spatialAudioCategories = settingCategories(
         "miscellaneous" to listOf("spatialAudio", "spatialAudioMode", "spatialAudioMusicMode"),
     )
 
@@ -37,12 +26,15 @@ class SettingWidgetSettingsTest {
     fun theMusicModeIsHiddenWhileSpatialAudioIsOff() {
         val values = mapOf(
             "spatialAudio" to Setting.ToggleSetting(false),
-            "spatialAudioMode" to select("Music", "Podcast", value = "Music"),
+            "spatialAudioMode" to selectSetting("Music", "Podcast", value = "Music"),
             "spatialAudioMusicMode" to musicMode,
         )
 
         assertTrue(
-            widgetSettings(listOf("spatialAudioMusicMode"), spatialAudioCategories, values).isEmpty(),
+            widgetSettings(
+                listOf("spatialAudioMusicMode"),
+                settingsSnapshot(spatialAudioCategories, values),
+            ).isEmpty(),
         )
     }
 
@@ -58,8 +50,10 @@ class SettingWidgetSettingsTest {
             ),
             widgetSettings(
                 listOf("spatialAudioMusicMode"),
-                spatialAudioCategories,
-                spatialAudio(musicMode = true, mode = "Music"),
+                settingsSnapshot(
+                    spatialAudioCategories,
+                    spatialAudio(musicMode = true, mode = "Music"),
+                ),
             ),
         )
     }
@@ -69,8 +63,10 @@ class SettingWidgetSettingsTest {
         assertTrue(
             widgetSettings(
                 listOf("spatialAudioMusicMode"),
-                spatialAudioCategories,
-                spatialAudio(musicMode = true, mode = "Podcast"),
+                settingsSnapshot(
+                    spatialAudioCategories,
+                    spatialAudio(musicMode = true, mode = "Podcast"),
+                ),
             ).isEmpty(),
         )
     }
@@ -79,14 +75,16 @@ class SettingWidgetSettingsTest {
     fun aDependentSettingIsHiddenWhileItsParentIsOff() {
         val values = mapOf(
             "easyChat" to Setting.ToggleSetting(false),
-            "easyChatWaitTime" to select("1", "2", value = "1"),
+            "easyChatWaitTime" to selectSetting("1", "2", value = "1"),
         )
 
         assertTrue(
             widgetSettings(
                 listOf("easyChatWaitTime"),
-                categories("miscellaneous" to listOf("easyChat", "easyChatWaitTime")),
-                values,
+                settingsSnapshot(
+                    settingCategories("miscellaneous" to listOf("easyChat", "easyChatWaitTime")),
+                    values,
+                ),
             ).isEmpty(),
         )
     }
@@ -107,7 +105,10 @@ class SettingWidgetSettingsTest {
                     SettingGroup.SoundEffects,
                 ),
             ),
-            widgetSettings(listOf("ldac"), categories("miscellaneous" to listOf("ldac")), values),
+            widgetSettings(
+                listOf("ldac"),
+                settingsSnapshot(settingCategories("miscellaneous" to listOf("ldac")), values),
+            ),
         )
     }
 
@@ -128,8 +129,7 @@ class SettingWidgetSettingsTest {
             ),
             widgetSettings(
                 listOf("volumeAdjustments"),
-                categories("equalizer" to listOf("volumeAdjustments")),
-                values,
+                settingsSnapshot(settingCategories("equalizer" to listOf("volumeAdjustments")), values),
             ),
         )
     }
@@ -142,8 +142,7 @@ class SettingWidgetSettingsTest {
             listOf(WidgetSetting.Editable("wearingDetection", Setting.ToggleSetting(true), SettingGroup.Comfort)),
             widgetSettings(
                 listOf("wearingDetection"),
-                categories("miscellaneous" to listOf("wearingDetection")),
-                values,
+                settingsSnapshot(settingCategories("miscellaneous" to listOf("wearingDetection")), values),
             ),
         )
     }
@@ -153,8 +152,10 @@ class SettingWidgetSettingsTest {
         assertTrue(
             widgetSettings(
                 listOf("somethingNew"),
-                spatialAudioCategories,
-                spatialAudio(musicMode = true, mode = "Music"),
+                settingsSnapshot(
+                    spatialAudioCategories,
+                    spatialAudio(musicMode = true, mode = "Music"),
+                ),
             ).isEmpty(),
         )
     }
@@ -164,15 +165,17 @@ class SettingWidgetSettingsTest {
         val values = mapOf(
             "wearingDetection" to Setting.ToggleSetting(true),
             "ldac" to Setting.ToggleSetting(true),
-            "ambientSoundMode" to select("Normal", "Transparency", value = "Normal"),
+            "ambientSoundMode" to selectSetting("Normal", "Transparency", value = "Normal"),
         )
         val rows = widgetSettings(
             listOf("wearingDetection", "ldac", "ambientSoundMode"),
-            categories(
-                "miscellaneous" to listOf("wearingDetection", "ldac"),
-                "soundModes" to listOf("ambientSoundMode"),
+            settingsSnapshot(
+                settingCategories(
+                    "miscellaneous" to listOf("wearingDetection", "ldac"),
+                    "soundModes" to listOf("ambientSoundMode"),
+                ),
+                values,
             ),
-            values,
         )
 
         assertEquals(
