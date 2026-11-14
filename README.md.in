@@ -125,7 +125,7 @@ The workspace shares device protocols, storage and client rules in Rust. The des
 For a desktop development build:
 
 ```sh
-cargo build --locked -p openscq30-desktop
+cargo build --locked --bin openscl4
 ./target/debug/openscl4
 ```
 

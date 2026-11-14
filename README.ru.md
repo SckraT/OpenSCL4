@@ -166,7 +166,7 @@ OpenSCL4 не требует аккаунта и не имеет собстве�
 Сборка настольного клиента:
 
 ```sh
-cargo build --locked -p openscq30-desktop
+cargo build --locked --bin openscl4
 ./target/debug/openscl4
 ```
 
