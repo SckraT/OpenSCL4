@@ -61,7 +61,8 @@ a setting the device does not let change now keeps its value and the reason, bat
 levels and the one-earbud state come from the shared battery rules, and the header
 illustration follows the shared device art. The header shows the device, its batteries
 and disconnects it; tapping the name opens the app. The compact-layout preference keeps
-the rows short, and a short widget drops the header and the group headings.
+the rows short and drops the group icons; a widget too short for the header and the
+group headings replaces them with one slim status row.
 
 The configuration screen groups the settings by purpose, explains why a setting cannot
 be shown now, and applies every change to the widget immediately. The selection is kept

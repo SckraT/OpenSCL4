@@ -1,7 +1,5 @@
 package com.oppzippy.openscq30.ui.theme
 
-import android.content.Context
-import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -201,15 +199,10 @@ private val widgetDarkColorProviders = colorProviders(
     widgetBackground = ColorProvider(backgroundDark),
 )
 
-/** Whether the system is in its dark theme, for the widget theme that has no composition-level theme preference. */
-private fun isDarkTheme(context: Context): Boolean =
-    (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-        Configuration.UI_MODE_NIGHT_YES
-
 @Composable
 fun OpenSCQ30GlanceTheme(
     dynamicColor: Boolean = true,
-    darkTheme: Boolean = isDarkTheme(LocalContext.current),
+    darkTheme: Boolean = LocalContext.current.systemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     GlanceTheme(

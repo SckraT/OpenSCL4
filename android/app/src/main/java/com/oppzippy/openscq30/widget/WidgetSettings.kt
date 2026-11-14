@@ -2,15 +2,14 @@ package com.oppzippy.openscq30.widget
 
 import com.oppzippy.openscq30.lib.bindings.AvailabilityReason
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
-import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
 import com.oppzippy.openscq30.lib.bindings.ClientSettingControl
-import com.oppzippy.openscq30.lib.bindings.SettingCategory
 import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.clientIsOnlyOneEarbudConnected
 import com.oppzippy.openscq30.lib.wrapper.Setting
 import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
+import com.oppzippy.openscq30.ui.sound.DeviceSettingsSnapshot
 import com.oppzippy.openscq30.ui.sound.SettingGroup
 import com.oppzippy.openscq30.ui.sound.settingAvailability
 import com.oppzippy.openscq30.ui.sound.settingGroup
@@ -62,8 +61,7 @@ internal fun List<WidgetSetting>.groups(): List<Pair<SettingGroup, List<WidgetSe
 }
 
 /**
- * The selected settings the widget can draw, decided from the [snapshot] the device reports and the shared client
- * rules.
+ * The selected settings the widget can draw, decided from the device's [snapshot] and the shared client rules.
  *
  * The same pipeline the device settings screens use decides what the widget shows:
  * [clientDisplayedSettings] removes settings with nothing to draw, the shared presentation decides editor dependencies
@@ -73,32 +71,27 @@ internal fun List<WidgetSetting>.groups(): List<Pair<SettingGroup, List<WidgetSe
  */
 internal fun widgetSettings(
     selectedSettingIds: Collection<String>,
-    categories: List<SettingCategory>,
-    snapshot: Map<String, Setting>,
+    snapshot: DeviceSettingsSnapshot,
 ): List<WidgetSetting> {
-    val displayed = clientDisplayedSettings(snapshot)
+    val displayed = clientDisplayedSettings(snapshot.settings)
     val presentation = settingsPresentation(displayed)
     val selected = selectedSettingIds.toSet()
 
-    return clientGroupSettings(
-        categories.map { category ->
-            ClientSettingCategory(category.categoryId, category.settings.map { it.settingId })
-        },
-    ).flatMap { group ->
-        val settingGroup = settingGroup(group.group)
+    return clientGroupSettings(snapshot.categories).flatMap { group ->
+        val sharedGroup = settingGroup(group.group)
         group.ids.filter { it in selected }.mapNotNull { settingId ->
             val setting = displayed[settingId] ?: return@mapNotNull null
             if (presentation.controls[settingId] != null) {
                 return@mapNotNull null
             }
             when (val availability = settingAvailability(presentation.availability, settingId)) {
-                is ClientSettingAvailability.Available -> WidgetSetting.Editable(settingId, setting, settingGroup)
+                is ClientSettingAvailability.Available -> WidgetSetting.Editable(settingId, setting, sharedGroup)
 
                 is ClientSettingAvailability.ReadOnly ->
-                    WidgetSetting.ReadOnly(settingId, setting, availability.reason, settingGroup)
+                    WidgetSetting.ReadOnly(settingId, setting, availability.reason, sharedGroup)
 
                 is ClientSettingAvailability.Unavailable ->
-                    WidgetSetting.Blocked(settingId, availability.reason, settingGroup)
+                    WidgetSetting.Blocked(settingId, availability.reason, sharedGroup)
             }
         }
     }
@@ -139,23 +132,20 @@ internal sealed class WidgetConfigurationNote {
 internal data class WidgetConfigurationGroup(val group: SettingGroup, val settings: List<WidgetConfigurationSetting>)
 
 /**
- * The settings the configuration screen offers, grouped and ordered by the shared client rules. A setting the widget
- * cannot draw in the current device state is still listed, disabled and with its reason, so the choice is not a
- * mystery; a hidden dependent setting is left out, like everywhere else in the client.
+ * The settings the configuration screen offers, grouped and ordered by the shared client rules.
+ *
+ * The list comes from the same displayed settings the widget draws, so a setting with nothing to draw is not offered:
+ * the adaptive noise canceling level, for example, exists only while the device runs in its adaptive mode. A setting the
+ * widget can draw but cannot change in the current device state is still listed, disabled and with its reason, so the
+ * choice is not a mystery; a hidden dependent setting is left out, like everywhere else in the client.
  */
-internal fun widgetConfigurationGroups(
-    categories: List<SettingCategory>,
-    snapshot: Map<String, Setting>,
-): List<WidgetConfigurationGroup> {
-    val presentation = settingsPresentation(snapshot)
+internal fun widgetConfigurationGroups(snapshot: DeviceSettingsSnapshot): List<WidgetConfigurationGroup> {
+    val displayed = clientDisplayedSettings(snapshot.settings)
+    val presentation = settingsPresentation(displayed)
 
-    return clientGroupSettings(
-        categories.map { category ->
-            ClientSettingCategory(category.categoryId, category.settings.map { it.settingId })
-        },
-    ).mapNotNull { group ->
+    return clientGroupSettings(snapshot.categories).mapNotNull { group ->
         val settings = group.ids.mapNotNull { settingId ->
-            val setting = snapshot[settingId] ?: return@mapNotNull null
+            displayed[settingId] ?: return@mapNotNull null
             val availability = settingAvailability(presentation.availability, settingId)
             when {
                 presentation.controls[settingId] == ClientSettingControl.HIDDEN -> null
