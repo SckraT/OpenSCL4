@@ -57,6 +57,7 @@ import com.oppzippy.openscq30.lib.bindings.OpenScq30Device
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.ui.DeviceServiceConnection
+import com.oppzippy.openscq30.ui.sound.DeviceSettingsSnapshot
 import com.oppzippy.openscq30.ui.sound.availabilityReasonText
 import com.oppzippy.openscq30.ui.sound.title
 import com.oppzippy.openscq30.ui.theme.OpenSCQ30Theme
@@ -290,12 +291,7 @@ private fun ConnectedConfiguration(
     onCompactLayoutChange: (Boolean) -> Unit,
 ) {
     val deviceModel = device.model()
-    val categories = device.settingsByCategory()
-    val snapshot = categories
-        .flatMap { it.settings }
-        .distinctBy { it.settingId }
-        .associate { it.settingId to it.setting }
-    val groups = widgetConfigurationGroups(categories, snapshot)
+    val groups = widgetConfigurationGroups(DeviceSettingsSnapshot.of(device.settingsByCategory()))
 
     Column(
         modifier = Modifier

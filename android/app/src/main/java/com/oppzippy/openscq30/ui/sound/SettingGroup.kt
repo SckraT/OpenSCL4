@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.oppzippy.openscq30.R
-import com.oppzippy.openscq30.lib.bindings.ClientSettingCategory
 import com.oppzippy.openscq30.lib.bindings.clientDisplayedSettings
 import com.oppzippy.openscq30.lib.bindings.clientGroupSettings
 import com.oppzippy.openscq30.lib.bindings.translateCategoryId
@@ -70,12 +69,10 @@ internal fun settingGroup(name: String): SettingGroup = SettingGroup.entries.fir
 internal fun groupSettings(
     byCategory: Map<String, List<Pair<String, Setting>>>,
 ): Map<SettingGroup, List<Pair<String, Setting>>> {
-    val categories = byCategory.map { (category, settings) ->
-        ClientSettingCategory(category, settings.map { it.first })
-    }
-    val displayed = clientDisplayedSettings(byCategory.values.flatten().toMap())
+    val snapshot = DeviceSettingsSnapshot.of(byCategory)
+    val displayed = clientDisplayedSettings(snapshot.settings)
     return buildMap {
-        for (group in clientGroupSettings(categories)) {
+        for (group in clientGroupSettings(snapshot.categories)) {
             val shown = group.ids.mapNotNull { id -> displayed[id]?.let { id to it } }
             if (shown.isNotEmpty()) put(settingGroup(group.group), shown)
         }
