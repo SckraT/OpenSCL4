@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewImage="@drawable/widget_preview_device_panel"
+    android:configure="com.oppzippy.openscq30.widget.DevicePanelWidgetConfigurationActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:description="@string/widget_device_panel_description"
+    android:minWidth="280dp"
+    android:minHeight="220dp"
+    android:minResizeWidth="260dp"
+    android:minResizeHeight="220dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="4"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen" />

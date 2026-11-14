@@ -12,3 +12,13 @@ internal fun toggledSettingIds(selectedSettingIds: Set<String>?, settingId: Stri
     } else {
         selectedSettingIds.orEmpty() - settingId
     }
+
+/**
+ * Adds or removes a quick preset of the device panel, keeping the order the user picked and never more than [maxSlots].
+ * A preset that is already selected cannot be added twice.
+ */
+internal fun togglePresetSelection(selected: List<String>, name: String, maxSlots: Int): List<String> = when {
+    name in selected -> selected - name
+    selected.size >= maxSlots -> selected
+    else -> selected + name
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_battery_title">Battery</string>
+    <string name="widget_battery_description">Left earbud, right earbud and case levels</string>
+    <string name="widget_mode_toggle_title">Sound mode switch</string>
+    <string name="widget_mode_toggle_description">Switch between noise canceling and transparency</string>
+    <string name="widget_sound_modes_title">Battery and sound modes</string>
+    <string name="widget_sound_modes_description">Charge and one-tap sound mode switching</string>
+    <string name="widget_device_panel_title">Device panel</string>
+    <string name="widget_device_panel_description">Device, charge, sound modes and quick presets</string>
+    <string name="widget_battery_cell_description">%1$s: %2$s</string>
+    <string name="widget_battery_unknown_cell">%1$s: level unknown</string>
+    <string name="widget_next_noise_canceling">Turn on noise canceling</string>
+    <string name="widget_next_transparency">Turn on transparency</string>
+    <string name="widget_mode_noise_canceling_short">Noise cancel</string>
+    <string name="widget_last_preset">Last: %1$s</string>
+    <string name="widget_presets_empty">No presets chosen</string>
+    <string name="widget_presets_configure">Configure</string>
+    <string name="widget_open_device">Open in OpenSCL4</string>
+    <string name="widget_switch_description">Switch sound mode: now %1$s, next action %2$s</string>
+    <string name="widget_switch_description_unavailable">%1$s. %2$s</string>
+    <string name="widget_connection_waiting">Waiting for the headphones</string>
+    <string name="widget_connection_check">Check Bluetooth and try to connect again.</string>
+    <string name="widget_connection_no_device">No device is connected.</string>
+    <string name="widget_presets_config_title">Widget presets</string>
+    <string name="widget_presets_config_help">Choose up to two saved presets for this widget.</string>
+    <string name="widget_presets_config_max">Choose up to two presets</string>
+    <string name="widget_presets_config_empty">This device has no saved presets.</string>
+    <string name="widget_presets_config_connected">Connect to the headphones to choose their presets</string>
+</resources>

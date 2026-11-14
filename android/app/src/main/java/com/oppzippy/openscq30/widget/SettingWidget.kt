@@ -19,7 +19,6 @@ import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.lib.bindings.OpenScq30Session
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.wrapper.PairedDevice
-import com.oppzippy.openscq30.ui.deviceselection.splitBrand
 import com.oppzippy.openscq30.ui.sound.DeviceSettingsSnapshot
 import com.oppzippy.openscq30.ui.theme.isDark
 import com.oppzippy.openscq30.ui.theme.systemInDarkTheme
@@ -216,9 +215,6 @@ class SettingWidget : GlanceAppWidget() {
     }
 }
 
-/** The device name without the manufacturer, as the client's device card shows it. */
-private fun deviceShortName(model: String): String = splitBrand(translateDeviceModel(model)).second
-
 /** Reads the state cached in the widget; a snapshot from another version is dropped instead of crashing the widget. */
 internal fun decodeWidgetState(json: String?): SettingWidgetState? = try {
     json?.let { Json.decodeFromString<SettingWidgetState>(it) }
@@ -232,15 +228,3 @@ internal fun recoveryWidgetState(connectionStatus: ConnectionStatus, deviceName:
         is ConnectionStatus.Lost -> SettingWidgetState.Lost(deviceName, connectionStatus.macAddress)
         else -> null
     }
-
-private fun connectionDeviceName(connectionStatus: ConnectionStatus): String {
-    val model = connectionStatus.deviceManager?.let { manager ->
-        try {
-            deviceShortName(manager.device.model())
-        } catch (ex: IllegalStateException) {
-            Log.w("SettingWidget", "device was closed, using the address as its name", ex)
-            null
-        }
-    }
-    return model ?: connectionStatus.macAddress.orEmpty()
-}
