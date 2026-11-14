@@ -253,9 +253,8 @@ internal fun WidgetModeTile(
 ) {
     Row(
         modifier = modifier
-            .height(48.dp)
             .clickable(onClick)
-            .semantics { contentDescription = mode.label }
+            .height(48.dp)
             .background(ColorProvider(if (selected) palette.primary else palette.tile))
             .cornerRadius(15.dp)
             .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -263,7 +262,7 @@ internal fun WidgetModeTile(
     ) {
         Image(
             provider = ImageProvider(modeIcon(mode.id)),
-            contentDescription = null,
+            contentDescription = mode.label,
             modifier = GlanceModifier.size(17.dp),
             colorFilter = ColorFilter.tint(ColorProvider(if (selected) palette.onPrimary else palette.text)),
         )
@@ -295,9 +294,8 @@ internal fun WidgetPresetTile(context: Context, preset: WidgetPreset, palette: W
     }
     Row(
         modifier = GlanceModifier
-            .height(48.dp)
             .clickable(onClick)
-            .semantics { contentDescription = description }
+            .height(48.dp)
             .background(ColorProvider(palette.lavender))
             .cornerRadius(15.dp)
             .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -305,7 +303,7 @@ internal fun WidgetPresetTile(context: Context, preset: WidgetPreset, palette: W
     ) {
         Image(
             provider = ImageProvider(R.drawable.bolt_24px),
-            contentDescription = null,
+            contentDescription = description,
             modifier = GlanceModifier.size(17.dp),
             colorFilter = ColorFilter.tint(ColorProvider(palette.onLavender)),
         )
@@ -340,17 +338,21 @@ internal fun WidgetSectionLabel(text: String, palette: WidgetPalette) {
 
 /** The small round button that opens the device in the client. */
 @Composable
-internal fun WidgetOpenButton(context: Context, tint: Color, modifier: GlanceModifier = GlanceModifier) {
+internal fun WidgetOpenButton(
+    context: Context,
+    tint: Color,
+    modifier: GlanceModifier = GlanceModifier,
+    size: androidx.compose.ui.unit.Dp = 44.dp,
+) {
     Box(
         modifier = modifier
-            .size(44.dp)
             .clickable(openDeviceAction(context))
-            .semantics { contentDescription = context.getString(R.string.widget_open_device) },
+            .size(size),
         contentAlignment = Alignment.Center,
     ) {
         Image(
             provider = ImageProvider(R.drawable.arrow_outward_24px),
-            contentDescription = null,
+            contentDescription = context.getString(R.string.widget_open_device),
             modifier = GlanceModifier.size(17.dp),
             colorFilter = ColorFilter.tint(ColorProvider(tint)),
         )

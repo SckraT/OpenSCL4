@@ -2,7 +2,6 @@ package com.oppzippy.openscq30.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
@@ -10,6 +9,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -18,19 +18,16 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.semantics.contentDescription
-import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.unit.ColorProvider
 import com.oppzippy.openscq30.R
 
-/** The 2×2 switcher: the whole tile moves between noise canceling and transparency. */
+/** The 2×1 switcher: the whole tile moves between noise canceling and transparency. */
 class ModeToggleWidget : DeviceWidget() {
     @Composable
     override fun DeviceContent(context: Context, state: DeviceWidgetState?, palette: WidgetPalette) {
@@ -55,48 +52,47 @@ class ModeToggleWidget : DeviceWidget() {
             state is DeviceWidgetState.Recovering -> R.drawable.bluetooth_24px
             else -> R.drawable.baseline_headset_off_24
         }
-        var modifier = GlanceModifier
-            .fillMaxSize()
+        var modifier = GlanceModifier.fillMaxSize()
         if (action != null) {
             modifier = modifier.clickable(action)
         }
         modifier = modifier
             .background(ColorProvider(palette.lavender))
-            .semantics { contentDescription = description }
-            .padding(13.dp)
-        Column(modifier, verticalAlignment = Alignment.CenterVertically) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                WidgetLogo(22.dp)
-                Spacer(GlanceModifier.width(7.dp))
-                Text(
-                    fallbackDeviceName(context, state),
-                    style = widgetStyle(palette, palette.onLavender, 12f, FontWeight.Bold),
-                    maxLines = 1,
-                )
-            }
-            Spacer(GlanceModifier.height(12.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = GlanceModifier
-                    .size(49.dp)
+                    .size(40.dp)
                     .background(ColorProvider(palette.primary))
-                    .cornerRadius(17.dp),
+                    .cornerRadius(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
                     provider = ImageProvider(icon),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(25.dp),
+                    contentDescription = description,
+                    modifier = GlanceModifier.size(20.dp),
                     colorFilter = ColorFilter.tint(ColorProvider(palette.onPrimary)),
                 )
             }
-            Spacer(GlanceModifier.height(8.dp))
-            Text(
-                caption,
-                style = widgetStyle(palette, palette.onLavender, 15f, FontWeight.Bold),
-                maxLines = 2,
-            )
-            Spacer(GlanceModifier.height(3.dp))
-            Text(hint, style = widgetStyle(palette, palette.onLavender, 11f), maxLines = 1)
+            Spacer(GlanceModifier.width(8.dp))
+            Column(GlanceModifier.defaultWeight()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    WidgetLogo(16.dp)
+                    Spacer(GlanceModifier.width(5.dp))
+                    Text(
+                        fallbackDeviceName(context, state),
+                        style = widgetStyle(palette, palette.onLavender, 10f, FontWeight.Medium),
+                        maxLines = 1,
+                    )
+                }
+                Spacer(GlanceModifier.height(2.dp))
+                Text(
+                    caption,
+                    style = widgetStyle(palette, palette.onLavender, 14f, FontWeight.Bold),
+                    maxLines = 1,
+                )
+                Text(hint, style = widgetStyle(palette, palette.onLavender, 10f), maxLines = 1)
+            }
         }
     }
 }
@@ -123,4 +119,6 @@ private fun switchHint(context: Context, state: DeviceWidgetState?, target: Stri
     else -> context.getString(R.string.widget_connection_no_device)
 }
 
-class ModeToggleWidgetReceiver : DeviceWidgetReceiver(ModeToggleWidget())
+class ModeToggleWidgetReceiver : DeviceWidgetReceiver() {
+    override val deviceWidget: ModeToggleWidget = ModeToggleWidget()
+}

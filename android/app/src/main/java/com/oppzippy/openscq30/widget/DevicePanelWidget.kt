@@ -210,4 +210,6 @@ private fun statusLabel(context: Context, state: DeviceWidgetState?): String = w
     else -> context.getString(R.string.disconnected)
 }
 
-class DevicePanelWidgetReceiver : DeviceWidgetReceiver(DevicePanelWidget())
+class DevicePanelWidgetReceiver : DeviceWidgetReceiver() {
+    override val deviceWidget: DevicePanelWidget = DevicePanelWidget()
+}

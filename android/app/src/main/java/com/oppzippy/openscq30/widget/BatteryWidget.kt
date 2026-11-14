@@ -34,4 +34,6 @@ private fun disconnectedBatteryCells(): List<WidgetBattery> = listOf(
     WidgetBattery(WidgetBatteryCell.Case, WIDGET_UNKNOWN_VALUE),
 )
 
-class BatteryWidgetReceiver : DeviceWidgetReceiver(BatteryWidget())
+class BatteryWidgetReceiver : DeviceWidgetReceiver() {
+    override val deviceWidget: BatteryWidget = BatteryWidget()
+}

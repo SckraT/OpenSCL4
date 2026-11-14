@@ -121,12 +121,7 @@ internal fun Content(
                 ) {
                     WidgetButton(
                         text = context.getString(R.string.sound_overview_retry),
-                        onClick = actionSendBroadcast(
-                            Intent().apply {
-                                `package` = context.packageName
-                                action = DeviceService.ACTION_RETRY
-                            },
-                        ),
+                        onClick = CommandBroadcasts.glanceAction(context, DeviceService.ACTION_RETRY),
                     )
                 }
 
@@ -816,18 +811,11 @@ private fun actionConnectToPairedDevice(context: Context, macAddress: String): A
     isForegroundService = true,
 )
 
-private fun actionDisconnect(context: Context): Action = actionSendBroadcast(
-    Intent().apply {
-        `package` = context.packageName
-        action = DeviceService.ACTION_DISCONNECT
-    },
-)
+private fun actionDisconnect(context: Context): Action =
+    CommandBroadcasts.glanceAction(context, DeviceService.ACTION_DISCONNECT)
 
-private fun actionSetSettingValue(context: Context, settingId: String, value: Value): Action = actionSendBroadcast(
-    Intent().apply {
-        `package` = context.packageName
-        action = DeviceService.ACTION_SET_SETTING_VALUE
-        putExtra(DeviceService.INTENT_EXTRA_SETTING_ID, settingId)
-        putExtra(DeviceService.INTENT_EXTRA_SETTING_VALUE, value)
-    },
-)
+private fun actionSetSettingValue(context: Context, settingId: String, value: Value): Action =
+    CommandBroadcasts.glanceAction(context, DeviceService.ACTION_SET_SETTING_VALUE) { intent ->
+        intent.putExtra(DeviceService.INTENT_EXTRA_SETTING_ID, settingId)
+        intent.putExtra(DeviceService.INTENT_EXTRA_SETTING_VALUE, value)
+    }

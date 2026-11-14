@@ -82,10 +82,10 @@ OpenSCL4 is controlling. They read the same shared client rules as the rest of t
 
 - **Battery** (3×1) shows the left earbud, right earbud and case levels with a bar each; a missing
   reading keeps its position as "—" without a bar, and a single-battery model shows its overall charge.
-- **Sound mode switch** (2×2) moves between noise canceling and transparency with one tap of the whole
+- **Sound mode switch** (2×1) moves between noise canceling and transparency with one tap of the whole
   tile, shows the confirmed mode and labels the next action; while recovering it is disabled, and after
   a lost connection it retries through the device service.
-- **Battery and sound modes** (4×2) shows the device, its charge and one row of three equal mode buttons
+- **Battery and sound modes** (4×1) shows the device, its charge and one row of three equal mode buttons
   (noise canceling, transparency, normal); the active button is filled and checked, airplane mode selects
   none of them, and only the modes the model supports are offered.
 - **Device panel** (4×4) shows the device, its charge, sound mode tiles in two columns and up to two
@@ -94,7 +94,9 @@ OpenSCL4 is controlling. They read the same shared client rules as the rest of t
   configuration picks the two preset slots for this instance, offering only presets of the current model.
 
 The widgets repaint when the connection or the confirmed device snapshot changes, and a mode command is
-blocked until the device confirms the previous one. Colors come from the OpenSCL4 palette for light and
+blocked until the device confirms the previous one. Widget and notification commands go through an exported
+receiver guarded by a per-install token, because a broadcast PendingIntent fired by the launcher or the
+notification shade is not accepted by the service's non-exported receiver. Colors come from the OpenSCL4 palette for light and
 dark themes and strings from resources; a widget whose contents do not fit the current size is read
 through the launcher's scrolling. Theme and font-scale changes reach the widgets on the next update; the
 rendering is checked manually on a device because the JVM tests cover the model, not Glance.

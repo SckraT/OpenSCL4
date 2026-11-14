@@ -124,6 +124,10 @@
 
 
         <receiver
+            android:name=".widget.WidgetCommandReceiver"
+            android:exported="true" />
+
+        <receiver
             android:name=".widget.BatteryWidgetReceiver"
             android:label="@string/widget_battery_title"
             android:exported="true">

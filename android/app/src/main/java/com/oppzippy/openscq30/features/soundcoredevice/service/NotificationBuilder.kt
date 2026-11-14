@@ -10,6 +10,7 @@ import com.oppzippy.openscq30.R
 import com.oppzippy.openscq30.lib.bindings.translateDeviceModel
 import com.oppzippy.openscq30.lib.bindings.translateSettingId
 import com.oppzippy.openscq30.lib.bindings.translateValue
+import com.oppzippy.openscq30.widget.CommandBroadcasts
 import dagger.hilt.android.scopes.ServiceScoped
 import javax.inject.Inject
 
@@ -86,15 +87,7 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
                 Notification.Action.Builder(
                     Icon.createWithResource(context, R.drawable.update_24px),
                     context.getString(R.string.sound_overview_retry),
-                    PendingIntent.getBroadcast(
-                        context,
-                        3,
-                        Intent().apply {
-                            action = DeviceService.ACTION_RETRY
-                            `package` = context.packageName
-                        },
-                        PendingIntent.FLAG_IMMUTABLE,
-                    ),
+                    CommandBroadcasts.pendingIntent(context, 3, DeviceService.ACTION_RETRY),
                 ).build(),
             )
         }
@@ -103,15 +96,7 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
             Notification.Action.Builder(
                 Icon.createWithResource(context, R.drawable.baseline_headset_off_24),
                 context.getString(R.string.disconnect),
-                PendingIntent.getBroadcast(
-                    context,
-                    1,
-                    Intent().apply {
-                        action = DeviceService.ACTION_DISCONNECT
-                        `package` = context.packageName
-                    },
-                    PendingIntent.FLAG_IMMUTABLE,
-                ),
+                CommandBroadcasts.pendingIntent(context, 1, DeviceService.ACTION_DISCONNECT),
             ).build(),
         )
 
@@ -135,15 +120,8 @@ class NotificationBuilder @Inject constructor(private val context: Service) {
         Notification.Action.Builder(
             icon,
             name,
-            PendingIntent.getBroadcast(
-                context,
-                presetId + 2,
-                Intent().apply {
-                    action = DeviceService.ACTION_QUICK_PRESET
-                    `package` = context.packageName
-                    putExtra(DeviceService.INTENT_EXTRA_PRESET_SLOT_INDEX, presetId)
-                },
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            ),
+            CommandBroadcasts.pendingIntent(context, presetId + 2, DeviceService.ACTION_QUICK_PRESET) { intent ->
+                intent.putExtra(DeviceService.INTENT_EXTRA_PRESET_SLOT_INDEX, presetId)
+            },
         ).build()
 }

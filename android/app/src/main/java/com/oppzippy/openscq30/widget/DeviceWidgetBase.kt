@@ -65,9 +65,11 @@ abstract class DeviceWidget : GlanceAppWidget() {
  * A receiver of one device widget: when the launcher adds or rebinds it, the device service is asked for a fresh state
  * in case the widget was added while a device is already connected.
  */
-abstract class DeviceWidgetReceiver(private val widget: DeviceWidget) :
-    androidx.glance.appwidget.GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = widget
+abstract class DeviceWidgetReceiver : androidx.glance.appwidget.GlanceAppWidgetReceiver() {
+    protected abstract val deviceWidget: DeviceWidget
+
+    final override val glanceAppWidget: GlanceAppWidget
+        get() = deviceWidget
 
     override fun onUpdate(
         context: Context,
@@ -109,42 +111,40 @@ internal suspend fun updateDeviceWidgets(
     session: OpenScq30Session,
     connectionStatus: ConnectionStatus,
 ) {
-    for (widget in deviceWidgets()) {
-        updateDeviceWidget(context, widget, session, connectionStatus)
+    for ((widget, receiver) in deviceWidgets()) {
+        updateDeviceWidget(context, widget, receiver, session, connectionStatus)
     }
 }
 
-internal fun deviceWidgets(): List<GlanceAppWidget> = listOf(
-    BatteryWidget(),
-    ModeToggleWidget(),
-    SoundModesWidget(),
-    DevicePanelWidget(),
+/** Every device widget with the receiver that hosts it; updates are routed by the receiver's app widget ids. */
+internal fun deviceWidgets(): List<Pair<DeviceWidget, Class<out DeviceWidgetReceiver>>> = listOf(
+    BatteryWidget() to BatteryWidgetReceiver::class.java,
+    ModeToggleWidget() to ModeToggleWidgetReceiver::class.java,
+    SoundModesWidget() to SoundModesWidgetReceiver::class.java,
+    DevicePanelWidget() to DevicePanelWidgetReceiver::class.java,
 )
 
 private suspend fun updateDeviceWidget(
     context: Context,
     widget: GlanceAppWidget,
+    receiver: Class<out DeviceWidgetReceiver>,
     session: OpenScq30Session,
     connectionStatus: ConnectionStatus,
 ) {
-    val manager = GlanceAppWidgetManager(context)
-    manager.getGlanceIds(widget.javaClass).forEach { glanceId ->
-        var isChanged = false
+    val glanceManager = GlanceAppWidgetManager(context)
+    val appWidgetIds = android.appwidget.AppWidgetManager.getInstance(context)
+        .getAppWidgetIds(android.content.ComponentName(context, receiver))
+    appWidgetIds.map { appWidgetId -> glanceManager.getGlanceIdBy(appWidgetId) }.forEach { glanceId ->
         updateAppWidgetState(context, glanceId) { preferences ->
             val previous = decodeDeviceWidgetState(preferences[STATE_KEY])
             val state = buildDeviceWidgetState(session, connectionStatus, preferences, previous)
             if (state is DeviceWidgetState.Connected) {
                 preferences[LAST_MODEL_KEY] = state.deviceModel
             }
-            val json = Json.encodeToString<DeviceWidgetState>(state)
-            if (json != preferences[STATE_KEY]) {
-                preferences[STATE_KEY] = json
-                isChanged = true
-            }
+            preferences[STATE_KEY] = Json.encodeToString<DeviceWidgetState>(state)
         }
-        if (isChanged) {
-            widget.update(context, glanceId)
-        }
+        // Always re-render: the widget's RemoteViews also embed the command PendingIntents, which change with the app.
+        widget.update(context, glanceId)
     }
 }
 
@@ -214,23 +214,14 @@ internal fun openDeviceAction(context: Context): androidx.glance.action.Action =
 
 /** Retries the lost connection through the device service. */
 internal fun retryConnectionAction(context: Context): androidx.glance.action.Action =
-    androidx.glance.appwidget.action.actionSendBroadcast(
-        Intent().apply {
-            `package` = context.packageName
-            action = DeviceService.ACTION_RETRY
-        },
-    )
+    CommandBroadcasts.glanceAction(context, DeviceService.ACTION_RETRY)
 
 /** Asks the device service to switch the ambient sound mode. */
 internal fun setSoundModeAction(context: Context, modeId: String): androidx.glance.action.Action =
-    androidx.glance.appwidget.action.actionSendBroadcast(
-        Intent().apply {
-            `package` = context.packageName
-            action = DeviceService.ACTION_SET_SETTING_VALUE
-            putExtra(DeviceService.INTENT_EXTRA_SETTING_ID, "ambientSoundMode")
-            putExtra(DeviceService.INTENT_EXTRA_SETTING_VALUE, modeId.toValue())
-        },
-    )
+    CommandBroadcasts.glanceAction(context, DeviceService.ACTION_SET_SETTING_VALUE) { intent ->
+        intent.putExtra(DeviceService.INTENT_EXTRA_SETTING_ID, "ambientSoundMode")
+        intent.putExtra(DeviceService.INTENT_EXTRA_SETTING_VALUE, modeId.toValue())
+    }
 
 /** Asks the device service to activate a saved quick preset by name. */
 internal fun activatePresetAction(
@@ -239,13 +230,9 @@ internal fun activatePresetAction(
     index: Int,
 ): androidx.glance.action.Action? {
     val preset = presets.getOrNull(index) ?: return null
-    return androidx.glance.appwidget.action.actionSendBroadcast(
-        Intent().apply {
-            `package` = context.packageName
-            action = DeviceService.ACTION_ACTIVATE_PRESET
-            putExtra(DeviceService.INTENT_EXTRA_PRESET_NAME, preset.name)
-        },
-    )
+    return CommandBroadcasts.glanceAction(context, DeviceService.ACTION_ACTIVATE_PRESET) { intent ->
+        intent.putExtra(DeviceService.INTENT_EXTRA_PRESET_NAME, preset.name)
+    }
 }
 
 /** Opens the instance configuration of the device panel. */
