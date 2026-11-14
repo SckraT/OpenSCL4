@@ -4,7 +4,7 @@ The current desktop client is `desktop/` (Slint). Linux is supported on x86_64 U
 
 ## Target systems
 
-The supported systems are x86_64 Ubuntu/Kubuntu 24.04 and 26.04. The supported session matrix covers Ubuntu 24.04 GNOME on Wayland and X11, Kubuntu 24.04 on X11, Ubuntu 26.04 GNOME and Kubuntu 26.04 on Wayland. Other architectures and distributions are later work, not a tested support promise.
+The `.deb` targets Debian-like distributions and has been tested on x86_64 Ubuntu/Kubuntu 24.04 and 26.04. The AppImage is intended for any Linux distribution and has been tested on Ubuntu; if it does not work on your distribution, please open an issue. An RPM package for Red Hat-like distributions is planned. The session matrix covers Ubuntu 24.04 GNOME on Wayland and X11, Kubuntu 24.04 on X11, Ubuntu 26.04 GNOME and Kubuntu 26.04 on Wayland. Other architectures are later work.
 
 ## Build prerequisites
 
@@ -86,5 +86,3 @@ Starting the app again for the same data directory asks the running window to sh
 The release workflow installs/removes the `.deb` on Ubuntu 24.04/26.04 and runs X11/nested-Wayland smoke checks with [`scripts/test-linux-package.sh`](../scripts/test-linux-package.sh). These cover the application's own behaviour: one instance per data folder, separate data folders, recovery after a crash and a start without a session bus.
 
 On the same releases, the `linux-appimage-check` job installs the runtime dependencies from `packaging/linux/control`, but no FUSE, and starts the AppImage artifact with `--appimage-extract-and-run` through [`scripts/test-linux-appimage.sh`](../scripts/test-linux-appimage.sh). Under X11 the application's window must open and closing it without a tray must end the AppImage with status 0. Under nested Wayland the application must open its window and still run after eight seconds. The check does not repeat the `.deb` checks. When it fails, it prints the failed session's logs in the job log and keeps the log folder as the `linux-appimage-check-logs-UBUNTU-attempt-N` artifact. It does not hold back the bundle, since the AppImage is not a release gate. When the Linux job could not build the AppImage, this job finds no artifact to start and fails with that reason. To run it on an Ubuntu host, install the packages that job installs and run `bash scripts/test-linux-appimage.sh path/to/openscl4-VERSION-linux-x86_64.AppImage LOG_FOLDER`.
-
-These are configured CI checks, not evidence that the full GNOME/KDE matrix or Bluetooth hardware checks have passed. See [the release gates](build-release.md#ci-and-verification) for the required session and Liberty 4 Pro evidence.

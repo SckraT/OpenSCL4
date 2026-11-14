@@ -4,7 +4,7 @@
 
 OpenSCL4 controls supported Soundcore headphones, earbuds and speakers on Windows, Linux and Android. It is free, open source and works without an account.
 
-![OpenSCL4 1.0.0 on Windows and Android](docs/images/openscl4-hero-en.png)
+![OpenSCL4 1.0.0 on Windows and Android](docs/images/openscl4-overview-en.png)
 
 _OpenSCL4 1.0.0 on Windows and Android._
 
@@ -22,6 +22,10 @@ OpenSCL4 brings the Soundcore settings you use every day into one app.
 - **Desktop.** Tray menu, light and dark themes, interface scaling and a layout you can rearrange.
 - **Android.** Background connection, notification controls, a home-screen widget, an LDAC quick-settings tile and auto-connect.
 
+![OpenSCL4 sound mode on Windows and Android](docs/images/openscl4-soundmode-en.png)
+
+_Sound mode: noise cancelling, transparency and strength._
+
 ![OpenSCL4 equalizer with the Bass Booster profile](docs/images/openscl4-equalizer-en.png)
 
 _Eight bands, Soundcore profiles and custom curves._
@@ -30,12 +34,11 @@ The interface is available in 16 languages, including Russian. Available feature
 
 ## Platforms
 
-| Platform                         | Status    | Packages                       |
-| -------------------------------- | --------- | ------------------------------ |
-| Windows 10/11 x64                | Supported | Installer, portable `openscl4` |
-| Android 8.0+                     | Supported | APK for your phone or tablet   |
-| Linux x86_64, Ubuntu 24.04/26.04 | Supported | `.deb`, `.tar.gz`, AppImage    |
-| macOS                            | Not yet   | —                              |
+| Platform          | Status    | Packages                                  |
+| ----------------- | --------- | ----------------------------------------- |
+| Windows 10/11 x64 | Supported | Installer, portable `openscl4`            |
+| Android 8.0+      | Supported | APK for your phone or tablet              |
+| Linux x86_64      | Supported | `.deb` (Debian-like), `.tar.gz`, AppImage |
 
 ## Install
 
@@ -61,7 +64,7 @@ Android 8.0 or newer is required. Allow your browser or file manager to install 
 
 ### Linux
 
-Supported on Ubuntu/Kubuntu 24.04 and 26.04 on x86_64.
+The `.deb` is for Debian-like distributions and has been tested on Ubuntu/Kubuntu 24.04 and 26.04 on x86_64. The AppImage is intended for any Linux distribution and has also been tested on Ubuntu; if it does not work on your distribution, please open an [issue](https://github.com/SckraT/OpenSCL4/issues).
 
 With the `.deb`:
 
@@ -84,6 +87,8 @@ chmod +x openscl4-1.0.0-linux-x86_64.AppImage
 ```
 
 If FUSE is unavailable, run the AppImage with `--appimage-extract-and-run`. See [Linux installation notes](docs/build-linux.md) for runtime dependencies and Wayland/X11 details.
+
+An RPM package for Red Hat-like distributions is planned.
 
 ## First start
 
