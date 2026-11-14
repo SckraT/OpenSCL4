@@ -4,7 +4,11 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, watch};
 
 use crate::{
-    client::presets::fields_to_apply,
+    client::{
+        SettingMap,
+        availability::{SettingAvailability, setting_availability},
+        presets::fields_to_apply,
+    },
     connection::ConnectionStatus,
     storage::{self, OpenSCQ30Database, QuickPreset, QuickPresetField},
 };
@@ -69,15 +73,21 @@ impl QuickPresetActivation {
         if *self.connection_status.borrow() != ConnectionStatus::Connected {
             return Err(device::Error::Disconnected);
         }
-        if let Some(outcome) = outcomes
-            .iter()
-            .find(|outcome| !matches!(outcome.outcome, WriteOutcome::Applied { .. }))
-        {
+        if let Some(outcome) = outcomes.iter().find(|outcome| {
+            !matches!(
+                outcome.outcome,
+                WriteOutcome::Applied { .. } | WriteOutcome::UnsupportedInState { .. }
+            )
+        }) {
             return Err(device::Error::SettingWriteNotApplied {
                 setting_id: outcome.setting_id,
             });
         }
-        self.last_applied.send_replace(Some(name));
+        // An unavailable field is skipped rather than failing the whole preset, so don't claim that a preset
+        // with nothing left to write was applied.
+        if !outcomes.is_empty() {
+            self.last_applied.send_replace(Some(name));
+        }
         Ok(())
     }
 }
@@ -196,14 +206,44 @@ impl QuickPresetsHandler {
             .database
             .fetch_quick_preset(device.model(), name.into())
             .await?;
-        let settings: Vec<_> = fields_to_apply(&quick_preset, |id| {
+        let current_settings: SettingMap = device
+            .settings_by_category()
+            .into_values()
+            .flatten()
+            .collect();
+        let mut settings = Vec::new();
+        for field in fields_to_apply(&quick_preset, |id| {
             device
                 .setting(&id)
                 .is_some_and(|setting| setting.is_action())
-        })
-        .into_iter()
-        .map(|field| (field.setting_id, field.value.clone()))
-        .collect();
+        }) {
+            let Some(setting) = current_settings.get(&field.setting_id) else {
+                tracing::debug!(
+                    setting_id = ?field.setting_id,
+                    "quick preset field skipped: setting is not present on the device"
+                );
+                continue;
+            };
+            if !setting.mode().is_writable() {
+                tracing::debug!(
+                    setting_id = ?field.setting_id,
+                    "quick preset field skipped: setting is read-only"
+                );
+                continue;
+            }
+            let setting_id: &'static str = field.setting_id.into();
+            if !matches!(
+                setting_availability(&current_settings, setting_id),
+                SettingAvailability::Available
+            ) {
+                tracing::debug!(
+                    setting_id = ?field.setting_id,
+                    "quick preset field skipped: setting is unavailable in the current state"
+                );
+                continue;
+            }
+            settings.push((field.setting_id, field.value.clone()));
+        }
         let mut outcomes = device.set_setting_values(settings.clone()).await?;
 
         let retryable = outcomes
@@ -538,6 +578,58 @@ mod tests {
         let device = registry.connect(model.demo_mac_address()).await.unwrap();
         let handler = QuickPresetsHandler::new(database.clone());
         (device, database, handler)
+    }
+
+    async fn connect_demo_a3949() -> (
+        Arc<dyn OpenSCQ30Device + Send + Sync>,
+        Arc<OpenSCQ30Database>,
+        QuickPresetsHandler,
+    ) {
+        let database = Arc::new(OpenSCQ30Database::new_in_memory().await.unwrap());
+        let model = DeviceModel::SoundcoreA3949;
+        let registry = model.demo_device_registry(database.clone()).await.unwrap();
+        let device = registry.connect(model.demo_mac_address()).await.unwrap();
+        let handler = QuickPresetsHandler::new(database.clone());
+        (device, database, handler)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn activation_skips_read_only_and_unavailable_fields() {
+        let (device, database, handler) = connect_demo_a3949().await;
+        database
+            .upsert_quick_preset(
+                DeviceModel::SoundcoreA3949,
+                QuickPreset {
+                    name: "A3949".into(),
+                    fields: vec![
+                        // A3949 only supports factory equalizer profiles, so its volume adjustments are read-only.
+                        field(SettingId::VolumeAdjustments, vec![0i16; 8].into(), true),
+                        field(SettingId::GamingMode, true.into(), true),
+                    ],
+                },
+            )
+            .await
+            .unwrap();
+
+        let outcomes = handler.activate(device.as_ref(), "A3949").await.unwrap();
+
+        assert!(
+            outcomes
+                .iter()
+                .all(|outcome| outcome.setting_id != SettingId::VolumeAdjustments),
+            "a read-only field must be skipped instead of failing the activation: {outcomes:?}",
+        );
+        assert!(
+            outcomes.iter().any(|outcome| {
+                outcome.setting_id == SettingId::GamingMode
+                    && matches!(outcome.outcome, WriteOutcome::Applied { .. })
+            }),
+            "the writable field should still be applied: {outcomes:?}",
+        );
+        QuickPresetActivation::new(device)
+            .activate(&handler, "A3949".into())
+            .await
+            .unwrap();
     }
 
     fn current_value(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> settings::Value {
