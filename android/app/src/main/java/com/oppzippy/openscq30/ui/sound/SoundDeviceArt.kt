@@ -74,6 +74,18 @@ internal fun deviceArtImage(art: DeviceArt, scheme: ColorScheme, color: EarbudsC
         EarbudsColor.Black -> art.black
     }
 
+/**
+ * The illustration drawn on the widget's sage header card. The large hero card shows the silver drawing in light
+ * themes, but at 30 dp on the sage card it loses its contrast, so the widget uses the black drawing on a light card
+ * and the silver one on a dark card unless the user picked a colour.
+ */
+@DrawableRes
+internal fun deviceArtOnCard(art: DeviceArt, color: EarbudsColor?, darkHeader: Boolean): Int =
+    when (color ?: if (darkHeader) EarbudsColor.Silver else EarbudsColor.Black) {
+        EarbudsColor.Silver -> art.silver
+        EarbudsColor.Black -> art.black
+    }
+
 /** Decorative illustration of the device for the device overview and the device list. */
 @Composable
 fun SoundDeviceArt(art: DeviceArt, modifier: Modifier = Modifier, color: EarbudsColor? = preferredEarbudsColor()) {

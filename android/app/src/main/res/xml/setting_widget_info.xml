@@ -9,6 +9,6 @@
     android:minResizeWidth="200dp"
     android:minResizeHeight="40dp"
     android:targetCellWidth="3"
-    android:targetCellHeight="1"
+    android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
