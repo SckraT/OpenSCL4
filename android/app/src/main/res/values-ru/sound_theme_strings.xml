@@ -10,8 +10,8 @@
     <string name="sound_notification_controls">Уведомление с управлением</string>
     <string name="sound_notification_controls_description">Управление устройством вне приложения</string>
     <string name="sound_widget">Виджет на главный экран</string>
-    <string name="sound_widget_description">Пресеты и часто используемые настройки</string>
-    <string name="sound_widget_help">Нажмите и удерживайте пустую область главного экрана, выберите «Виджеты» и добавьте виджет OpenSCQ30. Для настройки его элементов управления подключитесь к наушникам.</string>
+    <string name="sound_widget_description">Часто используемые настройки устройства на главном экране</string>
+    <string name="sound_widget_help">Нажмите и удерживайте пустую область главного экрана, выберите «Виджеты» и добавьте виджет OpenSCL4. Для настройки его элементов управления подключитесь к наушникам. Виджет следует состоянию устройства, поэтому недоступная сейчас настройка показывается отключённой с причиной.</string>
     <string name="sound_auto_connect_description">Подключаться, когда наушники доступны</string>
     <string name="sound_diagnostics">Диагностика</string>
     <string name="sound_logs_description">Скопировать последние записи для поиска причины неполадок</string>

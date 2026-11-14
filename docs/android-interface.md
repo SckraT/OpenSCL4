@@ -52,11 +52,33 @@ Interactive controls use Material semantics and at least 48 dp touch targets.
 Large text removes the decorative overview illustration and stacks battery cards;
 device pages and notification-slot settings can scroll.
 
+## Home screen widget
+
+The home screen widget shows the settings chosen for it. It is built from the same
+shared client rules as the rest of the interface: settings are grouped and ordered as
+in All device settings, a dependent setting disappears while its parent setting is off,
+a setting the device does not let change now keeps its value and the reason, battery
+levels and the one-earbud state come from the shared battery rules, and the header
+illustration follows the shared device art. The header shows the device, its batteries
+and disconnects it; tapping the name opens the app. The compact-layout preference keeps
+the rows short, and a short widget drops the header and the group headings.
+
+The configuration screen groups the settings by purpose, explains why a setting cannot
+be shown now, and applies every change to the widget immediately. The last saved
+selection stays visible while the device is not connected; without a connection the
+widget lists the saved devices, and connecting, reconnecting and lost sessions keep
+their status and the retry action.
+
+Glance cannot use the bundled Onest font, so the widget approximates it with the system
+typeface weights and the client's text sizes. The preview in
+`android/app/src/main/res/drawable/widget_preview.png` is a render for the system widget
+picker; check the widget itself on a device or emulator with the manual QA pass below.
+
 ## Validation
 
 Unit tests cover connection ownership, binding and retry behavior, equalizer
-precision, preset matching, range quantization, battery fractions and UI
-responsiveness while synchronous native reads are blocked.
+precision, preset matching, range quantization, battery fractions, widget presentation
+and widget selection, and UI responsiveness while synchronous native reads are blocked.
 `SoundNavigationTest` exercises real demo-device writes and connection-preserving
 Back navigation. Existing device-setting, migration and notification tests use
 the new interface paths.
@@ -65,7 +87,9 @@ Build one architecture with `assembleArm64-v8aDebug` for an arm64 phone or
 `assembleX86_64Debug` for an x86_64 emulator. Run Android instrumentation with
 `connectedX86_64DebugAndroidTest`, or `connectedArm64-v8aDebugAndroidTest` on an
 arm64 phone. Emulator demo checks do not establish physical Bluetooth behavior or
-Pixel gesture-animation behavior; those require a phone and headphones.
+Pixel gesture-animation behavior; those require a phone and headphones. The widget's
+Glance and Compose rendering is checked the same way: its JVM tests cover only the
+presentation model and the selection logic.
 
 A connected test task fails when a device ran no tests or no results were
 written, including a test filter that matches nothing. AGP reports an
