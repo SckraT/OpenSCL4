@@ -13,14 +13,14 @@ For an installer, install the exact Inno Setup version from [`.build-tool-versio
 From the repository root in PowerShell:
 
 ```powershell
-cargo build --locked -p openscq30-desktop
+cargo build --locked --bin openscl4
 .\target\debug\openscl4.exe
 ```
 
 For an optimized executable without packaging:
 
 ```powershell
-cargo build --locked --release -p openscq30-desktop
+cargo build --locked --release --bin openscl4
 ```
 
 The output is `target/release/openscl4.exe`. `--profile release-fast` uses the workspace's thin-LTO profile; it is a development option, not the profile used by the release workflow.

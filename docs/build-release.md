@@ -15,7 +15,7 @@ Build Linux packages on x86_64 Ubuntu 24.04, including when targeting Ubuntu 26.
 For desktop development:
 
 ```text
-cargo build --locked -p openscq30-desktop
+cargo build --locked --bin openscl4
 cargo test --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android
 ```
 

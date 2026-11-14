@@ -22,7 +22,7 @@ The AppImage is made with `appimagetool` and the AppImage runtime at the version
 ## Development and packaging
 
 ```sh
-cargo build --locked -p openscq30-desktop
+cargo build --locked --bin openscl4
 ./target/debug/openscl4
 python3 scripts/release.py build linux
 python3 scripts/release.py build linux-appimage
