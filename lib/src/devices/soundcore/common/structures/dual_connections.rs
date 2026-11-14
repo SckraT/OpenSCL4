@@ -51,12 +51,20 @@ impl DualConnectionsDevice {
                 .iter()
                 .position(|b| *b == 0)
                 .map_or(name_bytes, |index| &name_bytes[..index]);
-            // Bluetooth device names are supposed to be utf8
-            let name = str::from_utf8(name_str_bytes)
-                .map_err(|_| {
-                    nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Char))
-                })?
-                .to_owned();
+            // Bluetooth device names are supposed to be utf8, but the device
+            // pads them to the 32-byte name field and can cut a multi-byte
+            // character in half. Keep the valid prefix: dropping the whole
+            // packet loses every device in the list for one truncated name.
+            let name = match str::from_utf8(name_str_bytes) {
+                Ok(name) => name.to_owned(),
+                Err(error) => {
+                    tracing::debug!(
+                        "device name ends mid-UTF-8 character at byte {}, truncating",
+                        error.valid_up_to()
+                    );
+                    String::from_utf8_lossy(&name_str_bytes[..error.valid_up_to()]).into_owned()
+                }
+            };
 
             Ok((
                 input,
