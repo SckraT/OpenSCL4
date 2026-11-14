@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -545,7 +547,11 @@ private fun ShowSetting(context: Context, settingId: String, setting: Setting, c
 
         is Setting.ImportStringSetting -> ReadOnlyValueRow(context, settingId, "")
 
-        is Setting.InformationSetting -> ReadOnlyValueRow(context, settingId, setting.value)
+        is Setting.InformationSetting -> ReadOnlyValueRow(
+            context,
+            settingId,
+            setting.translatedValue.ifEmpty { setting.value },
+        )
 
         is Setting.SelectSetting -> Select(
             context = context,
@@ -663,8 +669,7 @@ private fun Select(
     compact: Boolean,
 ) {
     val size = LocalSize.current
-    val roomForButtons =
-        size.width >= WidgetDimens.selectPillMinimumWidth * (setting.options.size + if (isOptional) 1 else 0)
+    val roomForButtons = selectPillsFit(size.width, setting.localizedOptions, isOptional)
 
     Column(GlanceModifier.fillMaxWidth()) {
         Text(
@@ -730,6 +735,19 @@ private fun Select(
             }
         }
     }
+}
+
+/**
+ * Whether the option pills fit in one row. A pill is at least [WidgetDimens.selectPillMinimumWidth] wide, but a long
+ * label needs more, so estimate the row from the labels; a count alone would draw a row of truncated labels.
+ */
+private fun selectPillsFit(availableWidth: Dp, labels: List<String>, isOptional: Boolean): Boolean {
+    val contentWidth = availableWidth - WidgetDimens.pillRowReservedWidth
+    val pills = labels.size + if (isOptional) 1 else 0
+    val estimatedLabelsWidth = labels.sumOf { label -> label.length.coerceAtMost(24) * 8 + 20 }.dp
+    val optionalWidth = if (isOptional) WidgetDimens.selectPillMinimumWidth else 0.dp
+    val gaps = WidgetDimens.selectPillGap * (pills - 1)
+    return contentWidth >= (estimatedLabelsWidth + optionalWidth + gaps)
 }
 
 /**

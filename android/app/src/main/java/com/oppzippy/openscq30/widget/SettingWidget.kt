@@ -179,7 +179,7 @@ class SettingWidget : GlanceAppWidget() {
 
                         if (settingIds.isNullOrEmpty()) {
                             SettingWidgetState.ConnectedUnconfigured(
-                                deviceName = translateDeviceModel(model),
+                                deviceName = deviceShortName(model),
                             )
                         } else {
                             val snapshot = DeviceSettingsSnapshot.of(device.settingsByCategory())

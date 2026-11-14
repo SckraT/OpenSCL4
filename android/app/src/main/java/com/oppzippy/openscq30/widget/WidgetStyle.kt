@@ -79,6 +79,9 @@ internal object WidgetDimens {
 
     /** Room one pill needs before the options become radio rows instead. */
     val selectPillMinimumWidth = 80.dp
+
+    /** Root, row and spare padding the pills do not have available inside the available widget width. */
+    val pillRowReservedWidth = 40.dp
     val pillRadius = 12.dp
     val pillOuterPaddingHorizontal = 2.dp
     val pillOuterPaddingVertical = 4.dp
