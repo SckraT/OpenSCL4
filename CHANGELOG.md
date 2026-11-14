@@ -2,6 +2,12 @@
 
 Changes below describe this fork. This is source history, not proof of publication; published packages belong in [OpenSCL4 Releases](https://github.com/SckraT/OpenSCL4/releases). The inherited OpenSCQ30 release notes are preserved in [upstream history](docs/history/upstream-changelog.md).
 
+## v1.0.1
+
+### Shared behavior
+
+- Apply the writable part of a quick preset when some of its saved settings are read-only or unavailable in the current state. Previously such a preset failed activation as a whole, which made quick presets unusable on the Soundcore A3949 (P20i/P25i/R50i) after custom equalizer support was removed by the device firmware family, or when a preset was activated with one earbud connected. Unavailable fields are now skipped with a debug log; the remaining settings are applied.
+
 ## v1.0.0
 
 ### Clients and identity
