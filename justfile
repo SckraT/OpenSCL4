@@ -124,7 +124,7 @@ format: android::format cli::format desktop::format gui::format i18n::format i18
 format-docs:
     set -euo pipefail
     if command -v prettier > /dev/null; then
-        prettier --write README.md CHANGELOG.md docs/*.md tools/soundcore-device-faker/README.md
+        prettier --write README.md README.ru.md CHANGELOG.md docs/*.md tools/soundcore-device-faker/README.md
     else
         echo "Prettier not installed, skipping markdown formatting"
     fi
@@ -137,7 +137,7 @@ format-check: android::format-check cli::format-check desktop::format-check gui:
 format-check-docs:
     set -euxo pipefail
     if command -v prettier > /dev/null; then
-        prettier --check README.md CHANGELOG.md docs/*.md tools/soundcore-device-faker/README.md
+        prettier --check README.md README.ru.md CHANGELOG.md docs/*.md tools/soundcore-device-faker/README.md
     elif [[ -n "${CI:-}" ]]; then
         echo "Prettier not installed; CI must check markdown formatting" >&2
         exit 1

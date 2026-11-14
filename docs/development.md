@@ -38,17 +38,17 @@ CI runs for pull requests and for pushes to `master`; a push to any other branch
 
 ## Documentation and model catalog
 
-`README.md.in` is the source of the prose in `README.md`. Change the template first. From the repository root, regenerate the catalog and README with:
+`README.md.in` and `README.ru.md.in` are the sources of the prose in `README.md` and `README.ru.md`. Change the templates first. From the repository root, regenerate both catalogs and READMEs with:
 
 ```sh
 bash scripts/generate-readme
 ```
 
-This existing generator requires bash, Rust/Cargo, `jq`, `sd` and Prettier. It runs the CLI's `list-models --json`, removes the development-only model, substitutes `@SUPPORTED_DEVICES_TABLE@` and formats Markdown. Its input is this checkout's template, not an upstream README download. On Windows use an environment with those tools, or update both files and run the documentation consistency checks; the device table must still match the current enum and English model names.
+This existing generator requires bash, Rust/Cargo, `jq`, `sd` and Prettier. It runs the CLI's `list-models --json`, removes the development-only model, substitutes `@SUPPORTED_DEVICES_TABLE@` in each template (with English or Russian column headers) and formats Markdown. Its input is this checkout's templates, not an upstream README download. On Windows use an environment with those tools, or update the four files and run the documentation consistency checks; the device table must still match the current enum and English model names.
 
-The lightweight Python suite checks that the checked-in README matches its template and that its catalog matches the core model declarations. It also checks release scripts, how the release workflow hands the Linux packages to their checks, and that push, pull request and manual runs of one branch fall into different concurrency groups (see the CI rules above). Documentation CI runs it without rebuilding the apps.
+The lightweight Python suite checks that each checked-in README matches its template and that both catalogs match the core model declarations. It also checks release scripts, how the release workflow hands the Linux packages to their checks, and that push, pull request and manual runs of one branch fall into different concurrency groups (see the CI rules above). Documentation CI runs it without rebuilding the apps.
 
-Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
+Screenshots in `docs/images/` are captures from the release packages with a demo device, not generated assets; replace them when the interface or the shown version changes, and keep the version in the README caption. Device implementation work is described in [the protocol development guide](device-development.md). Feature/bug reports belong in [OpenSCL4 Issues](https://github.com/SckraT/OpenSCL4/issues); translation updates arrive as pull requests here. Upstream's translation host is not automatically connected to this fork.
 
 ## Historical material
 

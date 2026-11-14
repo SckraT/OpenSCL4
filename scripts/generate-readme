@@ -4,17 +4,30 @@ set -euo pipefail
 script_path="$(readlink -f -- "$0")"
 cd "$(dirname "$script_path")/.."
 
-table=$(
-    printf '%s\n%s\n%s' \
-        '|Model|Name|' \
-        '|-|-|' \
-        "$(cargo run --bin openscq30 -- list-models --json |
-            jq --raw-output '.[] |
-                select(.model != "SoundcoreDevelopment") |
-                "|" + (.model | ltrimstr("Soundcore")) + "|" + .name + "|"'
-        )"
-)
+models=$(cargo run --bin openscq30 -- list-models --json)
 
-cat README.md.in |
-    sd --fixed-strings '@SUPPORTED_DEVICES_TABLE@' "$table" |
-    prettier --parser markdown > README.md
+generate() {
+    local template="$1"
+    local output="$2"
+    local model_header="$3"
+    local name_header="$4"
+    local table
+
+    table=$(
+        printf '%s\n%s\n%s' \
+            "|$model_header|$name_header|" \
+            '|-|-|' \
+            "$(printf '%s' "$models" |
+                jq --raw-output '.[] |
+                    select(.model != "SoundcoreDevelopment") |
+                    "|" + (.model | ltrimstr("Soundcore")) + "|" + .name + "|"'
+            )"
+    )
+
+    cat "$template" |
+        sd --fixed-strings '@SUPPORTED_DEVICES_TABLE@' "$table" |
+        prettier --parser markdown > "$output"
+}
+
+generate README.md.in README.md Model Name
+generate README.ru.md.in README.ru.md Модель Название
