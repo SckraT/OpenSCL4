@@ -2,6 +2,12 @@
 
 Changes below describe this fork. This is source history, not proof of publication; published packages belong in [OpenSCL4 Releases](https://github.com/SckraT/OpenSCL4/releases). The inherited OpenSCQ30 release notes are preserved in [upstream history](docs/history/upstream-changelog.md).
 
+## Unreleased
+
+### Shared behavior
+
+- Keep the dual-connections list when a remembered device's name is cut in the middle of a UTF-8 character. The headphones pad names to 32 bytes; the parser now keeps the valid prefix instead of discarding the whole response, so the connected devices stay visible.
+
 ## v2.14.0
 
 ### Clients and identity
