@@ -2,6 +2,12 @@
 
 Changes below describe this fork. This is source history, not proof of publication; published packages belong in [OpenSCL4 Releases](https://github.com/SckraT/OpenSCL4/releases). The inherited OpenSCQ30 release notes are preserved in [upstream history](docs/history/upstream-changelog.md).
 
+## Unreleased
+
+### Shared behavior
+
+- Refresh the device state after 30 s without inbound packets instead of only proving the device is alive. The silence watchdog now lets its `RequestState` response reach the packet handlers, so battery level and charging flags no longer stay at their connect-time values on a long, otherwise idle connection — the Soundcore A3949 (P20i/P25i/R50i) is the reported case, and it never sends these on its own.
+
 ## v2.14.0
 
 ### Clients and identity
