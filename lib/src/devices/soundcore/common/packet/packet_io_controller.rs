@@ -32,6 +32,10 @@ const ACK_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(500);
 const MULTI_RESPONSE_PACKET_TIMEOUT: Duration = Duration::from_secs(2);
 pub const SILENCE_TIMEOUT: Duration = Duration::from_secs(30);
 const WATCHDOG_RETRY_DELAY: Duration = Duration::from_secs(1);
+/// How long the silence watchdog waits for any inbound packet after its state request
+/// (`docs/android-connection-spec.md` §6.2).
+const WATCHDOG_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+const WATCHDOG_INBOUND_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct PacketIOController {
     checksum_kind: ChecksumKind,
@@ -393,14 +397,23 @@ async fn run_watchdog(weak_controller: Weak<PacketIOController>) -> Result<(), S
         tracing::debug!("silence watchdog probing the device");
         let mut failures = 0;
         for attempt in 0..2 {
-            let answered = match weak_controller.upgrade() {
-                Some(controller) => controller
-                    .send_with_response(&packet::outbound::RequestState.to_packet())
-                    .await
-                    .is_ok(),
-                None => return Ok(()),
+            let Some(controller) = weak_controller.upgrade() else {
+                return Ok(());
             };
-            if answered {
+            let probed_at = *last_inbound
+                .lock()
+                .expect("last inbound mutex should not be poisoned");
+            // The probe deliberately has no response queue. Some devices only report battery level
+            // and charging flags inside the state update packet, so waiting for the response in a
+            // command queue would leave them at their connect-time values for the whole session.
+            // Letting it through to the packet handlers refreshes the state instead, and any
+            // inbound packet still proves the device is alive.
+            let sent = controller
+                .send_without_response(&packet::outbound::RequestState.to_packet())
+                .await
+                .is_ok();
+            drop(controller);
+            if sent && wait_for_inbound(&last_inbound, probed_at).await {
                 failures = 0;
                 break;
             }
@@ -413,6 +426,29 @@ async fn run_watchdog(weak_controller: Weak<PacketIOController>) -> Result<(), S
             session.report_unhealthy(SessionFailureReason::SilenceWatchdogFailed);
             // Keep the watchdog alive: if the session recovers, a second silence must be detected.
         }
+    }
+}
+
+/// Waits for any inbound packet that arrived after `since`. Used by the silence watchdog, whose
+/// probe has no response queue: the device answering with anything at all proves it is alive, and
+/// the state update it sends back is applied to the device state by the packet handlers.
+async fn wait_for_inbound(last_inbound: &Mutex<Instant>, since: Instant) -> bool {
+    // Measured from the request, not from `since`: on an idle connection `since` is already older
+    // than the budget, which would count every probe as unanswered.
+    let deadline = Instant::now() + WATCHDOG_PROBE_TIMEOUT;
+    loop {
+        if *last_inbound
+            .lock()
+            .expect("last inbound mutex should not be poisoned")
+            > since
+        {
+            return true;
+        }
+        let now = Instant::now();
+        if now >= deadline {
+            return false;
+        }
+        tokio::time::sleep((deadline - now).min(WATCHDOG_INBOUND_POLL_INTERVAL)).await;
     }
 }
 
@@ -1122,5 +1158,63 @@ mod tests {
             SessionStatus::Connected,
             *packet_io.session_status().borrow()
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_silence_watchdog_probe_response_reaches_the_packet_handlers() {
+        let (connection, inbound_sender, mut outbound_receiver) = StubRfcommConnection::new();
+        let (packet_io, mut unsolicited) =
+            PacketIOController::new(Arc::new(connection), ChecksumKind::Suffix)
+                .await
+                .unwrap();
+        let packet_io = Arc::new(packet_io);
+
+        // Answer every state request the way a device does, without the app waiting for it.
+        let writes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let responder_writes = writes.clone();
+        let responder = tokio::spawn(async move {
+            while let Some(bytes) = outbound_receiver.recv().await {
+                let is_state_request = bytes.len() >= 9 && bytes[5] == 0x01 && bytes[6] == 0x01;
+                if is_state_request {
+                    responder_writes.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    inbound_sender
+                        .send(vec![
+                            0x09, 0xff, 0x00, 0x00, 0x01, 0x01, 0x01, 0x0a, 0x00, 0x15,
+                        ])
+                        .await
+                        .unwrap();
+                }
+            }
+        });
+        packet_io.start_watchdog();
+
+        let received = tokio::time::timeout(
+            SILENCE_TIMEOUT + COMMAND_TIMEOUT + Duration::from_secs(5),
+            unsolicited.recv(),
+        )
+        .await
+        .expect("the watchdog probe should be answered")
+        .expect("the device's state update should reach the packet handlers");
+
+        assert_eq!(received.command, packet::Command([0x01, 0x01]));
+        assert_eq!(
+            SessionStatus::Connected,
+            *packet_io.session_status().borrow()
+        );
+
+        // A second silent period must produce exactly one more request: an unanswered probe is
+        // retried, and a retry here would mean the answer was not counted as one.
+        tokio::time::sleep(SILENCE_TIMEOUT + Duration::from_secs(5)).await;
+        assert_eq!(
+            SessionStatus::Connected,
+            *packet_io.session_status().borrow(),
+            "a probe that was answered must not leave the session recovering"
+        );
+        assert_eq!(
+            2,
+            writes.load(std::sync::atomic::Ordering::SeqCst),
+            "each silent period should send exactly one state request"
+        );
+        responder.abort();
     }
 }

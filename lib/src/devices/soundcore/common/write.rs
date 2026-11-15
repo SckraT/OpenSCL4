@@ -21,6 +21,13 @@ use crate::{
 
 pub const MIN_WRITE_INTERVAL: Duration = Duration::from_millis(250);
 pub const DEFAULT_CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(2);
+/// A flag is one command with no read-back of its own, and some devices only reflect it in the
+/// state update a second or two later: the A3949 takes about a second to enter gaming mode and
+/// about 1.5 s to leave it, which with the write and poll pacing does not fit in
+/// [`DEFAULT_CONFIRMATION_TIMEOUT`] and turns a successful write into "the device did not apply
+/// this setting". The longer window costs nothing when the device answers quickly, because a
+/// confirmed write returns as soon as its value is seen.
+pub const FLAG_CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(5);
 pub const LDAC_CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(15);
 
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
@@ -298,6 +305,8 @@ where
 
         let timeout = if is_flag && setting_id == SettingId::Ldac {
             LDAC_CONFIRMATION_TIMEOUT
+        } else if is_flag {
+            FLAG_CONFIRMATION_TIMEOUT
         } else {
             DEFAULT_CONFIRMATION_TIMEOUT
         };
@@ -1318,6 +1327,45 @@ mod tests {
             outcomes[0].outcome
         );
         assert!(!harness.state_sender.borrow().wearing_detection.0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_flag_that_the_device_reports_late_is_still_confirmed() {
+        // The A3949 takes about 1.5 s to leave gaming mode, so a device may still report the old
+        // flag value on the last read that fits in the non-flag confirmation timeout.
+        let mut harness = Harness::new(TestState::default()).await;
+        let mut write = harness.spawn_write(vec![(SettingId::TouchTone, true.into())]);
+
+        let set = harness.next_packet().await;
+        assert_eq!(packet::outbound::SET_TOUCH_TONE_COMMAND, set.command);
+        harness.respond(set.command, Vec::new()).await;
+
+        let mut reads = 0;
+        let outcomes = loop {
+            tokio::select! {
+                result = &mut write => break result.unwrap().unwrap(),
+                packet = harness.outbound.recv() => {
+                    let bytes = packet.expect("outbound channel");
+                    let get = packet::Outbound::take::<VerboseError<_>>(ChecksumKind::None)(&bytes)
+                        .unwrap()
+                        .1;
+                    assert_eq!(packet::inbound::STATE_COMMAND, get.command);
+                    reads += 1;
+                    // ldac, wearing detection, wearing tone, touch tone
+                    harness
+                        .respond(get.command, vec![0, 0, 0, u8::from(reads > 4)])
+                        .await;
+                }
+            }
+        };
+
+        assert_eq!(
+            WriteOutcome::Applied {
+                observed: Value::Bool(true)
+            },
+            outcomes[0].outcome
+        );
+        assert!(reads > 4);
     }
 
     #[tokio::test(start_paused = true)]
