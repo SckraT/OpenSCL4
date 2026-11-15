@@ -7,6 +7,8 @@ Changes below describe this fork. This is source history, not proof of publicati
 ### Shared behavior
 
 - Keep the dual-connections list when a remembered device's name is cut in the middle of a UTF-8 character. The headphones pad names to 32 bytes; the parser now keeps the valid prefix instead of discarding the whole response, so the connected devices stay visible.
+- Refresh the device state after 30 s without inbound packets instead of only proving the device is alive. The silence watchdog now lets its `RequestState` response reach the packet handlers, so battery level and charging flags no longer stay at their connect-time values on a long, otherwise idle connection — the Soundcore A3949 (P20i/P25i/R50i) is the reported case, and it never sends these on its own.
+- Wait longer for a device to report a toggle before declaring the change unapplied. Some devices reflect a flag only a second or two after the command — the Soundcore A3949 takes about 1 s to enter gaming mode and about 1.5 s to leave it — which did not fit the 2 s window together with the write and read-back pacing, so leaving gaming mode failed with "the device did not apply this setting" in both clients. A confirmed write still returns as soon as the device reports it.
 
 ## v2.14.0
 
