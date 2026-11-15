@@ -433,7 +433,9 @@ async fn run_watchdog(weak_controller: Weak<PacketIOController>) -> Result<(), S
 /// probe has no response queue: the device answering with anything at all proves it is alive, and
 /// the state update it sends back is applied to the device state by the packet handlers.
 async fn wait_for_inbound(last_inbound: &Mutex<Instant>, since: Instant) -> bool {
-    let deadline = since + WATCHDOG_PROBE_TIMEOUT;
+    // Measured from the request, not from `since`: on an idle connection `since` is already older
+    // than the budget, which would count every probe as unanswered.
+    let deadline = Instant::now() + WATCHDOG_PROBE_TIMEOUT;
     loop {
         if *last_inbound
             .lock()
@@ -1168,10 +1170,13 @@ mod tests {
         let packet_io = Arc::new(packet_io);
 
         // Answer every state request the way a device does, without the app waiting for it.
+        let writes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let responder_writes = writes.clone();
         let responder = tokio::spawn(async move {
             while let Some(bytes) = outbound_receiver.recv().await {
                 let is_state_request = bytes.len() >= 9 && bytes[5] == 0x01 && bytes[6] == 0x01;
                 if is_state_request {
+                    responder_writes.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     inbound_sender
                         .send(vec![
                             0x09, 0xff, 0x00, 0x00, 0x01, 0x01, 0x01, 0x0a, 0x00, 0x15,
@@ -1195,6 +1200,20 @@ mod tests {
         assert_eq!(
             SessionStatus::Connected,
             *packet_io.session_status().borrow()
+        );
+
+        // A second silent period must produce exactly one more request: an unanswered probe is
+        // retried, and a retry here would mean the answer was not counted as one.
+        tokio::time::sleep(SILENCE_TIMEOUT + Duration::from_secs(5)).await;
+        assert_eq!(
+            SessionStatus::Connected,
+            *packet_io.session_status().borrow(),
+            "a probe that was answered must not leave the session recovering"
+        );
+        assert_eq!(
+            2,
+            writes.load(std::sync::atomic::Ordering::SeqCst),
+            "each silent period should send exactly one state request"
         );
         responder.abort();
     }
