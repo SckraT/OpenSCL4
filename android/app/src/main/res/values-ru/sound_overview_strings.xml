@@ -6,6 +6,7 @@
     <string name="sound_overview_right">Правый</string>
     <string name="sound_overview_case">Кейс</string>
     <string name="sound_overview_battery">Заряд</string>
+    <string name="sound_overview_battery_android">Заряд (Android)</string>
     <string name="sound_overview_sound_mode">Режим звука</string>
     <string name="sound_overview_customize">Настроить</string>
     <string name="sound_overview_your_sound">Ваше звучание</string>

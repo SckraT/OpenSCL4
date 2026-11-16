@@ -66,6 +66,15 @@
     <string name="sound_modes_view_tiles">Плитки</string>
     <string name="sound_modes_view_scale">Шкала 1–11</string>
     <string name="sound_one_earbud_badge_setting">Значок одного наушника</string>
+    <string name="sound_experimental">Экспериментальные</string>
+    <string name="sound_system_battery_setting">Заряд из Android</string>
+    <string name="sound_system_battery_setting_description">Берёт процент, который Android сообщает для устройства. Для пары это одно число, в него схлопываются уровни левого и правого; у одно-батарейных устройств подпись остаётся своя. Может не работать на части устройств.</string>
+    <string name="sound_system_battery_tws">Использовать и для пары наушников</string>
+    <string name="sound_system_battery_tws_description">Заменяет уровни левого и правого одним числом от Android. Уровень кейса тоже скрывается.</string>
+    <string name="sound_system_battery_exact_device">Это устройство сообщает точные проценты для левого, правого и кейса — одно число от Android потеряет разбивку.</string>
+    <string name="sound_system_battery_warning_title">Заряд из Android</string>
+    <string name="sound_system_battery_warning">Это чтение скрытого API Android. Число одно на пару наушников, поэтому уровни левого, правого и кейса скрываются, пока режим включён. Если Android значение не отдаёт, возвращаются уровни Soundcore.</string>
+    <string name="sound_system_battery_enable">Включить</string>
     <string name="sound_one_earbud_badge_setting_description">Показывать, когда подключён только один наушник</string>
     <string name="sound_ldac_tile">LDAC</string>
     <string name="sound_ldac_tile_unavailable">Нет устройства с LDAC</string>

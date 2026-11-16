@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.battery.SystemBatteryMode
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.ui.theme.ThemeType
@@ -74,12 +75,18 @@ fun SettingsPage(
     soundModesViewApplies: Boolean,
     // only a pair of earbuds can be down to one of them
     oneEarbudBadgeApplies: Boolean = false,
+    // a device that already reports exact percentages would only lose detail with the system number
+    systemBatteryApplies: Boolean = true,
+    // only a pair has per-earbud levels to collapse into one number
+    systemBatteryTwsApplies: Boolean = false,
 ) {
     if (embedded) {
         SettingsContent(
             onNotificationSettings = onNotificationSettings,
             soundModesViewApplies = soundModesViewApplies,
             oneEarbudBadgeApplies = oneEarbudBadgeApplies,
+            systemBatteryApplies = systemBatteryApplies,
+            systemBatteryTwsApplies = systemBatteryTwsApplies,
         )
     } else {
         Scaffold(
@@ -104,6 +111,8 @@ fun SettingsPage(
                     onNotificationSettings = onNotificationSettings,
                     soundModesViewApplies = soundModesViewApplies,
                     oneEarbudBadgeApplies = oneEarbudBadgeApplies,
+                    systemBatteryApplies = systemBatteryApplies,
+                    systemBatteryTwsApplies = systemBatteryTwsApplies,
                 )
             }
         }
@@ -115,6 +124,8 @@ private fun SettingsContent(
     onNotificationSettings: (() -> Unit)?,
     soundModesViewApplies: Boolean,
     oneEarbudBadgeApplies: Boolean,
+    systemBatteryApplies: Boolean,
+    systemBatteryTwsApplies: Boolean,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val autoConnect by viewModel.autoConnect.collectAsState()
@@ -123,9 +134,11 @@ private fun SettingsContent(
     val earbudsColor by viewModel.earbudsColor.collectAsState()
     val soundModesView by viewModel.soundModesView.collectAsState()
     val showOneEarbudBadge by viewModel.showOneEarbudBadge.collectAsState()
+    val systemBatteryMode by viewModel.systemBatteryMode.collectAsState()
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var showWidgetHelp by remember { mutableStateOf(false) }
+    var systemBatteryWarning by remember { mutableStateOf(false) }
     if (showWidgetHelp) {
         AlertDialog(
             onDismissRequest = { showWidgetHelp = false },
@@ -133,6 +146,24 @@ private fun SettingsContent(
             text = { Text(stringResource(R.string.sound_widget_help)) },
             confirmButton = {
                 TextButton(onClick = { showWidgetHelp = false }) { Text(stringResource(R.string.close)) }
+            },
+        )
+    }
+    if (systemBatteryWarning) {
+        AlertDialog(
+            onDismissRequest = { systemBatteryWarning = false },
+            title = { Text(stringResource(R.string.sound_system_battery_warning_title)) },
+            text = { Text(stringResource(R.string.sound_system_battery_warning)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setSystemBatteryMode(SystemBatteryMode.SingleBatteryOnly)
+                        systemBatteryWarning = false
+                    },
+                ) { Text(stringResource(R.string.sound_system_battery_enable)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { systemBatteryWarning = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -232,6 +263,52 @@ private fun SettingsContent(
                             }
                         },
                     )
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SettingsSectionTitle(stringResource(R.string.sound_experimental))
+                SettingsGroup {
+                    SettingsToggle(
+                        title = stringResource(R.string.sound_system_battery_setting),
+                        description = if (systemBatteryApplies) {
+                            stringResource(R.string.sound_system_battery_setting_description)
+                        } else {
+                            stringResource(R.string.sound_system_battery_exact_device)
+                        },
+                        icon = R.drawable.bolt_24px,
+                        enabled = systemBatteryApplies,
+                        checked = systemBatteryMode != SystemBatteryMode.Off,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                systemBatteryWarning = true
+                            } else {
+                                viewModel.setSystemBatteryMode(SystemBatteryMode.Off)
+                            }
+                        },
+                    )
+                    if (systemBatteryApplies &&
+                        systemBatteryTwsApplies &&
+                        systemBatteryMode != SystemBatteryMode.Off
+                    ) {
+                        SettingsDivider()
+                        SettingsToggle(
+                            title = stringResource(R.string.sound_system_battery_tws),
+                            description = stringResource(R.string.sound_system_battery_tws_description),
+                            icon = R.drawable.earbuds_2_24px,
+                            checked = systemBatteryMode == SystemBatteryMode.Always,
+                            onCheckedChange = { always ->
+                                viewModel.setSystemBatteryMode(
+                                    if (always) {
+                                        SystemBatteryMode.Always
+                                    } else {
+                                        SystemBatteryMode.SingleBatteryOnly
+                                    },
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -433,16 +510,18 @@ private fun SettingsToggle(
     @DrawableRes icon: Int,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
-        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+        Modifier.fillMaxWidth()
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
             .heightIn(min = 80.dp).padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SettingsIcon(icon)
         SettingsLabel(title, description, Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 

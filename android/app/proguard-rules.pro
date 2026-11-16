@@ -34,3 +34,5 @@
 -keepclassmembers class com.oppzippy.openscq30.features.preferences.Preferences {
     private android.content.SharedPreferences$OnSharedPreferenceChangeListener onChangeListener;
 }
+# The system battery reading is a native method: its JNI symbol carries the class name, so R8 must not rename it.
+-keep class com.oppzippy.openscq30.android.SystemBattery { *; }

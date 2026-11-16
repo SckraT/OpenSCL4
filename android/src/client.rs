@@ -254,6 +254,22 @@ pub fn client_is_tws(values: HashMap<String, serializable::Setting>) -> bool {
     battery::is_tws(&settings(values))
 }
 
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct ClientBatteryShape {
+    pub is_tws: bool,
+    /// The denominator of the raw reading, such as 5, 10 or 100; null when the format is not recognised.
+    pub scale: Option<i32>,
+}
+
+#[uniffi::export]
+pub fn client_battery_shape(values: HashMap<String, serializable::Setting>) -> ClientBatteryShape {
+    let shape = battery::battery_shape(&settings(values));
+    ClientBatteryShape {
+        is_tws: shape.is_tws,
+        scale: shape.scale.map(i32::from),
+    }
+}
+
 #[uniffi::export]
 pub fn client_is_only_one_earbud_connected(values: HashMap<String, serializable::Setting>) -> bool {
     battery::is_only_one_earbud_connected(&settings(values))

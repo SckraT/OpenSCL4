@@ -42,6 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.battery.SystemBatteryMode
+import com.oppzippy.openscq30.features.battery.batteryShape
+import com.oppzippy.openscq30.features.battery.rememberSystemBatteryPercent
+import com.oppzippy.openscq30.features.battery.useSystemBattery
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.SoundModesView
 import com.oppzippy.openscq30.lib.bindings.ClientSettingAvailability
@@ -58,6 +62,7 @@ import com.oppzippy.openscq30.lib.wrapper.toValue
 import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceBattery
 import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
+import com.oppzippy.openscq30.ui.deviceselection.systemBattery
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
 import com.oppzippy.openscq30.ui.utils.slidesWithDeviceCard
 
@@ -97,6 +102,7 @@ fun SoundOverview(
     val equalizerAvailable = equalizerAvailability.isAvailable()
     val oneEarbudOnly = isOnlyOneEarbudConnected(values)
     val showOneEarbudBadge by preferences.oneEarbudBadgeFlow.collectAsState()
+    val systemBatteryMode by preferences.systemBatteryModeFlow.collectAsState()
     val soundModesView by preferences.soundModesViewFlow.collectAsState()
     val storedLayout by remember(deviceModel) { preferences.overviewLayoutFlow(deviceModel) }.collectAsState()
     val layout = OverviewLayout.parse(storedLayout)
@@ -105,7 +111,14 @@ fun SoundOverview(
     val quickToggles = quickToggleIds(storedToggles, availableToggles).mapNotNull { id ->
         (values[id] as? Setting.ToggleSetting)?.let { id to it }
     }
-    val batteries = withMissingEarbud(deviceBatteries(values), oneEarbudOnly)
+    val shape = batteryShape(values)
+    val systemPercent = rememberSystemBatteryPercent(macAddress, systemBatteryMode != SystemBatteryMode.Off)
+    val systemReading = systemPercent?.takeIf { useSystemBattery(systemBatteryMode, shape, it) }
+    val batteries = if (systemReading != null) {
+        systemBattery(systemReading, shape.isTws)
+    } else {
+        withMissingEarbud(deviceBatteries(values), oneEarbudOnly)
+    }
     val scrollState = rememberScrollState()
     var cardBottom by remember { mutableIntStateOf(0) }
     // the card has scrolled out of sight: a narrow bar keeps the name and batteries on screen

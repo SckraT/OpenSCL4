@@ -6,6 +6,7 @@
     <string name="sound_overview_right">Right</string>
     <string name="sound_overview_case">Case</string>
     <string name="sound_overview_battery">Battery</string>
+    <string name="sound_overview_battery_android">Battery (Android)</string>
     <string name="sound_overview_sound_mode">Sound mode</string>
     <string name="sound_overview_customize">Customize</string>
     <string name="sound_overview_your_sound">Your sound</string>

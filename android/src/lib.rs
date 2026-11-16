@@ -73,3 +73,34 @@ pub enum AndroidError {
 pub fn device_models() -> Vec<serializable::DeviceModel> {
     DeviceModel::iter().map(serializable::DeviceModel).collect()
 }
+
+/// The battery percentage Android reports for a connected Classic audio device.
+///
+/// `BluetoothDevice.getBatteryLevel()` is a hidden API: reflection is blocked on recent Android releases, but
+/// native code may still call it. Returns -1 when Android has no reading for the device.
+#[cfg(target_os = "android")]
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_oppzippy_openscq30_android_SystemBattery_nativeGetBatteryLevel<
+    'caller,
+>(
+    mut env: jni::EnvUnowned<'caller>,
+    _class: jni::objects::JClass<'caller>,
+    device: jni::objects::JObject<'caller>,
+) -> jni::sys::jint {
+    env.with_env(|env| -> jni::errors::Result<jni::sys::jint> {
+        let level = env
+            .call_method(
+                device,
+                jni::jni_str!("getBatteryLevel"),
+                jni::jni_sig!("()I"),
+                &[],
+            )?
+            .i()?;
+        Ok(if (0..=100).contains(&level) {
+            level
+        } else {
+            -1
+        })
+    })
+    .resolve::<jni::errors::ThrowRuntimeExAndDefault>()
+}
