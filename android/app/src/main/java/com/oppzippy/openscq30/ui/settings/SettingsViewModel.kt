@@ -12,6 +12,7 @@ import com.oppzippy.openscq30.features.autoconnect.canEnableAutoConnect
 import com.oppzippy.openscq30.features.autoconnect.observeCompanionPresenceForAutoconnect
 import com.oppzippy.openscq30.features.autoconnect.startAutoConnectServiceIfEnabled
 import com.oppzippy.openscq30.features.autoconnect.stopAutoConnectService
+import com.oppzippy.openscq30.features.battery.SystemBatteryMode
 import com.oppzippy.openscq30.features.preferences.EarbudsColor
 import com.oppzippy.openscq30.features.preferences.Preferences
 import com.oppzippy.openscq30.features.preferences.SoundModesView
@@ -37,7 +38,7 @@ class SettingsViewModel @Inject constructor(
     val earbudsColor = preferences.earbudsColorFlow
     val soundModesView = preferences.soundModesViewFlow
     val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
-    val systemBattery = preferences.systemBatteryFlow
+    val systemBatteryMode = preferences.systemBatteryModeFlow
 
     fun setAutoConnect(value: Boolean) {
         if (value && !canEnableAutoConnect(context)) {
@@ -75,8 +76,8 @@ class SettingsViewModel @Inject constructor(
         preferences.showOneEarbudBadge = show
     }
 
-    fun setSystemBattery(value: Boolean) {
-        preferences.systemBattery = value
+    fun setSystemBatteryMode(mode: SystemBatteryMode) {
+        preferences.systemBatteryMode = mode
     }
 
     fun copyLogs() {

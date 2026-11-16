@@ -68,7 +68,10 @@
     <string name="sound_one_earbud_badge_setting">One earbud badge</string>
     <string name="sound_experimental">Experimental</string>
     <string name="sound_system_battery_setting">Battery from Android</string>
-    <string name="sound_system_battery_setting_description">Reads the percentage Android reports for the device and shows it as one battery instead of the Soundcore levels. May not work on every device.</string>
+    <string name="sound_system_battery_setting_description">Reads the percentage Android reports for the device. For a pair it is one number, so its left and right levels collapse into it; single-battery devices keep their own label. May not work on every device.</string>
+    <string name="sound_system_battery_tws">Use it for a pair too</string>
+    <string name="sound_system_battery_tws_description">Replaces the left and right levels with the single number Android reports. The case level is hidden as well.</string>
+    <string name="sound_system_battery_exact_device">This device reports exact percentages for the left, right and case, so one number from Android would lose detail here.</string>
     <string name="sound_system_battery_warning_title">Battery from Android</string>
     <string name="sound_system_battery_warning">This reads a hidden Android API. The number is one value for the pair, so the left, right and case levels are hidden while it is on. If Android has no reading, the Soundcore levels come back.</string>
     <string name="sound_system_battery_enable">Turn on</string>

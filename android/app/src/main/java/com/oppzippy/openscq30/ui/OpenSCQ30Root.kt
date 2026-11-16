@@ -30,7 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.battery.SystemBatteryMode
+import com.oppzippy.openscq30.features.battery.batteryShape
 import com.oppzippy.openscq30.features.battery.rememberSystemBatteryPercent
+import com.oppzippy.openscq30.features.battery.systemBatteryApplies
+import com.oppzippy.openscq30.features.battery.systemBatteryTwsApplies
+import com.oppzippy.openscq30.features.battery.useSystemBattery
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.prefersDarkTheme
 import com.oppzippy.openscq30.features.preferences.prefersDynamicColor
@@ -64,7 +69,7 @@ fun OpenSCQ30Root(
             val status by viewModel.connectionStatusFlow.collectAsState()
             val deviceSettings by viewModel.deviceSettingsManager.collectAsState()
             val showOneEarbudBadge by uiPreferences.oneEarbudBadgeFlow.collectAsState()
-            val systemBatteryEnabled by uiPreferences.systemBatteryFlow.collectAsState()
+            val systemBatteryMode by uiPreferences.systemBatteryModeFlow.collectAsState()
             var navigation by rememberSaveable(stateSaver = deviceNavigationSaver) {
                 mutableStateOf(DeviceNavigationState())
             }
@@ -115,18 +120,31 @@ fun OpenSCQ30Root(
                                 val modesViewApplies = remember(status, activeSettings) {
                                     soundModesViewApplies(status, activeSettings)
                                 }
+                                val activeShape = remember(activeSettings) {
+                                    batteryShape(activeSettings.toMap())
+                                }
                                 val activeDevice = when (val current = status) {
                                     is ConnectionStatus.Connected -> (
                                         current.macAddress ?: requestedMacAddress
                                         )?.let {
                                         val values = activeSettings.toMap()
                                         val oneEarbudOnly = isOnlyOneEarbudConnected(values)
-                                        val systemPercent = rememberSystemBatteryPercent(it, systemBatteryEnabled)
+                                        val shape = batteryShape(values)
+                                        val systemPercent = rememberSystemBatteryPercent(
+                                            it,
+                                            systemBatteryMode != SystemBatteryMode.Off,
+                                        )
+                                        val systemReading = systemPercent?.takeIf {
+                                            useSystemBattery(systemBatteryMode, shape, it)
+                                        }
                                         ActiveDevice(
                                             it,
                                             ActiveDeviceState.Connected,
-                                            systemPercent?.let(::systemBattery)
-                                                ?: withMissingEarbud(deviceBatteries(values), oneEarbudOnly),
+                                            if (systemReading != null) {
+                                                systemBattery(systemReading, shape.isTws)
+                                            } else {
+                                                withMissingEarbud(deviceBatteries(values), oneEarbudOnly)
+                                            },
                                             oneEarbudOnly = oneEarbudOnly && showOneEarbudBadge,
                                         )
                                     }
@@ -146,6 +164,8 @@ fun OpenSCQ30Root(
                                 DeviceSelectionScreen(
                                     activeDevice = activeDevice,
                                     soundModesViewApplies = modesViewApplies,
+                                    systemBatteryApplies = systemBatteryApplies(activeShape),
+                                    systemBatteryTwsApplies = systemBatteryTwsApplies(activeShape),
                                     onDeviceSelected = {
                                         navigation = navigation.openDevice(it.macAddress)
                                         viewModel.selectDevice(it.macAddress)

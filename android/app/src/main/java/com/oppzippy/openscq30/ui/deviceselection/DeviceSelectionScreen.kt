@@ -57,6 +57,8 @@ fun DeviceSelectionScreen(
     activeDevice: ActiveDevice? = null,
     // the app settings opened from the list are about the device the app controls, exactly as from the device screen
     soundModesViewApplies: Boolean,
+    systemBatteryApplies: Boolean = true,
+    systemBatteryTwsApplies: Boolean = false,
 ) {
     val bluetoothPermission = if (Build.VERSION.SDK_INT >= 31) {
         Manifest.permission.BLUETOOTH_CONNECT
@@ -125,6 +127,8 @@ fun DeviceSelectionScreen(
                     onDeviceUnpaired,
                     activeDevice,
                     soundModesViewApplies,
+                    systemBatteryApplies,
+                    systemBatteryTwsApplies,
                     onResolveBluetoothAccess,
                 )
             }
@@ -137,6 +141,8 @@ fun DeviceSelectionScreen(
                 onDeviceUnpaired,
                 activeDevice,
                 soundModesViewApplies,
+                systemBatteryApplies,
+                systemBatteryTwsApplies,
                 onResolveBluetoothAccess,
             )
         }
@@ -152,6 +158,8 @@ private fun DeviceSelectionContent(
     onDeviceUnpaired: (PairedDevice) -> Unit,
     activeDevice: ActiveDevice?,
     soundModesViewApplies: Boolean,
+    systemBatteryApplies: Boolean,
+    systemBatteryTwsApplies: Boolean,
     onResolveBluetoothAccess: (BluetoothAccess) -> Unit,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -263,6 +271,8 @@ private fun DeviceSelectionContent(
             SettingsPage(
                 onBackClick = { navController.popBackStack() },
                 soundModesViewApplies = soundModesViewApplies,
+                systemBatteryApplies = systemBatteryApplies,
+                systemBatteryTwsApplies = systemBatteryTwsApplies,
             )
         }
     }

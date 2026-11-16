@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.core.content.edit
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import com.oppzippy.openscq30.features.battery.SystemBatteryMode
 import com.oppzippy.openscq30.ui.theme.ThemeType
 import com.oppzippy.openscq30.ui.theme.prefersDarkTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,12 +31,26 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         private const val PREFERENCE_LAST_DEVICE = "lastDeviceMacAddress"
         private const val PREFERENCE_SOUND_MODES_VIEW = "soundModesView"
         private const val PREFERENCE_ONE_EARBUD_BADGE = "showOneEarbudBadge"
-        private const val PREFERENCE_SYSTEM_BATTERY = "systemBattery"
+        private const val PREFERENCE_SYSTEM_BATTERY_MODE = "systemBatteryMode"
+        private const val LEGACY_PREFERENCE_SYSTEM_BATTERY = "systemBattery"
         private const val PREFIX_OVERVIEW_LAYOUT = "overviewLayout."
         private const val PREFIX_QUICK_TOGGLES = "quickToggles."
     }
 
     private val preferences = context.getSharedPreferences("preferences", Context.MODE_PRIVATE)
+
+    init {
+        // the first version of the experimental source used one boolean and replaced every battery with one number,
+        // which loses the per-earbud split; a user who had it on gets the narrower mode instead
+        if (preferences.contains(LEGACY_PREFERENCE_SYSTEM_BATTERY)) {
+            if (preferences.getBoolean(LEGACY_PREFERENCE_SYSTEM_BATTERY, false) &&
+                !preferences.contains(PREFERENCE_SYSTEM_BATTERY_MODE)
+            ) {
+                preferences.edit { putString(PREFERENCE_SYSTEM_BATTERY_MODE, SystemBatteryMode.SingleBatteryOnly.name) }
+            }
+            preferences.edit { remove(LEGACY_PREFERENCE_SYSTEM_BATTERY) }
+        }
+    }
 
     private val autoConnectPreference = Preference(
         get = { preferences.getBoolean(PREFERENCE_AUTO_CONNECT, false) },
@@ -114,9 +129,13 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
     )
 
     // experimental: the percentage Android reports over its own profile, instead of the device levels
-    private val systemBatteryPreference = Preference(
-        get = { preferences.getBoolean(PREFERENCE_SYSTEM_BATTERY, false) },
-        set = { preferences.edit { putBoolean(PREFERENCE_SYSTEM_BATTERY, it) } },
+    private val systemBatteryModePreference = Preference(
+        get = {
+            preferences.getString(PREFERENCE_SYSTEM_BATTERY_MODE, null)?.let { name ->
+                SystemBatteryMode.entries.firstOrNull { it.name == name }
+            } ?: SystemBatteryMode.Off
+        },
+        set = { preferences.edit { putString(PREFERENCE_SYSTEM_BATTERY_MODE, it.name) } },
     )
 
     // values stored for each device model, created when first asked for
@@ -142,7 +161,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         PREFERENCE_LAST_DEVICE to lastDevicePreference,
         PREFERENCE_SOUND_MODES_VIEW to soundModesViewPreference,
         PREFERENCE_ONE_EARBUD_BADGE to oneEarbudBadgePreference,
-        PREFERENCE_SYSTEM_BATTERY to systemBatteryPreference,
+        PREFERENCE_SYSTEM_BATTERY_MODE to systemBatteryModePreference,
     )
 
     // Marked as -keepclassmembers in proguard-rules so that it doesn't get optimized out. This would lead to it getting
@@ -218,10 +237,10 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         get() = oneEarbudBadgePreference.flow.value
         set(show) = oneEarbudBadgePreference.set(show)
 
-    val systemBatteryFlow = systemBatteryPreference.flow
-    var systemBattery: Boolean
-        get() = systemBatteryPreference.flow.value
-        set(enabled) = systemBatteryPreference.set(enabled)
+    val systemBatteryModeFlow = systemBatteryModePreference.flow
+    var systemBatteryMode: SystemBatteryMode
+        get() = systemBatteryModePreference.flow.value
+        set(mode) = systemBatteryModePreference.set(mode)
 
     /** Blocks of the device overview and their order, as stored by [com.oppzippy.openscq30.ui.sound.OverviewLayout]. */
     fun overviewLayoutFlow(model: String): StateFlow<String?> = perModel(PREFIX_OVERVIEW_LAYOUT, model).flow
@@ -281,7 +300,7 @@ fun preferredEarbudsColor(viewModel: EarbudsColorViewModel = hiltViewModel()): E
 class DeviceUiPreferencesViewModel @Inject constructor(private val preferences: Preferences) : ViewModel() {
     val soundModesViewFlow = preferences.soundModesViewFlow
     val oneEarbudBadgeFlow = preferences.oneEarbudBadgeFlow
-    val systemBatteryFlow = preferences.systemBatteryFlow
+    val systemBatteryModeFlow = preferences.systemBatteryModeFlow
     fun overviewLayoutFlow(model: String) = preferences.overviewLayoutFlow(model)
     fun setOverviewLayout(model: String, layout: String?) = preferences.setOverviewLayout(model, layout)
     fun quickTogglesFlow(model: String) = preferences.quickTogglesFlow(model)

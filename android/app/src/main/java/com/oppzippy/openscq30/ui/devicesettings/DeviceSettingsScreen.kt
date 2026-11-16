@@ -55,6 +55,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.battery.batteryShape
+import com.oppzippy.openscq30.features.battery.systemBatteryApplies
+import com.oppzippy.openscq30.features.battery.systemBatteryTwsApplies
 import com.oppzippy.openscq30.features.equalizer.storage.LegacyEqualizerProfile
 import com.oppzippy.openscq30.features.soundcoredevice.service.ConnectionStatus
 import com.oppzippy.openscq30.features.soundcoredevice.service.textResource
@@ -160,6 +163,7 @@ fun DeviceSettingsScreen(
     val categories = byCategory.keys.toList()
     val settings = remember(byCategory) { byCategory.values.flatten().distinctBy { it.first } }
     val settingsById = remember(settings) { settings.toMap() }
+    val activeBatteryShape = remember(settingsById) { batteryShape(settingsById) }
     val presentation = remember(settingsById) { settingsPresentation(settingsById) }
     val equalizerAvailability = presentation.availability.getValue(EQUALIZER_AVAILABILITY_ID)
     val equalizerAvailable = equalizerAvailability.isAvailable()
@@ -539,6 +543,8 @@ fun DeviceSettingsScreen(
                             onNotificationSettings = { navController.navigate("notifications") },
                             soundModesViewApplies = modesViewApplies,
                             oneEarbudBadgeApplies = isTws(settingsById),
+                            systemBatteryApplies = systemBatteryApplies(activeBatteryShape),
+                            systemBatteryTwsApplies = systemBatteryTwsApplies(activeBatteryShape),
                         )
                     }
                     composable(ALL_SETTINGS) {
