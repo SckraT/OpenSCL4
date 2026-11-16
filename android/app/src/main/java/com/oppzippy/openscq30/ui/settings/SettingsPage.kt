@@ -123,9 +123,11 @@ private fun SettingsContent(
     val earbudsColor by viewModel.earbudsColor.collectAsState()
     val soundModesView by viewModel.soundModesView.collectAsState()
     val showOneEarbudBadge by viewModel.showOneEarbudBadge.collectAsState()
+    val systemBattery by viewModel.systemBattery.collectAsState()
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var showWidgetHelp by remember { mutableStateOf(false) }
+    var systemBatteryWarning by remember { mutableStateOf(false) }
     if (showWidgetHelp) {
         AlertDialog(
             onDismissRequest = { showWidgetHelp = false },
@@ -133,6 +135,24 @@ private fun SettingsContent(
             text = { Text(stringResource(R.string.sound_widget_help)) },
             confirmButton = {
                 TextButton(onClick = { showWidgetHelp = false }) { Text(stringResource(R.string.close)) }
+            },
+        )
+    }
+    if (systemBatteryWarning) {
+        AlertDialog(
+            onDismissRequest = { systemBatteryWarning = false },
+            title = { Text(stringResource(R.string.sound_system_battery_warning_title)) },
+            text = { Text(stringResource(R.string.sound_system_battery_warning)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setSystemBattery(true)
+                        systemBatteryWarning = false
+                    },
+                ) { Text(stringResource(R.string.sound_system_battery_enable)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { systemBatteryWarning = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -229,6 +249,26 @@ private fun SettingsContent(
                                 }
                             } else {
                                 context.startActivity(detailsIntent)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SettingsSectionTitle(stringResource(R.string.sound_experimental))
+                SettingsGroup {
+                    SettingsToggle(
+                        title = stringResource(R.string.sound_system_battery_setting),
+                        description = stringResource(R.string.sound_system_battery_setting_description),
+                        icon = R.drawable.bolt_24px,
+                        checked = systemBattery,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                systemBatteryWarning = true
+                            } else {
+                                viewModel.setSystemBattery(false)
                             }
                         },
                     )

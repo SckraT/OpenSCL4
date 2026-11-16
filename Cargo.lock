@@ -5517,6 +5517,7 @@ dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
  "itertools 0.15.0",
+ "jni",
  "log",
  "macaddr",
  "openscq30-i18n",

@@ -30,6 +30,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         private const val PREFERENCE_LAST_DEVICE = "lastDeviceMacAddress"
         private const val PREFERENCE_SOUND_MODES_VIEW = "soundModesView"
         private const val PREFERENCE_ONE_EARBUD_BADGE = "showOneEarbudBadge"
+        private const val PREFERENCE_SYSTEM_BATTERY = "systemBattery"
         private const val PREFIX_OVERVIEW_LAYOUT = "overviewLayout."
         private const val PREFIX_QUICK_TOGGLES = "quickToggles."
     }
@@ -112,6 +113,12 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         set = { preferences.edit { putBoolean(PREFERENCE_ONE_EARBUD_BADGE, it) } },
     )
 
+    // experimental: the percentage Android reports over its own profile, instead of the device levels
+    private val systemBatteryPreference = Preference(
+        get = { preferences.getBoolean(PREFERENCE_SYSTEM_BATTERY, false) },
+        set = { preferences.edit { putBoolean(PREFERENCE_SYSTEM_BATTERY, it) } },
+    )
+
     // values stored for each device model, created when first asked for
     private val perModelPreferences = mutableMapOf<String, Preference<String?>>()
 
@@ -135,6 +142,7 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         PREFERENCE_LAST_DEVICE to lastDevicePreference,
         PREFERENCE_SOUND_MODES_VIEW to soundModesViewPreference,
         PREFERENCE_ONE_EARBUD_BADGE to oneEarbudBadgePreference,
+        PREFERENCE_SYSTEM_BATTERY to systemBatteryPreference,
     )
 
     // Marked as -keepclassmembers in proguard-rules so that it doesn't get optimized out. This would lead to it getting
@@ -210,6 +218,11 @@ class Preferences @Inject constructor(@ApplicationContext context: Context) {
         get() = oneEarbudBadgePreference.flow.value
         set(show) = oneEarbudBadgePreference.set(show)
 
+    val systemBatteryFlow = systemBatteryPreference.flow
+    var systemBattery: Boolean
+        get() = systemBatteryPreference.flow.value
+        set(enabled) = systemBatteryPreference.set(enabled)
+
     /** Blocks of the device overview and their order, as stored by [com.oppzippy.openscq30.ui.sound.OverviewLayout]. */
     fun overviewLayoutFlow(model: String): StateFlow<String?> = perModel(PREFIX_OVERVIEW_LAYOUT, model).flow
     fun setOverviewLayout(model: String, layout: String?) = perModel(PREFIX_OVERVIEW_LAYOUT, model).set(layout)
@@ -268,6 +281,7 @@ fun preferredEarbudsColor(viewModel: EarbudsColorViewModel = hiltViewModel()): E
 class DeviceUiPreferencesViewModel @Inject constructor(private val preferences: Preferences) : ViewModel() {
     val soundModesViewFlow = preferences.soundModesViewFlow
     val oneEarbudBadgeFlow = preferences.oneEarbudBadgeFlow
+    val systemBatteryFlow = preferences.systemBatteryFlow
     fun overviewLayoutFlow(model: String) = preferences.overviewLayoutFlow(model)
     fun setOverviewLayout(model: String, layout: String?) = preferences.setOverviewLayout(model, layout)
     fun quickTogglesFlow(model: String) = preferences.quickTogglesFlow(model)

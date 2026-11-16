@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.oppzippy.openscq30.R
+import com.oppzippy.openscq30.features.battery.rememberSystemBatteryPercent
 import com.oppzippy.openscq30.features.preferences.DeviceUiPreferencesViewModel
 import com.oppzippy.openscq30.features.preferences.prefersDarkTheme
 import com.oppzippy.openscq30.features.preferences.prefersDynamicColor
@@ -39,6 +40,7 @@ import com.oppzippy.openscq30.ui.deviceselection.ActiveDeviceState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceNavigationState
 import com.oppzippy.openscq30.ui.deviceselection.DeviceSelectionScreen
 import com.oppzippy.openscq30.ui.deviceselection.deviceBatteries
+import com.oppzippy.openscq30.ui.deviceselection.systemBattery
 import com.oppzippy.openscq30.ui.deviceselection.toAppControlSnapshot
 import com.oppzippy.openscq30.ui.deviceselection.withMissingEarbud
 import com.oppzippy.openscq30.ui.devicesettings.DeviceSettingsScreen
@@ -62,6 +64,7 @@ fun OpenSCQ30Root(
             val status by viewModel.connectionStatusFlow.collectAsState()
             val deviceSettings by viewModel.deviceSettingsManager.collectAsState()
             val showOneEarbudBadge by uiPreferences.oneEarbudBadgeFlow.collectAsState()
+            val systemBatteryEnabled by uiPreferences.systemBatteryFlow.collectAsState()
             var navigation by rememberSaveable(stateSaver = deviceNavigationSaver) {
                 mutableStateOf(DeviceNavigationState())
             }
@@ -118,10 +121,12 @@ fun OpenSCQ30Root(
                                         )?.let {
                                         val values = activeSettings.toMap()
                                         val oneEarbudOnly = isOnlyOneEarbudConnected(values)
+                                        val systemPercent = rememberSystemBatteryPercent(it, systemBatteryEnabled)
                                         ActiveDevice(
                                             it,
                                             ActiveDeviceState.Connected,
-                                            withMissingEarbud(deviceBatteries(values), oneEarbudOnly),
+                                            systemPercent?.let(::systemBattery)
+                                                ?: withMissingEarbud(deviceBatteries(values), oneEarbudOnly),
                                             oneEarbudOnly = oneEarbudOnly && showOneEarbudBadge,
                                         )
                                     }

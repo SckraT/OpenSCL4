@@ -62,6 +62,18 @@ private fun ClientBattery.toDeviceBattery(): DeviceBattery =
 fun deviceBatteries(settings: Map<String, Setting>): List<DeviceBattery> =
     clientDeviceBatteries(settings).map { it.toDeviceBattery() }
 
+/**
+ * The one system percentage, when Android has one: showing the device levels next to it would repeat the same charge in
+ * a coarser scale and look like two different readings.
+ */
+fun systemBattery(percent: Int): List<DeviceBattery> = listOf(
+    DeviceBattery(
+        label = R.string.sound_overview_battery,
+        value = "$percent%",
+        progress = (percent / 100f).coerceIn(0f, 1f),
+    ),
+)
+
 fun withMissingEarbud(batteries: List<DeviceBattery>, oneEarbudOnly: Boolean): List<DeviceBattery> =
     clientWithMissingEarbud(
         batteries.map { battery ->

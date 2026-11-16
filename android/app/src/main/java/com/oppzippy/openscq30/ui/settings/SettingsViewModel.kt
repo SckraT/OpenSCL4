@@ -37,6 +37,7 @@ class SettingsViewModel @Inject constructor(
     val earbudsColor = preferences.earbudsColorFlow
     val soundModesView = preferences.soundModesViewFlow
     val showOneEarbudBadge = preferences.oneEarbudBadgeFlow
+    val systemBattery = preferences.systemBatteryFlow
 
     fun setAutoConnect(value: Boolean) {
         if (value && !canEnableAutoConnect(context)) {
@@ -72,6 +73,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setShowOneEarbudBadge(show: Boolean) {
         preferences.showOneEarbudBadge = show
+    }
+
+    fun setSystemBattery(value: Boolean) {
+        preferences.systemBattery = value
     }
 
     fun copyLogs() {
