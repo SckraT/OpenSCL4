@@ -1,5 +1,6 @@
 package com.oppzippy.openscq30.features.battery
 
+import com.oppzippy.openscq30.lib.bindings.clientBatteryShape
 import com.oppzippy.openscq30.lib.wrapper.Setting
 
 /**
@@ -7,6 +8,7 @@ import com.oppzippy.openscq30.lib.wrapper.Setting
  *
  * A device with one battery has nothing to lose: the system percentage is finer than a coarse level. A pair of
  * earbuds loses the per-earbud split, and one that already reports exact percentages loses precision as well.
+ * The shape itself — the pair flag and the reading's scale — is the shared library's reading of the settings.
  */
 data class BatteryShape(
     val isTws: Boolean,
@@ -15,15 +17,8 @@ data class BatteryShape(
 )
 
 /** The shape of the battery settings the device currently reports. */
-fun batteryShape(settings: Map<String, Setting>): BatteryShape {
-    fun scaleOf(id: String): Int? {
-        val raw = (settings[id] as? Setting.InformationSetting)?.value ?: return null
-        return raw.substringAfter('/', "").toIntOrNull()?.takeIf { it > 0 }
-    }
-    val isTws = settings.containsKey("batteryLevelLeft") || settings.containsKey("batteryLevelRight")
-    val scale = scaleOf("batteryLevel") ?: scaleOf("batteryLevelLeft") ?: scaleOf("batteryLevelRight")
-    return BatteryShape(isTws, scale)
-}
+fun batteryShape(settings: Map<String, Setting>): BatteryShape =
+    clientBatteryShape(settings).let { BatteryShape(it.isTws, it.scale) }
 
 /** Whether the system percentage should be shown instead of the device's own levels. */
 fun useSystemBattery(mode: SystemBatteryMode, shape: BatteryShape, systemPercent: Int?): Boolean {

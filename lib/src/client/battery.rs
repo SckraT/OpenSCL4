@@ -116,6 +116,40 @@ pub fn is_tws(settings: &SettingMap) -> bool {
     settings.contains_key(&SettingId::TwsStatus)
 }
 
+/// What the device's own battery readings look like: whether they come from a pair of earbuds, and the resolution
+/// of the raw levels. Clients use it to decide whether a coarser outside reading may replace the device's own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BatteryShape {
+    pub is_tws: bool,
+    /// The denominator of the raw reading, such as 5, 10 or 100. None when the format is not recognised.
+    pub scale: Option<u8>,
+}
+
+/// The shape of the battery settings the device currently reports. The pair flag follows the same `TwsStatus`
+/// rule as [`is_tws`]: a pair that momentarily reports no per-earbud levels is still a pair.
+pub fn battery_shape(settings: &SettingMap) -> BatteryShape {
+    let scale = [
+        SettingId::BatteryLevel,
+        SettingId::BatteryLevelLeft,
+        SettingId::BatteryLevelRight,
+    ]
+    .into_iter()
+    .find_map(|id| match settings.get(&id) {
+        Some(Setting::Information { value, .. }) => battery_scale(value),
+        _ => None,
+    });
+    BatteryShape {
+        is_tws: is_tws(settings),
+        scale,
+    }
+}
+
+/// The denominator of a raw fraction reading, e.g. 100 for "83/100"; bare percentages have no scale.
+fn battery_scale(raw: &str) -> Option<u8> {
+    let maximum = raw.trim().split('/').nth(1)?.trim().parse::<u8>().ok()?;
+    (maximum > 0).then_some(maximum)
+}
+
 /// The earbuds report whether they are connected to each other. With one of them in the case, settings that need
 /// both, such as the equalizer, are not available.
 pub fn is_only_one_earbud_connected(settings: &SettingMap) -> bool {
@@ -233,6 +267,44 @@ mod tests {
         assert!(is_tws(&status("Connected")));
         // over-ear headphones do not report it
         assert!(!is_tws(&SettingMap::new()));
+    }
+
+    #[test]
+    fn the_battery_shape_reads_the_scale_from_the_raw_fraction() {
+        let shape = |pairs: [(SettingId, Setting); 1]| battery_shape(&SettingMap::from(pairs));
+        assert_eq!(
+            Some(5),
+            shape([(SettingId::BatteryLevelLeft, information("5/5", "100%"))]).scale
+        );
+        assert_eq!(
+            Some(10),
+            shape([(SettingId::BatteryLevel, information("8/10", "80%"))]).scale
+        );
+        assert_eq!(
+            Some(100),
+            shape([(SettingId::BatteryLevelLeft, information("75/100", "75%"))]).scale
+        );
+    }
+
+    #[test]
+    fn the_battery_shape_has_no_scale_for_unknown_formats() {
+        assert_eq!(None, battery_shape(&SettingMap::new()).scale);
+        for raw in ["unknown", "1/0", "80%"] {
+            let settings = SettingMap::from([(SettingId::BatteryLevelLeft, information(raw, raw))]);
+            assert_eq!(None, battery_shape(&settings).scale, "{raw}");
+        }
+    }
+
+    #[test]
+    fn the_battery_shape_follows_the_shared_pair_rule() {
+        // A pair that reports no per-earbud levels right now is still a pair: only the TWS status
+        // decides, so a coarse outside reading cannot collapse a pair by accident.
+        let settings = SettingMap::from([(
+            SettingId::TwsStatus,
+            information("Disconnected", "Disconnected"),
+        )]);
+        assert!(battery_shape(&settings).is_tws);
+        assert!(!battery_shape(&SettingMap::new()).is_tws);
     }
 
     #[test]
