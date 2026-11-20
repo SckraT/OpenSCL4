@@ -10,6 +10,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def store_file_value(keystore: Path, project_dir: Path, repository_root: Path) -> str:
+    """The keystore path as Gradle resolves it in signingConfigs: relative to the app project when possible.
+
+    A relative value keeps the generated configuration valid after the checkout moves; an absolute one does not.
+    A keystore outside the repository keeps its absolute form.
+    """
+    if not keystore.is_relative_to(repository_root):
+        return keystore.as_posix()
+    return Path(os.path.relpath(keystore, project_dir)).as_posix()
+
+
 def protect(path: Path) -> None:
     if sys.platform == "win32":
         account = subprocess.run(["whoami"], check=True, capture_output=True, text=True).stdout.strip()
@@ -44,7 +55,7 @@ def main() -> None:
     protect(keystore)
     with properties.open("x", encoding="utf-8") as target:
         protect(properties)
-        store_file = json.dumps(keystore.as_posix(), ensure_ascii=True)[1:-1]
+        store_file = json.dumps(store_file_value(keystore, ROOT / "android" / "app", ROOT), ensure_ascii=True)[1:-1]
         target.write(f"storeFile={store_file}\nstorePassword={password}\nkeyPassword={password}\nkeyAlias=openscl4\n")
     with zipfile.ZipFile(backup, "x", compression=zipfile.ZIP_DEFLATED) as target:
         target.write(keystore, "openscl4.p12")
