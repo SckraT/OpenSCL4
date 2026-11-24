@@ -1,0 +1,2524 @@
+{
+    "schema": 1,
+    "source": "SoundcoreNext v2.0.0 (c1bf3e6881d2806972bf1fbe7f52fd5589997462)",
+    "selection": "Reviewed complete outbound frames for framing conformance",
+    "count": 503,
+    "features": 24,
+    "frames": [
+        {
+            "label": "adaptive_sound_leak_compensation/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9A 0B 00 00 AB"
+        },
+        {
+            "label": "adaptive_sound_leak_compensation/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9A 0B 00 01 AC"
+        },
+        {
+            "label": "adaptive_sound_leak_compensation/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 09 01 D5"
+        },
+        {
+            "label": "adaptive_sound_leak_compensation/D1205",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 86 0B 00 01 98"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 00 89"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 10 99"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 08 91"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 28 B1"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 38 C1"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 24 AD"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 34 BD"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 0C 95"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 1C A5"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 02 8B"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 22 AB"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 32 BB"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 2A B3"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 3A C3"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 06 8F"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 16 9F"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 0E 97"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 2E B7"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 3E C7"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 21 AA"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 11 9A"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 09 92"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 19 A2"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 05 8E"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 25 AE"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 35 BE"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 2D B6"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 1D A6"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 03 8C"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 13 9C"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 0B 94"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 2B B4"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 3B C4"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 27 B0"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 17 A0"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 0F 98"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 1F A8"
+        },
+        {
+            "label": "ambient_mode_cycle/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 06 82 0B 00 3F C8"
+        },
+        {
+            "label": "ambient_sound_mode_prompt/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 AE 0B 00 01 B1"
+        },
+        {
+            "label": "ambient_sound_mode_prompt/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 06 01 D1"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 00 01 8A"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 00 02 8B"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 00 04 8D"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 01 00 8A"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 01 01 8B"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 01 03 8D"
+        },
+        {
+            "label": "auto_power_off/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 86 0C 00 01 05 8F"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 11 9A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 22 AB"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 44 CD"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 66 EF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 77 00"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 99 22"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 BB 44"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 CC 55"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 EE 77"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 00 8A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 22 AC"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 33 BD"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 55 DF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 77 01"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 88 12"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 AA 34"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 CC 56"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 EE 78"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 FF 89"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 11 9C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 33 BE"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 44 CF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 66 F1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 88 13"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 99 24"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 BB 46"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 DD 68"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 FF 8A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 00 8C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 22 AE"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 44 D0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 55 E1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 77 03"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 99 25"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 BB 47"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 CC 58"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 EE 7A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 00 8D"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 11 9E"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 33 C0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 55 E2"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 66 F3"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 88 15"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 AA 37"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 CC 59"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 DD 6A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 FF 8C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 11 9F"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 22 B0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 44 D2"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 66 F4"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 88 16"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 99 27"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 BB 49"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 DD 6B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 EE 7C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 00 8F"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 22 B1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 33 C2"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 55 E4"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 77 06"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 99 28"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 AA 39"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 CC 5B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 EE 7D"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 FF 8E"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 11 A1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 33 C3"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 55 E5"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 66 F6"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 88 18"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 AA 3A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 BB 4B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 DD 6D"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 FF 8F"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 00 88"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 22 AA"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 44 CC"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 66 EE"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 77 FF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 99 21"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 BB 43"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 CC 54"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 EE 76"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 00 89"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 22 AB"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 33 BC"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 55 DE"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 77 00"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 88 11"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 AA 33"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 CC 55"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 DD 66"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 FF 88"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 11 9B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 33 BD"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 44 CE"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 66 F0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 88 12"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 99 23"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 BB 45"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 DD 67"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 FF 89"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 00 8B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 22 AD"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 44 CF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 55 E0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 77 02"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 99 24"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 AA 35"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 CC 57"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 EE 79"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 00 8C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 11 9D"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 33 BF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 55 E1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 66 F2"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 88 14"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 AA 36"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 CC 58"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 DD 69"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 FF 8B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 11 9E"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 22 AF"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 44 D1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 66 F3"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 77 04"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 99 26"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 BB 48"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 DD 6A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 EE 7B"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 00 8E"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 22 B0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 33 C1"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 55 E3"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 77 05"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 99 27"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 AA 38"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 CC 5A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 EE 7C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 FF 8D"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 11 A0"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 33 C2"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 44 D3"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 66 F5"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 88 17"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 AA 39"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 BB 4A"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 DD 6C"
+        },
+        {
+            "label": "button_action/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 FF 8E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 00 00 95"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 02 02 99"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 04 04 9D"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 06 06 A1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 07 07 A3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 09 09 A7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 0B 0B AB"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 0C 0C AD"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 0E 0E B1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 00 00 96"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 01 01 98"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 03 03 9C"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 05 05 A0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 07 07 A4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 08 08 A6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 0A 0A AA"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 0C 0C AE"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 0D 0D B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 0F 0F B4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 01 01 99"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 03 03 9D"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 04 04 9F"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 06 06 A3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 08 08 A7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 09 09 A9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 0B 0B AD"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 0D 0D B1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 0E 0E B3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 00 00 98"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 02 02 9C"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 04 04 A0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 05 05 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 07 07 A6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 09 09 AA"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 0A 0A AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 0C 0C B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 0E 0E B4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 00 00 99"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 01 01 9B"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 03 03 9F"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 05 05 A3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 06 06 A5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 08 08 A9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 0A 0A AD"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 0B 0B AF"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 0D 0D B3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 0F 0F B7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 01 01 9C"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 02 02 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 04 04 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 06 06 A6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 07 07 A8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 09 09 AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 0B 0B B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 0D 0D B4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 0E 0E B6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 00 00 9B"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 02 02 9F"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 03 03 A1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 05 05 A5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 07 07 A9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 08 08 AB"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 0A 0A AF"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 0C 0C B3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 0E 0E B7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 0F 0F B9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 01 01 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 03 03 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 04 04 A4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 06 06 A8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 08 08 AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 0A 0A B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 0B 0B B2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 0D 0D B6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 0F 0F BA"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 00 00 94"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 02 02 98"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 04 04 9C"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 05 05 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 07 07 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 09 09 A6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 0B 0B AA"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 0C 0C AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 0E 0E B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 00 00 95"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 01 01 97"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 03 03 9B"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 05 05 9F"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 07 07 A3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 08 08 A5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 0A 0A A9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 0C 0C AD"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 0D 0D AF"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 0F 0F B3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 01 01 98"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 02 02 9A"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 04 04 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 06 06 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 08 08 A6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 09 09 A8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 0B 0B AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 0D 0D B0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 0E 0E B2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 00 00 97"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 02 02 9B"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 04 04 9F"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 05 05 A1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 07 07 A5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 09 09 A9"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 0A 0A AB"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 0C 0C AF"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 0E 0E B3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 0F 0F B5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 01 01 9A"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 03 03 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 05 05 A2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 06 06 A4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 08 08 A8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 0A 0A AC"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 0B 0B AE"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 0D 0D B2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 0F 0F B6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 01 01 9B"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 02 02 9D"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 04 04 A1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 06 06 A5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 07 07 A7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 09 09 AB"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 0B 0B AF"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 0C 0C B1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 0E 0E B5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 00 00 9A"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 02 02 9E"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 03 03 A0"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 05 05 A4"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 07 07 A8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 08 08 AA"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 0A 0A AE"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 0C 0C B2"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 0E 0E B6"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 0F 0F B8"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 01 01 9D"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 03 03 A1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 04 04 A3"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 06 06 A7"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 08 08 AB"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 09 09 AD"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 0B 0B B1"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 0D 0D B5"
+        },
+        {
+            "label": "button_action/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 0F 0F B9"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 12 9B"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 00 0F 98"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 12 9C"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 21 AB"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 01 F0 7A"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 21 AC"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 02 F0 7B"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 12 9E"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 03 0F 9B"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 12 9F"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 21 AE"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 04 F0 7D"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 21 AF"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 05 0F 9D"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 12 A1"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 06 0F 9E"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 12 A2"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 21 B1"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 01 07 F0 80"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 21 A9"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 00 0F 97"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 12 9B"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 01 0F 98"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 12 9C"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 21 AB"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 02 F0 7A"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 21 AC"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 03 0F 9A"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 12 9E"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 0F 9B"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 04 F0 7C"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 21 AE"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 05 F0 7D"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 21 AF"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 06 0F 9D"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 12 A1"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 0F 9E"
+        },
+        {
+            "label": "button_action_split/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 81 0D 00 00 07 F0 7F"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 01 02 98"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 00 00 0F A4"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 01 02 99"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 01 0F 00 A5"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 02 01 9A"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 0F 00 A6"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 02 00 0F A6"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 01 02 9B"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 03 00 0F A7"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 02 01 9C"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 04 0F 00 A8"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 02 01 9D"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 0F 00 A9"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 05 00 0F A9"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 01 02 9E"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 06 00 0F AA"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 02 01 9F"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 01 07 0F 00 AB"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 02 01 97"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 0F 00 A3"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 00 00 0F A3"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 01 02 98"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 01 00 0F A4"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 02 01 99"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 02 0F 00 A5"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 02 01 9A"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 01 02 9A"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 03 00 0F A6"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 01 02 9B"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 04 00 0F A7"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 02 01 9C"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 05 0F 00 A8"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 02 01 9D"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 01 02 9D"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 06 00 0F A9"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 01 02 9E"
+        },
+        {
+            "label": "button_action_split/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 04 8C 0E 00 00 07 00 0F AA"
+        },
+        {
+            "label": "click_sound_legacy/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 8E 0B 00 00 90"
+        },
+        {
+            "label": "dual_connections/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 0B 84 0B 00 00 90"
+        },
+        {
+            "label": "easy_chat/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9D 0C 00 00 00 AF"
+        },
+        {
+            "label": "easy_chat/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9D 0C 00 00 01 B0"
+        },
+        {
+            "label": "easy_chat/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9D 0C 00 01 00 B0"
+        },
+        {
+            "label": "easy_chat/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 9D 0C 00 01 02 B2"
+        },
+        {
+            "label": "ldac/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 FF 0B 00 00 01"
+        },
+        {
+            "label": "ldac/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 02 00 CD"
+        },
+        {
+            "label": "low_battery_prompt/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 82 0B 00 00 93"
+        },
+        {
+            "label": "low_battery_prompt/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 01 00 CB"
+        },
+        {
+            "label": "low_battery_prompt/D1105",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 01 01 CC"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 00 01 CC"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 01 01 CD"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 03 00 CE"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 04 00 CF"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 05 00 D0"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 06 00 D1"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 06 01 D2"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 07 01 D3"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 08 01 D4"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0A 00 D5"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0B 00 D6"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0C 00 D7"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0C 01 D8"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0D 01 D9"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0E 01 DA"
+        },
+        {
+            "label": "multiplex_function_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 0F 01 DB"
+        },
+        {
+            "label": "multiplex_function_raw/D1205",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 94 0B 00 00 A5"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 00 00 CA"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 02 00 CC"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 02 01 CD"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 03 01 CE"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 04 01 CF"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 05 01 D0"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 07 00 D1"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 08 00 D2"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 09 00 D3"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 09 01 D4"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0A 01 D5"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0B 01 D6"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0C 00 D6"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0D 00 D7"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0E 00 D8"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0F 00 D9"
+        },
+        {
+            "label": "multiplex_prompt_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 87 0C 00 0F 01 DA"
+        },
+        {
+            "label": "power_off_pure_builder/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 8F 0B 00 01 92"
+        },
+        {
+            "label": "power_on_battery_notice/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 AF 0B 00 01 B2"
+        },
+        {
+            "label": "prompt_selection_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 8D 0B 00 00 8F"
+        },
+        {
+            "label": "prompt_selection_raw/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 8D 0B 00 02 91"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 00 01 00 95"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 00 01 02 97"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 00 01 03 98"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 00 02 01 97"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 00 02 03 99"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 01 01 00 96"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 01 01 02 98"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 01 02 00 97"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 01 02 01 98"
+        },
+        {
+            "label": "spatial_audio/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0D 00 01 02 03 9A"
+        },
+        {
+            "label": "spatial_audio/A31A3",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 10 81 0B 00 01 93"
+        },
+        {
+            "label": "spatial_audio/D1406",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 41 88 0C 00 11 01 DD"
+        },
+        {
+            "label": "surround_sound/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 02 86 0B 00 00 89"
+        },
+        {
+            "label": "touch_tone/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 83 0B 00 00 85"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 00 4B EF"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 00 50 F4"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 00 5A FE"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 00 64 08"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 01 50 F5"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 01 55 FA"
+        },
+        {
+            "label": "volume_limit/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 82 0C 00 01 5F 04"
+        },
+        {
+            "label": "volume_meter_refresh/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 81 0B 00 00 A2"
+        },
+        {
+            "label": "volume_meter_refresh/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 20 81 0B 00 01 A3"
+        },
+        {
+            "label": "wearing_detection_or_auto_pause/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 81 0B 00 00 83"
+        },
+        {
+            "label": "wearing_tone/A3004",
+            "source": "settings-frames.csv",
+            "frame_hex": "08 EE 00 00 00 01 8C 0B 00 00 8E"
+        },
+        {
+            "label": "a3062-anc/anc",
+            "source": "a3062-anc-modes.json",
+            "frame_hex": "08 EE 00 00 00 06 81 10 00 00 51 01 01 00 05 E5"
+        },
+        {
+            "label": "a3062-anc/normal",
+            "source": "a3062-anc-modes.json",
+            "frame_hex": "08 EE 00 00 00 06 81 10 00 02 51 01 01 00 05 E7"
+        },
+        {
+            "label": "a3062-anc/transparency",
+            "source": "a3062-anc-modes.json",
+            "frame_hex": "08 EE 00 00 00 06 81 10 00 01 51 01 01 00 05 E6"
+        }
+    ]
+}
