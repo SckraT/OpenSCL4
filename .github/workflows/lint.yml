@@ -29,7 +29,11 @@ jobs:
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Run clippy
-        run: cargo clippy --locked -p openscq30-lib -p openscq30-desktop -p openscq30-android --all-targets -- -D warnings
+        run: >-
+          cargo clippy --locked --all-targets
+          -p openscq30-lib -p openscq30-desktop -p openscq30-android
+          -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
+          -- -D warnings
 
   documentation:
     runs-on: ubuntu-24.04
@@ -58,6 +62,8 @@ jobs:
           chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
       - name: Install prettier
         run: npm install --global --ignore-scripts prettier@3.9.10
+      - name: Check new core and mock formatting
+        run: cargo fmt --check -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
       - name: Check formatting
         run: just format-check
 

@@ -10,6 +10,9 @@ members = [
     "i18n",
     "i18n-macros",
     "lib-has",
+    "core/crates/transport",
+    "core/crates/protocol",
+    "transports/mock",
 ]
 resolver = "3"
 
@@ -63,10 +66,13 @@ openscq30-lib-has = { path = "./lib-has" }
 openscq30-lib-macros = { path = "./lib-macros" }
 openscq30-i18n = { path = "./i18n" }
 openscq30-i18n-macros = { path = "./i18n-macros" }
+openscl4-protocol = { path = "core/crates/protocol" }
+openscl4-transport = { path = "core/crates/transport" }
 
 clap = "4"
 clap_complete = "4"
 tokio = "1"
+bytes = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 macaddr = "1"

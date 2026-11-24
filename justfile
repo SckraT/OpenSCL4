@@ -75,7 +75,11 @@ create-build-output-dir:
     mkdir -p build-output
 
 [doc("Run all tests")]
-test: lib::test cli::test gui::test desktop::test android::test
+test: lib::test cli::test gui::test desktop::test android::test test-core
+
+[doc("Run the platform-independent core and mock tests")]
+test-core:
+    cargo test --locked -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
 
 test-cov: lib::test-cov cli::test-cov gui::test-cov desktop::test-cov android::test-cov
 
