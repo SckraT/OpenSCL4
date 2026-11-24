@@ -36,3 +36,15 @@ All 503 frames are unique and retain their original order. They span 36 labels,
 the frame size and each additive checksum matches the preceding bytes. The
 SHA-256 of the concatenated decoded frames in file order is
 `475919f1ed95f162cd722244919311aa54c6ad787fef2e19601ca643e50b31d6`.
+
+## CI verification
+
+The protocol integration test decodes all 503 records and runs in the Windows
+and Linux CI jobs. Run it locally with
+
+```sh
+cargo test --locked -p openscl4-protocol --test conformance
+```
+
+A failing record is identified by its index and reviewed label. The full corpus
+run is part of first-wave acceptance. [First-wave acceptance criteria](https://github.com/SckraT/OpenSCL4/issues/136#issuecomment-7133141246)
