@@ -17,6 +17,9 @@ bundled-dependencies = ["openscq30-lib/bundled-dependencies"]
 [dependencies]
 openscq30-lib = { workspace = true }
 openscq30-i18n = { workspace = true }
+openscl4-session.workspace = true
+openscl4-transport.workspace = true
+openscl4-transport-mock.workspace = true
 tokio = { workspace = true, features = ["rt"] }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["wrap_help"] }

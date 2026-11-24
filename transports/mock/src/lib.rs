@@ -2,6 +2,11 @@
 
 #![forbid(unsafe_code)]
 
+mod virtual_device;
+
+use virtual_device::Responder;
+pub use virtual_device::VirtualSoundcoreDevice;
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use openscl4_transport::{
@@ -15,16 +20,31 @@ pub struct MockTransport;
 impl MockTransport {
     /// Opens a loopback link with a handle for simulating loss of this connection.
     pub fn connect_with_fault_injection(&self) -> (Box<dyn TransportLink>, MockDisconnect) {
-        let (tx, rx) = mpsc::channel(16);
-        let (trigger, disconnected) = watch::channel(false);
-        (
-            Box::new(LoopbackLink {
-                tx,
-                rx,
-                disconnected,
-            }),
-            MockDisconnect(trigger),
-        )
+        open_link(None)
+    }
+}
+
+fn open_link(responder: Option<Responder>) -> (Box<dyn TransportLink>, MockDisconnect) {
+    let (tx, rx) = mpsc::channel(16);
+    let (trigger, disconnected) = watch::channel(false);
+    (
+        Box::new(LoopbackLink {
+            tx,
+            rx,
+            disconnected,
+            responder,
+        }),
+        MockDisconnect(trigger),
+    )
+}
+
+#[async_trait]
+impl TransportProvider for VirtualSoundcoreDevice {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(open_link(Some(Responder::default())).0)
     }
 }
 
@@ -55,6 +75,7 @@ struct LoopbackLink {
     tx: mpsc::Sender<Bytes>,
     rx: mpsc::Receiver<Bytes>,
     disconnected: watch::Receiver<bool>,
+    responder: Option<Responder>,
 }
 
 impl TransportLink for LoopbackLink {
@@ -63,6 +84,7 @@ impl TransportLink for LoopbackLink {
             Box::new(LoopbackTx {
                 tx: Some(self.tx),
                 disconnected: self.disconnected.clone(),
+                responder: self.responder,
             }),
             Box::new(LoopbackRx {
                 rx: self.rx,
@@ -75,6 +97,7 @@ impl TransportLink for LoopbackLink {
 struct LoopbackTx {
     tx: Option<mpsc::Sender<Bytes>>,
     disconnected: watch::Receiver<bool>,
+    responder: Option<Responder>,
 }
 
 #[async_trait]
@@ -86,7 +109,16 @@ impl LinkTx for LoopbackTx {
             Ok(_) = self.disconnected.wait_for(|disconnected| *disconnected) => {
                 Err(TransportError::Disconnected)
             }
-            result = tx.send(data) => result.map_err(|_| TransportError::Closed),
+            result = async {
+                let data = match &mut self.responder {
+                    Some(responder) => responder.reply(&data),
+                    None => Some(data),
+                };
+                if let Some(data) = data {
+                    tx.send(data).await.map_err(|_| TransportError::Closed)?;
+                }
+                Ok(())
+            } => result,
         }
     }
 

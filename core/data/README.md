@@ -48,3 +48,14 @@ cargo test --locked -p openscl4-protocol --test conformance
 
 A failing record is identified by its index and reviewed label. The full corpus
 run is part of first-wave acceptance. [First-wave acceptance criteria](https://github.com/SckraT/OpenSCL4/issues/136#issuecomment-7133141246)
+
+## A3954 pilot state
+
+[a3954-pilot-state.bin](a3954-pilot-state.bin) is the 175-byte inbound `01 01`
+frame from `core/data/a3954-state.json` at the SoundcoreNext revision above.
+The source JSON SHA-256 is `a58f290aedfc9e06de4bec1d63c5d3ac7bdaf4e84ed6724ea2b1bbe509379947`.
+The 16-byte device serial and six-byte case serial were masked again at body
+offsets 16 and 38. The frame checksum was recalculated. The resulting frame
+SHA-256 is `6025c240c672fb296e50b5e84d8bc18f14aa1dcf6809f030bbd6bb447ebad037`.
+The virtual transport supplies a synthetic identity response with the A3954
+model prefix.

@@ -1,8 +1,8 @@
-//! Streaming decoder for Soundcore frames with a trailing checksum.
+//! Framing codec for Soundcore packets with a trailing checksum.
 
 #![forbid(unsafe_code)]
 
-use bytes::{Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 
 const OUTBOUND_PREFIX: [u8; 5] = [0x08, 0xee, 0x00, 0x00, 0x00];
 const INBOUND_PREFIX: [u8; 5] = [0x09, 0xff, 0x00, 0x00, 0x01];
@@ -40,6 +40,35 @@ pub enum DecodeError {
     /// The checksum did not match the preceding bytes.
     #[error("frame checksum mismatch")]
     ChecksumMismatch,
+}
+
+/// A frame that does not fit the wire length field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("frame body does not fit the wire length field")]
+pub struct EncodeError;
+
+/// Encodes a complete checksummed frame.
+pub fn encode_frame(
+    direction: Direction,
+    command: [u8; 2],
+    body: &[u8],
+) -> Result<Bytes, EncodeError> {
+    let length = u16::try_from(MIN_FRAME_LEN + body.len()).map_err(|_| EncodeError)?;
+    let prefix = match direction {
+        Direction::Outbound => OUTBOUND_PREFIX,
+        Direction::Inbound => INBOUND_PREFIX,
+    };
+    let mut bytes = BytesMut::with_capacity(usize::from(length));
+    bytes.extend_from_slice(&prefix);
+    bytes.extend_from_slice(&command);
+    bytes.put_u16_le(length);
+    bytes.extend_from_slice(body);
+    bytes.put_u8(checksum(&bytes));
+    Ok(bytes.freeze())
+}
+
+fn checksum(bytes: &[u8]) -> u8 {
+    bytes.iter().fold(0u8, |sum, byte| sum.wrapping_add(*byte))
 }
 
 /// Buffers byte chunks from a single connection.
@@ -83,10 +112,7 @@ impl FrameDecoder {
 
         let bytes = self.buffer.split_to(length).freeze();
         let checksum_index = length - 1;
-        let checksum = bytes[..checksum_index]
-            .iter()
-            .fold(0u8, |sum, byte| sum.wrapping_add(*byte));
-        if bytes[checksum_index] != checksum {
+        if bytes[checksum_index] != checksum(&bytes[..checksum_index]) {
             return Err(DecodeError::ChecksumMismatch);
         }
 

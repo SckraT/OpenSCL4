@@ -12,6 +12,8 @@ members = [
     "lib-has",
     "core/crates/transport",
     "core/crates/protocol",
+    "core/crates/models",
+    "core/crates/session",
     "transports/mock",
 ]
 resolver = "3"
@@ -68,6 +70,9 @@ openscq30-i18n = { path = "./i18n" }
 openscq30-i18n-macros = { path = "./i18n-macros" }
 openscl4-protocol = { path = "core/crates/protocol" }
 openscl4-transport = { path = "core/crates/transport" }
+openscl4-models = { path = "core/crates/models" }
+openscl4-session = { path = "core/crates/session" }
+openscl4-transport-mock = { path = "transports/mock" }
 
 clap = "4"
 clap_complete = "4"
