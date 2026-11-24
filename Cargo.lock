@@ -5512,6 +5512,9 @@ name = "openscl4-protocol"
 version = "2.14.0"
 dependencies = [
  "bytes",
+ "hex",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 
