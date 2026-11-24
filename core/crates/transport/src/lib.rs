@@ -82,3 +82,16 @@ pub trait LinkRx: Send + 'static {
     /// Receives a byte chunk. Chunk boundaries are transport-specific.
     async fn recv(&mut self) -> Result<Bytes, TransportError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RedactedMac;
+
+    #[test]
+    fn device_address_is_redacted_when_formatted() {
+        let address = RedactedMac::from_octets([2, 17, 34, 51, 68, 85]);
+
+        assert_eq!(format!("{address:?}"), "<redacted-mac>");
+        assert_eq!(format!("{address}"), "<redacted-mac>");
+    }
+}
