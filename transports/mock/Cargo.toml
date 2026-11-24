@@ -11,8 +11,8 @@ workspace = true
 async-trait.workspace = true
 bytes.workspace = true
 openscl4-transport.workspace = true
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["macros", "sync"] }
 
 [dev-dependencies]
 openscl4-protocol.workspace = true
-tokio = { workspace = true, features = ["macros", "rt", "time"] }
+tokio = { workspace = true, features = ["rt", "time"] }

@@ -45,6 +45,9 @@ pub struct ConnectTarget {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum TransportError {
+    /// The connection was lost.
+    #[error("transport link disconnected")]
+    Disconnected,
     /// The link has been closed.
     #[error("transport link closed")]
     Closed,
