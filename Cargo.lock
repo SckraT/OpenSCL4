@@ -5508,6 +5508,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "openscl4-protocol"
+version = "2.14.0"
+dependencies = [
+ "bytes",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "openscl4-transport"
+version = "2.14.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "openscl4-transport-mock"
+version = "2.14.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "openscl4-protocol",
+ "openscl4-transport",
+ "tokio",
+]
+
+[[package]]
 name = "openscq30-android"
 version = "1.0.2"
 dependencies = [
