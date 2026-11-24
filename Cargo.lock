@@ -5509,7 +5509,7 @@ dependencies = [
 
 [[package]]
 name = "openscl4-protocol"
-version = "2.14.0"
+version = "1.0.3"
 dependencies = [
  "bytes",
  "thiserror 2.0.21",
@@ -5517,7 +5517,7 @@ dependencies = [
 
 [[package]]
 name = "openscl4-transport"
-version = "2.14.0"
+version = "1.0.3"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5526,7 +5526,7 @@ dependencies = [
 
 [[package]]
 name = "openscl4-transport-mock"
-version = "2.14.0"
+version = "1.0.3"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5537,7 +5537,7 @@ dependencies = [
 
 [[package]]
 name = "openscq30-android"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "android_logger",
  "anyhow",
@@ -5560,7 +5560,7 @@ dependencies = [
 
 [[package]]
 name = "openscq30-cli"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -5587,7 +5587,7 @@ dependencies = [
 
 [[package]]
 name = "openscq30-desktop"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "arboard",
@@ -5617,7 +5617,7 @@ dependencies = [
 
 [[package]]
 name = "openscq30-gui"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "dirs 7.0.0",
@@ -5647,11 +5647,11 @@ dependencies = [
 
 [[package]]
 name = "openscq30-i18n"
-version = "1.0.2"
+version = "1.0.3"
 
 [[package]]
 name = "openscq30-i18n-macros"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "heck 0.5.0",
  "openscq30-i18n",
@@ -5662,7 +5662,7 @@ dependencies = [
 
 [[package]]
 name = "openscq30-lib"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "async-trait",
  "bitflags 2.13.2",
@@ -5699,11 +5699,11 @@ dependencies = [
 
 [[package]]
 name = "openscq30-lib-has"
-version = "1.0.2"
+version = "1.0.3"
 
 [[package]]
 name = "openscq30-lib-macros"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "heck 0.5.0",
  "itertools 0.15.0",
@@ -8183,7 +8183,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi-bindgen"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "uniffi",
 ]

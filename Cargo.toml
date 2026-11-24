@@ -17,7 +17,7 @@ members = [
 resolver = "3"
 
 [workspace.package]
-version = "1.0.2"
+version = "1.0.3"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/SckraT/OpenSCL4"
 authors = ["Kyle Scheuing <kyle@kylescheuing.com>"]
