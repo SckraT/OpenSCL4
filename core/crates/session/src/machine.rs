@@ -475,13 +475,17 @@ impl SessionMachine {
 #[cfg(test)]
 mod tests {
     use openscl4_models::{SoundMode, SoundModeSetting};
+    use openscl4_protocol::encode_frame;
 
     use super::*;
 
     const STATE: &[u8] = include_bytes!("../../../data/a3954-pilot-state.bin");
     const A3062_STATE: &[u8] = include_bytes!("../../../data/a3062-pilot-state.bin");
     const A3062_NORMAL: &[u8] = include_bytes!("../../../data/a3062-mode-normal.bin");
-    const A3062_ANC: &[u8] = include_bytes!("../../../data/a3062-mode-noise-canceling.bin");
+    const A3062_TRANSPARENCY: &[u8] = include_bytes!("../../../data/a3062-mode-transparency.bin");
+    // The a3062-anc/transparency frame from conformance.json.
+    const A3062_TRANSPARENCY_WRITE: &[u8] =
+        b"\x08\xee\0\0\0\x06\x81\x10\0\x01\x51\x01\x01\0\x05\xe6";
 
     #[test]
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
@@ -656,7 +660,7 @@ mod tests {
             now,
             Input::Command(QueuedCommand {
                 id,
-                command: SessionCommand::SetAmbientSoundMode(SoundMode::NoiseCanceling),
+                command: SessionCommand::SetAmbientSoundMode(SoundMode::Transparency),
                 submitted_at: now,
             }),
         );
@@ -667,10 +671,13 @@ mod tests {
 
         // The two captures of normal mode have different ANC and transparency controls.
         let normal = state_body(A3062_NORMAL);
-        let write = machine.input(now, inbound(STATE_COMMAND, &normal));
-        assert!(
-            matches!(write, Effect::Request { command: SOUND_MODE_COMMAND, body, .. } if body == [0, 0x51, 1, 1, 0, 5])
-        );
+        let Effect::Request { command, body, .. } =
+            machine.input(now, inbound(STATE_COMMAND, &normal))
+        else {
+            panic!("expected a transparency write after refreshing the state");
+        };
+        let wire = encode_frame(Direction::Outbound, command, &body).expect("encode mode write");
+        assert_eq!(wire.as_ref(), A3062_TRANSPARENCY_WRITE);
         machine.input(now, sent());
 
         let read_back = machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
@@ -688,12 +695,12 @@ mod tests {
         machine.input(READ_BACK_INTERVAL, sent());
         let completed = machine.input(
             READ_BACK_INTERVAL,
-            inbound(STATE_COMMAND, &state_body(A3062_ANC)),
+            inbound(STATE_COMMAND, &state_body(A3062_TRANSPARENCY)),
         );
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
-                if completed_id == id && state.sound_mode == SoundMode::NoiseCanceling
+                if completed_id == id && state.sound_mode == SoundMode::Transparency
         ));
     }
 

@@ -19,7 +19,7 @@ impl SessionCommand {
     pub(crate) fn supported_by(self, model: ModelDriver) -> bool {
         let capabilities = model.capabilities();
         match self {
-            Self::SetSoundMode(_) => capabilities.sound_mode_write,
+            Self::SetSoundMode(_) => capabilities.positioned_sound_mode_write,
             Self::SetAmbientSoundMode(_) => capabilities.ambient_sound_mode_write,
         }
     }

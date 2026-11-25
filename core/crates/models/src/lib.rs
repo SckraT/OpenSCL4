@@ -38,7 +38,7 @@ impl ModelDriver {
     /// Operations implemented in the new session for this model.
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
-            sound_mode_write: matches!(self, Self::A3954),
+            positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3062),
         }
     }
@@ -95,7 +95,7 @@ impl ModelDriver {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Capabilities {
     /// The session can confirm writes of the sound mode and its scale position.
-    pub sound_mode_write: bool,
+    pub positioned_sound_mode_write: bool,
     /// The session can confirm writes of the ambient mode without a scale position.
     pub ambient_sound_mode_write: bool,
 }
@@ -446,7 +446,7 @@ mod tests {
         let driver =
             ModelDriver::identify(b"04.3904.393062TEST00000000").expect("registered A3062 prefix");
         assert_eq!(driver, ModelDriver::A3062);
-        assert!(!driver.capabilities().sound_mode_write);
+        assert!(!driver.capabilities().positioned_sound_mode_write);
         assert!(driver.capabilities().ambient_sound_mode_write);
         assert_eq!(registry::by_code("A3062"), Some(driver));
     }
