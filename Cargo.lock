@@ -5549,6 +5549,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "openscl4-transport-bluez"
+version = "2.14.0"
+dependencies = [
+ "async-trait",
+ "bluer",
+ "bytes",
+ "futures",
+ "openscl4-transport",
+ "tokio",
+ "uuid",
+ "zbus",
+]
+
+[[package]]
 name = "openscl4-transport-mock"
 version = "2.14.0"
 dependencies = [
@@ -5615,6 +5629,7 @@ dependencies = [
  "openscl4-protocol",
  "openscl4-session",
  "openscl4-transport",
+ "openscl4-transport-bluez",
  "openscl4-transport-mock",
  "openscl4-transport-windows",
  "openscq30-i18n",

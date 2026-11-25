@@ -214,7 +214,7 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
         .subcommand(
             Command::new("pilot")
                 .about("Read the state of a Soundcore Liberty 4 Pro through the new session")
-                .arg(arg!(--"bluetooth" <DEVICE_NAME> "Use a connected Bluetooth device by name (Windows)"))
+                .arg(arg!(--"bluetooth" <DEVICE_NAME> "Use a connected Bluetooth device by name (Windows or Linux)"))
                 .arg(arg!(--"cycle-mode" "Switch and restore the sound mode with read-back confirmation")),
         )
         .subcommand(

@@ -37,9 +37,24 @@ async fn start_bluetooth(name: &str) -> anyhow::Result<SessionHandle> {
     Ok(SessionRunner::start(WindowsRfcommTransport, target))
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+async fn start_bluetooth(name: &str) -> anyhow::Result<SessionHandle> {
+    use std::time::Duration;
+
+    use openscl4_transport_bluez::BluezRfcommTransport;
+
+    let (provider, target) = tokio::time::timeout(
+        Duration::from_secs(5),
+        BluezRfcommTransport::for_connected_device(name),
+    )
+    .await
+    .map_err(|_| SessionError::Timeout(openscl4_session::IoStage::Connect))??;
+    Ok(SessionRunner::start(provider, target))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 async fn start_bluetooth(_name: &str) -> anyhow::Result<SessionHandle> {
-    anyhow::bail!("the Bluetooth pilot is available on Windows")
+    anyhow::bail!("the Bluetooth pilot is available on Windows and Linux")
 }
 
 async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<Value> {

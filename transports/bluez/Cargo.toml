@@ -1,0 +1,22 @@
+[package]
+name = "openscl4-transport-bluez"
+edition = "2024"
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+async-trait.workspace = true
+bluer = { workspace = true, features = ["bluetoothd", "rfcomm"] }
+bytes.workspace = true
+futures.workspace = true
+openscl4-transport.workspace = true
+tokio = { workspace = true, features = ["io-util", "macros", "sync"] }
+uuid.workspace = true
+
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+tokio = { workspace = true, features = ["net", "rt", "time"] }
+zbus.workspace = true
