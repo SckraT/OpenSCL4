@@ -13,3 +13,8 @@ openscl4-protocol.workspace = true
 openscl4-transport.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+
+[dev-dependencies]
+async-trait.workspace = true
+bytes.workspace = true
+tokio = { workspace = true, features = ["test-util"] }

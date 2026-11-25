@@ -58,4 +58,6 @@ pub enum SessionEvent {
     ViewChanged(Arc<SessionView>),
     /// A frame was rejected without exposing its bytes.
     FrameRejected(DecodeError),
+    /// Closing the transport failed. The final snapshot keeps any earlier failure.
+    CleanupFailed(SessionError),
 }

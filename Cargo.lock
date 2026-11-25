@@ -5529,6 +5529,8 @@ dependencies = [
 name = "openscl4-session"
 version = "2.14.0"
 dependencies = [
+ "async-trait",
+ "bytes",
  "openscl4-models",
  "openscl4-protocol",
  "openscl4-transport",

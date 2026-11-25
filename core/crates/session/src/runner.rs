@@ -1,6 +1,6 @@
 use std::{future::Future, sync::Arc};
 
-use openscl4_protocol::{Direction, Frame, FrameDecoder, encode_frame};
+use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, LinkRx, TransportError, TransportProvider};
 use tokio::{
     sync::{broadcast, watch},
@@ -9,9 +9,7 @@ use tokio::{
 
 use crate::{
     ConnectionState, IoStage, SessionError, SessionEvent, SessionView,
-    machine::{
-        CLOSE_TIMEOUT, CONNECT_TIMEOUT, Effect, Input, REPLY_TIMEOUT, SEND_TIMEOUT, SessionMachine,
-    },
+    machine::{CLOSE_TIMEOUT, CONNECT_TIMEOUT, Effect, Input, SEND_TIMEOUT, SessionMachine},
 };
 
 /// A shared handle for observing and closing one session.
@@ -106,6 +104,7 @@ impl SessionRunner {
     }
 
     async fn run(mut self, provider: impl TransportProvider, target: ConnectTarget) {
+        let started = Instant::now();
         let opening = async {
             timeout(CONNECT_TIMEOUT, provider.connect(&target))
                 .await
@@ -115,18 +114,17 @@ impl SessionRunner {
         let link = match until_close(&mut self.close_requested, opening).await {
             Ok(link) => link,
             Err(error) => {
-                self.machine.input(terminal_input(error));
+                self.machine.input(started.elapsed(), terminal_input(error));
                 self.publish();
                 return;
             }
         };
         let (mut tx, mut rx) = link.split();
         let mut decoder = FrameDecoder::default();
-        let mut effect = self.machine.input(Input::Opened);
-        let mut deadline = None;
+        let mut effect = self.machine.input(started.elapsed(), Input::Opened);
 
         loop {
-            match effect {
+            let input = match effect {
                 Effect::Request(command) => {
                     self.publish();
                     let sending = async {
@@ -136,37 +134,44 @@ impl SessionRunner {
                             .map_err(|_| SessionError::Timeout(IoStage::Send))?
                             .map_err(|error| transport_error(IoStage::Send, error))
                     };
-                    if let Err(error) = until_close(&mut self.close_requested, sending).await {
-                        self.machine.input(terminal_input(error));
-                        break;
-                    }
-                    deadline = Some(Instant::now() + REPLY_TIMEOUT);
+                    until_close(&mut self.close_requested, sending)
+                        .await
+                        .map_or_else(terminal_input, |()| Input::RequestSent)
                 }
-                Effect::Wait => {
-                    deadline = None;
+                Effect::Receive(deadline) => {
                     self.publish();
+                    let receiving = receive_input(
+                        rx.as_mut(),
+                        &mut decoder,
+                        &self.events,
+                        deadline.map(|deadline| started + deadline),
+                    );
+                    until_close(&mut self.close_requested, receiving)
+                        .await
+                        .unwrap_or_else(terminal_input)
                 }
-                Effect::Ignore => {}
                 Effect::Stop => break,
-            }
-
-            let receiving = receive_frame(rx.as_mut(), &mut decoder, &self.events, deadline);
-            effect = match until_close(&mut self.close_requested, receiving).await {
-                Ok(frame) => self.machine.input(Input::Frame(&frame)),
-                Err(error) => self.machine.input(terminal_input(error)),
             };
+            effect = self.machine.input(started.elapsed(), input);
         }
 
-        if timeout(CLOSE_TIMEOUT, tx.close()).await.is_err() {
-            self.machine
-                .input(Input::Failed(SessionError::Timeout(IoStage::Close)));
-        }
+        let close_timed_out = timeout(CLOSE_TIMEOUT, tx.close()).await.is_err();
         drop((tx, rx));
+        if close_timed_out {
+            let error = SessionError::Timeout(IoStage::Close);
+            self.machine
+                .input(started.elapsed(), Input::CleanupFailed(error));
+            let _ = self.events.send(SessionEvent::CleanupFailed(error));
+        }
         self.publish();
     }
 
     fn publish(&self) {
-        let view = Arc::new(self.machine.view());
+        let next = self.machine.view();
+        if self.view.borrow().revision == next.revision {
+            return;
+        }
+        let view = Arc::new(next);
         self.view.send_replace(Arc::clone(&view));
         let _ = self.events.send(SessionEvent::ViewChanged(view));
     }
@@ -183,16 +188,16 @@ async fn until_close<T>(
     }
 }
 
-async fn receive_frame(
+async fn receive_input(
     rx: &mut dyn LinkRx,
     decoder: &mut FrameDecoder,
     events: &broadcast::Sender<SessionEvent>,
     deadline: Option<Instant>,
-) -> Result<Frame, SessionError> {
+) -> Result<Input, SessionError> {
     let receive = async {
         loop {
             match decoder.next_frame() {
-                Ok(Some(frame)) => return Ok(frame),
+                Ok(Some(frame)) => return Ok(Input::Frame(frame)),
                 Ok(None) => {
                     let chunk = rx
                         .recv()
@@ -207,9 +212,10 @@ async fn receive_frame(
         }
     };
     if let Some(deadline) = deadline {
-        timeout_at(deadline, receive)
-            .await
-            .map_err(|_| SessionError::Timeout(IoStage::Receive))?
+        match timeout_at(deadline, receive).await {
+            Ok(result) => result,
+            Err(_) => Ok(Input::ReplyTimerElapsed),
+        }
     } else {
         receive.await
     }
@@ -219,7 +225,7 @@ fn transport_error(stage: IoStage, error: TransportError) -> SessionError {
     SessionError::Transport { stage, error }
 }
 
-fn terminal_input(error: SessionError) -> Input<'static> {
+fn terminal_input(error: SessionError) -> Input {
     if error == SessionError::Closed {
         Input::Close
     } else {
