@@ -38,6 +38,10 @@ indexmap = { workspace = true, features = ["serde"] }
 regex = { workspace = true }
 
 [dev-dependencies]
+async-trait.workspace = true
+bytes.workspace = true
+openscl4-models.workspace = true
+openscl4-protocol.workspace = true
 insta = { workspace = true }
 insta-cmd = { workspace = true }
 tempfile = { workspace = true }

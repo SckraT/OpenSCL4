@@ -5589,6 +5589,8 @@ name = "openscq30-cli"
 version = "2.14.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "bytes",
  "clap",
  "clap_complete",
  "csv",
@@ -5597,6 +5599,8 @@ dependencies = [
  "insta",
  "insta-cmd",
  "macaddr",
+ "openscl4-models",
+ "openscl4-protocol",
  "openscl4-session",
  "openscl4-transport",
  "openscl4-transport-mock",

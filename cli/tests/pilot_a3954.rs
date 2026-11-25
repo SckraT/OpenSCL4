@@ -1,6 +1,10 @@
 #![forbid(unsafe_code)]
 
 #[cfg(test)]
+#[path = "pilot_a3954/disconnect.rs"]
+mod disconnect;
+
+#[cfg(test)]
 mod tests {
     use std::{process::Command, time::Duration};
 
