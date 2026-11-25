@@ -71,3 +71,19 @@ noise-canceling setting uses position 11 (`00 0B 00 01`). The SoundcoreNext
 fixture appended `FF`. With that fifth byte, the hardware run reported the
 previous mode after the write. [Windows hardware run](https://github.com/SckraT/OpenSCL4/issues/154)
 [SoundcoreNext measurements](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3954-sound-modes.json)
+
+## A3062 pilot state
+
+[a3062-pilot-state.bin](a3062-pilot-state.bin) contains the 105-byte inbound
+`01 01` frame from `core/data/a3062-state.json` at the SoundcoreNext revision
+above. The source JSON SHA-256 is
+`f4a9c23808cad91278a0a8bf85282159b7f93ad3d236c84736638ba068e33ed9`.
+
+The original capture had already masked the serial at body offsets 7–22. This
+fixture substitutes a synthetic serial with the model prefix at the same offsets
+and recalculates the checksum. The resulting frame SHA-256 is
+`1624f62a147f7bf480b560bb5866b084b4c37afca6bbddadaad3225b70ad5ecb`.
+The fixture exercises the single battery at offset 0 (raw step 2, displayed as
+30% using the existing A3062 scale), firmware 04.39 at offsets 2–6 and normal mode
+at offset 69. The payload carries no multipoint peer addresses.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-state.json)

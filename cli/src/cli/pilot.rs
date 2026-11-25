@@ -1,20 +1,28 @@
+use anyhow::Context;
 use openscl4_session::{
-    CommandOutcome, ConnectionState, DeviceState, SessionCommand, SessionError, SessionHandle,
-    SessionRunner, SoundMode, SoundModeSetting,
+    CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
+    SessionHandle, SessionRunner, SoundMode, SoundModeSetting,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
-use openscl4_transport_mock::VirtualSoundcoreDevice;
+use openscl4_transport_mock::{VirtualA3062, VirtualSoundcoreDevice};
 use serde_json::{Value, json};
 
-pub async fn handle(cycle_mode: bool, device: Option<&str>) -> anyhow::Result<()> {
+pub async fn handle(
+    cycle_mode: bool,
+    device: Option<&str>,
+    mock_model: ModelDriver,
+) -> anyhow::Result<()> {
     let handle = match device {
         Some(name) => start_bluetooth(name).await?,
-        None => SessionRunner::start(
-            VirtualSoundcoreDevice,
-            ConnectTarget {
+        None => {
+            let target = ConnectTarget {
                 mac: RedactedMac::from_octets([0; 6]),
-            },
-        ),
+            };
+            match mock_model {
+                ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
+            }
+        }
     };
     let output = read_pilot(&handle, cycle_mode).await;
     let closed = handle.close().await;
@@ -67,7 +75,9 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
         return Ok(snapshot_json(initial));
     }
 
-    let original = initial.sound_mode_setting();
+    let original = initial
+        .sound_mode_setting()
+        .context("device model is read-only in the pilot")?;
     initial.sound_mode_write(original)?;
     let target = match original.mode {
         SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
@@ -97,26 +107,35 @@ async fn apply_mode(
 }
 
 fn applied_json(state: DeviceState) -> Value {
-    let setting = state.sound_mode_setting();
     json!({
         "result": "Applied",
-        "soundMode": setting.mode.code(),
-        "position": setting.position,
+        "soundMode": state.sound_mode.code(),
+        "position": state.sound_mode_setting().map(|setting| setting.position),
     })
 }
 
 fn snapshot_json(device: DeviceState) -> Value {
+    let (firmware, battery) = match device.model {
+        ModelDriver::A3062 => (
+            json!({"device": device.firmware_device.map(|version| version.to_string())}),
+            json!({"devicePercent": device.battery.device}),
+        ),
+        ModelDriver::A3954 => (
+            json!({
+                "left": device.firmware_left.map(|version| version.to_string()),
+                "right": device.firmware_right.map(|version| version.to_string()),
+            }),
+            json!({
+                "leftPercent": device.battery.left,
+                "rightPercent": device.battery.right,
+                "casePercent": device.battery.case,
+            }),
+        ),
+    };
     json!({
         "model": device.model.code(),
-        "firmware": {
-            "left": device.firmware_left.map(|version| version.to_string()),
-            "right": device.firmware_right.map(|version| version.to_string()),
-        },
-        "battery": {
-            "leftPercent": device.battery.left,
-            "rightPercent": device.battery.right,
-            "casePercent": device.battery.case,
-        },
+        "firmware": firmware,
+        "battery": battery,
         "soundMode": device.sound_mode.code(),
     })
 }

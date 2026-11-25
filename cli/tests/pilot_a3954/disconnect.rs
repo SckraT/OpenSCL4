@@ -57,14 +57,16 @@ async fn reconnects_explicitly_through_legacy_after_a_disconnected_write() {
     };
     assert_eq!(
         initial.sound_mode_setting(),
-        SoundModeSetting::NOISE_CANCELING
+        Some(SoundModeSetting::NOISE_CANCELING)
     );
 
     let changed = pilot
         .dispatch(SessionCommand::SetSoundMode(SoundModeSetting::NORMAL))
         .expect("queue the change");
     let queued = pilot
-        .dispatch(SessionCommand::SetSoundMode(initial.sound_mode_setting()))
+        .dispatch(SessionCommand::SetSoundMode(
+            SoundModeSetting::NOISE_CANCELING,
+        ))
         .expect("queue a subsequent command");
     assert_eq!(changed.wait().await, Err(CommandError::Disconnected));
     assert_eq!(queued.wait().await, Err(CommandError::Disconnected));

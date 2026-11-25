@@ -6,6 +6,7 @@ mod pilot;
 
 use clap::{ArgAction, ArgMatches, Command, arg, value_parser};
 use macaddr::MacAddr6;
+use openscl4_session::{ModelDriver, registry};
 use openscq30_lib::DeviceModel;
 
 pub fn build() -> Command {
@@ -213,7 +214,12 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
         )
         .subcommand(
             Command::new("pilot")
-                .about("Read the state of a Soundcore Liberty 4 Pro through the new session")
+                .about("Read a supported Soundcore device through the new session")
+                .arg(
+                    arg!(--"mock-model" <MODEL> "Select the virtual model (default: A3954)")
+                        .value_parser(clap::builder::PossibleValuesParser::new(registry::DRIVERS.map(ModelDriver::code)))
+                        .conflicts_with("bluetooth"),
+                )
                 .arg(arg!(--"bluetooth" <DEVICE_NAME> "Use a connected Bluetooth device by name (Windows or Linux)"))
                 .arg(arg!(--"cycle-mode" "Switch and restore the sound mode with read-back confirmation")),
         )
@@ -236,7 +242,11 @@ pub async fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
         ("list-models", matches) => list_models::handle(matches)?,
         ("pilot", options) => {
             let device = options.get_one::<String>("bluetooth").map(String::as_str);
-            pilot::handle(options.get_flag("cycle-mode"), device).await?;
+            let mock_model = options
+                .get_one::<String>("mock-model")
+                .and_then(|code| registry::by_code(code))
+                .unwrap_or(ModelDriver::A3954);
+            pilot::handle(options.get_flag("cycle-mode"), device, mock_model).await?;
         }
         _ => (),
     }
