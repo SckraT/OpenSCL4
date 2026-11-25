@@ -5508,6 +5508,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "openscl4-models"
+version = "2.14.0"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "openscl4-protocol"
 version = "2.14.0"
 dependencies = [
@@ -5516,6 +5523,19 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "openscl4-session"
+version = "2.14.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "openscl4-models",
+ "openscl4-protocol",
+ "openscl4-transport",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
@@ -5533,6 +5553,7 @@ version = "2.14.0"
 dependencies = [
  "async-trait",
  "bytes",
+ "openscl4-models",
  "openscl4-protocol",
  "openscl4-transport",
  "tokio",
@@ -5575,6 +5596,9 @@ dependencies = [
  "insta",
  "insta-cmd",
  "macaddr",
+ "openscl4-session",
+ "openscl4-transport",
+ "openscl4-transport-mock",
  "openscq30-i18n",
  "openscq30-lib",
  "regex",

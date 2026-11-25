@@ -15,6 +15,14 @@ Keep native types and Kotlin wrappers synchronized. Regenerate bindings through 
 
 The `openscq30` CLI remains useful for protocol work. Its default database is still in the legacy `openscq30` configuration directory; set `OPENSCQ30_DATABASE_PATH` to an isolated database when testing. It does not manage the current desktop client's data directory by default.
 
+Run the read-only CLI pilot to start a virtual Liberty 4 Pro through the new core.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot
+```
+
+The command prints the confirmed model, firmware, battery levels and sound mode as JSON after closing the link.
+
 ## Checks
 
 With the relevant host prerequisites installed, the current Rust-client suite is:

@@ -1,0 +1,11 @@
+[package]
+name = "openscl4-models"
+edition = "2024"
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror.workspace = true

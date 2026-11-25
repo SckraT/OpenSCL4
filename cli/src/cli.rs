@@ -2,6 +2,7 @@ mod completions;
 mod device;
 mod list_models;
 mod pair;
+mod pilot;
 
 use clap::{ArgAction, ArgMatches, Command, arg, value_parser};
 use macaddr::MacAddr6;
@@ -211,6 +212,10 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
                 .arg(json_arg)
         )
         .subcommand(
+            Command::new("pilot")
+                .about("Read the state of a virtual Soundcore Liberty 4 Pro through the new session"),
+        )
+        .subcommand(
             Command::new("completions")
                 .about("Generate shell completions")
                 .arg(
@@ -227,6 +232,7 @@ pub async fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
         ("device", matches) => device::handle(matches).await?,
         ("completions", matches) => completions::handle(matches)?,
         ("list-models", matches) => list_models::handle(matches)?,
+        ("pilot", _) => pilot::handle().await?,
         _ => (),
     }
     Ok(())

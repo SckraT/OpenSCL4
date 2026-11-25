@@ -2,12 +2,19 @@
 
 #[cfg(test)]
 mod tests {
-    use openscl4_protocol::{DecodeError, Direction, Frame, FrameDecoder};
+    use openscl4_protocol::{DecodeError, Direction, Frame, FrameDecoder, encode_frame};
 
     const INBOUND: [u8; 11] = [
         0x09, 0xff, 0x00, 0x00, 0x01, 0x01, 0x03, 0x0b, 0x00, 0x2a, 0x42,
     ];
     const OUTBOUND: [u8; 10] = [0x08, 0xee, 0x00, 0x00, 0x00, 0x01, 0x01, 0x0a, 0x00, 0x02];
+
+    #[test]
+    fn encodes_the_wire_format_of_a_state_request() {
+        let bytes =
+            encode_frame(Direction::Outbound, [0x01, 0x01], &[]).expect("encode the state request");
+        assert_eq!(bytes.as_ref(), &OUTBOUND);
+    }
 
     #[test]
     fn assembles_a_frame_across_multiple_reads() {

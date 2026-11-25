@@ -44,8 +44,11 @@ jobs:
           dbus-run-session -- cargo llvm-cov --locked --no-report --no-cfg-coverage
           -p openscq30-lib -p openscq30-desktop -p openscq30-android
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
+          -p openscl4-models -p openscl4-session
       - name: Generate HTML test coverage report
         run: cargo llvm-cov report --html
+      - name: Test the virtual A3954 CLI pilot
+        run: cargo test --locked -p openscq30-cli --test pilot_a3954
       - name: Check release verification
         run: python3 -m unittest discover -s scripts/tests
       - name: Upload coverage report

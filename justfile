@@ -79,7 +79,7 @@ test: lib::test cli::test gui::test desktop::test android::test test-core
 
 [doc("Run the platform-independent core and mock tests")]
 test-core:
-    cargo test --locked -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
+    cargo test --locked -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock -p openscl4-models -p openscl4-session
 
 test-cov: lib::test-cov cli::test-cov gui::test-cov desktop::test-cov android::test-cov
 

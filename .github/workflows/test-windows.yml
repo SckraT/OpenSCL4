@@ -11,6 +11,7 @@ on:
       - core/**
       - transports/**
       - desktop/**
+      - cli/**
       - packaging/**
       - .github/workflows/test-windows.yml
   pull_request:
@@ -39,3 +40,6 @@ jobs:
         run: >-
           cargo test --locked -p openscq30-lib -p openscq30-desktop
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
+          -p openscl4-models -p openscl4-session
+      - name: Test the virtual A3954 CLI pilot
+        run: cargo test --locked -p openscq30-cli --test pilot_a3954
