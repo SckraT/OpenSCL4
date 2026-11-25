@@ -1,4 +1,3 @@
-use anyhow::Context;
 use openscl4_session::{
     CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
     SessionHandle, SessionRunner, SoundMode, SoundModeSetting,
@@ -75,17 +74,27 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
         return Ok(snapshot_json(initial));
     }
 
-    let original = initial
-        .sound_mode_setting()
-        .context("device model is read-only in the pilot")?;
-    initial.sound_mode_write(original)?;
-    let target = match original.mode {
+    let target = match initial.sound_mode {
         SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
         SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
         _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
     };
-    let changed = apply_mode(handle, target).await?;
-    let restored = apply_mode(handle, original).await?;
+    let (change, restore) = if let Some(original) = initial.sound_mode_setting() {
+        initial.sound_mode_write(original)?;
+        (
+            SessionCommand::SetSoundMode(target),
+            SessionCommand::SetSoundMode(original),
+        )
+    } else {
+        let original = initial.sound_mode;
+        initial.ambient_sound_mode_write(original)?;
+        (
+            SessionCommand::SetAmbientSoundMode(target.mode),
+            SessionCommand::SetAmbientSoundMode(original),
+        )
+    };
+    let changed = apply_mode(handle, change).await?;
+    let restored = apply_mode(handle, restore).await?;
 
     let mut output = snapshot_json(restored);
     output["modeCycle"] = json!({
@@ -97,21 +106,21 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
 
 async fn apply_mode(
     handle: &SessionHandle,
-    setting: SoundModeSetting,
+    command: SessionCommand,
 ) -> anyhow::Result<DeviceState> {
-    let CommandOutcome::Applied(state) = handle
-        .dispatch(SessionCommand::SetSoundMode(setting))?
-        .wait()
-        .await?;
+    let CommandOutcome::Applied(state) = handle.dispatch(command)?.wait().await?;
     Ok(state)
 }
 
 fn applied_json(state: DeviceState) -> Value {
-    json!({
+    let mut applied = json!({
         "result": "Applied",
         "soundMode": state.sound_mode.code(),
-        "position": state.sound_mode_setting().map(|setting| setting.position),
-    })
+    });
+    if let Some(setting) = state.sound_mode_setting() {
+        applied["position"] = json!(setting.position);
+    }
+    applied
 }
 
 fn snapshot_json(device: DeviceState) -> Value {

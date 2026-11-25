@@ -32,8 +32,9 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3062
 ```
 
 The A3062 pilot reports one device battery and firmware. The session can identify
-it from the state response if the separate identity probe is unavailable. A3062
-currently supports reading only.
+it from the state response if the separate identity probe is unavailable. Add
+`--cycle-mode` to change the mode and restore the original. Each result comes
+from a fresh state response. The JSON reports the mode without a scale position.
 
 On Windows and Linux, select a connected Liberty 4 Pro by its name in Bluetooth settings to run the same pilot over RFCOMM. Linux uses BlueZ on the system D-Bus.
 

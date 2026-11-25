@@ -10,7 +10,11 @@ use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
-const A3062_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3062-pilot-state.bin");
+const A3062_MODE_REPLIES: [&[u8]; 3] = [
+    include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
+    include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
+    include_bytes!("../../../core/data/a3062-mode-normal.bin"),
+];
 const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
@@ -31,7 +35,7 @@ impl VirtualSoundcoreDevice {
     }
 }
 
-/// A read-only virtual Space One Pro that answers the common state probe.
+/// A virtual Space One Pro that responds with independently captured state frames.
 pub struct VirtualA3062;
 
 #[async_trait]
@@ -43,7 +47,7 @@ impl TransportProvider for VirtualA3062 {
         let model = ModelDriver::A3062;
         Ok(open_link(Some(Responder::with_state(
             model,
-            false,
+            true,
             initial_state(model),
         )))
         .0)
@@ -121,26 +125,43 @@ impl Responder {
                 if let Ok(peers) = encode_frame(Direction::Inbound, frame.command, &[1, 1]) {
                     replies.extend_from_slice(&peers);
                 }
-            } else if self.model.capabilities().sound_mode_write
-                && frame.command == SOUND_MODE_COMMAND
+            } else if frame.command == SOUND_MODE_COMMAND
+                && self.apply_sound_mode(&frame.body)
+                && self.acknowledge_sound_mode
             {
-                let mut state = self.state.lock().expect("virtual state lock");
-                let applied = SoundModeWrite::decode(&frame.body)
-                    .and_then(|write| write.apply_to_state(&mut state));
-                if applied.is_ok() && self.acknowledge_sound_mode {
-                    replies.extend_from_slice(SOUND_MODE_ACK);
-                }
+                replies.extend_from_slice(SOUND_MODE_ACK);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
+    }
+
+    fn apply_sound_mode(&self, body: &[u8]) -> bool {
+        let mut state = self.state.lock().expect("virtual state lock");
+        match self.model {
+            ModelDriver::A3954 => SoundModeWrite::decode(body)
+                .and_then(|write| write.apply_to_state(&mut state))
+                .is_ok(),
+            ModelDriver::A3062 => {
+                // The outgoing golden fixtures and the measured responses use this control profile.
+                let [mode @ 0..=2, 0x51, 1, 1, 0, 5] = body else {
+                    return false;
+                };
+                *state = fixture_body(self.model, A3062_MODE_REPLIES[usize::from(*mode)]);
+                true
+            }
+        }
     }
 }
 
 fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
-        ModelDriver::A3062 => A3062_STATE_REPLY,
+        ModelDriver::A3062 => A3062_MODE_REPLIES[2],
         ModelDriver::A3954 => A3954_STATE_REPLY,
     };
+    Arc::new(Mutex::new(fixture_body(model, bytes)))
+}
+
+fn fixture_body(model: ModelDriver, bytes: &[u8]) -> Vec<u8> {
     let mut decoder = FrameDecoder::default();
     decoder.push(bytes);
     let state = decoder
@@ -149,5 +170,5 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         .expect("complete virtual state fixture");
     assert_eq!(state.command, model.state_command());
     assert_eq!(state.direction, Direction::Inbound);
-    Arc::new(Mutex::new(state.body.to_vec()))
+    state.body.to_vec()
 }

@@ -13,7 +13,7 @@ pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
 /// Read the state of a device using the common state command.
 pub const STATE_COMMAND: [u8; 2] = [0x01, 0x01];
 
-/// Write the A3954 sound mode and its position on the mode scale.
+/// Write the selected driver's sound-mode controls.
 pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
 
 const A3954_STATE_LENGTH: usize = 165;
@@ -39,6 +39,7 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             sound_mode_write: matches!(self, Self::A3954),
+            ambient_sound_mode_write: matches!(self, Self::A3062),
         }
     }
 
@@ -78,11 +79,11 @@ impl ModelDriver {
             model: self,
             battery,
             sound_mode,
-            sound_mode_controls: Some(A3954SoundModeControls {
+            sound_mode_controls: Some(SoundModeControls::A3954(A3954SoundModeControls {
                 position: body[A3954_SOUND_MODE + 1],
                 airplane_mode: body[A3954_SOUND_MODE + 2],
                 wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
-            }),
+            })),
             firmware_device: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
@@ -93,8 +94,16 @@ impl ModelDriver {
 /// Implemented operations exposed by a model driver.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Capabilities {
-    /// The session can confirm sound-mode writes for this model.
+    /// The session can confirm writes of the sound mode and its scale position.
     pub sound_mode_write: bool,
+    /// The session can confirm writes of the ambient mode without a scale position.
+    pub ambient_sound_mode_write: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SoundModeControls {
+    A3062([u8; 5]),
+    A3954(A3954SoundModeControls),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -113,7 +122,7 @@ pub struct DeviceState {
     pub battery: BatteryLevels,
     /// Current sound mode.
     pub sound_mode: SoundMode,
-    sound_mode_controls: Option<A3954SoundModeControls>,
+    sound_mode_controls: Option<SoundModeControls>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -125,7 +134,10 @@ pub struct DeviceState {
 impl DeviceState {
     /// Returns the reported setting for a model with a measured position scale.
     pub fn sound_mode_setting(self) -> Option<SoundModeSetting> {
-        self.sound_mode_controls.map(|controls| SoundModeSetting {
+        let Some(SoundModeControls::A3954(controls)) = self.sound_mode_controls else {
+            return None;
+        };
+        Some(SoundModeSetting {
             mode: self.sound_mode,
             position: controls.position,
         })
@@ -133,12 +145,22 @@ impl DeviceState {
 
     /// Builds a measured write while retaining airplane and wind controls.
     pub fn sound_mode_write(self, setting: SoundModeSetting) -> Result<SoundModeWrite, ModelError> {
-        let controls = self.sound_mode_controls.ok_or(ModelError::ReadOnly)?;
+        let Some(SoundModeControls::A3954(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
         SoundModeWrite::new(
             setting,
             controls.airplane_mode,
             controls.wind_noise_suppression,
         )
+    }
+
+    /// Builds an ambient-mode write from the latest measured A3062 controls.
+    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
+        let Some(SoundModeControls::A3062(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        a3062::ambient_sound_mode_write(mode, controls)
     }
 }
 
@@ -345,9 +367,6 @@ pub enum ModelError {
     /// The device returned an unrecognized mode.
     #[error("unknown device sound mode")]
     UnknownSoundMode,
-    /// The model is currently supported for reading only.
-    #[error("device model is read-only in the pilot")]
-    ReadOnly,
     /// The selected mode or its controls do not match the measured write format.
     #[error("unsupported device sound mode write")]
     InvalidSoundModeWrite,
@@ -428,6 +447,7 @@ mod tests {
             ModelDriver::identify(b"04.3904.393062TEST00000000").expect("registered A3062 prefix");
         assert_eq!(driver, ModelDriver::A3062);
         assert!(!driver.capabilities().sound_mode_write);
+        assert!(driver.capabilities().ambient_sound_mode_write);
         assert_eq!(registry::by_code("A3062"), Some(driver));
     }
 }

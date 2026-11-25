@@ -87,3 +87,21 @@ The fixture exercises the single battery at offset 0 (raw step 2, displayed as
 30% using the existing A3062 scale), firmware 04.39 at offsets 2–6 and normal mode
 at offset 69. The payload carries no multipoint peer addresses.
 [Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-state.json)
+
+## A3062 sound-mode read-back
+
+The [noise canceling](a3062-mode-noise-canceling.bin),
+[transparency](a3062-mode-transparency.bin), and [normal](a3062-mode-normal.bin)
+fixtures are independent 105-byte `01 01` responses captured over RFCOMM on
+Space One Pro firmware 04.39 after the corresponding `06 81` writes. The source
+JSON SHA-256 is
+`f02ca21f9497ad324d5f633efa2671b37cff827ed82ed265ea6de541d78e89e8`.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-sound-modes.json)
+
+The fixtures replace the already masked serial at body offsets 7–22 with the
+synthetic A3062 serial and recalculate the checksum. Concatenated in the order
+shown above, their SHA-256 is
+`63bf74ff20775569dbd8bc827fdf477c3639a60f7c457adb338b4ccb8b53e205`.
+The virtual device answers a state probe with the corresponding captured
+response after accepting the matching `06 81` body from the three A3062
+sound-mode entries in [conformance.json](conformance.json).

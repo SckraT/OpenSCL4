@@ -35,17 +35,25 @@ mod tests {
     }
 
     #[test]
-    fn pilot_reports_a3062_as_read_only_for_the_mode_cycle() {
+    fn pilot_confirms_the_a3062_mode_change_and_restores_the_original() {
         let output = Command::new(env!("CARGO_BIN_EXE_openscq30"))
             .args(["pilot", "--mock-model", "A3062", "--cycle-mode"])
             .output()
-            .expect("run the A3062 pilot");
+            .expect("run the A3062 mode cycle");
 
-        assert!(!output.status.success());
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr).trim(),
-            "Error: device model is read-only in the pilot"
+        assert!(
+            output.status.success(),
+            "pilot cycle failed: {}",
+            String::from_utf8_lossy(&output.stderr)
         );
-        assert!(output.stdout.is_empty());
+        let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot JSON");
+        assert_eq!(snapshot["soundMode"], "Normal");
+        assert_eq!(
+            snapshot["modeCycle"],
+            json!({
+                "changed": {"result": "Applied", "soundMode": "NoiseCanceling"},
+                "restored": {"result": "Applied", "soundMode": "Normal"},
+            })
+        );
     }
 }
