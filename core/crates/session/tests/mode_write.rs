@@ -54,14 +54,14 @@ mod tests {
         let handle = start(VirtualA3062);
         let confirmed = handle.confirmed_view().await.expect("initial A3062 state");
         assert!(
-            matches!(confirmed.connection, ConnectionState::Ready(state) if state.sound_mode == SoundMode::Normal)
+            matches!(confirmed.connection, ConnectionState::Ready(state) if state.sound_mode == Some(SoundMode::Normal))
         );
 
         let change = handle
             .dispatch(SessionCommand::SetAmbientSoundMode(SoundMode::Transparency))
             .expect("queue transparency");
         let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm transparency");
-        assert_eq!(changed.sound_mode, SoundMode::Transparency);
+        assert_eq!(changed.sound_mode, Some(SoundMode::Transparency));
         handle.close().await.expect("close virtual link");
     }
 

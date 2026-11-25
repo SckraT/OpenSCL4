@@ -5,6 +5,7 @@
 use std::fmt;
 
 mod a3062;
+mod a3949;
 pub mod registry;
 
 /// Probe for the firmware versions and the device identifier.
@@ -25,6 +26,8 @@ const A3954_SOUND_MODE: usize = 125;
 pub enum ModelDriver {
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore P20i, P25i and R50i.
+    A3949,
     /// Soundcore Liberty 4 Pro.
     A3954,
 }
@@ -47,6 +50,7 @@ impl ModelDriver {
     pub const fn code(self) -> &'static str {
         match self {
             Self::A3062 => "A3062",
+            Self::A3949 => "A3949",
             Self::A3954 => "A3954",
         }
     }
@@ -60,6 +64,7 @@ impl ModelDriver {
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         match self {
             Self::A3062 => a3062::decode_state(body),
+            Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
     }
@@ -78,7 +83,7 @@ impl ModelDriver {
         Ok(DeviceState {
             model: self,
             battery,
-            sound_mode,
+            sound_mode: Some(sound_mode),
             sound_mode_controls: Some(SoundModeControls::A3954(A3954SoundModeControls {
                 position: body[A3954_SOUND_MODE + 1],
                 airplane_mode: body[A3954_SOUND_MODE + 2],
@@ -120,8 +125,8 @@ pub struct DeviceState {
     pub model: ModelDriver,
     /// Reported battery percentages.
     pub battery: BatteryLevels,
-    /// Current sound mode.
-    pub sound_mode: SoundMode,
+    /// Current sound mode, if the device reports one for the pilot.
+    pub sound_mode: Option<SoundMode>,
     sound_mode_controls: Option<SoundModeControls>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
@@ -138,7 +143,7 @@ impl DeviceState {
             return None;
         };
         Some(SoundModeSetting {
-            mode: self.sound_mode,
+            mode: self.sound_mode?,
             position: controls.position,
         })
     }
@@ -432,7 +437,7 @@ mod tests {
     #[test]
     fn rejects_unknown_models_and_partial_identities() {
         assert_eq!(
-            ModelDriver::identify(b"04.3004.303949TEST0000000002.58"),
+            ModelDriver::identify(b"04.3004.303988TEST0000000002.58"),
             Err(ModelError::UnknownModel),
         );
         assert_eq!(

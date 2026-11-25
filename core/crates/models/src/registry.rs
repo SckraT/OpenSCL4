@@ -1,9 +1,9 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3062};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3062, a3949};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 2] = [ModelDriver::A3062, ModelDriver::A3954];
+pub const DRIVERS: [ModelDriver; 3] = [ModelDriver::A3062, ModelDriver::A3949, ModelDriver::A3954];
 
 /// Finds a registered driver by its stable model code.
 pub fn by_code(code: &str) -> Option<ModelDriver> {
@@ -21,13 +21,17 @@ pub(crate) fn identify_identity(body: &[u8]) -> Result<ModelDriver, ModelError> 
     Ok(model)
 }
 
-/// Identifies the measured single-battery state layout for a read-only probe.
+/// Identifies a model from the serial at the offset in its measured state layout.
 pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
-    let model = from_serial(&a3062::state_serial(body)?)?;
-    if model == ModelDriver::A3062 {
-        Ok(model)
-    } else {
-        Err(ModelError::UnknownModel)
+    match a3062::state_serial(body).and_then(|serial| from_serial(&serial)) {
+        Ok(ModelDriver::A3062) => Ok(ModelDriver::A3062),
+        _ if a3949::state_serial(body)
+            .is_ok_and(|serial| serial.identifies(ModelDriver::A3949)) =>
+        {
+            Ok(ModelDriver::A3949)
+        }
+        Ok(_) => Err(ModelError::UnknownModel),
+        Err(error) => Err(error),
     }
 }
 

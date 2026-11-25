@@ -9,6 +9,7 @@ use openscl4_transport::{ConnectTarget, TransportError, TransportLink, Transport
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
+const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
 const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
@@ -48,6 +49,25 @@ impl TransportProvider for VirtualA3062 {
         Ok(open_link(Some(Responder::with_state(
             model,
             true,
+            initial_state(model),
+        )))
+        .0)
+    }
+}
+
+/// A read-only virtual P20i that answers with a measured state response.
+pub struct VirtualA3949;
+
+#[async_trait]
+impl TransportProvider for VirtualA3949 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let model = ModelDriver::A3949;
+        Ok(open_link(Some(Responder::with_state(
+            model,
+            false,
             initial_state(model),
         )))
         .0)
@@ -149,6 +169,7 @@ impl Responder {
                 *state = fixture_body(self.model, A3062_MODE_REPLIES[usize::from(*mode)]);
                 true
             }
+            ModelDriver::A3949 => false,
         }
     }
 }
@@ -156,6 +177,7 @@ impl Responder {
 fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
         ModelDriver::A3062 => A3062_MODE_REPLIES[2],
+        ModelDriver::A3949 => A3949_STATE_REPLY,
         ModelDriver::A3954 => A3954_STATE_REPLY,
     };
     Arc::new(Mutex::new(fixture_body(model, bytes)))
