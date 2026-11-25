@@ -5,11 +5,11 @@ mod tests {
     use std::time::Duration;
 
     use openscl4_session::{
-        CommandOutcome, ConnectionState, SessionCommand, SessionHandle, SessionRunner,
+        CommandOutcome, ConnectionState, SessionCommand, SessionHandle, SessionRunner, SoundMode,
         SoundModeSetting,
     };
     use openscl4_transport::{ConnectTarget, RedactedMac, TransportProvider};
-    use openscl4_transport_mock::VirtualSoundcoreDevice;
+    use openscl4_transport_mock::{VirtualA3062, VirtualSoundcoreDevice};
     use tokio::time::Instant;
 
     #[tokio::test(start_paused = true)]
@@ -46,6 +46,22 @@ mod tests {
         assert!(dispatched_at.elapsed() >= Duration::from_millis(1500));
         assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
         assert_eq!(mode(&handle).await, SoundModeSetting::NORMAL);
+        handle.close().await.expect("close virtual link");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn confirms_a3062_transparency_from_the_captured_state() {
+        let handle = start(VirtualA3062);
+        let confirmed = handle.confirmed_view().await.expect("initial A3062 state");
+        assert!(
+            matches!(confirmed.connection, ConnectionState::Ready(state) if state.sound_mode == SoundMode::Normal)
+        );
+
+        let change = handle
+            .dispatch(SessionCommand::SetAmbientSoundMode(SoundMode::Transparency))
+            .expect("queue transparency");
+        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm transparency");
+        assert_eq!(changed.sound_mode, SoundMode::Transparency);
         handle.close().await.expect("close virtual link");
     }
 

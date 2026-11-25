@@ -2,7 +2,7 @@ use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
     DeviceState, IDENTITY_COMMAND, ModelDriver, ModelError, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeSetting, registry,
+    registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -126,7 +126,7 @@ enum WriteStage {
 #[derive(Clone, Copy)]
 struct ModeWrite {
     id: CommandId,
-    requested: SoundModeSetting,
+    command: SessionCommand,
     model: ModelDriver,
     stage: WriteStage,
     may_have_written: bool,
@@ -224,13 +224,12 @@ impl SessionMachine {
             && let ConnectionState::Ready(device) = self.view.connection
             && let Some(command) = self.queue.pop_front()
         {
-            let SessionCommand::SetSoundMode(requested) = command.command;
-            if !device.model.capabilities().sound_mode_write {
-                return Effect::Complete(command.id, Err(ModelError::ReadOnly.into()));
+            if !command.command.supported_by(device.model) {
+                return Effect::Complete(command.id, Err(ModelError::InvalidSoundModeWrite.into()));
             }
             self.mode_write = Some(ModeWrite {
                 id: command.id,
-                requested,
+                command: command.command,
                 model: device.model,
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
@@ -357,13 +356,13 @@ impl SessionMachine {
             self.transition(ConnectionState::Ready(state));
         }
 
-        match state.sound_mode_write(write.requested) {
-            Ok(command) => {
+        match write.command.write_body(state) {
+            Ok(body) => {
                 self.mode_write = Some(ModeWrite {
                     stage: WriteStage::Ack,
                     ..write
                 });
-                Effect::request(now, SOUND_MODE_COMMAND, command.bytes().to_vec())
+                Effect::request(now, SOUND_MODE_COMMAND, body)
             }
             Err(error) => {
                 self.mode_write = None;
@@ -403,11 +402,11 @@ impl SessionMachine {
             Ok(state) => state,
             Err(error) => return self.fail(error.into()),
         };
-        if state.sound_mode_setting() == Some(write.requested) {
+        if write.command.verify_mode(state).is_ok() {
             return self.finish_write(write, state);
         }
 
-        // A3954 can acknowledge the write before the new value appears in a state response.
+        // A device can acknowledge the write before the new value appears in a state response.
         self.mode_write = Some(ModeWrite {
             stage: WriteStage::WaitForReadBack {
                 deadline,
@@ -420,20 +419,13 @@ impl SessionMachine {
     }
 
     fn finish_write(&mut self, write: ModeWrite, state: DeviceState) -> Effect {
-        let Some(observed) = state.sound_mode_setting() else {
-            return self.fail(ModelError::ReadOnly.into());
-        };
         self.mode_write = None;
         self.transition(ConnectionState::Ready(state));
 
-        let result = if observed == write.requested {
-            Ok(CommandOutcome::Applied(state))
-        } else {
-            Err(CommandError::ModeMismatch {
-                requested: write.requested,
-                observed,
-            })
-        };
+        let result = write
+            .command
+            .verify_mode(state)
+            .map(|()| CommandOutcome::Applied(state));
         Effect::Complete(write.id, result)
     }
 
@@ -482,10 +474,18 @@ impl SessionMachine {
 
 #[cfg(test)]
 mod tests {
+    use openscl4_models::{SoundMode, SoundModeSetting};
+    use openscl4_protocol::encode_frame;
+
     use super::*;
 
     const STATE: &[u8] = include_bytes!("../../../data/a3954-pilot-state.bin");
     const A3062_STATE: &[u8] = include_bytes!("../../../data/a3062-pilot-state.bin");
+    const A3062_NORMAL: &[u8] = include_bytes!("../../../data/a3062-mode-normal.bin");
+    const A3062_TRANSPARENCY: &[u8] = include_bytes!("../../../data/a3062-mode-transparency.bin");
+    // The a3062-anc/transparency frame from conformance.json.
+    const A3062_TRANSPARENCY_WRITE: &[u8] =
+        b"\x08\xee\0\0\0\x06\x81\x10\0\x01\x51\x01\x01\0\x05\xe6";
 
     #[test]
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
@@ -524,7 +524,7 @@ mod tests {
     fn ack_requests_read_back_and_never_completes_without_a_matching_mode() {
         let now = Duration::ZERO;
         let model = ModelDriver::A3954;
-        let state = baseline();
+        let state = state_body(STATE);
         let original = model.decode_state(&state).expect("decode baseline fixture");
         assert_eq!(
             original
@@ -591,14 +591,14 @@ mod tests {
 
     #[test]
     fn rereads_until_the_written_mode_appears_without_sending_another_write() {
-        let original = baseline();
+        let original = state_body(STATE);
         let model = ModelDriver::A3954;
         let requested = SoundModeSetting::NORMAL;
         let id = CommandId(1);
         let mut machine = SessionMachine::new();
         machine.mode_write = Some(ModeWrite {
             id,
-            requested,
+            command: SessionCommand::SetSoundMode(requested),
             model,
             stage: WriteStage::ReadBack {
                 deadline: None,
@@ -632,18 +632,80 @@ mod tests {
         ));
     }
 
-    fn baseline() -> bytes::Bytes {
+    fn state_body(fixture: &[u8]) -> bytes::Bytes {
         let mut decoder = openscl4_protocol::FrameDecoder::default();
-        decoder.push(STATE);
-        decoder
+        decoder.push(fixture);
+        let frame = decoder
             .next_frame()
-            .expect("valid baseline frame")
-            .expect("complete baseline frame")
-            .body
+            .expect("valid state frame")
+            .expect("complete state frame");
+        assert_eq!(frame.command, STATE_COMMAND);
+        assert_eq!(frame.direction, Direction::Inbound);
+        frame.body
     }
 
     #[test]
-    fn a3062_state_probe_rejects_writes_without_another_request() {
+    fn a3062_write_preserves_fresh_controls_and_waits_for_observed_mode() {
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new();
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, &[]));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+
+        let id = CommandId(1);
+        let refresh = machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::SetAmbientSoundMode(SoundMode::Transparency),
+                submitted_at: now,
+            }),
+        );
+        assert!(
+            matches!(refresh, Effect::Request { command: STATE_COMMAND, body, .. } if body.is_empty())
+        );
+        machine.input(now, sent());
+
+        // The two captures of normal mode have different ANC and transparency controls.
+        let normal = state_body(A3062_NORMAL);
+        let Effect::Request { command, body, .. } =
+            machine.input(now, inbound(STATE_COMMAND, &normal))
+        else {
+            panic!("expected a transparency write after refreshing the state");
+        };
+        let wire = encode_frame(Direction::Outbound, command, &body).expect("encode mode write");
+        assert_eq!(wire.as_ref(), A3062_TRANSPARENCY_WRITE);
+        machine.input(now, sent());
+
+        let read_back = machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
+        assert!(
+            matches!(read_back, Effect::Request { command: STATE_COMMAND, body, .. } if body.is_empty())
+        );
+        machine.input(now, sent());
+        let waiting = machine.input(now, inbound(STATE_COMMAND, &normal));
+        assert!(matches!(waiting, Effect::Receive(Some(at)) if at == READ_BACK_INTERVAL));
+
+        let retry = machine.input(READ_BACK_INTERVAL, Input::TimerElapsed);
+        assert!(
+            matches!(retry, Effect::Request { command: STATE_COMMAND, body, .. } if body.is_empty())
+        );
+        machine.input(READ_BACK_INTERVAL, sent());
+        let completed = machine.input(
+            READ_BACK_INTERVAL,
+            inbound(STATE_COMMAND, &state_body(A3062_TRANSPARENCY)),
+        );
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
+                if completed_id == id && state.sound_mode == SoundMode::Transparency
+        ));
+    }
+
+    #[test]
+    fn a3062_state_probe_rejects_positioned_writes_without_another_request() {
         let mut decoder = openscl4_protocol::FrameDecoder::default();
         decoder.push(A3062_STATE);
         let frame = decoder
@@ -687,7 +749,7 @@ mod tests {
         );
         assert!(matches!(
             rejected,
-            Effect::Complete(completed, Err(CommandError::Model(ModelError::ReadOnly)))
+            Effect::Complete(completed, Err(CommandError::Model(ModelError::InvalidSoundModeWrite)))
                 if completed == id
         ));
         assert_eq!(machine.view().connection, ConnectionState::Ready(snapshot));
@@ -701,7 +763,7 @@ mod tests {
             let mut machine = SessionMachine::new();
             machine.mode_write = Some(ModeWrite {
                 id: attempted,
-                requested: SoundModeSetting::NORMAL,
+                command: SessionCommand::SetSoundMode(SoundModeSetting::NORMAL),
                 model: ModelDriver::A3954,
                 stage: WriteStage::Ack,
                 may_have_written: false,
