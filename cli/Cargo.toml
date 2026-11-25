@@ -37,6 +37,9 @@ serde_json = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 regex = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+openscl4-transport-windows.workspace = true
+
 [dev-dependencies]
 insta = { workspace = true }
 insta-cmd = { workspace = true }

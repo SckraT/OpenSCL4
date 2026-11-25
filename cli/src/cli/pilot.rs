@@ -6,11 +6,16 @@ use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::VirtualSoundcoreDevice;
 use serde_json::{Value, json};
 
-pub async fn handle(cycle_mode: bool) -> anyhow::Result<()> {
-    let target = ConnectTarget {
-        mac: RedactedMac::from_octets([0; 6]),
+pub async fn handle(cycle_mode: bool, device: Option<&str>) -> anyhow::Result<()> {
+    let handle = match device {
+        Some(name) => start_bluetooth(name).await?,
+        None => SessionRunner::start(
+            VirtualSoundcoreDevice,
+            ConnectTarget {
+                mac: RedactedMac::from_octets([0; 6]),
+            },
+        ),
     };
-    let handle = SessionRunner::start(VirtualSoundcoreDevice, target);
     let output = read_pilot(&handle, cycle_mode).await;
     let closed = handle.close().await;
     let output = output?;
@@ -18,6 +23,23 @@ pub async fn handle(cycle_mode: bool) -> anyhow::Result<()> {
 
     println!("{output}");
     Ok(())
+}
+
+#[cfg(windows)]
+async fn start_bluetooth(name: &str) -> anyhow::Result<SessionHandle> {
+    use std::time::Duration;
+
+    use openscl4_transport_windows::{WindowsRfcommTransport, connected_target};
+
+    let target = tokio::time::timeout(Duration::from_secs(5), connected_target(name))
+        .await
+        .map_err(|_| SessionError::Timeout(openscl4_session::IoStage::Connect))??;
+    Ok(SessionRunner::start(WindowsRfcommTransport, target))
+}
+
+#[cfg(not(windows))]
+async fn start_bluetooth(_name: &str) -> anyhow::Result<SessionHandle> {
+    anyhow::bail!("the Bluetooth pilot is available on Windows")
 }
 
 async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<Value> {
@@ -31,8 +53,9 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
     }
 
     let original = initial.sound_mode_setting();
+    initial.sound_mode_write(original)?;
     let target = match original.mode {
-        SoundMode::NoiseCanceling => SoundModeSetting::NORMAL,
+        SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
         SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
         _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
     };

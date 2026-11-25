@@ -44,7 +44,9 @@ pub enum CommandError {
     #[error(transparent)]
     Model(#[from] ModelError),
     /// The read-back did not match the requested mode or position.
-    #[error("sound mode did not match the device read-back")]
+    #[error(
+        "sound mode did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
     ModeMismatch {
         /// The mode requested by the command.
         requested: SoundModeSetting,

@@ -51,6 +51,24 @@ pub enum TransportError {
     /// The link has been closed.
     #[error("transport link closed")]
     Closed,
+    /// No connected device matched the selection.
+    #[error("Bluetooth device not found")]
+    DeviceNotFound,
+    /// More than one connected device matched the selection.
+    #[error("more than one connected Bluetooth device has that name")]
+    AmbiguousDevice,
+    /// Windows or the device refused Bluetooth access.
+    #[error("Bluetooth access denied")]
+    AccessDenied,
+    /// The requested Bluetooth connection is already in use.
+    #[error("Bluetooth connection is in use")]
+    Busy,
+    /// The requested Bluetooth transport or service is unavailable.
+    #[error("Bluetooth transport unavailable")]
+    Unavailable,
+    /// An unclassified transport I/O failure.
+    #[error("transport I/O failed")]
+    Io,
 }
 
 /// Opens a full-duplex byte link to a device.

@@ -13,6 +13,7 @@ use crate::{
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const SEND_TIMEOUT: Duration = Duration::from_secs(2);
 const REPLY_TIMEOUT: Duration = Duration::from_millis(1500);
+const READ_BACK_INTERVAL: Duration = Duration::from_millis(100);
 const QUEUE_TIMEOUT: Duration = Duration::from_secs(5);
 pub const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -109,7 +110,14 @@ impl Effect {
 enum WriteStage {
     ReadCurrent,
     Ack,
-    ReadBack,
+    ReadBack {
+        deadline: Option<Duration>,
+        observed: Option<DeviceState>,
+    },
+    WaitForReadBack {
+        deadline: Duration,
+        observed: DeviceState,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -157,7 +165,15 @@ impl SessionMachine {
             Input::RequestSent { receive_cutoff } => {
                 self.mark_write_attempt();
                 self.receive_cutoff = receive_cutoff;
-                self.reply_deadline = Some(now + REPLY_TIMEOUT);
+                let timeout = now + REPLY_TIMEOUT;
+                let deadline = match &mut self.mode_write {
+                    Some(ModeWrite {
+                        stage: WriteStage::ReadBack { deadline, .. },
+                        ..
+                    }) => *deadline.get_or_insert(timeout),
+                    _ => timeout,
+                };
+                self.reply_deadline = Some(deadline);
                 self.next_effect(now)
             }
             Input::RequestFailed {
@@ -225,15 +241,27 @@ impl SessionMachine {
     }
 
     fn on_timer(&mut self, now: Duration) -> Effect {
-        if self.reply_deadline.is_some_and(|deadline| now >= deadline) {
-            if let Some(write) = self.mode_write
-                && write.stage == WriteStage::Ack
-            {
-                return self.read_back(now, write);
-            }
-            return self.fail(SessionError::Timeout(IoStage::Receive));
+        if self.reply_deadline.is_none_or(|deadline| now < deadline) {
+            return self.next_effect(now);
         }
-        self.next_effect(now)
+
+        if let Some(write) = self.mode_write {
+            match write.stage {
+                WriteStage::Ack => return self.read_back(now, write, None, None),
+                WriteStage::WaitForReadBack { deadline, observed } if now < deadline => {
+                    return self.read_back(now, write, Some(deadline), Some(observed));
+                }
+                WriteStage::ReadBack {
+                    observed: Some(observed),
+                    ..
+                }
+                | WriteStage::WaitForReadBack { observed, .. } => {
+                    return self.finish_write(write, observed);
+                }
+                _ => {}
+            }
+        }
+        self.fail(SessionError::Timeout(IoStage::Receive))
     }
 
     fn on_frame(&mut self, now: Duration, frame: Frame, first_read: u64) -> Effect {
@@ -254,10 +282,13 @@ impl SessionMachine {
                     self.send_write(now, write, &frame.body)
                 }
                 WriteStage::Ack if frame.command == SOUND_MODE_COMMAND && frame.body.is_empty() => {
-                    self.read_back(now, write)
+                    self.read_back(now, write, None, None)
                 }
-                WriteStage::ReadBack if frame.command == write.model.state_command() => {
-                    self.finish_write(write, &frame.body)
+                WriteStage::ReadBack {
+                    deadline: Some(deadline),
+                    ..
+                } if frame.command == write.model.state_command() => {
+                    self.observe_write(now, deadline, write, &frame.body)
                 }
                 _ => self.next_effect(now),
             };
@@ -312,20 +343,54 @@ impl SessionMachine {
         }
     }
 
-    fn read_back(&mut self, now: Duration, write: ModeWrite) -> Effect {
+    fn read_back(
+        &mut self,
+        now: Duration,
+        write: ModeWrite,
+        deadline: Option<Duration>,
+        observed: Option<DeviceState>,
+    ) -> Effect {
         self.reply_deadline = None;
         self.mode_write = Some(ModeWrite {
-            stage: WriteStage::ReadBack,
+            stage: WriteStage::ReadBack { deadline, observed },
             ..write
         });
-        Effect::read(now, write.model.state_command())
+        let send_deadline = now + SEND_TIMEOUT;
+        Effect::Request {
+            command: write.model.state_command(),
+            body: Vec::new(),
+            deadline: deadline.map_or(send_deadline, |deadline| deadline.min(send_deadline)),
+        }
     }
 
-    fn finish_write(&mut self, write: ModeWrite, body: &[u8]) -> Effect {
+    fn observe_write(
+        &mut self,
+        now: Duration,
+        deadline: Duration,
+        write: ModeWrite,
+        body: &[u8],
+    ) -> Effect {
         let state = match write.model.decode_state(body) {
             Ok(state) => state,
             Err(error) => return self.fail(error.into()),
         };
+        if state.sound_mode_setting() == write.requested {
+            return self.finish_write(write, state);
+        }
+
+        // A3954 can acknowledge the write before the new value appears in a state response.
+        self.mode_write = Some(ModeWrite {
+            stage: WriteStage::WaitForReadBack {
+                deadline,
+                observed: state,
+            },
+            ..write
+        });
+        self.reply_deadline = Some((now + READ_BACK_INTERVAL).min(deadline));
+        self.next_effect(now)
+    }
+
+    fn finish_write(&mut self, write: ModeWrite, state: DeviceState) -> Effect {
         let observed = state.sound_mode_setting();
         self.mode_write = None;
         self.transition(ConnectionState::Ready(state));
@@ -418,23 +483,17 @@ mod tests {
     fn ack_requests_read_back_and_never_completes_without_a_matching_mode() {
         let now = Duration::ZERO;
         let model = ModelDriver::A3954;
-        let mut decoder = openscl4_protocol::FrameDecoder::default();
-        decoder.push(STATE);
-        let state = decoder
-            .next_frame()
-            .expect("valid baseline frame")
-            .expect("complete baseline frame")
-            .body;
+        let state = baseline();
         let original = model.decode_state(&state).expect("decode baseline fixture");
         assert_eq!(
             original
                 .sound_mode_write(SoundModeSetting::NORMAL)
                 .expect("measured normal write")
                 .bytes(),
-            [2, 6, 0, 1, 255],
+            [2, 6, 0, 1],
         );
         let mut current = state.to_vec();
-        openscl4_models::SoundModeWrite::decode(&[0, 11, 1, 0, 255])
+        openscl4_models::SoundModeWrite::decode(&[0, 11, 1, 0])
             .expect("controls changed at the headset")
             .apply_to_state(&mut current)
             .expect("apply changed controls to the state");
@@ -467,7 +526,7 @@ mod tests {
         machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         let write = machine.input(now, inbound(model.state_command(), &current));
         assert!(
-            matches!(write, Effect::Request { command: SOUND_MODE_COMMAND, body, .. } if body == [2, 6, 1, 0, 255])
+            matches!(write, Effect::Request { command: SOUND_MODE_COMMAND, body, .. } if body == [2, 6, 1, 0])
         );
         machine.input(now, Input::RequestSent { receive_cutoff: 0 });
 
@@ -479,12 +538,67 @@ mod tests {
 
         let waiting = machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         assert!(matches!(waiting, Effect::Receive(Some(_))));
-        let completed = machine.input(now, inbound(model.state_command(), &current));
+        let retry = machine.input(now, inbound(model.state_command(), &current));
+        assert!(matches!(retry, Effect::Receive(Some(deadline)) if deadline == READ_BACK_INTERVAL));
+        let completed = machine.input(REPLY_TIMEOUT, Input::TimerElapsed);
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Err(CommandError::ModeMismatch {requested: expected, observed}))
                 if completed_id == id && expected == requested && observed == original.sound_mode_setting()
         ));
+    }
+
+    #[test]
+    fn rereads_until_the_written_mode_appears_without_sending_another_write() {
+        let original = baseline();
+        let model = ModelDriver::A3954;
+        let requested = SoundModeSetting::NORMAL;
+        let id = CommandId(1);
+        let mut machine = SessionMachine::new();
+        machine.mode_write = Some(ModeWrite {
+            id,
+            requested,
+            model,
+            stage: WriteStage::ReadBack {
+                deadline: None,
+                observed: None,
+            },
+            may_have_written: true,
+        });
+        machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
+        let retry = machine.input(Duration::ZERO, inbound(model.state_command(), &original));
+        assert!(matches!(retry, Effect::Receive(Some(deadline)) if deadline == READ_BACK_INTERVAL));
+
+        let request = machine.input(READ_BACK_INTERVAL, Input::TimerElapsed);
+        assert!(
+            matches!(request, Effect::Request { command, body, deadline }
+                if command == model.state_command() && body.is_empty() && deadline == REPLY_TIMEOUT)
+        );
+        machine.input(READ_BACK_INTERVAL, Input::RequestSent { receive_cutoff: 0 });
+        let mut changed = original.to_vec();
+        model
+            .decode_state(&original)
+            .expect("baseline state")
+            .sound_mode_write(requested)
+            .expect("valid write")
+            .apply_to_state(&mut changed)
+            .expect("write has appeared");
+        let completed = machine.input(READ_BACK_INTERVAL, inbound(model.state_command(), &changed));
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
+                if completed_id == id && state.sound_mode_setting() == requested
+        ));
+    }
+
+    fn baseline() -> bytes::Bytes {
+        let mut decoder = openscl4_protocol::FrameDecoder::default();
+        decoder.push(STATE);
+        decoder
+            .next_frame()
+            .expect("valid baseline frame")
+            .expect("complete baseline frame")
+            .body
     }
 
     #[test]

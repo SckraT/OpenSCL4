@@ -60,9 +60,14 @@ SHA-256 is `6025c240c672fb296e50b5e84d8bc18f14aa1dcf6809f030bbd6bb447ebad037`.
 The virtual transport supplies a synthetic identity response with the A3954
 model prefix.
 
-The A3954 pilot's `06 81` writes follow the five-byte bodies measured in
-`core/data/a3954-sound-modes.json` in the SoundcoreNext source at the revision above
-(SHA-256 `8d05bb9c8e909776e2a595539a344a5d7cd9b39ddaa0739217224d0f11fbd914`).
-The measured normal command uses position 6 (`02 06 00 01 FF`), while the
-fixture's noise-canceling setting uses position 11 (`00 0B 00 01 FF`).
-[Source measurements](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3954-sound-modes.json)
+The physical A3954 reports a 31-byte `01 05` identity body. It contains two
+five-byte earbud firmware versions, a 16-byte serial beginning with `3954`,
+and a five-byte case firmware version. The model tests use a synthetic serial.
+
+The Windows hardware pilot confirmed four-byte `06 81` writes. The body is mode,
+position, airplane mode and wind-noise suppression. Normal uses position 6
+(`02 06 00 01` with wind-noise suppression enabled), and the pilot's
+noise-canceling setting uses position 11 (`00 0B 00 01`). The SoundcoreNext
+fixture appended `FF`. With that fifth byte, the hardware run reported the
+previous mode after the write. [Windows hardware run](https://github.com/SckraT/OpenSCL4/issues/154)
+[SoundcoreNext measurements](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3954-sound-modes.json)
