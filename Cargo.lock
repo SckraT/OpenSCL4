@@ -5561,6 +5561,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "openscl4-transport-windows"
+version = "2.14.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "openscl4-transport",
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
+]
+
+[[package]]
 name = "openscq30-android"
 version = "2.14.0"
 dependencies = [
@@ -5604,6 +5616,7 @@ dependencies = [
  "openscl4-session",
  "openscl4-transport",
  "openscl4-transport-mock",
+ "openscl4-transport-windows",
  "openscq30-i18n",
  "openscq30-lib",
  "regex",

@@ -22,13 +22,20 @@ pub enum ModelDriver {
 }
 
 impl ModelDriver {
-    /// Selects a driver from a dual-firmware identity response.
+    /// Selects a driver from an identity response with optional case firmware.
     pub fn identify(body: &[u8]) -> Result<Self, ModelError> {
-        let [_, _, _, _, _, _, _, _, _, _, serial @ ..] = body else {
+        if !matches!(body.len(), 26 | 31) {
             return Err(ModelError::InvalidIdentity);
-        };
-        let serial = RedactedSerial(serial.try_into().map_err(|_| ModelError::InvalidIdentity)?);
-        if serial.0.starts_with(b"A3954") {
+        }
+        let serial = RedactedSerial(
+            body[10..26]
+                .try_into()
+                .map_err(|_| ModelError::InvalidIdentity)?,
+        );
+        if !serial.0.iter().all(u8::is_ascii_alphanumeric) {
+            return Err(ModelError::InvalidIdentity);
+        }
+        if serial.0.starts_with(b"3954") || serial.0.starts_with(b"A3954") {
             Ok(Self::A3954)
         } else {
             Err(ModelError::UnknownModel)
@@ -198,7 +205,7 @@ impl SoundModeSetting {
     }
 }
 
-/// Measured five-byte A3954 sound-mode write.
+/// Four-byte A3954 sound-mode write.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SoundModeWrite {
     setting: SoundModeSetting,
@@ -224,7 +231,7 @@ impl SoundModeWrite {
 
     /// Parses the command body as received by the virtual A3954.
     pub fn decode(body: &[u8]) -> Result<Self, ModelError> {
-        let [mode, position, airplane_mode, wind @ 0..=1, 0xff] = body else {
+        let [mode, position, airplane_mode, wind @ 0..=1] = body else {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         Self::new(
@@ -237,14 +244,13 @@ impl SoundModeWrite {
         )
     }
 
-    /// Encodes the body format measured on the device.
-    pub const fn bytes(self) -> [u8; 5] {
+    /// Encodes the four controls accepted by the device.
+    pub const fn bytes(self) -> [u8; 4] {
         [
             self.setting.mode.wire(),
             self.setting.position,
             self.airplane_mode,
             self.wind_noise_suppression as u8,
-            0xff,
         ]
     }
 
@@ -345,4 +351,31 @@ fn battery_percent(raw: u8, scale: u8, offset: u8) -> Result<Option<u8>, ModelEr
         return Err(ModelError::InvalidBattery);
     }
     Ok(Some((u16::from(step) * 100 / u16::from(scale)) as u8))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identifies_a3954_with_either_known_identity_layout() {
+        for body in [
+            b"04.2904.29A3954DEMO0000000".as_slice(),
+            b"04.3004.303954TEST0000000002.58".as_slice(),
+        ] {
+            assert_eq!(ModelDriver::identify(body), Ok(ModelDriver::A3954));
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_models_and_partial_identities() {
+        assert_eq!(
+            ModelDriver::identify(b"04.3004.303062TEST0000000002.58"),
+            Err(ModelError::UnknownModel),
+        );
+        assert_eq!(
+            ModelDriver::identify(b"04.3004.303954TEST0000000002.5"),
+            Err(ModelError::InvalidIdentity),
+        );
+    }
 }

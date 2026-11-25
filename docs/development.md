@@ -25,6 +25,15 @@ The command prints the confirmed model, firmware, battery levels and sound mode 
 Pass `--cycle-mode` after `pilot` to switch between normal and noise canceling modes, then restore the original mode and position.
 The JSON includes the separately confirmed `changed` and `restored` results.
 
+On Windows, select a connected Liberty 4 Pro by its name in Bluetooth settings to run the same pilot over RFCOMM.
+
+```powershell
+cargo run --locked -p openscq30-cli -- pilot --bluetooth "soundcore Liberty 4 Pro"
+```
+
+Start with the read-only run. Add `--cycle-mode` to test the writes once the read-only run succeeds.
+A hardware run uses a separate connection to the device. Close any other app that holds a Soundcore control connection before starting it.
+
 ## Checks
 
 With the relevant host prerequisites installed, the current Rust-client suite is:
