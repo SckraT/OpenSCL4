@@ -5534,6 +5534,7 @@ dependencies = [
  "openscl4-models",
  "openscl4-protocol",
  "openscl4-transport",
+ "openscl4-transport-mock",
  "thiserror 2.0.21",
  "tokio",
 ]

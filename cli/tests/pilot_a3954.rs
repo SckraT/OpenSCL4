@@ -42,6 +42,29 @@ mod tests {
         );
     }
 
+    #[test]
+    fn pilot_applies_and_restores_the_sound_mode() {
+        let output = Command::new(env!("CARGO_BIN_EXE_openscq30"))
+            .args(["pilot", "--cycle-mode"])
+            .output()
+            .expect("run the CLI mode cycle");
+
+        assert!(
+            output.status.success(),
+            "pilot mode cycle failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot snapshot JSON");
+        assert_eq!(snapshot["soundMode"], "NoiseCanceling");
+        assert_eq!(
+            snapshot["modeCycle"],
+            json!({
+                "changed": {"result": "Applied", "soundMode": "Normal", "position": 6},
+                "restored": {"result": "Applied", "soundMode": "NoiseCanceling", "position": 11},
+            })
+        );
+    }
+
     #[tokio::test]
     async fn pilot_closes_the_session_and_notifies_other_handles() {
         let target = ConnectTarget {

@@ -1,17 +1,21 @@
-//! Read-only session for the A3954 pilot.
+//! Device session for the A3954 pilot.
 
 #![forbid(unsafe_code)]
 
+mod command;
 mod machine;
 mod runner;
 
 use std::sync::Arc;
 
+pub use command::{
+    CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, SessionCommand,
+};
 pub use machine::{ConnectionState, SessionView};
-pub use openscl4_models::{DeviceState, ModelDriver};
+pub use openscl4_models::{DeviceState, ModelDriver, SoundMode, SoundModeSetting};
 use openscl4_protocol::{DecodeError, EncodeError};
 use openscl4_transport::TransportError;
-pub use runner::{SessionHandle, SessionRunner};
+pub use runner::{PendingCommand, SessionHandle, SessionRunner};
 
 /// Stage at which an I/O operation can fail.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -60,4 +64,11 @@ pub enum SessionEvent {
     FrameRejected(DecodeError),
     /// Closing the transport failed. The final snapshot keeps any earlier failure.
     CleanupFailed(SessionError),
+    /// The device confirmation or failure for an accepted command.
+    CommandCompleted {
+        /// The accepted command.
+        id: CommandId,
+        /// The command result, also sent directly to its submitter.
+        result: CommandResult,
+    },
 }

@@ -44,7 +44,19 @@ impl TransportProvider for VirtualSoundcoreDevice {
         &self,
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
-        Ok(open_link(Some(Responder::default())).0)
+        Ok(open_link(Some(Responder::new(true))).0)
+    }
+}
+
+struct WithoutSoundModeAck;
+
+#[async_trait]
+impl TransportProvider for WithoutSoundModeAck {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(open_link(Some(Responder::new(false))).0)
     }
 }
 
