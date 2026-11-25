@@ -29,7 +29,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
             right: None,
             case: None,
         },
-        sound_mode,
+        sound_mode: Some(sound_mode),
         sound_mode_controls: body
             .get(SOUND_MODE_CONTROLS)
             .and_then(|controls| controls.try_into().ok())

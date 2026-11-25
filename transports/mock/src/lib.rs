@@ -5,7 +5,9 @@
 mod virtual_device;
 
 use virtual_device::Responder;
-pub use virtual_device::{SharedVirtualSoundcoreDevice, VirtualA3062, VirtualSoundcoreDevice};
+pub use virtual_device::{
+    SharedVirtualSoundcoreDevice, VirtualA3062, VirtualA3949, VirtualSoundcoreDevice,
+};
 
 use async_trait::async_trait;
 use bytes::Bytes;

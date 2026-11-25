@@ -45,7 +45,7 @@ impl SessionCommand {
                 }
             }
             Self::SetAmbientSoundMode(requested) => {
-                let observed = state.sound_mode;
+                let observed = state.sound_mode.ok_or(ModelError::InvalidSoundModeWrite)?;
                 if observed != requested {
                     return Err(CommandError::AmbientModeMismatch {
                         requested,

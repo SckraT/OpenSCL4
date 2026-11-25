@@ -486,6 +486,7 @@ mod tests {
     // The a3062-anc/transparency frame from conformance.json.
     const A3062_TRANSPARENCY_WRITE: &[u8] =
         b"\x08\xee\0\0\0\x06\x81\x10\0\x01\x51\x01\x01\0\x05\xe6";
+    const A3949_STATE: &[u8] = include_bytes!("../../../data/a3949-pilot-state.bin");
 
     #[test]
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
@@ -700,7 +701,7 @@ mod tests {
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
-                if completed_id == id && state.sound_mode == SoundMode::Transparency
+                if completed_id == id && state.sound_mode == Some(SoundMode::Transparency)
         ));
     }
 
@@ -753,6 +754,49 @@ mod tests {
                 if completed == id
         ));
         assert_eq!(machine.view().connection, ConnectionState::Ready(snapshot));
+    }
+
+    #[test]
+    fn a3949_state_probe_enables_reading_and_rejects_sound_mode_writes() {
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new();
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        machine.input(now, inbound(IDENTITY_COMMAND, &[]));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        machine.input(now, inbound(STATE_COMMAND, &state_body(A3949_STATE)));
+
+        let ConnectionState::Ready(state) = machine.view().connection else {
+            panic!("expected confirmed A3949 state");
+        };
+        assert_eq!(state.model, ModelDriver::A3949);
+        assert_eq!(state.sound_mode, None);
+
+        for (id, command) in [
+            (
+                CommandId(1),
+                SessionCommand::SetSoundMode(SoundModeSetting::NORMAL),
+            ),
+            (
+                CommandId(2),
+                SessionCommand::SetAmbientSoundMode(SoundMode::Normal),
+            ),
+        ] {
+            let effect = machine.input(
+                now,
+                Input::Command(QueuedCommand {
+                    id,
+                    command,
+                    submitted_at: now,
+                }),
+            );
+            assert!(matches!(
+                effect,
+                Effect::Complete(completed, Err(CommandError::Model(ModelError::InvalidSoundModeWrite)))
+                    if completed == id
+            ));
+        }
+        assert_eq!(machine.view().connection, ConnectionState::Ready(state));
     }
 
     #[test]

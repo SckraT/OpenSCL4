@@ -105,3 +105,16 @@ shown above, their SHA-256 is
 The virtual device answers a state probe with the corresponding captured
 response after accepting the matching `06 81` body from the three A3062
 sound-mode entries in [conformance.json](conformance.json).
+
+## A3949 pilot state
+
+[a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response
+captured from a P20i. The source JSON SHA-256 is
+`e69afee67c36b283420fda162dc0d5b877bf6dd7d188c1ed0336c037e0914af8`.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3949-state.json)
+
+The fixture replaces the masked serial at body offsets 16–31 with a synthetic
+serial with the A3949 model prefix and recalculates the checksum. Its SHA-256 is
+`26b4102a741f34f9bf2ffa85b312231aa45ac3b6c13dff9268303ff592cf64b3`.
+The left and right levels are 5 and 4 on the five-step scale at body offsets 2
+and 3. Both firmware versions are `14.43` at body offsets 6–10 and 11–15.
