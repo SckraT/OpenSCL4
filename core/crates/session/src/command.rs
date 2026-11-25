@@ -51,7 +51,13 @@ pub enum CommandError {
         /// The mode and position reported by the device.
         observed: SoundModeSetting,
     },
-    /// An error ended the session before the command was confirmed.
+    /// The device link was lost before the command could be confirmed.
+    #[error("device disconnected")]
+    Disconnected,
+    /// The write may have reached the device before confirmation was interrupted.
+    #[error("device write could not be confirmed: {0}")]
+    Unconfirmed(SessionError),
+    /// An error ended the session before the write was attempted.
     #[error(transparent)]
     Session(#[from] SessionError),
 }

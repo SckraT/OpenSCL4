@@ -83,6 +83,11 @@ impl FrameDecoder {
         self.buffer.extend_from_slice(chunk);
     }
 
+    /// Whether unread bytes remain, including an incomplete frame.
+    pub fn has_pending_bytes(&self) -> bool {
+        !self.buffer.is_empty()
+    }
+
     /// Takes one frame, or returns `None` while waiting for more bytes.
     ///
     /// An invalid header clears the buffer. A checksum error discards the

@@ -27,9 +27,17 @@ pub struct Responder {
 
 impl Responder {
     pub fn new(acknowledge_sound_mode: bool) -> Self {
+        let mut decoder = FrameDecoder::default();
+        decoder.push(STATE_REPLY);
+        let state = decoder
+            .next_frame()
+            .expect("valid A3954 state fixture")
+            .expect("complete A3954 state fixture");
+        assert_eq!(state.command, ModelDriver::A3954.state_command());
+        assert_eq!(state.direction, Direction::Inbound);
         Self {
-            decoder: FrameDecoder::default(),
-            state: STATE_REPLY[9..STATE_REPLY.len() - 1].to_vec(),
+            decoder,
+            state: state.body.to_vec(),
             acknowledge_sound_mode,
         }
     }

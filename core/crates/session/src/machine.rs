@@ -4,13 +4,14 @@ use openscl4_models::{
     DeviceState, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeSetting,
 };
 use openscl4_protocol::{Direction, Frame};
+use openscl4_transport::TransportError;
 
 use crate::{
     CommandError, CommandId, CommandOutcome, CommandResult, IoStage, SessionCommand, SessionError,
 };
 
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
-pub const SEND_TIMEOUT: Duration = Duration::from_secs(2);
+const SEND_TIMEOUT: Duration = Duration::from_secs(2);
 const REPLY_TIMEOUT: Duration = Duration::from_millis(1500);
 const QUEUE_TIMEOUT: Duration = Duration::from_secs(5);
 pub const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
@@ -61,8 +62,17 @@ impl QueuedCommand {
 
 pub enum Input {
     Opened,
-    RequestSent,
-    Frame(Frame),
+    RequestSent {
+        receive_cutoff: u64,
+    },
+    RequestFailed {
+        error: SessionError,
+        send_started: bool,
+    },
+    Frame {
+        frame: Frame,
+        first_read: u64,
+    },
     TimerElapsed,
     Command(QueuedCommand),
     Close,
@@ -71,20 +81,33 @@ pub enum Input {
 }
 
 pub enum Effect {
-    Request([u8; 2], Vec<u8>),
+    Request {
+        command: [u8; 2],
+        body: Vec<u8>,
+        deadline: Duration,
+    },
     Receive(Option<Duration>),
     Complete(CommandId, CommandResult),
     Stop,
 }
 
 impl Effect {
-    fn read(command: [u8; 2]) -> Self {
-        Self::Request(command, Vec::new())
+    fn request(now: Duration, command: [u8; 2], body: Vec<u8>) -> Self {
+        Self::Request {
+            command,
+            body,
+            deadline: now + SEND_TIMEOUT,
+        }
+    }
+
+    fn read(now: Duration, command: [u8; 2]) -> Self {
+        Self::request(now, command, Vec::new())
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WriteStage {
+    ReadCurrent,
     Ack,
     ReadBack,
 }
@@ -95,12 +118,14 @@ struct ModeWrite {
     requested: SoundModeSetting,
     model: ModelDriver,
     stage: WriteStage,
+    may_have_written: bool,
 }
 
 /// The state transition logic has no runtime or transport access.
 pub struct SessionMachine {
     view: SessionView,
     reply_deadline: Option<Duration>,
+    receive_cutoff: u64,
     mode_write: Option<ModeWrite>,
     queue: VecDeque<QueuedCommand>,
 }
@@ -113,6 +138,7 @@ impl SessionMachine {
                 connection: ConnectionState::Connecting,
             },
             reply_deadline: None,
+            receive_cutoff: 0,
             mode_write: None,
             queue: VecDeque::new(),
         }
@@ -126,18 +152,33 @@ impl SessionMachine {
         match input {
             Input::Opened => {
                 self.transition(ConnectionState::ProbingIdentity);
-                Effect::read(IDENTITY_COMMAND)
+                Effect::read(now, IDENTITY_COMMAND)
             }
-            Input::RequestSent => {
+            Input::RequestSent { receive_cutoff } => {
+                self.mark_write_attempt();
+                self.receive_cutoff = receive_cutoff;
                 self.reply_deadline = Some(now + REPLY_TIMEOUT);
                 self.next_effect(now)
+            }
+            Input::RequestFailed {
+                error,
+                send_started,
+            } => {
+                if send_started {
+                    self.mark_write_attempt();
+                }
+                if error == SessionError::Closed {
+                    self.input(now, Input::Close)
+                } else {
+                    self.fail(error)
+                }
             }
             Input::TimerElapsed => self.on_timer(now),
             Input::Command(command) => {
                 self.queue.push_back(command);
                 self.next_effect(now)
             }
-            Input::Frame(frame) => self.on_frame(now, frame),
+            Input::Frame { frame, first_read } => self.on_frame(now, frame, first_read),
             Input::Close => {
                 self.transition(ConnectionState::Closed);
                 Effect::Stop
@@ -165,18 +206,14 @@ impl SessionMachine {
             && let Some(command) = self.queue.pop_front()
         {
             let SessionCommand::SetSoundMode(requested) = command.command;
-            return match device.sound_mode_write(requested) {
-                Ok(write) => {
-                    self.mode_write = Some(ModeWrite {
-                        id: command.id,
-                        requested,
-                        model: device.model,
-                        stage: WriteStage::Ack,
-                    });
-                    Effect::Request(SOUND_MODE_COMMAND, write.bytes().to_vec())
-                }
-                Err(error) => Effect::Complete(command.id, Err(error.into())),
-            };
+            self.mode_write = Some(ModeWrite {
+                id: command.id,
+                requested,
+                model: device.model,
+                stage: WriteStage::ReadCurrent,
+                may_have_written: false,
+            });
+            return Effect::read(now, device.model.state_command());
         }
 
         let next_deadline = self
@@ -192,14 +229,14 @@ impl SessionMachine {
             if let Some(write) = self.mode_write
                 && write.stage == WriteStage::Ack
             {
-                return self.read_back(write);
+                return self.read_back(now, write);
             }
             return self.fail(SessionError::Timeout(IoStage::Receive));
         }
         self.next_effect(now)
     }
 
-    fn on_frame(&mut self, now: Duration, frame: Frame) -> Effect {
+    fn on_frame(&mut self, now: Duration, frame: Frame, first_read: u64) -> Effect {
         // A frame and its receive timer can become ready in the same runtime poll.
         if self.reply_deadline.is_some_and(|deadline| now >= deadline) {
             return self.on_timer(now);
@@ -209,9 +246,15 @@ impl SessionMachine {
         }
 
         if let Some(write) = self.mode_write {
+            if first_read <= self.receive_cutoff {
+                return self.next_effect(now);
+            }
             return match write.stage {
+                WriteStage::ReadCurrent if frame.command == write.model.state_command() => {
+                    self.send_write(now, write, &frame.body)
+                }
                 WriteStage::Ack if frame.command == SOUND_MODE_COMMAND && frame.body.is_empty() => {
-                    self.read_back(write)
+                    self.read_back(now, write)
                 }
                 WriteStage::ReadBack if frame.command == write.model.state_command() => {
                     self.finish_write(write, &frame.body)
@@ -225,7 +268,7 @@ impl SessionMachine {
                 match ModelDriver::identify(&frame.body) {
                     Ok(model) => {
                         self.transition(ConnectionState::SyncingState(model));
-                        Effect::read(model.state_command())
+                        Effect::read(now, model.state_command())
                     }
                     Err(error) => self.fail(error.into()),
                 }
@@ -243,13 +286,39 @@ impl SessionMachine {
         }
     }
 
-    fn read_back(&mut self, write: ModeWrite) -> Effect {
+    fn send_write(&mut self, now: Duration, write: ModeWrite, body: &[u8]) -> Effect {
+        let state = match write.model.decode_state(body) {
+            Ok(state) => state,
+            Err(error) => return self.fail(error.into()),
+        };
+        if self.view.connection == ConnectionState::Ready(state) {
+            self.reply_deadline = None;
+        } else {
+            self.transition(ConnectionState::Ready(state));
+        }
+
+        match state.sound_mode_write(write.requested) {
+            Ok(command) => {
+                self.mode_write = Some(ModeWrite {
+                    stage: WriteStage::Ack,
+                    ..write
+                });
+                Effect::request(now, SOUND_MODE_COMMAND, command.bytes().to_vec())
+            }
+            Err(error) => {
+                self.mode_write = None;
+                Effect::Complete(write.id, Err(error.into()))
+            }
+        }
+    }
+
+    fn read_back(&mut self, now: Duration, write: ModeWrite) -> Effect {
         self.reply_deadline = None;
         self.mode_write = Some(ModeWrite {
             stage: WriteStage::ReadBack,
             ..write
         });
-        Effect::read(write.model.state_command())
+        Effect::read(now, write.model.state_command())
     }
 
     fn finish_write(&mut self, write: ModeWrite, body: &[u8]) -> Effect {
@@ -270,6 +339,37 @@ impl SessionMachine {
             })
         };
         Effect::Complete(write.id, result)
+    }
+
+    fn mark_write_attempt(&mut self) {
+        if let Some(write) = &mut self.mode_write
+            && write.stage == WriteStage::Ack
+        {
+            write.may_have_written = true;
+        }
+    }
+
+    pub fn terminal_command_error(&self, id: CommandId) -> CommandError {
+        let failure = match self.view.connection {
+            ConnectionState::Failed(error) => error,
+            _ => SessionError::Closed,
+        };
+        if matches!(
+            failure,
+            SessionError::Transport {
+                error: TransportError::Disconnected,
+                ..
+            }
+        ) {
+            CommandError::Disconnected
+        } else if self
+            .mode_write
+            .is_some_and(|write| write.id == id && write.may_have_written)
+        {
+            CommandError::Unconfirmed(failure)
+        } else {
+            failure.into()
+        }
     }
 
     fn fail(&mut self, error: SessionError) -> Effect {
@@ -294,17 +394,16 @@ mod tests {
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
         let mut machine = SessionMachine::new();
         let request = machine.input(Duration::ZERO, Input::Opened);
-        assert!(matches!(request, Effect::Request(IDENTITY_COMMAND, body) if body.is_empty()));
+        assert!(
+            matches!(request, Effect::Request { command: IDENTITY_COMMAND, body, deadline } if body.is_empty() && deadline == SEND_TIMEOUT)
+        );
 
         let sent = Duration::from_secs(1);
         let expected = sent + REPLY_TIMEOUT;
-        let receive = machine.input(sent, Input::RequestSent);
+        let receive = machine.input(sent, Input::RequestSent { receive_cutoff: 0 });
         assert!(matches!(receive, Effect::Receive(Some(deadline)) if deadline == expected));
 
-        let receive = machine.input(
-            sent + Duration::from_millis(500),
-            Input::Frame(inbound([0, 0], &[])),
-        );
+        let receive = machine.input(sent + Duration::from_millis(500), inbound([0, 0], &[]));
         assert!(matches!(receive, Effect::Receive(Some(deadline)) if deadline == expected));
 
         let stopped = machine.input(expected, Input::TimerElapsed);
@@ -319,21 +418,42 @@ mod tests {
     fn ack_requests_read_back_and_never_completes_without_a_matching_mode() {
         let now = Duration::ZERO;
         let model = ModelDriver::A3954;
-        let state = &STATE[9..STATE.len() - 1];
-        let original = model.decode_state(state).expect("decode baseline fixture");
+        let mut decoder = openscl4_protocol::FrameDecoder::default();
+        decoder.push(STATE);
+        let state = decoder
+            .next_frame()
+            .expect("valid baseline frame")
+            .expect("complete baseline frame")
+            .body;
+        let original = model.decode_state(&state).expect("decode baseline fixture");
+        assert_eq!(
+            original
+                .sound_mode_write(SoundModeSetting::NORMAL)
+                .expect("measured normal write")
+                .bytes(),
+            [2, 6, 0, 1, 255],
+        );
+        let mut current = state.to_vec();
+        openscl4_models::SoundModeWrite::decode(&[0, 11, 1, 0, 255])
+            .expect("controls changed at the headset")
+            .apply_to_state(&mut current)
+            .expect("apply changed controls to the state");
+        let refreshed = model
+            .decode_state(&current)
+            .expect("decode refreshed state");
         let mut machine = SessionMachine::new();
         machine.input(now, Input::Opened);
-        machine.input(now, Input::RequestSent);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         machine.input(
             now,
-            Input::Frame(inbound(IDENTITY_COMMAND, b"04.2904.29A3954DEMO0000000")),
+            inbound(IDENTITY_COMMAND, b"04.2904.29A3954DEMO0000000"),
         );
-        machine.input(now, Input::RequestSent);
-        machine.input(now, Input::Frame(inbound(model.state_command(), state)));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        machine.input(now, inbound(model.state_command(), &state));
 
         let id = CommandId(1);
         let requested = SoundModeSetting::NORMAL;
-        let write = machine.input(
+        let refresh = machine.input(
             now,
             Input::Command(QueuedCommand {
                 id,
@@ -342,19 +462,24 @@ mod tests {
             }),
         );
         assert!(
-            matches!(write, Effect::Request(SOUND_MODE_COMMAND, body) if body == [2, 6, 0, 1, 255])
+            matches!(refresh, Effect::Request { command, body, .. } if command == model.state_command() && body.is_empty())
         );
-        machine.input(now, Input::RequestSent);
-
-        let read_back = machine.input(now, Input::Frame(inbound(SOUND_MODE_COMMAND, &[])));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        let write = machine.input(now, inbound(model.state_command(), &current));
         assert!(
-            matches!(read_back, Effect::Request(command, body) if command == model.state_command() && body.is_empty())
+            matches!(write, Effect::Request { command: SOUND_MODE_COMMAND, body, .. } if body == [2, 6, 1, 0, 255])
         );
-        assert_eq!(machine.view().connection, ConnectionState::Ready(original));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
 
-        let waiting = machine.input(now, Input::RequestSent);
+        let read_back = machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
+        assert!(
+            matches!(read_back, Effect::Request { command, body, .. } if command == model.state_command() && body.is_empty())
+        );
+        assert_eq!(machine.view().connection, ConnectionState::Ready(refreshed));
+
+        let waiting = machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         assert!(matches!(waiting, Effect::Receive(Some(_))));
-        let completed = machine.input(now, Input::Frame(inbound(model.state_command(), state)));
+        let completed = machine.input(now, inbound(model.state_command(), &current));
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Err(CommandError::ModeMismatch {requested: expected, observed}))
@@ -362,11 +487,49 @@ mod tests {
         ));
     }
 
-    fn inbound(command: [u8; 2], body: &[u8]) -> Frame {
-        Frame {
-            direction: Direction::Inbound,
-            command,
-            body: bytes::Bytes::copy_from_slice(body),
+    #[test]
+    fn a_cancelled_send_marks_only_the_attempted_write_as_unconfirmed() {
+        let attempted = CommandId(1);
+        let queued = CommandId(2);
+        for send_started in [false, true] {
+            let mut machine = SessionMachine::new();
+            machine.mode_write = Some(ModeWrite {
+                id: attempted,
+                requested: SoundModeSetting::NORMAL,
+                model: ModelDriver::A3954,
+                stage: WriteStage::Ack,
+                may_have_written: false,
+            });
+            let effect = machine.input(
+                Duration::ZERO,
+                Input::RequestFailed {
+                    error: SessionError::Closed,
+                    send_started,
+                },
+            );
+
+            assert!(matches!(effect, Effect::Stop));
+            let expected = if send_started {
+                CommandError::Unconfirmed(SessionError::Closed)
+            } else {
+                CommandError::Session(SessionError::Closed)
+            };
+            assert_eq!(machine.terminal_command_error(attempted), expected);
+            assert_eq!(
+                machine.terminal_command_error(queued),
+                CommandError::Session(SessionError::Closed)
+            );
+        }
+    }
+
+    fn inbound(command: [u8; 2], body: &[u8]) -> Input {
+        Input::Frame {
+            frame: Frame {
+                direction: Direction::Inbound,
+                command,
+                body: bytes::Bytes::copy_from_slice(body),
+            },
+            first_read: 1,
         }
     }
 }

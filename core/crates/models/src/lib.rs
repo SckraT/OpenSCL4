@@ -1,4 +1,4 @@
-//! Read-only model drivers for the pilot.
+//! Model drivers for the device pilot.
 
 #![forbid(unsafe_code)]
 

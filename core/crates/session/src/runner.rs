@@ -7,8 +7,7 @@ use std::{
     },
 };
 
-use bytes::Bytes;
-use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
+use openscl4_protocol::{Direction, Frame, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, LinkRx, TransportError, TransportProvider};
 use tokio::{
     sync::{OwnedSemaphorePermit, Semaphore, broadcast, mpsc, oneshot, watch},
@@ -18,9 +17,7 @@ use tokio::{
 use crate::{
     CommandId, CommandResult, ConnectionState, DispatchError, IoStage, SessionCommand,
     SessionError, SessionEvent, SessionView,
-    machine::{
-        CLOSE_TIMEOUT, CONNECT_TIMEOUT, Effect, Input, QueuedCommand, SEND_TIMEOUT, SessionMachine,
-    },
+    machine::{CLOSE_TIMEOUT, CONNECT_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
 
 const COMMAND_CAPACITY: usize = 8;
@@ -228,34 +225,49 @@ impl SessionRunner {
             }
         };
         let (mut tx, rx) = link.split();
-        let (chunks, mut received) = mpsc::channel(16);
-        let reader = tokio::spawn(read_link(rx, chunks));
-        let mut decoder = FrameDecoder::default();
+        let (frames, mut received) = mpsc::channel(16);
+        let receive_order = Arc::new(AtomicU64::new(0));
+        let reader = tokio::spawn(read_link(
+            rx,
+            frames,
+            Arc::clone(&receive_order),
+            self.events.clone(),
+        ));
         let mut effect = self.machine.input(started.elapsed(), Input::Opened);
 
         loop {
             let input = match effect {
-                Effect::Request(command, body) => {
+                Effect::Request {
+                    command,
+                    body,
+                    deadline,
+                } => {
                     self.publish();
+                    let mut send_started = false;
                     let sending = async {
                         let request = encode_frame(Direction::Outbound, command, &body)?;
-                        timeout(SEND_TIMEOUT, tx.send(request))
-                            .await
-                            .map_err(|_| SessionError::Timeout(IoStage::Send))?
-                            .map_err(|error| transport_error(IoStage::Send, error))
-                    };
-                    until_close(&mut self.close_requested, sending)
+                        let receive_cutoff = receive_order.load(Ordering::SeqCst);
+                        timeout_at(started + deadline, async {
+                            send_started = true;
+                            tx.send(request).await
+                        })
                         .await
-                        .map_or_else(terminal_input, |()| Input::RequestSent)
+                        .map_err(|_| SessionError::Timeout(IoStage::Send))?
+                        .map_err(|error| transport_error(IoStage::Send, error))?;
+                        Ok(receive_cutoff)
+                    };
+                    match until_close(&mut self.close_requested, sending).await {
+                        Ok(receive_cutoff) => Input::RequestSent { receive_cutoff },
+                        Err(error) => Input::RequestFailed {
+                            error,
+                            send_started,
+                        },
+                    }
                 }
                 Effect::Receive(deadline) => {
                     self.publish();
-                    let receiving = receive_input(
-                        &mut received,
-                        &mut decoder,
-                        &self.events,
-                        deadline.map(|deadline| started + deadline),
-                    );
+                    let receiving =
+                        receive_input(&mut received, deadline.map(|deadline| started + deadline));
                     tokio::select! {
                         biased;
                         _ = self.close_requested.wait_for(|requested| *requested) => Input::Close,
@@ -295,16 +307,12 @@ impl SessionRunner {
             let _ = self.events.send(SessionEvent::CleanupFailed(error));
         }
         self.publish();
-        let failure = match self.machine.view().connection {
-            ConnectionState::Failed(error) => error,
-            _ => SessionError::Closed,
-        };
         self.commands.close();
         while let Ok(dispatch) = self.commands.try_recv() {
             self.replies.insert(dispatch.command.id, dispatch.reply);
         }
         for (id, reply) in std::mem::take(&mut self.replies) {
-            self.complete(id, reply, Err(failure.into()));
+            self.complete(id, reply, Err(self.machine.terminal_command_error(id)));
         }
     }
 
@@ -342,39 +350,66 @@ async fn until_close<T>(
     }
 }
 
-async fn read_link(mut rx: Box<dyn LinkRx>, chunks: mpsc::Sender<Result<Bytes, TransportError>>) {
-    loop {
-        let chunk = rx.recv().await;
-        let failed = chunk.is_err();
-        if chunks.send(chunk).await.is_err() || failed {
-            return;
-        }
-    }
+struct ReceivedFrame {
+    frame: Frame,
+    first_read: u64,
 }
 
-async fn receive_input(
-    chunks: &mut mpsc::Receiver<Result<Bytes, TransportError>>,
-    decoder: &mut FrameDecoder,
-    events: &broadcast::Sender<SessionEvent>,
-    deadline: Option<Instant>,
-) -> Result<Input, SessionError> {
-    let receive = async {
+async fn read_link(
+    mut rx: Box<dyn LinkRx>,
+    frames: mpsc::Sender<Result<ReceivedFrame, TransportError>>,
+    receive_order: Arc<AtomicU64>,
+    events: broadcast::Sender<SessionEvent>,
+) {
+    let mut decoder = FrameDecoder::default();
+    let mut partial_start = None;
+    loop {
+        let chunk = match rx.recv().await {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                let _ = frames.send(Err(error)).await;
+                return;
+            }
+        };
+        let current_read = receive_order.fetch_add(1, Ordering::SeqCst) + 1;
+        let mut first_read = partial_start.take().unwrap_or(current_read);
+        decoder.push(&chunk);
         loop {
             match decoder.next_frame() {
-                Ok(Some(frame)) => return Ok(Input::Frame(frame)),
-                Ok(None) => {
-                    let chunk = chunks
-                        .recv()
+                Ok(Some(frame)) => {
+                    if frames
+                        .send(Ok(ReceivedFrame { frame, first_read }))
                         .await
-                        .unwrap_or(Err(TransportError::Closed))
-                        .map_err(|error| transport_error(IoStage::Receive, error))?;
-                    decoder.push(&chunk);
+                        .is_err()
+                    {
+                        return;
+                    }
+                }
+                Ok(None) => {
+                    // A frame that spans reads keeps the order of its first bytes.
+                    partial_start = decoder.has_pending_bytes().then_some(first_read);
+                    break;
                 }
                 Err(error) => {
                     let _ = events.send(SessionEvent::FrameRejected(error));
                 }
             }
+            first_read = current_read;
         }
+    }
+}
+
+async fn receive_input(
+    frames: &mut mpsc::Receiver<Result<ReceivedFrame, TransportError>>,
+    deadline: Option<Instant>,
+) -> Result<Input, SessionError> {
+    let receive = async {
+        let ReceivedFrame { frame, first_read } = frames
+            .recv()
+            .await
+            .unwrap_or(Err(TransportError::Closed))
+            .map_err(|error| transport_error(IoStage::Receive, error))?;
+        Ok(Input::Frame { frame, first_read })
     };
     if let Some(deadline) = deadline {
         match timeout_at(deadline, receive).await {
