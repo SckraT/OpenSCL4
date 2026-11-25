@@ -9,7 +9,7 @@ use clap::ArgMatches;
 use dirs::config_dir;
 use openscq30_lib::OpenSCQ30Session;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{EnvFilter, filter::filter_fn, prelude::*};
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -54,17 +54,24 @@ fn initialize_logging(matches: &ArgMatches) -> anyhow::Result<()> {
     };
 
     if let Some(log_level_filter) = log_level_filter {
-        tracing_subscriber::fmt()
+        let pilot = matches.subcommand_name() == Some("pilot");
+        let output = tracing_subscriber::fmt::layer()
             .with_file(true)
             .with_line_number(true)
             .with_target(true)
-            .with_env_filter(
+            .with_writer(std::io::stderr)
+            .pretty()
+            // Native Bluetooth libraries may trace device addresses and D-Bus paths.
+            .with_filter(filter_fn(move |metadata| {
+                !pilot || metadata.target().starts_with("openscl4_")
+            }));
+        tracing_subscriber::registry()
+            .with(
                 EnvFilter::builder()
                     .with_default_directive(log_level_filter.into())
                     .from_env()?,
             )
-            .with_writer(std::io::stderr)
-            .pretty()
+            .with(output)
             .init();
     }
     Ok(())

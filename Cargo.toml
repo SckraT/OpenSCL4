@@ -16,6 +16,7 @@ members = [
     "core/crates/session",
     "transports/mock",
     "transports/windows",
+    "transports/bluez",
 ]
 resolver = "3"
 
@@ -75,6 +76,7 @@ openscl4-models = { path = "core/crates/models" }
 openscl4-session = { path = "core/crates/session" }
 openscl4-transport-mock = { path = "transports/mock" }
 openscl4-transport-windows = { path = "transports/windows" }
+openscl4-transport-bluez = { path = "transports/bluez" }
 
 clap = "4"
 clap_complete = "4"

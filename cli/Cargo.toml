@@ -40,6 +40,9 @@ regex = { workspace = true }
 [target.'cfg(windows)'.dependencies]
 openscl4-transport-windows.workspace = true
 
+[target.'cfg(target_os = "linux")'.dependencies]
+openscl4-transport-bluez.workspace = true
+
 [dev-dependencies]
 async-trait.workspace = true
 bytes.workspace = true

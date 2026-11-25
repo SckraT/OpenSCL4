@@ -33,7 +33,7 @@ jobs:
           cargo clippy --locked --all-targets
           -p openscq30-lib -p openscq30-desktop -p openscq30-android
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
-          -p openscl4-models -p openscl4-session
+          -p openscl4-models -p openscl4-session -p openscl4-transport-bluez
           -- -D warnings
       - name: Lint the A3954 CLI pilot
         run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 -- -D warnings
@@ -65,8 +65,10 @@ jobs:
           chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
       - name: Install prettier
         run: npm install --global --ignore-scripts prettier@3.9.10
-      - name: Check new core and mock formatting
-        run: cargo fmt --check -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock -p openscl4-models -p openscl4-session
+      - name: Check pilot crate formatting
+        run: >-
+          cargo fmt --check -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
+          -p openscl4-models -p openscl4-session -p openscl4-transport-bluez -p openscl4-transport-windows
       - name: Check formatting
         run: just format-check
 
