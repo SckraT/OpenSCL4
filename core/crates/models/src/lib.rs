@@ -4,8 +4,14 @@
 
 use std::fmt;
 
-/// Read the two earbud firmware versions and the device identifier.
+mod a3062;
+pub mod registry;
+
+/// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
+
+/// Read the state of a device using the common state command.
+pub const STATE_COMMAND: [u8; 2] = [0x01, 0x01];
 
 /// Write the A3954 sound mode and its position on the mode scale.
 pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
@@ -17,48 +23,42 @@ const A3954_SOUND_MODE: usize = 125;
 /// A driver selected from a checked identity response.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelDriver {
+    /// Soundcore Space One Pro.
+    A3062,
     /// Soundcore Liberty 4 Pro.
     A3954,
 }
 
 impl ModelDriver {
-    /// Selects a driver from an identity response with optional case firmware.
+    /// Selects a driver from a validated identity response.
     pub fn identify(body: &[u8]) -> Result<Self, ModelError> {
-        if !matches!(body.len(), 26 | 31) {
-            return Err(ModelError::InvalidIdentity);
-        }
-        let serial = RedactedSerial(
-            body[10..26]
-                .try_into()
-                .map_err(|_| ModelError::InvalidIdentity)?,
-        );
-        if !serial.0.iter().all(u8::is_ascii_alphanumeric) {
-            return Err(ModelError::InvalidIdentity);
-        }
-        if serial.0.starts_with(b"3954") || serial.0.starts_with(b"A3954") {
-            Ok(Self::A3954)
-        } else {
-            Err(ModelError::UnknownModel)
+        registry::identify_identity(body)
+    }
+
+    /// Operations implemented in the new session for this model.
+    pub const fn capabilities(self) -> Capabilities {
+        Capabilities {
+            sound_mode_write: matches!(self, Self::A3954),
         }
     }
 
     /// Returns the stable model code.
     pub const fn code(self) -> &'static str {
         match self {
+            Self::A3062 => "A3062",
             Self::A3954 => "A3954",
         }
     }
 
     /// Returns the request and reply command for the initial state.
     pub const fn state_command(self) -> [u8; 2] {
-        match self {
-            Self::A3954 => [0x01, 0x01],
-        }
+        STATE_COMMAND
     }
 
     /// Decodes the state response for the selected model.
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         match self {
+            Self::A3062 => a3062::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
     }
@@ -68,6 +68,7 @@ impl ModelDriver {
             return Err(ModelError::IncompleteState);
         }
         let battery = BatteryLevels {
+            device: None,
             left: battery_percent(body[2], 100, 0)?,
             right: battery_percent(body[3], 100, 0)?,
             case: battery_percent(body[A3954_CASE_BATTERY], 10, 1)?,
@@ -77,13 +78,30 @@ impl ModelDriver {
             model: self,
             battery,
             sound_mode,
-            sound_mode_position: body[A3954_SOUND_MODE + 1],
-            airplane_mode: body[A3954_SOUND_MODE + 2],
-            wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
+            sound_mode_controls: Some(A3954SoundModeControls {
+                position: body[A3954_SOUND_MODE + 1],
+                airplane_mode: body[A3954_SOUND_MODE + 2],
+                wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
+            }),
+            firmware_device: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
     }
+}
+
+/// Implemented operations exposed by a model driver.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Capabilities {
+    /// The session can confirm sound-mode writes for this model.
+    pub sound_mode_write: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct A3954SoundModeControls {
+    position: u8,
+    airplane_mode: u8,
+    wind_noise_suppression: bool,
 }
 
 /// State reported by the device through its state response.
@@ -95,9 +113,9 @@ pub struct DeviceState {
     pub battery: BatteryLevels,
     /// Current sound mode.
     pub sound_mode: SoundMode,
-    sound_mode_position: u8,
-    airplane_mode: u8,
-    wind_noise_suppression: bool,
+    sound_mode_controls: Option<A3954SoundModeControls>,
+    /// The firmware of a device with a single battery, if reported.
+    pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
@@ -105,23 +123,30 @@ pub struct DeviceState {
 }
 
 impl DeviceState {
-    /// Returns the reported sound mode and its position.
-    pub const fn sound_mode_setting(self) -> SoundModeSetting {
-        SoundModeSetting {
+    /// Returns the reported setting for a model with a measured position scale.
+    pub fn sound_mode_setting(self) -> Option<SoundModeSetting> {
+        self.sound_mode_controls.map(|controls| SoundModeSetting {
             mode: self.sound_mode,
-            position: self.sound_mode_position,
-        }
+            position: controls.position,
+        })
     }
 
     /// Builds a measured write while retaining airplane and wind controls.
     pub fn sound_mode_write(self, setting: SoundModeSetting) -> Result<SoundModeWrite, ModelError> {
-        SoundModeWrite::new(setting, self.airplane_mode, self.wind_noise_suppression)
+        let controls = self.sound_mode_controls.ok_or(ModelError::ReadOnly)?;
+        SoundModeWrite::new(
+            setting,
+            controls.airplane_mode,
+            controls.wind_noise_suppression,
+        )
     }
 }
 
 /// Battery percentages, with absent components represented by `None`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BatteryLevels {
+    /// Battery percentage for a device with a single battery.
+    pub device: Option<u8>,
     /// Left earbud percentage.
     pub left: Option<u8>,
     /// Right earbud percentage.
@@ -320,6 +345,9 @@ pub enum ModelError {
     /// The device returned an unrecognized mode.
     #[error("unknown device sound mode")]
     UnknownSoundMode,
+    /// The model is currently supported for reading only.
+    #[error("device model is read-only in the pilot")]
+    ReadOnly,
     /// The selected mode or its controls do not match the measured write format.
     #[error("unsupported device sound mode write")]
     InvalidSoundModeWrite,
@@ -329,6 +357,21 @@ pub enum ModelError {
 }
 
 struct RedactedSerial<'a>(&'a [u8; 16]);
+
+impl<'a> RedactedSerial<'a> {
+    fn parse(bytes: &'a [u8]) -> Result<Self, ModelError> {
+        let bytes: &[u8; 16] = bytes.try_into().map_err(|_| ModelError::InvalidIdentity)?;
+        if !bytes.iter().all(u8::is_ascii_alphanumeric) {
+            return Err(ModelError::InvalidIdentity);
+        }
+        Ok(Self(bytes))
+    }
+
+    fn identifies(&self, model: ModelDriver) -> bool {
+        let code = model.code().as_bytes();
+        self.0.starts_with(code) || self.0.starts_with(&code[1..])
+    }
+}
 
 impl fmt::Display for RedactedSerial<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -370,12 +413,21 @@ mod tests {
     #[test]
     fn rejects_unknown_models_and_partial_identities() {
         assert_eq!(
-            ModelDriver::identify(b"04.3004.303062TEST0000000002.58"),
+            ModelDriver::identify(b"04.3004.303949TEST0000000002.58"),
             Err(ModelError::UnknownModel),
         );
         assert_eq!(
             ModelDriver::identify(b"04.3004.303954TEST0000000002.5"),
             Err(ModelError::InvalidIdentity),
         );
+    }
+
+    #[test]
+    fn registry_selects_the_a3062_driver_from_a_numeric_prefix() {
+        let driver =
+            ModelDriver::identify(b"04.3904.393062TEST00000000").expect("registered A3062 prefix");
+        assert_eq!(driver, ModelDriver::A3062);
+        assert!(!driver.capabilities().sound_mode_write);
+        assert_eq!(registry::by_code("A3062"), Some(driver));
     }
 }

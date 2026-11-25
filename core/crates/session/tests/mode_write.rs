@@ -25,9 +25,9 @@ mod tests {
         assert_ne!(change.id(), restore.id());
 
         let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm change");
-        assert_eq!(changed.sound_mode_setting(), SoundModeSetting::NORMAL);
+        assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
         let CommandOutcome::Applied(restored) = restore.wait().await.expect("confirm restore");
-        assert_eq!(restored.sound_mode_setting(), original);
+        assert_eq!(restored.sound_mode_setting(), Some(original));
         assert_eq!(mode(&handle).await, original);
         handle.close().await.expect("close virtual link");
     }
@@ -44,7 +44,7 @@ mod tests {
 
         let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm without ACK");
         assert!(dispatched_at.elapsed() >= Duration::from_millis(1500));
-        assert_eq!(changed.sound_mode_setting(), SoundModeSetting::NORMAL);
+        assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
         assert_eq!(mode(&handle).await, SoundModeSetting::NORMAL);
         handle.close().await.expect("close virtual link");
     }
@@ -60,7 +60,7 @@ mod tests {
 
         let CommandOutcome::Applied(changed) =
             change.wait().await.expect("confirm without subscriber");
-        assert_eq!(changed.sound_mode_setting(), SoundModeSetting::NORMAL);
+        assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
     }
 
     fn start(provider: impl TransportProvider) -> SessionHandle {
@@ -77,6 +77,6 @@ mod tests {
         let ConnectionState::Ready(state) = view.connection else {
             panic!("expected a confirmed snapshot");
         };
-        state.sound_mode_setting()
+        state.sound_mode_setting().expect("A3954 scale position")
     }
 }

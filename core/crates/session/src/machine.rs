@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    DeviceState, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeSetting,
+    DeviceState, IDENTITY_COMMAND, ModelDriver, ModelError, SOUND_MODE_COMMAND, STATE_COMMAND,
+    SoundModeSetting, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -24,6 +25,8 @@ pub enum ConnectionState {
     Connecting,
     /// The session is waiting for the identification response.
     ProbingIdentity,
+    /// A read-only state probe after the identity query failed.
+    ProbingState(SessionError),
     /// The model is known and the initial state read is in progress.
     SyncingState(ModelDriver),
     /// A validated state response has been parsed for the current link.
@@ -222,6 +225,9 @@ impl SessionMachine {
             && let Some(command) = self.queue.pop_front()
         {
             let SessionCommand::SetSoundMode(requested) = command.command;
+            if !device.model.capabilities().sound_mode_write {
+                return Effect::Complete(command.id, Err(ModelError::ReadOnly.into()));
+            }
             self.mode_write = Some(ModeWrite {
                 id: command.id,
                 requested,
@@ -261,7 +267,13 @@ impl SessionMachine {
                 _ => {}
             }
         }
-        self.fail(SessionError::Timeout(IoStage::Receive))
+        match self.view.connection {
+            ConnectionState::ProbingIdentity => {
+                self.probe_state(now, SessionError::Timeout(IoStage::Receive))
+            }
+            ConnectionState::ProbingState(identity_error) => self.fail(identity_error),
+            _ => self.fail(SessionError::Timeout(IoStage::Receive)),
+        }
     }
 
     fn on_frame(&mut self, now: Duration, frame: Frame, first_read: u64) -> Effect {
@@ -301,19 +313,36 @@ impl SessionMachine {
                         self.transition(ConnectionState::SyncingState(model));
                         Effect::read(now, model.state_command())
                     }
-                    Err(error) => self.fail(error.into()),
+                    Err(error) => self.probe_state(now, error.into()),
+                }
+            }
+            ConnectionState::ProbingState(identity_error)
+                if frame.command == STATE_COMMAND && first_read > self.receive_cutoff =>
+            {
+                match registry::identify_state(&frame.body) {
+                    Ok(model) => self.confirm_state(now, model, &frame.body),
+                    Err(_) => self.fail(identity_error),
                 }
             }
             ConnectionState::SyncingState(model) if frame.command == model.state_command() => {
-                match model.decode_state(&frame.body) {
-                    Ok(state) => {
-                        self.transition(ConnectionState::Ready(state));
-                        self.next_effect(now)
-                    }
-                    Err(error) => self.fail(error.into()),
-                }
+                self.confirm_state(now, model, &frame.body)
             }
             _ => self.next_effect(now),
+        }
+    }
+
+    fn probe_state(&mut self, now: Duration, reason: SessionError) -> Effect {
+        self.transition(ConnectionState::ProbingState(reason));
+        Effect::read(now, STATE_COMMAND)
+    }
+
+    fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
+        match model.decode_state(body) {
+            Ok(state) => {
+                self.transition(ConnectionState::Ready(state));
+                self.next_effect(now)
+            }
+            Err(error) => self.fail(error.into()),
         }
     }
 
@@ -374,7 +403,7 @@ impl SessionMachine {
             Ok(state) => state,
             Err(error) => return self.fail(error.into()),
         };
-        if state.sound_mode_setting() == write.requested {
+        if state.sound_mode_setting() == Some(write.requested) {
             return self.finish_write(write, state);
         }
 
@@ -391,7 +420,9 @@ impl SessionMachine {
     }
 
     fn finish_write(&mut self, write: ModeWrite, state: DeviceState) -> Effect {
-        let observed = state.sound_mode_setting();
+        let Some(observed) = state.sound_mode_setting() else {
+            return self.fail(ModelError::ReadOnly.into());
+        };
         self.mode_write = None;
         self.transition(ConnectionState::Ready(state));
 
@@ -454,6 +485,7 @@ mod tests {
     use super::*;
 
     const STATE: &[u8] = include_bytes!("../../../data/a3954-pilot-state.bin");
+    const A3062_STATE: &[u8] = include_bytes!("../../../data/a3062-pilot-state.bin");
 
     #[test]
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
@@ -471,7 +503,16 @@ mod tests {
         let receive = machine.input(sent + Duration::from_millis(500), inbound([0, 0], &[]));
         assert!(matches!(receive, Effect::Receive(Some(deadline)) if deadline == expected));
 
-        let stopped = machine.input(expected, Input::TimerElapsed);
+        let fallback = machine.input(expected, Input::TimerElapsed);
+        assert!(matches!(
+            fallback,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(expected, Input::RequestSent { receive_cutoff: 0 });
+        let stopped = machine.input(expected + REPLY_TIMEOUT, Input::TimerElapsed);
         assert!(matches!(stopped, Effect::Stop));
         assert_eq!(
             machine.view().connection,
@@ -544,7 +585,7 @@ mod tests {
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Err(CommandError::ModeMismatch {requested: expected, observed}))
-                if completed_id == id && expected == requested && observed == original.sound_mode_setting()
+                if completed_id == id && expected == requested && Some(observed) == original.sound_mode_setting()
         ));
     }
 
@@ -587,7 +628,7 @@ mod tests {
         assert!(matches!(
             completed,
             Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
-                if completed_id == id && state.sound_mode_setting() == requested
+                if completed_id == id && state.sound_mode_setting() == Some(requested)
         ));
     }
 
@@ -599,6 +640,57 @@ mod tests {
             .expect("valid baseline frame")
             .expect("complete baseline frame")
             .body
+    }
+
+    #[test]
+    fn a3062_state_probe_rejects_writes_without_another_request() {
+        let mut decoder = openscl4_protocol::FrameDecoder::default();
+        decoder.push(A3062_STATE);
+        let frame = decoder
+            .next_frame()
+            .expect("valid state frame")
+            .expect("complete state frame");
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new();
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        let probe = machine.input(now, inbound(IDENTITY_COMMAND, &[]));
+        assert!(matches!(
+            probe,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now, Input::RequestSent { receive_cutoff: 1 });
+        machine.input(
+            now,
+            Input::Frame {
+                frame,
+                first_read: 2,
+            },
+        );
+
+        let ConnectionState::Ready(snapshot) = machine.view().connection else {
+            panic!("expected confirmed A3062 state");
+        };
+        assert_eq!(snapshot.model, ModelDriver::A3062);
+        assert_eq!(snapshot.sound_mode_setting(), None);
+        let id = CommandId(1);
+        let rejected = machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::SetSoundMode(SoundModeSetting::NOISE_CANCELING),
+                submitted_at: now,
+            }),
+        );
+        assert!(matches!(
+            rejected,
+            Effect::Complete(completed, Err(CommandError::Model(ModelError::ReadOnly)))
+                if completed == id
+        ));
+        assert_eq!(machine.view().connection, ConnectionState::Ready(snapshot));
     }
 
     #[test]

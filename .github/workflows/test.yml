@@ -47,8 +47,8 @@ jobs:
           -p openscl4-models -p openscl4-session -p openscl4-transport-bluez
       - name: Generate HTML test coverage report
         run: cargo llvm-cov report --html
-      - name: Test the virtual A3954 CLI pilot
-        run: cargo test --locked -p openscq30-cli --test pilot_a3954
+      - name: Test the virtual CLI pilots
+        run: cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062
       - name: Package the Linux A3954 pilot CLI
         run: |
           mkdir -p "$RUNNER_TEMP/openscl4-pilot"

@@ -25,6 +25,16 @@ The command prints the confirmed model, firmware, battery levels and sound mode 
 Pass `--cycle-mode` after `pilot` to switch between normal and noise canceling modes, then restore the original mode and position.
 The JSON includes the separately confirmed `changed` and `restored` results.
 
+To read the virtual Space One Pro, run:
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3062
+```
+
+The A3062 pilot reports one device battery and firmware. The session can identify
+it from the state response if the separate identity probe is unavailable. A3062
+currently supports reading only.
+
 On Windows and Linux, select a connected Liberty 4 Pro by its name in Bluetooth settings to run the same pilot over RFCOMM. Linux uses BlueZ on the system D-Bus.
 
 ```sh

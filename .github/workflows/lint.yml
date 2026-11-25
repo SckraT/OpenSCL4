@@ -35,8 +35,8 @@ jobs:
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
           -p openscl4-models -p openscl4-session -p openscl4-transport-bluez
           -- -D warnings
-      - name: Lint the A3954 CLI pilot
-        run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 -- -D warnings
+      - name: Lint the CLI pilots
+        run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 --test pilot_a3062 -- -D warnings
 
   documentation:
     runs-on: ubuntu-24.04

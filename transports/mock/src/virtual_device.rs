@@ -1,14 +1,16 @@
 use std::sync::{Arc, Mutex};
 
+use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite};
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
-use openscl4_transport::{TransportLink, TransportProvider};
+use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
 
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
-const STATE_REPLY: &[u8; 175] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
+const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
+const A3062_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3062-pilot-state.bin");
 const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
@@ -24,8 +26,27 @@ impl VirtualSoundcoreDevice {
     /// Creates a virtual device that retains its settings across links.
     pub fn with_shared_state() -> SharedVirtualSoundcoreDevice {
         SharedVirtualSoundcoreDevice {
-            state: initial_state(),
+            state: initial_state(ModelDriver::A3954),
         }
+    }
+}
+
+/// A read-only virtual Space One Pro that answers the common state probe.
+pub struct VirtualA3062;
+
+#[async_trait]
+impl TransportProvider for VirtualA3062 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let model = ModelDriver::A3062;
+        Ok(open_link(Some(Responder::with_state(
+            model,
+            false,
+            initial_state(model),
+        )))
+        .0)
     }
 }
 
@@ -37,11 +58,16 @@ pub struct SharedVirtualSoundcoreDevice {
 impl SharedVirtualSoundcoreDevice {
     /// Opens a link with fault injection and no sound-mode ACK.
     pub fn connect_with_fault_injection(&self) -> (Box<dyn TransportLink>, MockDisconnect) {
-        open_link(Some(Responder::with_state(false, Arc::clone(&self.state))))
+        open_link(Some(Responder::with_state(
+            ModelDriver::A3954,
+            false,
+            Arc::clone(&self.state),
+        )))
     }
 }
 
 pub struct Responder {
+    model: ModelDriver,
     decoder: FrameDecoder,
     state: Arc<Mutex<Vec<u8>>>,
     acknowledge_sound_mode: bool,
@@ -49,11 +75,17 @@ pub struct Responder {
 
 impl Responder {
     pub fn new(acknowledge_sound_mode: bool) -> Self {
-        Self::with_state(acknowledge_sound_mode, initial_state())
+        let model = ModelDriver::A3954;
+        Self::with_state(model, acknowledge_sound_mode, initial_state(model))
     }
 
-    fn with_state(acknowledge_sound_mode: bool, state: Arc<Mutex<Vec<u8>>>) -> Self {
+    fn with_state(
+        model: ModelDriver,
+        acknowledge_sound_mode: bool,
+        state: Arc<Mutex<Vec<u8>>>,
+    ) -> Self {
         Self {
+            model,
             decoder: FrameDecoder::default(),
             state,
             acknowledge_sound_mode,
@@ -73,18 +105,25 @@ impl Responder {
                 continue;
             }
             if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
-                replies.extend_from_slice(IDENTITY_REPLY);
-            } else if frame.command == ModelDriver::A3954.state_command() && frame.body.is_empty() {
+                if self.model == ModelDriver::A3954 {
+                    replies.extend_from_slice(IDENTITY_REPLY);
+                }
+            } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
                 if let Ok(state) = encode_frame(Direction::Inbound, frame.command, &state) {
                     replies.extend_from_slice(&state);
                 }
-            } else if frame.command == DUAL_CONNECTIONS_COMMAND && frame.body.is_empty() {
+            } else if self.model == ModelDriver::A3954
+                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && frame.body.is_empty()
+            {
                 // The fixture has no stored peers. Reply with one empty list segment.
                 if let Ok(peers) = encode_frame(Direction::Inbound, frame.command, &[1, 1]) {
                     replies.extend_from_slice(&peers);
                 }
-            } else if frame.command == SOUND_MODE_COMMAND {
+            } else if self.model.capabilities().sound_mode_write
+                && frame.command == SOUND_MODE_COMMAND
+            {
                 let mut state = self.state.lock().expect("virtual state lock");
                 let applied = SoundModeWrite::decode(&frame.body)
                     .and_then(|write| write.apply_to_state(&mut state));
@@ -97,14 +136,18 @@ impl Responder {
     }
 }
 
-fn initial_state() -> Arc<Mutex<Vec<u8>>> {
+fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
+    let bytes = match model {
+        ModelDriver::A3062 => A3062_STATE_REPLY,
+        ModelDriver::A3954 => A3954_STATE_REPLY,
+    };
     let mut decoder = FrameDecoder::default();
-    decoder.push(STATE_REPLY);
+    decoder.push(bytes);
     let state = decoder
         .next_frame()
-        .expect("valid A3954 state fixture")
-        .expect("complete A3954 state fixture");
-    assert_eq!(state.command, ModelDriver::A3954.state_command());
+        .expect("valid virtual state fixture")
+        .expect("complete virtual state fixture");
+    assert_eq!(state.command, model.state_command());
     assert_eq!(state.direction, Direction::Inbound);
     Arc::new(Mutex::new(state.body.to_vec()))
 }

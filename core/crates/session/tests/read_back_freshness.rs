@@ -42,7 +42,7 @@ mod tests {
                 result,
                 Err(CommandError::ModeMismatch {
                     requested,
-                    observed: original.sound_mode_setting(),
+                    observed: original.sound_mode_setting().expect("A3954 scale position"),
                 }),
                 "stale frame split at {split_at}"
             );
