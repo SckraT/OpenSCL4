@@ -59,3 +59,9 @@ offsets 16 and 38. The frame checksum was recalculated. The resulting frame
 SHA-256 is `6025c240c672fb296e50b5e84d8bc18f14aa1dcf6809f030bbd6bb447ebad037`.
 The virtual transport supplies a synthetic identity response with the A3954
 model prefix.
+
+The A3954 pilot's `06 81` writes follow the five-byte bodies measured in
+`core/data/a3954-sound-modes.json` at the same revision
+(SHA-256 `8d05bb9c8e909776e2a595539a344a5d7cd9b39ddaa0739217224d0f11fbd914`).
+The measured normal command uses position 6 (`02 06 00 01 FF`), while the
+fixture's noise-canceling setting uses position 11 (`00 0B 00 01 FF`).

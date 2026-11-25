@@ -213,7 +213,8 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
         )
         .subcommand(
             Command::new("pilot")
-                .about("Read the state of a virtual Soundcore Liberty 4 Pro through the new session"),
+                .about("Read the state of a virtual Soundcore Liberty 4 Pro through the new session")
+                .arg(arg!(--"cycle-mode" "Switch and restore the sound mode with read-back confirmation")),
         )
         .subcommand(
             Command::new("completions")
@@ -232,7 +233,7 @@ pub async fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
         ("device", matches) => device::handle(matches).await?,
         ("completions", matches) => completions::handle(matches)?,
         ("list-models", matches) => list_models::handle(matches)?,
-        ("pilot", _) => pilot::handle().await?,
+        ("pilot", options) => pilot::handle(options.get_flag("cycle-mode")).await?,
         _ => (),
     }
     Ok(())
