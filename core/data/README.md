@@ -102,9 +102,30 @@ The fixtures replace the already masked serial at body offsets 7–22 with the
 synthetic A3062 serial and recalculate the checksum. Concatenated in the order
 shown above, their SHA-256 is
 `63bf74ff20775569dbd8bc827fdf477c3639a60f7c457adb338b4ccb8b53e205`.
-The virtual device answers a state probe with the corresponding captured
-response after accepting the matching `06 81` body from the three A3062
-sound-mode entries in [conformance.json](conformance.json).
+When the virtual device accepts a matching `06 81` body, it copies the mode and
+its controls from the corresponding capture into the current state. State reads
+keep the device's current EQ curve and other settings.
+[Sound-mode commands](conformance.json)
+
+## A3062 equalizer write and read-back
+
+These frames come from the Windows RFCOMM capture on A3062 firmware 04.39 in
+`core/data/a3062-eq-custom.json` at the SoundcoreNext revision above. The source
+JSON SHA-256 is `0b771d93b50d0a933f24c553bc7ed708128dd7c08ad1cc660d76d7d0386eacc3`.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-eq-custom.json)
+
+| Fixture                                    | Source field                                | SHA-256                                                            |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
+| [a3062-eq-write.bin](a3062-eq-write.bin)   | `frame_hex`                                 | `838f3fea1ce46e7912266210f3a1df27aa6144e5e2d24ffe8ede895fdf0ff93d` |
+| [a3062-eq-before.bin](a3062-eq-before.bin) | `before_frame_hex` and `restored_frame_hex` | `2b14e731828a86feb817389e911ca12298746257a3dce250877f44205abda775` |
+| [a3062-eq-custom.bin](a3062-eq-custom.bin) | `custom_frame_hex`                          | `132a798f9ae46431fc0a2ff86748ddd5bdf8a63f2fe674f7712cd603f168f97c` |
+
+The two `01 01` fixtures substitute a synthetic serial at body offsets 7–22
+and recalculate the checksum. The before and restored frames have identical
+bytes. The outbound `03 87` frame contains EQ and HearID settings.
+
+The session replay compares the custom write to the captured outbound frame
+and confirms both curves from the captured state replies.
 
 ## A3949 pilot state
 

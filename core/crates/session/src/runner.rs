@@ -3,7 +3,7 @@ use std::{
     future::Future,
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicU64, Ordering},
     },
 };
@@ -19,9 +19,9 @@ use tokio::{
 };
 
 use crate::{
-    CommandError, CommandId, CommandResult, ConnectionState, DiagnosticExportError, DispatchError,
-    EqualizerSetting, IoStage, ReconnectPolicy, SessionCommand, SessionError, SessionEvent,
-    SessionView,
+    CommandError, CommandId, CommandResult, ConnectionState, DeviceState, DiagnosticExportError,
+    DispatchError, EqualizerSetting, IoStage, ReconnectPolicy, SessionCommand, SessionError,
+    SessionEvent, SessionView,
     diagnostics::{Capture, CaptureDecoder},
     machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
@@ -39,15 +39,27 @@ struct Dispatch {
     reply: PendingReply,
 }
 
+enum ReceivedInput {
+    Dispatch(Dispatch),
+    Machine(Input),
+}
+
+#[derive(Clone, Copy)]
+struct LiveEq {
+    generation: u64,
+    after_command: CommandId,
+    setting: EqualizerSetting,
+}
+
 /// A shared handle for observing, controlling and closing one session.
 pub struct SessionHandle {
     view: watch::Receiver<Arc<SessionView>>,
     events: broadcast::Receiver<SessionEvent>,
     close_requested: watch::Sender<bool>,
     commands: mpsc::Sender<Dispatch>,
-    live_eq: watch::Sender<Option<(u64, EqualizerSetting)>>,
+    live_eq: watch::Sender<Option<LiveEq>>,
     slots: Arc<Semaphore>,
-    next_id: Arc<AtomicU64>,
+    last_command: Arc<Mutex<CommandId>>,
     capture: Capture,
     started: Instant,
 }
@@ -61,7 +73,7 @@ impl Clone for SessionHandle {
             commands: self.commands.clone(),
             live_eq: self.live_eq.clone(),
             slots: Arc::clone(&self.slots),
-            next_id: Arc::clone(&self.next_id),
+            last_command: Arc::clone(&self.last_command),
             capture: self.capture.clone(),
             started: self.started,
         }
@@ -109,11 +121,14 @@ impl SessionHandle {
         }
     }
 
-    /// The generation of the confirmed connection, or why dispatching stopped.
-    fn current_generation(&self) -> Result<u64, DispatchError> {
+    /// Reads the ready device and its generation in one snapshot.
+    fn ready_device(&self) -> Result<(u64, DeviceState), DispatchError> {
+        if *self.close_requested.borrow() {
+            return Err(DispatchError::Closed);
+        }
         let view = self.view.borrow();
         match view.connection {
-            ConnectionState::Ready(_) => Ok(view.generation),
+            ConnectionState::Ready(device) => Ok((view.generation, device)),
             state if state.is_terminal() => Err(DispatchError::Closed),
             _ => Err(DispatchError::NotReady),
         }
@@ -121,15 +136,13 @@ impl SessionHandle {
 
     /// Enqueues a discrete command and returns its independent completion handle.
     pub fn dispatch(&self, command: SessionCommand) -> Result<PendingCommand, DispatchError> {
-        if *self.close_requested.borrow() {
-            return Err(DispatchError::Closed);
-        }
-        let generation = self.current_generation()?;
-
+        // Discrete admission and live publication share an order across cloned handles.
+        let mut last_command = self.last_command.lock().expect("session submission order");
+        let (generation, _) = self.ready_device()?;
         let slot = Arc::clone(&self.slots)
             .try_acquire_owned()
             .map_err(|_| DispatchError::QueueFull)?;
-        let id = CommandId(self.next_id.fetch_add(1, Ordering::Relaxed));
+        let id = CommandId(last_command.0 + 1);
         let (result, outcome) = oneshot::channel();
         self.commands
             .try_send(Dispatch {
@@ -148,6 +161,7 @@ impl SessionHandle {
                 mpsc::error::TrySendError::Full(_) => DispatchError::QueueFull,
                 mpsc::error::TrySendError::Closed(_) => DispatchError::Closed,
             })?;
+        *last_command = id;
 
         Ok(PendingCommand {
             id,
@@ -159,15 +173,24 @@ impl SessionHandle {
 
     /// Publishes the latest live-equalizer curve for the session to write.
     ///
-    /// Rapid values coalesce into one pending curve: the queue never fills, the
-    /// write holds a short interval, and the final position is always applied.
+    /// Rapid values coalesce into one pending curve. The latest position is
+    /// scheduled after the write interval and any earlier accepted presets.
     /// A live value has no completion handle; the confirmed state is its outcome.
+    /// Model support and gain bounds are checked before publication.
     pub fn set_eq_live(&self, setting: EqualizerSetting) -> Result<(), DispatchError> {
-        if *self.close_requested.borrow() {
-            return Err(DispatchError::Closed);
+        let last_command = self.last_command.lock().expect("session submission order");
+        let (generation, device) = self.ready_device()?;
+        if !device.model.capabilities().equalizer_write {
+            return Err(DispatchError::UnsupportedEqualizer);
         }
-        let generation = self.current_generation()?;
-        self.live_eq.send_replace(Some((generation, setting)));
+        if !setting.is_writable() {
+            return Err(DispatchError::InvalidEqualizer);
+        }
+        self.live_eq.send_replace(Some(LiveEq {
+            generation,
+            after_command: *last_command,
+            setting,
+        }));
         Ok(())
     }
 
@@ -217,7 +240,7 @@ pub struct SessionRunner {
     events: broadcast::Sender<SessionEvent>,
     close_requested: watch::Receiver<bool>,
     commands: mpsc::Receiver<Dispatch>,
-    live_eq: watch::Receiver<Option<(u64, EqualizerSetting)>>,
+    live_eq: watch::Receiver<Option<LiveEq>>,
     replies: HashMap<CommandId, PendingReply>,
 }
 
@@ -260,7 +283,7 @@ impl SessionRunner {
             commands,
             live_eq,
             slots: Arc::new(Semaphore::new(COMMAND_CAPACITY)),
-            next_id: Arc::new(AtomicU64::new(1)),
+            last_command: Arc::new(Mutex::new(CommandId(0))),
             capture,
             started,
         }
@@ -297,10 +320,13 @@ impl SessionRunner {
                         Err(error) => terminal_input(error),
                     }
                 }
-                Effect::Release { deadline } => {
+                Effect::Release {
+                    deadline,
+                    interrupted_preset,
+                } => {
                     last_disconnected = generation;
                     self.publish();
-                    self.finish_disconnected_commands();
+                    self.finish_disconnected_commands(interrupted_preset);
                     match active.take() {
                         Some(link) => self.release(link, started + deadline).await,
                         None => Input::Released,
@@ -356,13 +382,25 @@ impl SessionRunner {
                         &mut link.received,
                         deadline.map(|deadline| started + deadline),
                     );
-                    tokio::select! {
+                    let received = tokio::select! {
                         biased;
-                        _ = self.close_requested.wait_for(|requested| *requested) => Input::Close,
+                        _ = self.close_requested.wait_for(|requested| *requested) => ReceivedInput::Machine(Input::Close),
+                        dispatch = self.commands.recv() => dispatch
+                            .map_or(ReceivedInput::Machine(Input::Close), ReceivedInput::Dispatch),
                         live_eq = next_live_eq(&mut self.live_eq) => {
                             match live_eq {
-                                Some((generation, setting)) if generation == self.machine.view().generation => {
-                                    Input::EqLive(setting)
+                                Some(update) if update.generation == generation => {
+                                    // A command can have arrived after its branch was polled.
+                                    match self.commands.try_recv() {
+                                        Ok(dispatch) => {
+                                            self.live_eq.mark_changed();
+                                            ReceivedInput::Dispatch(dispatch)
+                                        }
+                                        Err(_) => ReceivedInput::Machine(Input::EqLive {
+                                            after_command: update.after_command,
+                                            setting: update.setting,
+                                        }),
+                                    }
                                 }
                                 // A value stamped by a previous connection is not a
                                 // new user action and is not replayed on the new one.
@@ -372,20 +410,34 @@ impl SessionRunner {
                                 }
                             }
                         }
-                        dispatch = self.commands.recv() => {
-                            if let Some(dispatch) = dispatch {
-                                if dispatch.generation != generation {
-                                    Self::complete(&self.events, dispatch.command.id, dispatch.reply, Err(CommandError::Disconnected));
-                                    effect = Effect::Receive(deadline);
-                                    continue;
-                                }
-                                self.replies.insert(dispatch.command.id, dispatch.reply);
-                                Input::Command(dispatch.command)
+                        result = receiving => {
+                            let input = result.unwrap_or_else(terminal_input);
+                            if matches!(input, Input::TimerElapsed) {
+                                self.commands.try_recv().map_or(
+                                    ReceivedInput::Machine(input),
+                                    ReceivedInput::Dispatch,
+                                )
                             } else {
-                                Input::Close
+                                ReceivedInput::Machine(input)
                             }
                         }
-                        result = receiving => result.unwrap_or_else(terminal_input),
+                    };
+                    match received {
+                        ReceivedInput::Dispatch(dispatch) if dispatch.generation == generation => {
+                            self.replies.insert(dispatch.command.id, dispatch.reply);
+                            Input::Command(dispatch.command)
+                        }
+                        ReceivedInput::Dispatch(dispatch) => {
+                            Self::complete(
+                                &self.events,
+                                dispatch.command.id,
+                                dispatch.reply,
+                                Err(CommandError::Disconnected),
+                            );
+                            effect = Effect::Receive(deadline);
+                            continue;
+                        }
+                        ReceivedInput::Machine(input) => input,
                     }
                 }
                 Effect::Complete(id, result) => {
@@ -447,9 +499,16 @@ impl SessionRunner {
         }
     }
 
-    fn finish_disconnected_commands(&mut self) {
+    fn finish_disconnected_commands(
+        &mut self,
+        interrupted_preset: Option<(CommandId, CommandError)>,
+    ) {
         for (id, reply) in std::mem::take(&mut self.replies) {
-            Self::complete(&self.events, id, reply, Err(CommandError::Disconnected));
+            let error = match interrupted_preset {
+                Some((preset_id, error)) if id == preset_id => error,
+                _ => CommandError::Disconnected,
+            };
+            Self::complete(&self.events, id, reply, Err(error));
         }
         while let Ok(dispatch) = self.commands.try_recv() {
             Self::complete(
@@ -599,9 +658,7 @@ async fn read_link(
 /// Once the handle is gone no further values can arrive, and this future
 /// never completes, so the loop keeps waiting on frames and commands instead
 /// of spinning on the closed channel.
-async fn next_live_eq(
-    live_eq: &mut watch::Receiver<Option<(u64, EqualizerSetting)>>,
-) -> Option<(u64, EqualizerSetting)> {
+async fn next_live_eq(live_eq: &mut watch::Receiver<Option<LiveEq>>) -> Option<LiveEq> {
     if live_eq.changed().await.is_err() {
         std::future::pending::<()>().await;
     }

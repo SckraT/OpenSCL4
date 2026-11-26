@@ -8,7 +8,7 @@ mod a3062;
 mod a3949;
 pub mod registry;
 
-pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET};
+pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -365,9 +365,16 @@ pub struct EqualizerSetting {
 }
 
 impl EqualizerSetting {
+    /// Whether every band gain can be sent without changing its value.
+    pub fn is_writable(self) -> bool {
+        self.volume_adjustments
+            .iter()
+            .all(|gain| (EQUALIZER_MIN_GAIN..=EQUALIZER_MAX_GAIN).contains(gain))
+    }
+
     /// Encodes one band gain in the measured wire scale.
     pub(crate) fn band_byte(gain: i16) -> u8 {
-        (gain.clamp(EQUALIZER_MIN_GAIN, EQUALIZER_MAX_GAIN) - EQUALIZER_MIN_GAIN) as u8
+        (gain - EQUALIZER_MIN_GAIN) as u8
     }
 
     /// Decodes one band gain from the measured wire scale.

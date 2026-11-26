@@ -5,6 +5,8 @@ use crate::{
 
 const SOUND_MODE: usize = 69;
 const SOUND_MODE_CONTROLS: std::ops::Range<usize> = 70..75;
+/// Body offsets of the mode and its controls in the measured A3062 state layout.
+pub const A3062_SOUND_MODE_FIELDS: std::ops::Range<usize> = SOUND_MODE..SOUND_MODE_CONTROLS.end;
 /// Body offsets of the preset id in the measured A3062 state layout.
 pub const A3062_EQUALIZER_PRESET: std::ops::Range<usize> = 23..25;
 /// Body offsets of the band gains in the measured A3062 state layout.
@@ -88,6 +90,9 @@ pub fn equalizer_write_body(
     setting: EqualizerSetting,
     state: &[u8],
 ) -> Result<Vec<u8>, ModelError> {
+    if !setting.is_writable() {
+        return Err(ModelError::InvalidEqualizerWrite);
+    }
     if state.len() < HEAR_ID_GENRE.end {
         return Err(ModelError::IncompleteState);
     }
@@ -185,6 +190,24 @@ mod tests {
             equalizer_write_body(setting, short),
             Err(ModelError::IncompleteState)
         );
+    }
+
+    #[test]
+    fn equalizer_write_accepts_only_representable_gains() {
+        let mut setting = EqualizerSetting {
+            preset_id: 0xfefe,
+            volume_adjustments: [-120, 134, 0, 0, 0, 0, 0, 0, 0, 0],
+        };
+        let state = state_body(STATE);
+        let body = equalizer_write_body(setting, state).expect("both bounds are representable");
+        assert_eq!(body[4..6], [0, 254]);
+        for invalid in [i16::MIN, -121, 135, i16::MAX] {
+            setting.volume_adjustments[9] = invalid;
+            assert_eq!(
+                equalizer_write_body(setting, state),
+                Err(ModelError::InvalidEqualizerWrite)
+            );
+        }
     }
 
     #[test]

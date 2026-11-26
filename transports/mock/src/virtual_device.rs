@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, EQUALIZER_COMMAND, IDENTITY_COMMAND,
-    ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite,
+    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS, EQUALIZER_COMMAND,
+    IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -43,7 +43,7 @@ impl VirtualSoundcoreDevice {
 pub struct VirtualA3062;
 
 impl VirtualA3062 {
-    /// Answers and acknowledges equalizer writes but never applies them.
+    /// Continues to answer state reads while ignoring equalizer writes.
     pub fn without_equalizer_write() -> impl TransportProvider {
         WithoutEqualizerWrite
     }
@@ -229,7 +229,8 @@ impl Responder {
                 let [mode @ 0..=2, 0x51, 1, 1, 0, 5] = body else {
                     return false;
                 };
-                *state = fixture_body(self.model, A3062_MODE_REPLIES[usize::from(*mode)]);
+                let captured = fixture_body(self.model, A3062_MODE_REPLIES[usize::from(*mode)]);
+                state[A3062_SOUND_MODE_FIELDS].copy_from_slice(&captured[A3062_SOUND_MODE_FIELDS]);
                 true
             }
             ModelDriver::A3949 => false,
