@@ -14,6 +14,7 @@ members = [
     "core/crates/protocol",
     "core/crates/models",
     "core/crates/session",
+    "core/crates/profiles",
     "transports/mock",
     "transports/windows",
     "transports/bluez",
@@ -75,6 +76,7 @@ openscl4-protocol = { path = "core/crates/protocol" }
 openscl4-transport = { path = "core/crates/transport" }
 openscl4-models = { path = "core/crates/models" }
 openscl4-session = { path = "core/crates/session" }
+openscl4-profiles = { path = "core/crates/profiles" }
 openscl4-transport-mock = { path = "transports/mock" }
 openscl4-transport-windows = { path = "transports/windows" }
 openscl4-transport-bluez = { path = "transports/bluez" }
