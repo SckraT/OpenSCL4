@@ -5508,9 +5508,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "openscl4-diagnostics"
+version = "2.14.0"
+dependencies = [
+ "bytes",
+ "openscl4-models",
+ "openscl4-protocol",
+]
+
+[[package]]
 name = "openscl4-models"
 version = "2.14.0"
 dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "openscl4-profiles"
+version = "2.14.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 
