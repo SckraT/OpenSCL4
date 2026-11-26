@@ -19,6 +19,7 @@ openscq30-lib-macros = { workspace = true }
 openscq30-lib-has = { workspace = true }
 openscq30-i18n = { workspace = true }
 openscq30-i18n-macros = { workspace = true }
+openscl4-profiles = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
 futures = { workspace = true }
 uuid = { workspace = true }
@@ -31,7 +32,8 @@ nom-language = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
-rusqlite = { workspace = true }
+rusqlite = { workspace = true, features = ["backup"] }
+tempfile = { workspace = true }
 i18n-embed = { workspace = true, features = [
     "fluent-system",
     "desktop-requester",
