@@ -11,12 +11,23 @@ use crate::{
     CommandError, CommandId, CommandOutcome, CommandResult, IoStage, SessionCommand, SessionError,
 };
 
-pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const SEND_TIMEOUT: Duration = Duration::from_secs(2);
 const REPLY_TIMEOUT: Duration = Duration::from_millis(1500);
 const READ_BACK_INTERVAL: Duration = Duration::from_millis(100);
 const QUEUE_TIMEOUT: Duration = Duration::from_secs(5);
 pub const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
+const RECOVERY_WINDOW: Duration = Duration::from_secs(30);
+const RETRY_INTERVAL: Duration = Duration::from_millis(250);
+
+/// Chooses which layer manages recovery after losing a confirmed connection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReconnectPolicy {
+    /// End the session with the transport failure so the caller can reconnect.
+    External,
+    /// Retry within a bounded window and synchronize state before accepting writes.
+    Internal,
+}
 
 /// Current stage of the session.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,6 +42,13 @@ pub enum ConnectionState {
     SyncingState(ModelDriver),
     /// A validated state response has been parsed for the current link.
     Ready(DeviceState),
+    /// Recovery is in progress and the most recent confirmed snapshot is still available.
+    Reconnecting {
+        /// Snapshot from the last ready connection.
+        last_confirmed: DeviceState,
+        /// Why recovery started.
+        reason: SessionError,
+    },
     /// The link has been released.
     Closed,
     /// The session ended with a typed failure.
@@ -48,6 +66,8 @@ impl ConnectionState {
 pub struct SessionView {
     /// Increases when a new state is published.
     pub revision: u64,
+    /// Identifies the current connection attempt, starting with generation one.
+    pub generation: u64,
     /// The current connection or confirmed device state.
     pub connection: ConnectionState,
 }
@@ -66,6 +86,8 @@ impl QueuedCommand {
 
 pub enum Input {
     Opened,
+    Released,
+    RetryElapsed,
     RequestSent {
         receive_cutoff: u64,
     },
@@ -85,6 +107,13 @@ pub enum Input {
 }
 
 pub enum Effect {
+    Open {
+        deadline: Duration,
+    },
+    Release {
+        deadline: Duration,
+    },
+    RetryAt(Duration),
     Request {
         command: [u8; 2],
         body: Vec<u8>,
@@ -132,9 +161,18 @@ struct ModeWrite {
     may_have_written: bool,
 }
 
+#[derive(Clone, Copy)]
+struct Recovery {
+    deadline: Duration,
+    last_confirmed: DeviceState,
+    reason: SessionError,
+}
+
 /// The state transition logic has no runtime or transport access.
 pub struct SessionMachine {
     view: SessionView,
+    reconnect_policy: ReconnectPolicy,
+    recovery: Option<Recovery>,
     reply_deadline: Option<Duration>,
     receive_cutoff: u64,
     mode_write: Option<ModeWrite>,
@@ -142,12 +180,15 @@ pub struct SessionMachine {
 }
 
 impl SessionMachine {
-    pub fn new() -> Self {
+    pub fn new(reconnect_policy: ReconnectPolicy) -> Self {
         Self {
             view: SessionView {
                 revision: 0,
+                generation: 0,
                 connection: ConnectionState::Connecting,
             },
+            reconnect_policy,
+            recovery: None,
             reply_deadline: None,
             receive_cutoff: 0,
             mode_write: None,
@@ -156,15 +197,48 @@ impl SessionMachine {
     }
 
     pub fn view(&self) -> SessionView {
-        self.view
+        match self.recovery {
+            Some(recovery) => SessionView {
+                connection: ConnectionState::Reconnecting {
+                    last_confirmed: recovery.last_confirmed,
+                    reason: recovery.reason,
+                },
+                ..self.view
+            },
+            None => self.view,
+        }
+    }
+
+    pub fn open(&mut self, now: Duration) -> Effect {
+        self.view.generation += 1;
+        self.transition(ConnectionState::Connecting);
+        self.limit_to_recovery(Effect::Open {
+            deadline: now + CONNECT_TIMEOUT,
+        })
+    }
+
+    pub fn input_from(&mut self, generation: u64, now: Duration, input: Input) -> Option<Effect> {
+        if generation != self.view.generation {
+            return None;
+        }
+        Some(self.input(now, input))
     }
 
     pub fn input(&mut self, now: Duration, input: Input) -> Effect {
-        match input {
+        if let Some(recovery) = self.recovery
+            && now >= recovery.deadline
+            && !matches!(input, Input::Close | Input::CleanupFailed(_))
+        {
+            return self.stop_with(recovery.reason);
+        }
+
+        let effect = match input {
             Input::Opened => {
                 self.transition(ConnectionState::ProbingIdentity);
                 Effect::read(now, IDENTITY_COMMAND)
             }
+            Input::Released => Effect::RetryAt(now + RETRY_INTERVAL),
+            Input::RetryElapsed => self.open(now),
             Input::RequestSent { receive_cutoff } => {
                 self.mark_write_attempt();
                 self.receive_cutoff = receive_cutoff;
@@ -189,7 +263,7 @@ impl SessionMachine {
                 if error == SessionError::Closed {
                     self.input(now, Input::Close)
                 } else {
-                    self.fail(error)
+                    self.fail(now, error)
                 }
             }
             Input::TimerElapsed => self.on_timer(now),
@@ -199,6 +273,7 @@ impl SessionMachine {
             }
             Input::Frame { frame, first_read } => self.on_frame(now, frame, first_read),
             Input::Close => {
+                self.recovery = None;
                 self.transition(ConnectionState::Closed);
                 Effect::Stop
             }
@@ -207,8 +282,12 @@ impl SessionMachine {
             {
                 Effect::Stop
             }
-            Input::Failed(error) | Input::CleanupFailed(error) => self.fail(error),
-        }
+            Input::CleanupFailed(error) => {
+                self.stop_with(self.recovery.map_or(error, |recovery| recovery.reason))
+            }
+            Input::Failed(error) => self.fail(now, error),
+        };
+        self.limit_to_recovery(effect)
     }
 
     pub fn next_effect(&mut self, now: Duration) -> Effect {
@@ -270,8 +349,8 @@ impl SessionMachine {
             ConnectionState::ProbingIdentity => {
                 self.probe_state(now, SessionError::Timeout(IoStage::Receive))
             }
-            ConnectionState::ProbingState(identity_error) => self.fail(identity_error),
-            _ => self.fail(SessionError::Timeout(IoStage::Receive)),
+            ConnectionState::ProbingState(identity_error) => self.fail(now, identity_error),
+            _ => self.fail(now, SessionError::Timeout(IoStage::Receive)),
         }
     }
 
@@ -320,7 +399,7 @@ impl SessionMachine {
             {
                 match registry::identify_state(&frame.body) {
                     Ok(model) => self.confirm_state(now, model, &frame.body),
-                    Err(_) => self.fail(identity_error),
+                    Err(_) => self.fail(now, identity_error),
                 }
             }
             ConnectionState::SyncingState(model) if frame.command == model.state_command() => {
@@ -338,17 +417,18 @@ impl SessionMachine {
     fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
         match model.decode_state(body) {
             Ok(state) => {
+                self.recovery = None;
                 self.transition(ConnectionState::Ready(state));
                 self.next_effect(now)
             }
-            Err(error) => self.fail(error.into()),
+            Err(error) => self.fail(now, error.into()),
         }
     }
 
     fn send_write(&mut self, now: Duration, write: ModeWrite, body: &[u8]) -> Effect {
         let state = match write.model.decode_state(body) {
             Ok(state) => state,
-            Err(error) => return self.fail(error.into()),
+            Err(error) => return self.fail(now, error.into()),
         };
         if self.view.connection == ConnectionState::Ready(state) {
             self.reply_deadline = None;
@@ -400,7 +480,7 @@ impl SessionMachine {
     ) -> Effect {
         let state = match write.model.decode_state(body) {
             Ok(state) => state,
-            Err(error) => return self.fail(error.into()),
+            Err(error) => return self.fail(now, error.into()),
         };
         if write.command.verify_mode(state).is_ok() {
             return self.finish_write(write, state);
@@ -460,9 +540,61 @@ impl SessionMachine {
         }
     }
 
-    fn fail(&mut self, error: SessionError) -> Effect {
+    fn fail(&mut self, now: Duration, error: SessionError) -> Effect {
+        if self.reconnect_policy == ReconnectPolicy::Internal
+            && self.recovery.is_none()
+            && let ConnectionState::Ready(last_confirmed) = self.view.connection
+            && matches!(
+                error,
+                SessionError::Transport {
+                    error: TransportError::Disconnected | TransportError::Closed,
+                    ..
+                }
+            )
+        {
+            self.recovery = Some(Recovery {
+                deadline: now + RECOVERY_WINDOW,
+                last_confirmed,
+                reason: error,
+            });
+        }
+
+        if self.recovery.is_some() && retryable(error) {
+            self.mode_write = None;
+            self.queue.clear();
+            self.receive_cutoff = 0;
+            self.transition(ConnectionState::Connecting);
+            return Effect::Release {
+                deadline: now + CLOSE_TIMEOUT,
+            };
+        }
+
+        self.stop_with(error)
+    }
+
+    fn stop_with(&mut self, error: SessionError) -> Effect {
+        self.recovery = None;
         self.transition(ConnectionState::Failed(error));
         Effect::Stop
+    }
+
+    fn limit_to_recovery(&self, mut effect: Effect) -> Effect {
+        if let Some(recovery) = self.recovery {
+            match &mut effect {
+                Effect::Open { deadline }
+                | Effect::Release { deadline }
+                | Effect::RetryAt(deadline)
+                | Effect::Request { deadline, .. } => {
+                    *deadline = (*deadline).min(recovery.deadline);
+                }
+                Effect::Receive(deadline) => {
+                    *deadline =
+                        Some(deadline.map_or(recovery.deadline, |at| at.min(recovery.deadline)));
+                }
+                _ => {}
+            }
+        }
+        effect
     }
 
     fn transition(&mut self, connection: ConnectionState) {
@@ -470,6 +602,22 @@ impl SessionMachine {
         self.view.connection = connection;
         self.view.revision += 1;
     }
+}
+
+fn retryable(error: SessionError) -> bool {
+    matches!(
+        error,
+        SessionError::Timeout(_)
+            | SessionError::Transport {
+                error: TransportError::Disconnected
+                    | TransportError::Closed
+                    | TransportError::DeviceNotFound
+                    | TransportError::Unavailable
+                    | TransportError::Busy
+                    | TransportError::Io,
+                ..
+            }
+    )
 }
 
 #[cfg(test)]
@@ -489,8 +637,71 @@ mod tests {
     const A3949_STATE: &[u8] = include_bytes!("../../../data/a3949-pilot-state.bin");
 
     #[test]
+    fn frame_and_timer_from_the_prior_generation_are_ignored_during_sync() {
+        let mut machine = SessionMachine::new(ReconnectPolicy::Internal);
+        let now = Duration::ZERO;
+        let identity = b"04.2904.29A3954DEMO0000000";
+        let state = state_body(STATE);
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+
+        assert!(matches!(machine.open(now), Effect::Open { .. }));
+        let old = machine.view().generation;
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, identity));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state));
+        assert!(matches!(
+            machine.view().connection,
+            ConnectionState::Ready(_)
+        ));
+
+        let reason = SessionError::Transport {
+            stage: IoStage::Receive,
+            error: TransportError::Disconnected,
+        };
+        assert!(matches!(
+            machine.input(now, Input::Failed(reason)),
+            Effect::Release { .. }
+        ));
+        assert!(matches!(
+            machine.input(now, Input::Released),
+            Effect::RetryAt(_)
+        ));
+        let now = RETRY_INTERVAL;
+        assert!(matches!(
+            machine.input(now, Input::RetryElapsed),
+            Effect::Open { .. }
+        ));
+        let new = machine.view().generation;
+        assert!(new > old);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, identity));
+        machine.input(now, sent());
+
+        let reconnecting = machine.view();
+        assert!(
+            machine
+                .input_from(old, now, inbound(STATE_COMMAND, &state))
+                .is_none()
+        );
+        assert!(machine.input_from(old, now, Input::TimerElapsed).is_none());
+        assert_eq!(machine.view(), reconnecting);
+        assert!(
+            machine
+                .input_from(new, now, inbound(STATE_COMMAND, &state))
+                .is_some()
+        );
+        assert!(matches!(
+            machine.view().connection,
+            ConnectionState::Ready(_)
+        ));
+    }
+
+    #[test]
     fn keeps_the_deadline_from_send_success_across_unrelated_frames() {
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         let request = machine.input(Duration::ZERO, Input::Opened);
         assert!(
             matches!(request, Effect::Request { command: IDENTITY_COMMAND, body, deadline } if body.is_empty() && deadline == SEND_TIMEOUT)
@@ -542,7 +753,7 @@ mod tests {
         let refreshed = model
             .decode_state(&current)
             .expect("decode refreshed state");
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         machine.input(now, Input::Opened);
         machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         machine.input(
@@ -596,7 +807,7 @@ mod tests {
         let model = ModelDriver::A3954;
         let requested = SoundModeSetting::NORMAL;
         let id = CommandId(1);
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         machine.mode_write = Some(ModeWrite {
             id,
             command: SessionCommand::SetSoundMode(requested),
@@ -648,7 +859,7 @@ mod tests {
     #[test]
     fn a3062_write_preserves_fresh_controls_and_waits_for_observed_mode() {
         let now = Duration::ZERO;
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         let sent = || Input::RequestSent { receive_cutoff: 0 };
         machine.input(now, Input::Opened);
         machine.input(now, sent());
@@ -714,7 +925,7 @@ mod tests {
             .expect("valid state frame")
             .expect("complete state frame");
         let now = Duration::ZERO;
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         machine.input(now, Input::Opened);
         machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         let probe = machine.input(now, inbound(IDENTITY_COMMAND, &[]));
@@ -759,7 +970,7 @@ mod tests {
     #[test]
     fn a3949_state_probe_enables_reading_and_rejects_sound_mode_writes() {
         let now = Duration::ZERO;
-        let mut machine = SessionMachine::new();
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
         machine.input(now, Input::Opened);
         machine.input(now, Input::RequestSent { receive_cutoff: 0 });
         machine.input(now, inbound(IDENTITY_COMMAND, &[]));
@@ -804,7 +1015,7 @@ mod tests {
         let attempted = CommandId(1);
         let queued = CommandId(2);
         for send_started in [false, true] {
-            let mut machine = SessionMachine::new();
+            let mut machine = SessionMachine::new(ReconnectPolicy::External);
             machine.mode_write = Some(ModeWrite {
                 id: attempted,
                 command: SessionCommand::SetSoundMode(SoundModeSetting::NORMAL),
