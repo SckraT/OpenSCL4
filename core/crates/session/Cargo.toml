@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 bytes.workspace = true
+openscl4-diagnostics.workspace = true
 openscl4-models.workspace = true
 openscl4-protocol.workspace = true
 openscl4-transport.workspace = true
@@ -18,4 +19,5 @@ tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 [dev-dependencies]
 openscl4-transport-mock.workspace = true
 async-trait.workspace = true
+tempfile.workspace = true
 tokio = { workspace = true, features = ["test-util"] }

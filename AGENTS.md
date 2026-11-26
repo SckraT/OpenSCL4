@@ -4,6 +4,8 @@
 
 OpenSCL4 uses Compose in `android/` and Slint in `desktop/`, with shared device protocols and client rules in `lib/`. For architecture, checks and documentation generation, read `docs/development.md`; for packaging and platform release gates, read `docs/build-release.md`.
 
+For device control or profile migration work, confirm the target entry point before editing. [Migration boundaries](docs/development.md#device-control-during-the-migration)
+
 `gui/` is the legacy libcosmic client, not the current desktop release. See `docs/history/upstream.md` when changing inherited identities, attribution or historical assets.
 
 ## Coding standards

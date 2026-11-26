@@ -9,9 +9,19 @@ Start with the [README](../README.md) for product scope and platform status. Bui
 - `android/src/` is the UniFFI adapter; `android/app/` contains Kotlin wrappers, Compose UI, services, notifications and widgets. Setting values still cross the binding as JSON inside the native API records.
 - `desktop/src/controller.rs` reads device snapshots and writes settings; `desktop/src/app/` applies them to Slint models, and `desktop/ui/` defines the interface. The desktop client ships on Windows and Linux: text that names the system, its settings or where a device is paired has each platform's wording through `AppState.linux`, and the system's own settings pages open through `desktop/src/system_settings.rs`.
 
-The device is the source of truth. Read settings through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write through `set_setting_values`. A successful preset activation and a preset matching current settings are different concepts. The successful-activation mark lasts only for the current connection; saved presets persist. See the [glossary](../GLOSSARY.md) and [accepted architecture decisions](adr/0001-compose-slint-shared-behavior.md).
+The device is the source of truth. In the release clients, read settings through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write through `set_setting_values`. A successful preset activation and a preset matching current settings are different concepts. The successful-activation mark lasts for the current connection. Saved presets persist. [Glossary](../GLOSSARY.md) · [Shared behavior decision](adr/0001-compose-slint-shared-behavior.md)
 
 Keep native types and Kotlin wrappers synchronized. Regenerate bindings through Gradle when the exported API changes. Shared examples in `lib/tests/fixtures/client_rules.json` check behavior on both sides of the Android boundary.
+
+## Device control during the migration
+
+Trace the issue to its client or pilot entry point before editing, and verify the result through that path.
+
+- **Release clients.** Desktop and Android still control devices through `OpenSCQ30Device` in `lib`. Follow the release path for changes intended to reach those clients.
+- **Modular pilot.** `openscq30 pilot` starts a `SessionHandle` through `SessionRunner` from the modular core. Follow that path for pilot and session changes.
+- **Profile migration.** `lib` exposes `migrate_legacy_profiles` in `lib/src/storage/profile_migration.rs` to import legacy SQLite data into `openscl4-profiles`. Verify compatibility through the migration API and its integration tests.
+
+Use the epic decisions to identify the intended migration stage and required evidence. [Migration roadmap](https://github.com/SckraT/OpenSCL4/issues/134) · [Session contract](https://github.com/SckraT/OpenSCL4/issues/137#issuecomment-7133425212) · [Model parity criteria](https://github.com/SckraT/OpenSCL4/issues/141#issuecomment-7134509776)
 
 The `openscq30` CLI remains useful for protocol work. Its default database is still in the legacy `openscq30` configuration directory; set `OPENSCQ30_DATABASE_PATH` to an isolated database when testing. It does not manage the current desktop client's data directory by default.
 
@@ -65,13 +75,15 @@ cargo fmt --all --check
 python3 -m unittest discover -s scripts/tests -v
 ```
 
+For modular core, transport, protocol fixture and CLI pilot changes, follow the core checks on Windows and Linux. For device writes and vendored skills, use the repository review rules. [Core and pilot checks](../.agents/skills/openscl4-checks/SKILL.md#2-full-core-and-pilot-gate) · [Review standards](agents/review-standards.md)
+
 Install the pre-commit hook once per clone with `bash scripts/git-hooks/install.sh` (or `just install-hooks`); it serves every worktree of the clone and leaves other hooks in place. Before each commit it checks only the staged files: rustfmt for Rust, ktlint for Kotlin, Prettier for the Markdown that `just format-check` covers, shellcheck for shell scripts, and the Python suite when its inputs change. A tool that is not installed is reported and skipped, and CI still runs the full gate. Skip the hook once with `git commit --no-verify`.
 
 On Windows use `python`; the release workflow runs the Rust library/desktop tests there and the library/desktop/Android host checks on Linux. The desktop single-instance test needs a D-Bus session bus on Linux: CI runs the tests under `dbus-run-session` and fails the test without one, while a local run without a bus skips it. Android JVM tests use `./gradlew testX86_64DebugUnitTest` from `android/` (or `gradlew.bat`); tests for the Gradle helpers in `android/buildSrc` use `./gradlew :buildSrc:test`. CI does not currently run Android instrumentation; those checks are manual. See [Android validation](android-interface.md#validation).
 
 To check Linux-only desktop code from Windows before CI, `just desktop::check-linux` (or `bash scripts/check-desktop-linux.sh`) runs the desktop clippy and tests on Ubuntu 24.04 in Docker, the tests under `dbus-run-session` as in CI. The toolchain, crates and build stay in the `openscl4-desktop-linux` Docker volume, so only the first run builds everything; `docker volume rm openscl4-desktop-linux` clears it.
 
-CI runs for pull requests and for pushes to `master`; a push to any other branch does not start it on its own. A branch is checked through its pull request, so its commits are not checked twice. A concurrency group covers one workflow, event and branch: a newer run cancels an older run of the same event, while push, pull request and manual runs of one branch do not cancel each other. The Rust, Windows and Android jobs are path-filtered, so a documentation-only change does not start them. For a branch without a pull request, or when automatic triggering is unavailable, run a check for an existing revision directly from the repository root: `gh workflow run lint.yml --repo SckraT/OpenSCL4 --ref <branch>`, `gh workflow run test.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Rust job, or `gh workflow run test-android.yml --repo SckraT/OpenSCL4 --ref <branch>` for the Android JVM job. Do not dispatch a workflow again for a revision whose push or pull request already started it.
+CI runs for pull requests and pushes to `master`. A concurrency group covers one workflow, event and branch. A newer run cancels older runs in the same group. Push, pull request and manual runs use separate groups. Rust, Windows and Android workflows use path filters. If a required workflow has no run for your commit, use the manual check steps. [CI dispatch](../.agents/skills/openscl4-checks/SKILL.md#6-ci-dispatch-when-local-checks-are-not-enough)
 
 `cargo test --workspace` and `just test` also include legacy CLI/GUI targets. They are broader than the current release-client checks and may need legacy GUI dependencies. Most `just` recipes require bash; the current release entry point is Python and does not require `just`.
 

@@ -1,0 +1,19 @@
+[package]
+name = "openscl4-diagnostics"
+edition = "2024"
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bytes.workspace = true
+hex.workspace = true
+openscl4-models.workspace = true
+openscl4-protocol.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+zip = { version = "9.1", default-features = false }

@@ -8,6 +8,8 @@ mod a3062;
 mod a3949;
 pub mod registry;
 
+pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
 
@@ -16,6 +18,9 @@ pub const STATE_COMMAND: [u8; 2] = [0x01, 0x01];
 
 /// Write the selected driver's sound-mode controls.
 pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
+
+/// Write the equalizer curve together with the hear-id controls that gate it.
+pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
 
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
@@ -43,6 +48,7 @@ impl ModelDriver {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3062),
+            equalizer_write: matches!(self, Self::A3062),
         }
     }
 
@@ -90,9 +96,25 @@ impl ModelDriver {
                 wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
             })),
             firmware_device: None,
+            equalizer: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
+    }
+
+    /// Builds the driver's measured equalizer write body from a fresh state response.
+    ///
+    /// The write echoes the state's hear-id fields with hear-id disabled, so the
+    /// requested curve is the one in effect.
+    pub fn equalizer_write_body(
+        self,
+        setting: EqualizerSetting,
+        state: &[u8],
+    ) -> Result<Vec<u8>, ModelError> {
+        if !self.capabilities().equalizer_write {
+            return Err(ModelError::InvalidEqualizerWrite);
+        }
+        a3062::equalizer_write_body(setting, state)
     }
 }
 
@@ -103,6 +125,8 @@ pub struct Capabilities {
     pub positioned_sound_mode_write: bool,
     /// The session can confirm writes of the ambient mode without a scale position.
     pub ambient_sound_mode_write: bool,
+    /// The session can confirm writes of the equalizer curve.
+    pub equalizer_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -128,6 +152,8 @@ pub struct DeviceState {
     /// Current sound mode, if the device reports one for the pilot.
     pub sound_mode: Option<SoundMode>,
     sound_mode_controls: Option<SoundModeControls>,
+    /// The reported equalizer curve, if the model's state response carries one.
+    pub equalizer: Option<EqualizerSetting>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -320,6 +346,43 @@ impl SoundModeWrite {
     }
 }
 
+/// Number of equalizer band gains in the measured models' curves.
+pub const EQUALIZER_BANDS: usize = 10;
+
+/// Lowest measured band gain, in tenths of a decibel.
+pub const EQUALIZER_MIN_GAIN: i16 = -120;
+
+/// Highest measured band gain, in tenths of a decibel.
+pub const EQUALIZER_MAX_GAIN: i16 = 134;
+
+/// An equalizer curve: the preset it belongs to and the gain of every band.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EqualizerSetting {
+    /// The preset the curve belongs to, such as the custom profile marker.
+    pub preset_id: u16,
+    /// Band gains from the lowest band, in tenths of a decibel.
+    pub volume_adjustments: [i16; EQUALIZER_BANDS],
+}
+
+impl EqualizerSetting {
+    /// Whether every band gain can be sent without changing its value.
+    pub fn is_writable(self) -> bool {
+        self.volume_adjustments
+            .iter()
+            .all(|gain| (EQUALIZER_MIN_GAIN..=EQUALIZER_MAX_GAIN).contains(gain))
+    }
+
+    /// Encodes one band gain in the measured wire scale.
+    pub(crate) fn band_byte(gain: i16) -> u8 {
+        (gain - EQUALIZER_MIN_GAIN) as u8
+    }
+
+    /// Decodes one band gain from the measured wire scale.
+    pub(crate) fn band_gain(byte: u8) -> i16 {
+        i16::from(byte) + EQUALIZER_MIN_GAIN
+    }
+}
+
 /// A validated firmware version in the device's two-part decimal format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FirmwareVersion {
@@ -375,6 +438,9 @@ pub enum ModelError {
     /// The selected mode or its controls do not match the measured write format.
     #[error("unsupported device sound mode write")]
     InvalidSoundModeWrite,
+    /// The selected curve does not match the measured equalizer write format.
+    #[error("unsupported device equalizer write")]
+    InvalidEqualizerWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
@@ -453,6 +519,7 @@ mod tests {
         assert_eq!(driver, ModelDriver::A3062);
         assert!(!driver.capabilities().positioned_sound_mode_write);
         assert!(driver.capabilities().ambient_sound_mode_write);
+        assert!(driver.capabilities().equalizer_write);
         assert_eq!(registry::by_code("A3062"), Some(driver));
     }
 }

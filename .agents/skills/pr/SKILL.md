@@ -20,6 +20,7 @@ Use this template for writing the PR body:
 
 - **Before:** <screenshot/output/failing test run>
   **After:** <screenshot/output/passing test run>
+- <issue criterion> → <entry point and scenario> → <result at SHA> → <command or run link>
 
 ## Merge Danger
 
@@ -162,6 +163,10 @@ Concrete evidence that the change works. Show a before and after.
 Screenshots are S-tier - when the environment is set up for it and the change is visual.
 
 Execution-based evidence is A-tier. Test results, console output. Show the exact test that now fails and passes, using pseudocode.
+
+Map each required issue criterion to its normal entry point, scenario, result at the checked SHA and a command or run link. Group criteria that share evidence. Label Bluetooth results as virtual device, capture replay or physical hardware. List any required check awaiting a result as **Pending**, with the scenario still to run. [Checks](../openscl4-checks/SKILL.md)
+
+Use the issue tracker rules to choose closing or reference links for each ticket. [Issue completion](../../../docs/agents/issue-tracker.md#completing-implementation-tickets)
 
 ### Merge Danger
 

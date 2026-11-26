@@ -1,10 +1,65 @@
-use openscl4_models::ModelError;
+use openscl4_models::{
+    Capabilities, EQUALIZER_COMMAND, EqualizerSetting, ModelError, SOUND_MODE_COMMAND,
+};
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
 
 /// Identifier for one accepted command in this session.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CommandId(pub u64);
+
+/// Enabled fields of one quick preset, applied as one confirmed operation.
+///
+/// A preset that changes the equalizer replaces earlier deferred live curves.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct QuickPresetValues {
+    /// A positioned sound-mode change, for models that report a scale.
+    pub sound_mode: Option<SoundModeSetting>,
+    /// An ambient-mode change, for models without a scale.
+    pub ambient_sound_mode: Option<SoundMode>,
+    /// An equalizer curve change.
+    pub equalizer: Option<EqualizerSetting>,
+}
+
+impl QuickPresetValues {
+    /// The first enabled field in application order, with this field consumed.
+    pub(crate) fn first_field(self) -> Option<(WriteTarget, Self)> {
+        if let Some(setting) = self.sound_mode {
+            return Some((
+                WriteTarget::SoundMode(setting),
+                Self {
+                    sound_mode: None,
+                    ..self
+                },
+            ));
+        }
+        if let Some(mode) = self.ambient_sound_mode {
+            return Some((
+                WriteTarget::AmbientMode(mode),
+                Self {
+                    ambient_sound_mode: None,
+                    ..self
+                },
+            ));
+        }
+        if let Some(setting) = self.equalizer {
+            return Some((
+                WriteTarget::Equalizer(setting),
+                Self {
+                    equalizer: None,
+                    ..self
+                },
+            ));
+        }
+        None
+    }
+
+    /// Whether an enabled sound-mode field needs a capability the model lacks.
+    fn mode_unsupported(self, capabilities: Capabilities) -> bool {
+        (self.sound_mode.is_some() && !capabilities.positioned_sound_mode_write)
+            || (self.ambient_sound_mode.is_some() && !capabilities.ambient_sound_mode_write)
+    }
+}
 
 /// A discrete operation accepted by the session.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -13,48 +68,84 @@ pub enum SessionCommand {
     SetSoundMode(SoundModeSetting),
     /// Set the ambient mode on a device without a position scale.
     SetAmbientSoundMode(SoundMode),
+    /// Apply the enabled fields of one quick preset, one write at a time.
+    ApplyQuickPreset(QuickPresetValues),
 }
 
 impl SessionCommand {
-    pub(crate) fn supported_by(self, model: ModelDriver) -> bool {
+    pub(crate) fn validate(self, model: ModelDriver) -> Result<(), ModelError> {
         let capabilities = model.capabilities();
         match self {
-            Self::SetSoundMode(_) => capabilities.positioned_sound_mode_write,
-            Self::SetAmbientSoundMode(_) => capabilities.ambient_sound_mode_write,
+            Self::SetSoundMode(_) if !capabilities.positioned_sound_mode_write => {
+                Err(ModelError::InvalidSoundModeWrite)
+            }
+            Self::SetAmbientSoundMode(_) if !capabilities.ambient_sound_mode_write => {
+                Err(ModelError::InvalidSoundModeWrite)
+            }
+            Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
+                Err(ModelError::InvalidSoundModeWrite)
+            }
+            Self::ApplyQuickPreset(preset)
+                if preset.equalizer.is_some_and(|setting| {
+                    !capabilities.equalizer_write || !setting.is_writable()
+                }) =>
+            {
+                Err(ModelError::InvalidEqualizerWrite)
+            }
+            _ => Ok(()),
         }
     }
 
-    pub(crate) fn write_body(self, state: DeviceState) -> Result<Vec<u8>, ModelError> {
+    /// Whether accepting this command replaces a deferred live-equalizer value.
+    pub(crate) fn replaces_pending_equalizer(self) -> bool {
+        matches!(self, Self::ApplyQuickPreset(preset) if preset.equalizer.is_some())
+    }
+}
+
+/// One in-flight device write: a discrete command, one field of a quick preset,
+/// or a coalesced live-equalizer value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WriteTarget {
+    /// A positioned sound-mode change.
+    SoundMode(SoundModeSetting),
+    /// An ambient-mode change without a scale.
+    AmbientMode(SoundMode),
+    /// An equalizer curve change.
+    Equalizer(EqualizerSetting),
+}
+
+impl WriteTarget {
+    /// The wire command that carries this write.
+    pub(crate) fn command(self) -> [u8; 2] {
         match self {
-            Self::SetSoundMode(setting) => Ok(state.sound_mode_write(setting)?.bytes().to_vec()),
-            Self::SetAmbientSoundMode(mode) => Ok(state.ambient_sound_mode_write(mode)?.to_vec()),
+            Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
+            Self::Equalizer(_) => EQUALIZER_COMMAND,
         }
     }
 
-    pub(crate) fn verify_mode(self, state: DeviceState) -> Result<(), CommandError> {
+    /// Builds the write body from a fresh state response and its raw bytes.
+    ///
+    /// The equalizer write echoes the state's hear-id fields, so it needs the
+    /// raw response next to the decoded one.
+    pub(crate) fn write_body(
+        self,
+        state: DeviceState,
+        raw_state: &[u8],
+    ) -> Result<Vec<u8>, ModelError> {
         match self {
-            Self::SetSoundMode(requested) => {
-                let observed = state
-                    .sound_mode_setting()
-                    .ok_or(ModelError::InvalidSoundModeWrite)?;
-                if observed != requested {
-                    return Err(CommandError::ModeMismatch {
-                        requested,
-                        observed,
-                    });
-                }
-            }
-            Self::SetAmbientSoundMode(requested) => {
-                let observed = state.sound_mode.ok_or(ModelError::InvalidSoundModeWrite)?;
-                if observed != requested {
-                    return Err(CommandError::AmbientModeMismatch {
-                        requested,
-                        observed,
-                    });
-                }
-            }
+            Self::SoundMode(setting) => Ok(state.sound_mode_write(setting)?.bytes().to_vec()),
+            Self::AmbientMode(mode) => Ok(state.ambient_sound_mode_write(mode)?.to_vec()),
+            Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state),
         }
-        Ok(())
+    }
+
+    /// Whether the confirmed state already carries this write's requested value.
+    pub(crate) fn matches(self, state: DeviceState) -> bool {
+        match self {
+            Self::SoundMode(setting) => state.sound_mode_setting() == Some(setting),
+            Self::AmbientMode(mode) => state.sound_mode == Some(mode),
+            Self::Equalizer(setting) => state.equalizer == Some(setting),
+        }
     }
 }
 
@@ -77,6 +168,41 @@ pub enum DispatchError {
     /// The session is closing or has ended.
     #[error("session closed")]
     Closed,
+    /// The connected model does not support equalizer writes.
+    #[error("the connected model does not support equalizer writes")]
+    UnsupportedEqualizer,
+    /// A gain in the live-equalizer curve is outside the writable range.
+    #[error("equalizer gain is outside the writable range")]
+    InvalidEqualizer,
+}
+
+/// One quick-preset field whose read-back did not match the request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum PresetFieldMismatch {
+    /// The positioned sound-mode field.
+    #[error("sound mode (requested {requested:?}, observed {observed:?})")]
+    SoundMode {
+        /// The mode requested by the preset field.
+        requested: SoundModeSetting,
+        /// The mode and position reported by the device.
+        observed: SoundModeSetting,
+    },
+    /// The ambient-mode field.
+    #[error("ambient mode (requested {requested:?}, observed {observed:?})")]
+    AmbientMode {
+        /// The mode requested by the preset field.
+        requested: SoundMode,
+        /// The mode reported by the device.
+        observed: SoundMode,
+    },
+    /// The equalizer field.
+    #[error("equalizer (requested {requested:?}, observed {observed:?})")]
+    Equalizer {
+        /// The curve requested by the preset field.
+        requested: EqualizerSetting,
+        /// The curve reported by the device, if it reported one.
+        observed: Option<EqualizerSetting>,
+    },
 }
 
 /// Failure of an accepted command.
@@ -107,6 +233,26 @@ pub enum CommandError {
         requested: SoundMode,
         /// The mode reported by the device.
         observed: SoundMode,
+    },
+    /// A quick-preset field did not confirm; fields confirmed before it stay
+    /// applied in the confirmed snapshot.
+    #[error("quick preset stopped at a field that did not match the read-back: {field}")]
+    PresetMismatch {
+        /// The field that did not confirm, with the requested and observed values.
+        field: PresetFieldMismatch,
+        /// The snapshot with every field confirmed before the failure.
+        confirmed: DeviceState,
+    },
+    /// A preset stopped after confirming at least one field.
+    #[error("quick preset interrupted: {error}")]
+    PresetInterrupted {
+        /// Why the next field could not complete.
+        #[source]
+        error: SessionError,
+        /// Whether the unfinished write may have reached the device.
+        may_have_written: bool,
+        /// The snapshot from the confirmation of the last completed field.
+        confirmed: DeviceState,
     },
     /// The device link was lost before the command could be confirmed.
     #[error("device disconnected")]

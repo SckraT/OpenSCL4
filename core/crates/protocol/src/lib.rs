@@ -88,6 +88,11 @@ impl FrameDecoder {
         !self.buffer.is_empty()
     }
 
+    /// Number of buffered bytes, including an incomplete frame.
+    pub fn pending_bytes(&self) -> usize {
+        self.buffer.len()
+    }
+
     /// Takes one frame, or returns `None` while waiting for more bytes.
     ///
     /// An invalid header clears the buffer. A checksum error discards the

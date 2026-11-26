@@ -102,9 +102,30 @@ The fixtures replace the already masked serial at body offsets 7–22 with the
 synthetic A3062 serial and recalculate the checksum. Concatenated in the order
 shown above, their SHA-256 is
 `63bf74ff20775569dbd8bc827fdf477c3639a60f7c457adb338b4ccb8b53e205`.
-The virtual device answers a state probe with the corresponding captured
-response after accepting the matching `06 81` body from the three A3062
-sound-mode entries in [conformance.json](conformance.json).
+When the virtual device accepts a matching `06 81` body, it copies the mode and
+its controls from the corresponding capture into the current state. State reads
+keep the device's current EQ curve and other settings.
+[Sound-mode commands](conformance.json)
+
+## A3062 equalizer write and read-back
+
+These frames come from the Windows RFCOMM capture on A3062 firmware 04.39 in
+`core/data/a3062-eq-custom.json` at the SoundcoreNext revision above. The source
+JSON SHA-256 is `0b771d93b50d0a933f24c553bc7ed708128dd7c08ad1cc660d76d7d0386eacc3`.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-eq-custom.json)
+
+| Fixture                                    | Source field                                | SHA-256                                                            |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
+| [a3062-eq-write.bin](a3062-eq-write.bin)   | `frame_hex`                                 | `838f3fea1ce46e7912266210f3a1df27aa6144e5e2d24ffe8ede895fdf0ff93d` |
+| [a3062-eq-before.bin](a3062-eq-before.bin) | `before_frame_hex` and `restored_frame_hex` | `2b14e731828a86feb817389e911ca12298746257a3dce250877f44205abda775` |
+| [a3062-eq-custom.bin](a3062-eq-custom.bin) | `custom_frame_hex`                          | `132a798f9ae46431fc0a2ff86748ddd5bdf8a63f2fe674f7712cd603f168f97c` |
+
+The two `01 01` fixtures substitute a synthetic serial at body offsets 7–22
+and recalculate the checksum. The before and restored frames have identical
+bytes. The outbound `03 87` frame contains EQ and HearID settings.
+
+The session replay compares the custom write to the captured outbound frame
+and confirms both curves from the captured state replies.
 
 ## A3949 pilot state
 
@@ -118,3 +139,27 @@ serial with the A3949 model prefix and recalculates the checksum. Its SHA-256 is
 `26b4102a741f34f9bf2ffa85b312231aa45ac3b6c13dff9268303ff592cf64b3`.
 The left and right levels are 5 and 4 on the five-step scale at body offsets 2
 and 3. Both firmware versions are `14.43` at body offsets 6–10 and 11–15.
+
+## A3949 gaming-mode read-back
+
+[a3949-gaming-off.bin](a3949-gaming-off.bin) and
+[a3949-gaming-on.bin](a3949-gaming-on.bin) are 98-byte inbound `01 01` responses
+captured over Windows RFCOMM from the paired Soundcore P20i (A3949, firmware
+`14.43` on both earbuds) on 2026-11-26. The off frame is the state before and after
+the cycle; the on frame followed the measured write
+`08 EE 00 00 00 01 87 0B 00 01 8A`, and the mode returned with
+`08 EE 00 00 00 01 87 0B 00 00 89`.
+[Measurement ticket](https://github.com/SckraT/OpenSCL4/issues/174)
+
+The capture substituted the device serial at body offsets 16–31 with the synthetic
+`3949TEST00000000` serial and recalculated the checksums. The frames differ only in
+the gaming flag at body offset 71 (`00` off, `01` on) and the trailing checksum
+(`D0` off, `D1` on). The SHA-256 of the concatenated off and on frames in that
+order is
+`fd7324ef5cf2df5203074b59384e9c5a24deae33bc967114082d934294331577`.
+
+The measurement separated the `01 87` acknowledgements from the state responses it
+counted. The device kept reporting the previous mode for four state reads before
+the on write appeared, 1022 ms after the write, and for five reads before the off
+write appeared, 1247 ms after the write. A session test that confirms A3949
+gaming-mode writes by read-back must hold its window past both delays.
