@@ -1,0 +1,2527 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "source": "lib/src/devices/device_model.rs",
+    "defaultEvidence": {
+        "kind": "legacy",
+        "inbound": "legacyDriver state parser and registered modules",
+        "outbound": "legacyDriver registered modules and packet builders",
+        "result": "parityPending"
+    },
+    "startupOperations": {
+        "readState": {
+            "command": "0101",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+            "inbound": "legacyDriver",
+            "evidence": "legacy"
+        },
+        "readIdentity": {
+            "command": "0105",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "inbound": "legacyDriver",
+            "evidence": "legacy"
+        },
+        "readPeers": {
+            "command": "0B01",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+            "inbound": "lib/src/devices/soundcore/common/modules/dual_connections.rs",
+            "evidence": "legacy"
+        },
+        "readTargetedVoicePrompt": {
+            "command": "0110",
+            "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/a3116/packets/inbound.rs",
+            "evidence": "legacy"
+        },
+        "readAutoStopTimer": {
+            "command": "1503",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/auto_stop_timer.rs",
+            "evidence": "legacy"
+        },
+        "readAlarms": {
+            "command": "1401",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/alarms.rs",
+            "evidence": "legacy"
+        }
+    },
+    "models": [
+        {
+            "code": "A3004",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3004.rs",
+            "stateParser": "A3004StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3005",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3005.rs",
+            "stateParser": "A3005StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer_with_drc",
+                "dual_connections",
+                "auto_power_off",
+                "single_battery_custom",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3027",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3027.rs",
+            "stateParser": "A3027StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "single_battery",
+                "wearing_detection",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3028",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3028.rs",
+            "stateParser": "A3028StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "auto_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "variants": [
+                "a3028-a3029-mode-reference",
+                "optionalStateTail",
+                "legacyMultiWriteSoundModes"
+            ],
+            "reference": "core/data/a3028-a3029-mode-reference.json"
+        },
+        {
+            "code": "A3029",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3028.rs",
+            "stateParser": "A3028StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "auto_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "variants": [
+                "a3028-a3029-mode-reference",
+                "optionalStateTail",
+                "legacyMultiWriteSoundModes"
+            ],
+            "reference": "core/data/a3028-a3029-mode-reference.json"
+        },
+        {
+            "code": "A3030",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3027.rs",
+            "stateParser": "A3027StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "single_battery",
+                "wearing_detection",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3031",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3031.rs",
+            "stateParser": "A3031StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3033",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3033.rs",
+            "stateParser": "A3033StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer",
+                "wearing_detection",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3035",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3035.rs",
+            "stateParser": "A3035StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3035_sound_modes",
+                "a3035_equalizer",
+                "a3035_button_configuration",
+                "ambient_sound_mode_cycle",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "auto_play_pause",
+                "a3035_battery_alert",
+                "a3035_ambient_sound_mode_voice_prompt",
+                "single_battery_level",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "manualTransparency",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "autoPlayPause",
+                    "powerOnBatteryNotice",
+                    "voicePrompt"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3040",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3040.rs",
+            "stateParser": "A3040StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3040_sound_modes",
+                "a3040_equalizer",
+                "a3040_button_configuration",
+                "ambient_sound_mode_cycle",
+                "dual_connections",
+                "ldac",
+                "a3040_voice_prompt",
+                "a3040_low_battery_prompt",
+                "auto_power_off",
+                "limit_high_volume",
+                "single_battery_level",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "manualTransparency",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "voicePrompt",
+                    "lowBatteryPrompt",
+                    "autoPowerOff",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3062",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3062.rs",
+            "stateParser": "A3062StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3062_sound_modes",
+                "a3062_equalizer",
+                "a3062_button_configuration",
+                "ambient_sound_mode_cycle",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "a3062_dolby_audio",
+                "low_battery_prompt",
+                "a3062_side_tone",
+                "a3062_ambient_sound_mode_voice_prompt",
+                "single_battery_custom",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "manualTransparency",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "dolbyAudio",
+                    "lowBatteryPrompt",
+                    "sideTone",
+                    "voicePrompt"
+                ],
+                "actions": []
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "inbound": "core/data/a3062-pilot-state.bin"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "outbound": "core/data/conformance.json",
+                    "inbound": "core/data/README.md#a3062-sound-mode-read-back",
+                    "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "outbound": "core/data/a3062-eq-write.bin",
+                    "inbound": "core/data/README.md#a3062-equalizer-write-and-read-back",
+                    "result": "confirmedReadBack"
+                }
+            ]
+        },
+        {
+            "code": "A3116",
+            "family": "specialized",
+            "legacyDriver": "lib/src/devices/soundcore/a3116.rs",
+            "stateParser": "A3116StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readTargetedVoicePrompt": "firmwareAtLeast38.39"
+            },
+            "modules": [
+                "a3116_equalizer",
+                "a3116_volume",
+                "voice_prompt_targeted",
+                "a3116_auto_power_off",
+                "a3116_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "volume",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "powerOff"
+                ]
+            },
+            "variants": [
+                "noChecksum",
+                "voicePromptSince38.39"
+            ]
+        },
+        {
+            "code": "A3330",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3330.rs",
+            "stateParser": "A3330StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer_with_drc",
+                "disable_all_buttons",
+                "button_configuration",
+                "reset_button_configuration",
+                "dual_connections",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftDoublePressDuringCall",
+                    "rightDoublePressDuringCall",
+                    "leftLongPressDuringCall",
+                    "rightLongPressDuringCall",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3388",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3388.rs",
+            "stateParser": "A3388StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3388_equalizer",
+                "disable_all_buttons",
+                "button_configuration",
+                "reset_button_configuration",
+                "dual_connections",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3876",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3876.rs",
+            "stateParser": "A3876StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3876_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "a3876_colorful_lights",
+                "dual_connections",
+                "a3876_volume_balance",
+                "auto_power_off",
+                "voice_prompt",
+                "gaming_mode",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "lightsEnabled",
+                    "lightsBrightness",
+                    "autoLightsOffMinutes",
+                    "lightsColor",
+                    "lightsMode",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "volumeBalance",
+                    "autoPowerOff",
+                    "voicePrompt",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3909",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3909.rs",
+            "stateParser": "A3909StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "a3909_equalizer",
+                "button_configuration",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3926",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3926.rs",
+            "stateParser": "A3926StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_basic_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3930",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3930.rs",
+            "stateParser": "A3930StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "explicitSuffixChecksum"
+            ]
+        },
+        {
+            "code": "A3931",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3931.rs",
+            "stateParser": "A3931StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3933",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3933.rs",
+            "stateParser": "A3933StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3935",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3931.rs",
+            "stateParser": "A3931StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3936",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3936.rs",
+            "stateParser": "A3936StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3936_sound_modes",
+                "equalizer_with_custom_hear_id_tws_force_supports_hear_id",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "dual_connections",
+                "auto_power_off",
+                "ldac",
+                "touch_tone",
+                "gaming_mode",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff",
+                    "ldac",
+                    "touchTone",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3939",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3933.rs",
+            "stateParser": "A3933StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3944",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3944.rs",
+            "stateParser": "A3944StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc",
+                "button_configuration",
+                "touch_tone",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "touchTone"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "A3945",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3945.rs",
+            "stateParser": "A3945StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3947",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3947.rs",
+            "stateParser": "A3947StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "a3947_sound_modes",
+                "a3947_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "touch_tone",
+                "a3947_gaming_mode",
+                "sound_leak_compensation",
+                "surround_sound",
+                "auto_play_pause",
+                "wearing_tone",
+                "touch_lock",
+                "low_battery_prompt",
+                "auto_power_off",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "transportationMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "environmentDetection",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "touchTone",
+                    "gamingMode",
+                    "soundLeakCompensation",
+                    "surroundSound",
+                    "autoPlayPause",
+                    "wearingTone",
+                    "touchLock",
+                    "lowBatteryPrompt",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3948",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3948.rs",
+            "stateParser": "A3948StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "touch_tone",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3949",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3949.rs",
+            "stateParser": "A3949StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "gaming_mode",
+                "touch_tone",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "gamingMode",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "p20iP25iR50i",
+                "gamingCapture14.43"
+            ],
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3949-pilot-state.bin",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "14.43",
+                    "inbound": "core/data/a3949-pilot-state.bin"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "captureReplay",
+                    "firmware": "14.43",
+                    "outbound": "core/data/README.md#a3949-gaming-mode-read-back",
+                    "inbound": "core/data/README.md#a3949-gaming-mode-read-back",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/174",
+                    "result": "confirmedReadBack"
+                }
+            ]
+        },
+        {
+            "code": "A3951",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3951.rs",
+            "stateParser": "A3951StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "ldac",
+                "touch_tone",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "customNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "ldac",
+                    "touchTone",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3952",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3952.rs",
+            "stateParser": "A3952StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "a3952_sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "ldac",
+                "touch_tone",
+                "wearing_detection",
+                "wearing_tone",
+                "auto_power_off",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "ldac",
+                    "touchTone",
+                    "wearingDetection",
+                    "wearingTone",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3953",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3953.rs",
+            "stateParser": "A3953StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery",
+                "a3953_sound_modes",
+                "ambient_sound_mode_cycle",
+                "button_configuration",
+                "reset_button_configuration",
+                "wearing_detection",
+                "case_battery_level",
+                "ldac",
+                "auto_power_off",
+                "wearing_tone",
+                "low_battery_prompt",
+                "a3953_misc_toggles",
+                "dual_connections",
+                "a3953_spatial_audio",
+                "a3953_press_sensitivity",
+                "a3953_equalizer"
+            ],
+            "demoSettings": {
+                "information": [
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "exportCustomEqualizerProfilesOutput"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "windNoiseSuppression",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "wearingDetection",
+                    "ldac",
+                    "autoPowerOff",
+                    "wearingTone",
+                    "lowBatteryPrompt",
+                    "ambientSoundPrompt",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "spatialAudioMusicMode",
+                    "pressSensitivity",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3954",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3954.rs",
+            "stateParser": "A3954StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3954_sound_modes",
+                "a3954_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "a3954_case_features",
+                "a3954_case_language",
+                "ldac",
+                "auto_power_off",
+                "low_battery_prompt",
+                "a3954_spatial_audio",
+                "a3954_easy_chat",
+                "wearing_detection",
+                "a3954_air_pressure",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version",
+                "a3954_case_serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "airPressure",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "caseSerialNumber",
+                    "caseFirmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "airplaneMode",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftSlideUp",
+                    "rightSlideUp",
+                    "leftSlideDown",
+                    "rightSlideDown",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "atmospheric",
+                    "remoteCamera",
+                    "findDevice",
+                    "caseSpatialAudio",
+                    "caseLanguage",
+                    "ldac",
+                    "autoPowerOff",
+                    "lowBatteryPrompt",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "spatialAudioMusicMode",
+                    "easyChat",
+                    "easyChatWaitTime",
+                    "soundLeakCompensation",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "fourBytePositionedSoundModes",
+                "31ByteIdentity"
+            ],
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "04.29",
+                    "outbound": "core/crates/models/src/lib.rs",
+                    "inbound": "core/data/README.md#a3954-pilot-state",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3954-pilot-state.bin",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/155"
+                },
+                {
+                    "operation": "writePositionedSoundMode",
+                    "core": "protocolFixture",
+                    "firmware": "04.29",
+                    "outbound": "core/data/README.md#a3954-pilot-state",
+                    "inbound": "core/crates/session/tests/mode_write.rs",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154",
+                    "result": "confirmedReadBack"
+                }
+            ]
+        },
+        {
+            "code": "A3955",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3955.rs",
+            "stateParser": "A3955StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3955_sound_modes",
+                "a3955_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "a3955_immersive_experience",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "ancPersonalizedToEarCanal",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "immersiveExperience",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3957",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3957.rs",
+            "stateParser": "A3957StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3957_sound_modes",
+                "a3957_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "wearing_tone",
+                "wearing_detection",
+                "sound_leak_compensation",
+                "a3957_gaming_mode",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "transportationMode",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt",
+                    "wearingTone",
+                    "wearingDetection",
+                    "soundLeakCompensation",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            }
+        },
+        {
+            "code": "A3959",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3959.rs",
+            "stateParser": "A3959StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3959_sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "dual_connections",
+                "surround_sound",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "low_battery_prompt",
+                "gaming_mode",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "adaptiveNoiseCancelingSensitivityLevel",
+                    "multiSceneNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "surroundSound",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "gamingModeSince01.60"
+            ]
+        },
+        {
+            "code": "A3968",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3968.rs",
+            "stateParser": "A3968StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3968_sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle_tws",
+                "dual_connections",
+                "auto_power_off",
+                "surround_sound",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff",
+                    "surroundSound",
+                    "touchTone"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "D1101",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1101.rs",
+            "stateParser": "D1101StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer",
+                "disable_all_buttons",
+                "button_configuration",
+                "dual_connections",
+                "low_battery_prompt",
+                "ldac",
+                "auto_power_off",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "lowBatteryPrompt",
+                    "ldac",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            }
+        },
+        {
+            "code": "D1202",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1202.rs",
+            "stateParser": "D1202StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "d1202_sound_modes",
+                "d1202_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "d1202_spatial_audio",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "realTimeAdaptiveNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "d1202cSharesDriver"
+            ]
+        },
+        {
+            "code": "D1202C",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1202.rs",
+            "stateParser": "D1202StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "d1202_sound_modes",
+                "d1202_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "d1202_spatial_audio",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "realTimeAdaptiveNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "wireModelDiscriminatorUnresolved"
+            ]
+        },
+        {
+            "code": "D1301",
+            "family": "specialized",
+            "legacyDriver": "lib/src/devices/soundcore/d1301.rs",
+            "stateParser": "D1301StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readAutoStopTimer",
+                "readAlarms"
+            ],
+            "modules": [
+                "d1301_tap_controls_disabled",
+                "button_configuration",
+                "reset_button_configuration",
+                "d1301_alarms",
+                "d1301_auto_stop_timer",
+                "d1301_auto_switch_once_asleep",
+                "d1301_listening_mode",
+                "d1301_noise_canceling",
+                "d1301_incoming_calls_during_bluetooth_mode",
+                "low_battery_prompt",
+                "d1301_auto_power_off_prompt",
+                "d1301_listening_mode_prompt",
+                "d1301_noise_canceling_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "autoStopTimer",
+                    "autoStopTimerDuration",
+                    "autoSwitchOnceAsleep",
+                    "listeningMode",
+                    "defaultListeningMode",
+                    "noiseCanceling",
+                    "incomingCallsDuringBluetoothMode",
+                    "lowBatteryPrompt",
+                    "autoPowerOffPrompt",
+                    "listeningModePrompt",
+                    "noiseCancelingPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault",
+                    "createAlarm"
+                ]
+            },
+            "variants": [
+                "dynamicAlarms"
+            ]
+        }
+    ]
+}

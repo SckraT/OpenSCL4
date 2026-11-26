@@ -1,0 +1,45 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "evidence": "legacyFixture",
+    "sources": {
+        "state": "lib/src/devices/soundcore/a3028.rs::example_state_update_packet",
+        "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+        "outboundSoundMode": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs"
+    },
+    "stateBodyOffsets": {
+        "soundModes": 35,
+        "firmware": 39,
+        "serial": 44
+    },
+    "firmwareInExample": "02.30",
+    "expectedEqualizerBandsTenthsDb": [
+        -60,
+        60,
+        23,
+        40,
+        22,
+        60,
+        -4,
+        16
+    ],
+    "ambientModeSequence": [
+        "Normal",
+        "NoiseCanceling",
+        "Normal"
+    ],
+    "outbound": {
+        "readState": "08 EE 00 00 00 01 01 0A 00 02",
+        "writeNoiseCanceling": "08 EE 00 00 00 06 81 0E 00 00 00 01 00 8C",
+        "restoreNormal": "08 EE 00 00 00 06 81 0E 00 02 00 01 00 8E"
+    },
+    "inbound": {
+        "A3028": {
+            "initial": "09 FF 00 00 01 01 01 46 00 05 00 FE FE 3C B4 8F A0 8E B4 74 88 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 01 00 30 32 2E 33 30 33 30 32 38 54 45 53 54 30 30 30 30 30 30 30 30 32",
+            "noiseCanceling": "09 FF 00 00 01 01 01 46 00 05 00 FE FE 3C B4 8F A0 8E B4 74 88 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 30 32 2E 33 30 33 30 32 38 54 45 53 54 30 30 30 30 30 30 30 30 30"
+        },
+        "A3029": {
+            "initial": "09 FF 00 00 01 01 01 46 00 05 00 FE FE 3C B4 8F A0 8E B4 74 88 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 01 00 30 32 2E 33 30 33 30 32 39 54 45 53 54 30 30 30 30 30 30 30 30 33",
+            "noiseCanceling": "09 FF 00 00 01 01 01 46 00 05 00 FE FE 3C B4 8F A0 8E B4 74 88 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 30 32 2E 33 30 33 30 32 39 54 45 53 54 30 30 30 30 30 30 30 30 31"
+        }
+    }
+}
