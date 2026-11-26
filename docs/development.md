@@ -9,9 +9,19 @@ Start with the [README](../README.md) for product scope and platform status. Bui
 - `android/src/` is the UniFFI adapter; `android/app/` contains Kotlin wrappers, Compose UI, services, notifications and widgets. Setting values still cross the binding as JSON inside the native API records.
 - `desktop/src/controller.rs` reads device snapshots and writes settings; `desktop/src/app/` applies them to Slint models, and `desktop/ui/` defines the interface. The desktop client ships on Windows and Linux: text that names the system, its settings or where a device is paired has each platform's wording through `AppState.linux`, and the system's own settings pages open through `desktop/src/system_settings.rs`.
 
-The device is the source of truth. Read settings through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write through `set_setting_values`. A successful preset activation and a preset matching current settings are different concepts. The successful-activation mark lasts only for the current connection; saved presets persist. See the [glossary](../GLOSSARY.md) and [accepted architecture decisions](adr/0001-compose-slint-shared-behavior.md).
+The device is the source of truth. In the release clients, read settings through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write through `set_setting_values`. A successful preset activation and a preset matching current settings are different concepts. The successful-activation mark lasts for the current connection. Saved presets persist. [Glossary](../GLOSSARY.md) · [Shared behavior decision](adr/0001-compose-slint-shared-behavior.md)
 
 Keep native types and Kotlin wrappers synchronized. Regenerate bindings through Gradle when the exported API changes. Shared examples in `lib/tests/fixtures/client_rules.json` check behavior on both sides of the Android boundary.
+
+## Device control during the migration
+
+Trace the issue to its client or pilot entry point before editing, and verify the result through that path.
+
+- **Release clients.** Desktop and Android still control devices through `OpenSCQ30Device` in `lib`. Follow the release path for changes intended to reach those clients.
+- **Modular pilot.** `openscq30 pilot` starts a `SessionHandle` through `SessionRunner` from the modular core. Follow that path for pilot and session changes.
+- **Profile migration.** `lib` exposes `migrate_legacy_profiles` in `lib/src/storage/profile_migration.rs` to import legacy SQLite data into `openscl4-profiles`. Verify compatibility through the migration API and its integration tests.
+
+Use the epic decisions to identify the intended migration stage and required evidence. [Migration roadmap](https://github.com/SckraT/OpenSCL4/issues/134) · [Session contract](https://github.com/SckraT/OpenSCL4/issues/137#issuecomment-7133425212) · [Model parity criteria](https://github.com/SckraT/OpenSCL4/issues/141#issuecomment-7134509776)
 
 The `openscq30` CLI remains useful for protocol work. Its default database is still in the legacy `openscq30` configuration directory; set `OPENSCQ30_DATABASE_PATH` to an isolated database when testing. It does not manage the current desktop client's data directory by default.
 

@@ -3,7 +3,7 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
+Review a pinned diff on two axes.
 
 - **Standards**: does the code conform to this repo's documented coding standards?
 - **Spec**: does the code faithfully implement the originating issue / spec?
@@ -14,13 +14,13 @@ The issue tracker should have been provided to you. If not, tell the user to run
 
 ## Process
 
-### 1. Pin the fixed point
+### 1. Pin the review range
 
-Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
+Use any comparison or refs supplied by the user. For a PR, fill in unspecified endpoints from `gh pr view <number> --repo SckraT/OpenSCL4 --json baseRefName,baseRefOid,headRefOid`. For local review, use `HEAD` as the default head and ask for a base when the request leaves it unspecified.
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+Resolve the base and head to commit SHAs with `git rev-parse --verify`. If PR commits are missing locally, fetch `refs/heads/<base-name>` and `refs/pull/<number>/head` from `origin` and verify the pinned SHAs. Use `git diff <base-sha>...<head-sha>` for the default merge-base comparison and `git log <base-sha>..<head-sha> --oneline` for the commit list.
 
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+Confirm both commits resolve and the diff is non-empty before assigning reviewers. Run local checks in a clean worktree at the pinned head. Record both SHAs and the worktree path with the review inputs.
 
 ### 2. Identify the spec source
 
@@ -61,13 +61,13 @@ Issue both sub-agent calls together, in the foreground, and aggregate the report
 
 **Standards sub-agent prompt** should include:
 
-- The full diff command and commit list.
+- Both pinned SHAs, the review worktree, the full diff command and the commit list.
 - The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** should include:
 
-- The diff command and commit list.
+- Both pinned SHAs, the review worktree, the diff command and the commit list.
 - The path or fetched contents of the spec.
 - The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 

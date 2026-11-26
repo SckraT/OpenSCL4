@@ -14,13 +14,19 @@ Write multi-line bodies to a UTF-8 file with real newlines and pass --body-file;
 - Across states: --state all, optionally with --search "..." or --label LABEL
 - Comment: gh issue comment NUMBER --repo SckraT/OpenSCL4 --body-file BODY_FILE
 - Labels: gh issue edit NUMBER --repo SckraT/OpenSCL4 --add-label LABEL or --remove-label LABEL
-- Close: gh issue close NUMBER --repo SckraT/OpenSCL4
+- Manual close for an accepted non-code result or a scope decision. `gh issue close NUMBER --repo SckraT/OpenSCL4`
 
 Category labels are bug and enhancement; state labels are the five triage roles in docs/agents/triage-labels.md.
 
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** Triage covers issues only.
+
+## Completing implementation tickets
+
+Keep a code ticket open until the accepted result is merged to `master`. Use `Closes #NUMBER` in the PR description for the complete implementation when all required acceptance criteria have evidence on the reviewed revision. Merge after the required CI and any agreed manual verification pass. GitHub closes the linked issue on merge to the default branch. [GitHub issue linking](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
+
+Use `Refs #NUMBER` in draft, partial and intermediate changes, including PRs into an integration branch and their commit messages. Keep `Refs #NUMBER` while required acceptance is pending and record the remaining checks in the issue or PR. Verify the issue state after merging the closing PR.
 
 ## Skill operations
 
@@ -37,4 +43,4 @@ Used by wayfinder. The map is one issue; its children are the tickets.
 - Blocking: native issue dependencies. gh api --method POST repos/SckraT/OpenSCL4/issues/CHILD/dependencies/blocked_by -F issue_id=BLOCKER_DATABASE_ID, where the id comes from gh api repos/SckraT/OpenSCL4/issues/NUMBER --jq .id (database id, not #number). Without dependencies, record "Blocked by: #NUMBER" in the child.
 - Frontier: open children, in map order, with no assignee and no open blockers.
 - Claim: gh issue edit NUMBER --repo SckraT/OpenSCL4 --add-assignee @me — the first write.
-- Resolve: comment the answer, close the ticket, then append a named link and a one-line decision summary to the map.
+- Resolve by recording the answer on the issue. Apply the implementation completion rules for code tickets. For other tickets, close the issue after the result is accepted. After closure, append a named link and a one-line decision summary to the map.
