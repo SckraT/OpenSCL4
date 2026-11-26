@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    EQUALIZER_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite,
+    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, EQUALIZER_COMMAND, IDENTITY_COMMAND,
+    ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -48,20 +49,27 @@ impl VirtualA3062 {
     }
 }
 
+/// Opens a virtual A3062 link with the given responder options.
+fn a3062_link(options: ResponderOptions) -> Box<dyn TransportLink> {
+    let model = ModelDriver::A3062;
+    open_link(Some(Responder::with_state(
+        model,
+        options,
+        initial_state(model),
+    )))
+    .0
+}
+
 #[async_trait]
 impl TransportProvider for VirtualA3062 {
     async fn connect(
         &self,
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
-        let model = ModelDriver::A3062;
-        Ok(open_link(Some(Responder::with_state(
-            model,
-            true,
-            true,
-            initial_state(model),
-        )))
-        .0)
+        Ok(a3062_link(ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        }))
     }
 }
 
@@ -74,14 +82,10 @@ impl TransportProvider for WithoutEqualizerWrite {
         &self,
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
-        let model = ModelDriver::A3062;
-        Ok(open_link(Some(Responder::with_state(
-            model,
-            true,
-            false,
-            initial_state(model),
-        )))
-        .0)
+        Ok(a3062_link(ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: false,
+        }))
     }
 }
 
@@ -97,8 +101,10 @@ impl TransportProvider for VirtualA3949 {
         let model = ModelDriver::A3949;
         Ok(open_link(Some(Responder::with_state(
             model,
-            false,
-            false,
+            ResponderOptions {
+                acknowledge_writes: false,
+                apply_equalizer: false,
+            },
             initial_state(model),
         )))
         .0)
@@ -115,40 +121,54 @@ impl SharedVirtualSoundcoreDevice {
     pub fn connect_with_fault_injection(&self) -> (Box<dyn TransportLink>, MockDisconnect) {
         open_link(Some(Responder::with_state(
             ModelDriver::A3954,
-            false,
-            false,
+            ResponderOptions {
+                acknowledge_writes: false,
+                apply_equalizer: false,
+            },
             Arc::clone(&self.state),
         )))
     }
+}
+
+/// How the virtual responder treats device writes.
+#[derive(Clone, Copy)]
+struct ResponderOptions {
+    /// Whether a successful write is answered with an empty ACK.
+    acknowledge_writes: bool,
+    /// Whether an A3062 equalizer write changes the virtual device's curve.
+    apply_equalizer: bool,
 }
 
 pub struct Responder {
     model: ModelDriver,
     decoder: FrameDecoder,
     state: Arc<Mutex<Vec<u8>>>,
-    acknowledge_writes: bool,
-    /// Whether an A3062 equalizer write changes the virtual device's curve.
-    apply_equalizer: bool,
+    options: ResponderOptions,
 }
 
 impl Responder {
     pub fn new(acknowledge_writes: bool) -> Self {
         let model = ModelDriver::A3954;
-        Self::with_state(model, acknowledge_writes, false, initial_state(model))
+        Self::with_state(
+            model,
+            ResponderOptions {
+                acknowledge_writes,
+                apply_equalizer: false,
+            },
+            initial_state(model),
+        )
     }
 
     fn with_state(
         model: ModelDriver,
-        acknowledge_writes: bool,
-        apply_equalizer: bool,
+        options: ResponderOptions,
         state: Arc<Mutex<Vec<u8>>>,
     ) -> Self {
         Self {
             model,
             decoder: FrameDecoder::default(),
             state,
-            acknowledge_writes,
-            apply_equalizer,
+            options,
         }
     }
 
@@ -183,12 +203,12 @@ impl Responder {
                 }
             } else if frame.command == SOUND_MODE_COMMAND
                 && self.apply_sound_mode(&frame.body)
-                && self.acknowledge_writes
+                && self.options.acknowledge_writes
             {
                 replies.extend_from_slice(SOUND_MODE_ACK);
             } else if self.model == ModelDriver::A3062
                 && frame.command == EQUALIZER_COMMAND
-                && self.acknowledge_writes
+                && self.options.acknowledge_writes
                 && self.equalizer_applied(&frame.body)
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
             {
@@ -218,7 +238,7 @@ impl Responder {
 
     /// Applies an A3062 equalizer write; a withheld application answers nothing.
     fn equalizer_applied(&self, body: &[u8]) -> bool {
-        if !self.apply_equalizer {
+        if !self.options.apply_equalizer {
             return false;
         }
         // The write body starts with the preset, the hear-id genre, and the bands.
@@ -226,9 +246,9 @@ impl Responder {
             return false;
         };
         let mut state = self.state.lock().expect("virtual state lock");
-        // The A3062 state carries the curve at the measured offsets.
-        state[23..25].copy_from_slice(preset);
-        state[25..35].copy_from_slice(bands);
+        // The state carries the curve at the offsets the models crate measured.
+        state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
+        state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
         true
     }
 }

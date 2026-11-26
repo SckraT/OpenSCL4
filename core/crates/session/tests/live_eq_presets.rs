@@ -7,8 +7,8 @@ mod tests {
     use std::{sync::Arc, time::Duration};
 
     use openscl4_session::{
-        CommandError, CommandOutcome, ConnectionState, EqualizerSetting, QuickPresetValues,
-        SessionCommand, SessionHandle, SessionRunner, SessionView, SoundMode,
+        CommandError, CommandOutcome, ConnectionState, EqualizerSetting, PresetFieldMismatch,
+        QuickPresetValues, SessionCommand, SessionHandle, SessionRunner, SessionView, SoundMode,
     };
     use openscl4_transport::{ConnectTarget, RedactedMac, TransportProvider};
     use openscl4_transport_mock::VirtualA3062;
@@ -118,7 +118,11 @@ mod tests {
             .expect("queue preset");
 
         let result = preset.wait().await;
-        let Err(CommandError::PresetEqualizerMismatch { confirmed, .. }) = result else {
+        let Err(CommandError::PresetMismatch {
+            field: PresetFieldMismatch::Equalizer { .. },
+            confirmed,
+        }) = result
+        else {
             panic!("expected the preset to stop at its equalizer field");
         };
         // The sound-mode field confirmed first and stays applied.

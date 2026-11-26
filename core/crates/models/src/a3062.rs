@@ -5,8 +5,10 @@ use crate::{
 
 const SOUND_MODE: usize = 69;
 const SOUND_MODE_CONTROLS: std::ops::Range<usize> = 70..75;
-const EQUALIZER_PRESET: std::ops::Range<usize> = 23..25;
-const EQUALIZER_BANDS: std::ops::Range<usize> = 25..35;
+/// Body offsets of the preset id in the measured A3062 state layout.
+pub const A3062_EQUALIZER_PRESET: std::ops::Range<usize> = 23..25;
+/// Body offsets of the band gains in the measured A3062 state layout.
+pub const A3062_EQUALIZER_BANDS: std::ops::Range<usize> = 25..35;
 const HEAR_ID_VOLUME: std::ops::Range<usize> = 38..48;
 const HEAR_ID_TIME: std::ops::Range<usize> = 48..52;
 const HEAR_ID_TYPE: usize = 52;
@@ -53,8 +55,8 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
 /// Reads the equalizer curve from the measured state layout. A band block that
 /// starts with the absent marker reports no curve.
 fn equalizer_setting(body: &[u8]) -> Option<EqualizerSetting> {
-    let preset_id: [u8; 2] = body.get(EQUALIZER_PRESET)?.try_into().ok()?;
-    let bands: [u8; 10] = body.get(EQUALIZER_BANDS)?.try_into().ok()?;
+    let preset_id: [u8; 2] = body.get(A3062_EQUALIZER_PRESET)?.try_into().ok()?;
+    let bands: [u8; 10] = body.get(A3062_EQUALIZER_BANDS)?.try_into().ok()?;
     if bands[0] == u8::MAX {
         return None;
     }
@@ -136,7 +138,7 @@ mod tests {
     #[test]
     fn absent_band_block_reports_no_curve() {
         let mut body = state_body(STATE).to_vec();
-        body[EQUALIZER_BANDS.start] = u8::MAX;
+        body[A3062_EQUALIZER_BANDS.start] = u8::MAX;
         let state = decode_state(&body).expect("pilot state with an absent curve");
         assert_eq!(state.equalizer, None);
     }

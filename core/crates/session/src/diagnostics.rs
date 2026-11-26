@@ -52,6 +52,8 @@ impl Capture {
                 ..
             } => Some(device.model),
             ConnectionState::SyncingState(model) => Some(model),
+            // The tap classifies independently of the machine: redaction runs
+            // before the machine resolves this frame, which it may never read.
             ConnectionState::ProbingState(_)
                 if frame.direction == Direction::Inbound && frame.command == STATE_COMMAND =>
             {

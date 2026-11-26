@@ -8,6 +8,8 @@ mod a3062;
 mod a3949;
 pub mod registry;
 
+pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET};
+
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
 

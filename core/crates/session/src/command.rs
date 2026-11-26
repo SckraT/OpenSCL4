@@ -1,4 +1,6 @@
-use openscl4_models::{EQUALIZER_COMMAND, EqualizerSetting, ModelError, SOUND_MODE_COMMAND};
+use openscl4_models::{
+    Capabilities, EQUALIZER_COMMAND, EqualizerSetting, ModelError, SOUND_MODE_COMMAND,
+};
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
 
@@ -52,6 +54,17 @@ impl QuickPresetValues {
         }
         None
     }
+
+    /// Whether an enabled sound-mode field needs a capability the model lacks.
+    fn mode_unsupported(self, capabilities: Capabilities) -> bool {
+        (self.sound_mode.is_some() && !capabilities.positioned_sound_mode_write)
+            || (self.ambient_sound_mode.is_some() && !capabilities.ambient_sound_mode_write)
+    }
+
+    /// Whether an enabled equalizer field needs a capability the model lacks.
+    fn equalizer_unsupported(self, capabilities: Capabilities) -> bool {
+        self.equalizer.is_some() && !capabilities.equalizer_write
+    }
 }
 
 /// A discrete operation accepted by the session.
@@ -72,13 +85,8 @@ impl SessionCommand {
             Self::SetSoundMode(_) => capabilities.positioned_sound_mode_write,
             Self::SetAmbientSoundMode(_) => capabilities.ambient_sound_mode_write,
             Self::ApplyQuickPreset(preset) => {
-                let mode_unsupported = (preset.sound_mode.is_some()
-                    && !capabilities.positioned_sound_mode_write)
-                    || (preset.ambient_sound_mode.is_some()
-                        && !capabilities.ambient_sound_mode_write);
-                let equalizer_unsupported =
-                    preset.equalizer.is_some() && !capabilities.equalizer_write;
-                !mode_unsupported && !equalizer_unsupported
+                !preset.mode_unsupported(capabilities)
+                    && !preset.equalizer_unsupported(capabilities)
             }
         }
     }
@@ -91,11 +99,7 @@ impl SessionCommand {
                 CommandError::Model(ModelError::InvalidSoundModeWrite)
             }
             Self::ApplyQuickPreset(preset) => {
-                let mode_unsupported = (preset.sound_mode.is_some()
-                    && !capabilities.positioned_sound_mode_write)
-                    || (preset.ambient_sound_mode.is_some()
-                        && !capabilities.ambient_sound_mode_write);
-                if mode_unsupported {
+                if preset.mode_unsupported(capabilities) {
                     CommandError::Model(ModelError::InvalidSoundModeWrite)
                 } else {
                     CommandError::Model(ModelError::InvalidEqualizerWrite)
@@ -178,6 +182,35 @@ pub enum DispatchError {
     Closed,
 }
 
+/// One quick-preset field whose read-back did not match the request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum PresetFieldMismatch {
+    /// The positioned sound-mode field.
+    #[error("sound mode (requested {requested:?}, observed {observed:?})")]
+    SoundMode {
+        /// The mode requested by the preset field.
+        requested: SoundModeSetting,
+        /// The mode and position reported by the device.
+        observed: SoundModeSetting,
+    },
+    /// The ambient-mode field.
+    #[error("ambient mode (requested {requested:?}, observed {observed:?})")]
+    AmbientMode {
+        /// The mode requested by the preset field.
+        requested: SoundMode,
+        /// The mode reported by the device.
+        observed: SoundMode,
+    },
+    /// The equalizer field.
+    #[error("equalizer (requested {requested:?}, observed {observed:?})")]
+    Equalizer {
+        /// The curve requested by the preset field.
+        requested: EqualizerSetting,
+        /// The curve reported by the device, if it reported one.
+        observed: Option<EqualizerSetting>,
+    },
+}
+
 /// Failure of an accepted command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CommandError {
@@ -207,42 +240,12 @@ pub enum CommandError {
         /// The mode reported by the device.
         observed: SoundMode,
     },
-    /// The sound-mode field of a quick preset did not confirm; fields confirmed
-    /// before it stay applied in the confirmed snapshot.
-    #[error(
-        "quick preset sound mode did not match the device read-back (requested {requested:?}, observed {observed:?})"
-    )]
-    PresetSoundModeMismatch {
-        /// The mode requested by the preset field.
-        requested: SoundModeSetting,
-        /// The mode and position reported by the device.
-        observed: SoundModeSetting,
-        /// The snapshot with every field confirmed before the failure.
-        confirmed: DeviceState,
-    },
-    /// The ambient-mode field of a quick preset did not confirm; fields
-    /// confirmed before it stay applied in the confirmed snapshot.
-    #[error(
-        "quick preset ambient mode did not match the device read-back (requested {requested:?}, observed {observed:?})"
-    )]
-    PresetAmbientModeMismatch {
-        /// The mode requested by the preset field.
-        requested: SoundMode,
-        /// The mode reported by the device.
-        observed: SoundMode,
-        /// The snapshot with every field confirmed before the failure.
-        confirmed: DeviceState,
-    },
-    /// The equalizer field of a quick preset did not confirm; fields confirmed
-    /// before it stay applied in the confirmed snapshot.
-    #[error(
-        "quick preset equalizer did not match the device read-back (requested {requested:?}, observed {observed:?})"
-    )]
-    PresetEqualizerMismatch {
-        /// The curve requested by the preset field.
-        requested: EqualizerSetting,
-        /// The curve reported by the device, if it reported one.
-        observed: Option<EqualizerSetting>,
+    /// A quick-preset field did not confirm; fields confirmed before it stay
+    /// applied in the confirmed snapshot.
+    #[error("quick preset stopped at a field that did not match the read-back: {field}")]
+    PresetMismatch {
+        /// The field that did not confirm, with the requested and observed values.
+        field: PresetFieldMismatch,
         /// The snapshot with every field confirmed before the failure.
         confirmed: DeviceState,
     },

@@ -8,8 +8,8 @@ use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
 
 use crate::{
-    CommandError, CommandId, CommandOutcome, CommandResult, IoStage, QuickPresetValues,
-    SessionCommand, SessionError, WriteTarget,
+    CommandError, CommandId, CommandOutcome, CommandResult, IoStage, PresetFieldMismatch,
+    QuickPresetValues, SessionCommand, SessionError, WriteTarget,
 };
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -760,9 +760,11 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
                 return CommandError::Model(ModelError::InvalidSoundModeWrite);
             };
             if write.preset.is_some() {
-                CommandError::PresetSoundModeMismatch {
-                    requested,
-                    observed,
+                CommandError::PresetMismatch {
+                    field: PresetFieldMismatch::SoundMode {
+                        requested,
+                        observed,
+                    },
                     confirmed: state,
                 }
             } else {
@@ -777,9 +779,11 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
                 return CommandError::Model(ModelError::InvalidSoundModeWrite);
             };
             if write.preset.is_some() {
-                CommandError::PresetAmbientModeMismatch {
-                    requested,
-                    observed,
+                CommandError::PresetMismatch {
+                    field: PresetFieldMismatch::AmbientMode {
+                        requested,
+                        observed,
+                    },
                     confirmed: state,
                 }
             } else {
@@ -789,9 +793,11 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
                 }
             }
         }
-        WriteTarget::Equalizer(requested) => CommandError::PresetEqualizerMismatch {
-            requested,
-            observed: state.equalizer,
+        WriteTarget::Equalizer(requested) => CommandError::PresetMismatch {
+            field: PresetFieldMismatch::Equalizer {
+                requested,
+                observed: state.equalizer,
+            },
             confirmed: state,
         },
     }
@@ -1521,9 +1527,12 @@ mod tests {
                 }
                 Effect::Complete(
                     completed_id,
-                    Err(CommandError::PresetEqualizerMismatch {
-                        requested,
-                        observed,
+                    Err(CommandError::PresetMismatch {
+                        field:
+                            PresetFieldMismatch::Equalizer {
+                                requested,
+                                observed,
+                            },
                         confirmed,
                     }),
                 ) => {

@@ -109,19 +109,22 @@ impl SessionHandle {
         }
     }
 
+    /// The generation of the confirmed connection, or why dispatching stopped.
+    fn current_generation(&self) -> Result<u64, DispatchError> {
+        let view = self.view.borrow();
+        match view.connection {
+            ConnectionState::Ready(_) => Ok(view.generation),
+            state if state.is_terminal() => Err(DispatchError::Closed),
+            _ => Err(DispatchError::NotReady),
+        }
+    }
+
     /// Enqueues a discrete command and returns its independent completion handle.
     pub fn dispatch(&self, command: SessionCommand) -> Result<PendingCommand, DispatchError> {
         if *self.close_requested.borrow() {
             return Err(DispatchError::Closed);
         }
-        let generation = {
-            let view = self.view.borrow();
-            match view.connection {
-                ConnectionState::Ready(_) => view.generation,
-                state if state.is_terminal() => return Err(DispatchError::Closed),
-                _ => return Err(DispatchError::NotReady),
-            }
-        };
+        let generation = self.current_generation()?;
 
         let slot = Arc::clone(&self.slots)
             .try_acquire_owned()
@@ -163,14 +166,7 @@ impl SessionHandle {
         if *self.close_requested.borrow() {
             return Err(DispatchError::Closed);
         }
-        let generation = {
-            let view = self.view.borrow();
-            match view.connection {
-                ConnectionState::Ready(_) => view.generation,
-                state if state.is_terminal() => return Err(DispatchError::Closed),
-                _ => return Err(DispatchError::NotReady),
-            }
-        };
+        let generation = self.current_generation()?;
         self.live_eq.send_replace(Some((generation, setting)));
         Ok(())
     }

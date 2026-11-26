@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 pub(crate) use command::WriteTarget;
 pub use command::{
-    CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, QuickPresetValues,
-    SessionCommand,
+    CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, PresetFieldMismatch,
+    QuickPresetValues, SessionCommand,
 };
 pub use diagnostics::DiagnosticExportError;
 pub use machine::{ConnectionState, ReconnectPolicy, SessionView};
