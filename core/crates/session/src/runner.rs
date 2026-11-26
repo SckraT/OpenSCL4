@@ -1,13 +1,14 @@
 use std::{
     collections::HashMap,
     future::Future,
+    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicU64, Ordering},
     },
 };
 
-use openscl4_protocol::{Direction, Frame, FrameDecoder, encode_frame};
+use openscl4_protocol::{Direction, Frame, encode_frame};
 use openscl4_transport::{
     ConnectTarget, LinkRx, LinkTx, TransportError, TransportLink, TransportProvider,
 };
@@ -18,8 +19,9 @@ use tokio::{
 };
 
 use crate::{
-    CommandError, CommandId, CommandResult, ConnectionState, DispatchError, IoStage,
-    ReconnectPolicy, SessionCommand, SessionError, SessionEvent, SessionView,
+    CommandError, CommandId, CommandResult, ConnectionState, DiagnosticExportError, DispatchError,
+    IoStage, ReconnectPolicy, SessionCommand, SessionError, SessionEvent, SessionView,
+    diagnostics::{Capture, CaptureDecoder},
     machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
 
@@ -44,6 +46,7 @@ pub struct SessionHandle {
     commands: mpsc::Sender<Dispatch>,
     slots: Arc<Semaphore>,
     next_id: Arc<AtomicU64>,
+    capture: Capture,
     started: Instant,
 }
 
@@ -56,6 +59,7 @@ impl Clone for SessionHandle {
             commands: self.commands.clone(),
             slots: Arc::clone(&self.slots),
             next_id: Arc::clone(&self.next_id),
+            capture: self.capture.clone(),
             started: self.started,
         }
     }
@@ -70,6 +74,19 @@ impl SessionHandle {
     /// Starts receiving new session notifications.
     pub fn events(&self) -> broadcast::Receiver<SessionEvent> {
         self.events.resubscribe()
+    }
+
+    /// Enables or pauses capture of sanitized frames for this session.
+    pub fn set_frame_capture_enabled(&self, enabled: bool) {
+        self.capture.set_enabled(enabled);
+    }
+
+    /// Writes a snapshot of the captured frames to a caller-selected local ZIP.
+    pub async fn export_diagnostics(
+        &self,
+        destination: impl Into<PathBuf>,
+    ) -> Result<(), DiagnosticExportError> {
+        self.capture.export(destination.into()).await
     }
 
     /// Waits for the first confirmed device snapshot.
@@ -175,6 +192,7 @@ impl PendingCommand {
 /// Executes the state machine's transport operations on a Tokio runtime.
 pub struct SessionRunner {
     machine: SessionMachine,
+    capture: Capture,
     view: watch::Sender<Arc<SessionView>>,
     events: broadcast::Sender<SessionEvent>,
     close_requested: watch::Receiver<bool>,
@@ -200,8 +218,10 @@ impl SessionRunner {
         let (close, close_requested) = watch::channel(false);
         let (commands, incoming) = mpsc::channel(COMMAND_CAPACITY);
         let started = Instant::now();
+        let capture = Capture::new(started);
         let runner = Self {
             machine,
+            capture: capture.clone(),
             view,
             events,
             close_requested,
@@ -217,6 +237,7 @@ impl SessionRunner {
             commands,
             slots: Arc::new(Semaphore::new(COMMAND_CAPACITY)),
             next_id: Arc::new(AtomicU64::new(1)),
+            capture,
             started,
         }
     }
@@ -244,7 +265,9 @@ impl SessionRunner {
                     };
                     match until_close(&mut self.close_requested, opening).await {
                         Ok(link) => {
-                            active = Some(ActiveLink::new(link, self.events.clone()));
+                            let decoder =
+                                CaptureDecoder::new(self.capture.clone(), self.view.subscribe());
+                            active = Some(ActiveLink::new(link, self.events.clone(), decoder));
                             Input::Opened
                         }
                         Err(error) => terminal_input(error),
@@ -275,11 +298,18 @@ impl SessionRunner {
                     self.publish();
                     let link = active.as_mut().expect("requests use the active link");
                     let mut send_started = false;
+                    let frame = Frame {
+                        direction: Direction::Outbound,
+                        command,
+                        body: body.into(),
+                    };
+                    let connection = self.machine.view().connection;
                     let sending = async {
-                        let request = encode_frame(Direction::Outbound, command, &body)?;
+                        let request = encode_frame(frame.direction, frame.command, &frame.body)?;
                         let receive_cutoff = link.receive_order.load(Ordering::SeqCst);
                         timeout_at(started + deadline, async {
                             send_started = true;
+                            self.capture.record_frame(connection, &frame);
                             link.tx.send(request).await
                         })
                         .await
@@ -428,11 +458,21 @@ struct ActiveLink {
 }
 
 impl ActiveLink {
-    fn new(link: Box<dyn TransportLink>, events: broadcast::Sender<SessionEvent>) -> Self {
+    fn new(
+        link: Box<dyn TransportLink>,
+        events: broadcast::Sender<SessionEvent>,
+        decoder: CaptureDecoder,
+    ) -> Self {
         let (tx, rx) = link.split();
         let (frames, received) = mpsc::channel(16);
         let receive_order = Arc::new(AtomicU64::new(0));
-        let reader = tokio::spawn(read_link(rx, frames, Arc::clone(&receive_order), events));
+        let reader = tokio::spawn(read_link(
+            rx,
+            frames,
+            Arc::clone(&receive_order),
+            events,
+            decoder,
+        ));
         Self {
             tx,
             received,
@@ -478,8 +518,8 @@ async fn read_link(
     frames: mpsc::Sender<Result<ReceivedFrame, TransportError>>,
     receive_order: Arc<AtomicU64>,
     events: broadcast::Sender<SessionEvent>,
+    mut decoder: CaptureDecoder,
 ) {
-    let mut decoder = FrameDecoder::default();
     let mut partial_start = None;
     loop {
         let chunk = match rx.recv().await {

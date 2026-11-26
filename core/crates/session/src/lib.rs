@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod command;
+mod diagnostics;
 mod machine;
 mod runner;
 
@@ -11,6 +12,7 @@ use std::sync::Arc;
 pub use command::{
     CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, SessionCommand,
 };
+pub use diagnostics::DiagnosticExportError;
 pub use machine::{ConnectionState, ReconnectPolicy, SessionView};
 pub use openscl4_models::{DeviceState, ModelDriver, SoundMode, SoundModeSetting, registry};
 use openscl4_protocol::{DecodeError, EncodeError};

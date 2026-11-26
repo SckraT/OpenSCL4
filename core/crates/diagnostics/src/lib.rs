@@ -2,6 +2,10 @@
 
 #![forbid(unsafe_code)]
 
+mod archive;
+
+pub use archive::{ExportError, export_zip};
+
 use std::{collections::VecDeque, num::NonZeroUsize, time::Duration};
 
 use bytes::Bytes;
