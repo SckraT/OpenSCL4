@@ -46,8 +46,9 @@ it from the state response if the separate identity probe is unavailable. Add
 `--cycle-mode` to change the mode and restore the original. Each result comes
 from a fresh state response. The JSON reports the mode without a scale position.
 
-The read-only P20i pilot reports both earbud batteries and firmware versions
-from a captured A3949 state response.
+The P20i pilot reports both earbud batteries, firmware versions and gaming mode
+from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
+and restore its original value. Each result requires a fresh state response.
 
 ```sh
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3949

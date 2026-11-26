@@ -48,6 +48,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
             .and_then(|controls| controls.try_into().ok())
             .map(SoundModeControls::A3062),
         equalizer: equalizer_setting(body),
+        gaming_mode: None,
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,

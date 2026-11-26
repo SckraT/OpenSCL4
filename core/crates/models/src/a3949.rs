@@ -6,6 +6,9 @@ use crate::{
 const STATE_LENGTH: usize = 88;
 const BATTERY_SCALE: u8 = 5;
 
+/// Body offset of the measured A3949 gaming-mode flag.
+pub const A3949_GAMING_MODE: usize = 71;
+
 pub fn state_serial(body: &[u8]) -> Result<RedactedSerial<'_>, ModelError> {
     if body.len() < STATE_LENGTH {
         return Err(ModelError::IncompleteState);
@@ -28,6 +31,11 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         sound_mode: None,
         sound_mode_controls: None,
         equalizer: None,
+        gaming_mode: match (body.len(), body[A3949_GAMING_MODE]) {
+            (STATE_LENGTH, 0) => Some(false),
+            (STATE_LENGTH, 1) => Some(true),
+            _ => None,
+        },
         firmware_device: None,
         firmware_left: FirmwareVersion::parse(&body[6..11])?,
         firmware_right: FirmwareVersion::parse(&body[11..16])?,
