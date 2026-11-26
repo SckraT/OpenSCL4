@@ -24,7 +24,15 @@ A finding must name something the tools cannot decide. Run the gate first; "form
 
 **Shared behavior.** Availability/grouping rules, battery interpretation, sound-mode scales, equalizer validation, quick toggles, preset matching and the mapping from each model to its device art and kind (`lib/src/client/device_art.rs`) live in `lib/src/client/` and are consumed by both clients (`docs/development.md`, ADR-0001). Duplicating them in `android/app/` or `desktop/src/` is a violation; the illustration files, platform transport, permissions and UI lifecycle staying platform-specific is not.
 
-**Device state.** The device is the source of truth: read through `OpenSCQ30Device`, subscribe with `watch_for_changes`, write with `set_setting_values` (`docs/development.md`). A cached copy that can drift from the device is a finding. "Preset applied successfully" and "current settings match the preset" are different states; the applied mark clears on disconnect (`GLOSSARY.md`).
+**Device state.** The device is the source of truth. Release clients read through `OpenSCQ30Device`, subscribe with `watch_for_changes`, and write with `set_setting_values` (`docs/development.md`). A cached copy that can drift from the device is a finding. "Preset applied successfully" and "current settings match the preset" are different states. The applied mark clears on disconnect (`GLOSSARY.md`).
+
+**Session ordering.** In the modular core, resolve conflicts between quick presets and pending live EQ by order of acceptance within the session, including calls through cloned handles. A valid preset with EQ supersedes earlier unsent live EQ. A preset without EQ keeps the pending curve. Live EQ accepted after a preset waits until the preset finishes, including confirmation of its fields. [Session contract](https://github.com/SckraT/OpenSCL4/issues/137#issuecomment-7133425212)
+
+**Session confirmation.** Report a write to a readable setting as applied once fresh device state from the current connection matches the request. When a preset stops after confirming a field, return the independently confirmed snapshot and the typed cause. Keep the last confirmed snapshot available after link loss. A new connection accepts writes after fresh synchronization. Retrying an interrupted write takes a new user action. [Session contract](https://github.com/SckraT/OpenSCL4/issues/137#issuecomment-7133425212)
+
+**Write validation.** In the modular core, validate model capabilities and the wire range of every requested EQ gain before writing any field of a quick preset. Reject unsupported live EQ and out-of-range gains at submission. Use typed errors and preserve the current settings on these validation failures.
+
+**Model write evidence.** Verify the outbound command and the outcome separately. Confirm the outcome with device read-back or an independent measured response. Record the fixture's source revision or capture reference, known model and firmware, and how device and peer identifiers were masked. In the virtual transport, apply the write's documented effects and preserve unrelated settings. [Parity criteria](https://github.com/SckraT/OpenSCL4/issues/141#issuecomment-7134509776) · [Capture provenance](../../core/data/README.md)
 
 **Native boundary.** Setting values cross UniFFI as JSON; native types and Kotlin wrappers move together, and exported API changes require regenerated bindings (`docs/development.md`). Demo devices replay `OutboundPacket`, so a setting without an outbound implementation is incomplete.
 
@@ -35,6 +43,8 @@ A finding must name something the tools cannot decide. Run the gate first; "form
 **Identity and release.** The application id is `io.github.sckrat.openscl4`; OpenSCL4 stays a separate installation from OpenSCQ30 (ADR-0003). Do not rename inherited module identities without a stated reason. One product version and one tag per stable release; a platform hotfix bumps the common patch version and rebuilds every platform (ADR-0002). Keys, passwords and signing archives stay out of commits and review output (`docs/build-release.md`).
 
 **Documentation.** `README.md` is generated from `README.md.in`: change the template first (`docs/development.md`). `gui/` is the legacy client, not a release target; work there only when the issue is about it.
+
+**Vendored skills.** On addition or update, verify the applicable upstream license at the copied revision. Record the source and revision, full license text and required copyright notices in the license registry. [Third-party licenses](../../.agents/THIRD_PARTY_LICENSES.txt)
 
 ## Classifying findings
 
