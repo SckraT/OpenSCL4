@@ -221,7 +221,7 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
                         .conflicts_with("bluetooth"),
                 )
                 .arg(arg!(--"bluetooth" <DEVICE_NAME> "Use a connected Bluetooth device by name (Windows or Linux)"))
-                .arg(arg!(--"cycle-mode" "Switch and restore the sound mode with read-back confirmation")),
+                .arg(arg!(--"cycle-mode" "Switch and restore the model's sound or gaming mode with read-back confirmation")),
         )
         .subcommand(
             Command::new("completions")

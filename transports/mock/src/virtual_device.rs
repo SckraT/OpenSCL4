@@ -3,8 +3,9 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS, EQUALIZER_COMMAND,
-    IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SoundModeWrite,
+    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE,
+    EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND,
+    SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -13,6 +14,10 @@ use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
+const A3949_GAMING_REPLIES: [&[u8]; 2] = [
+    include_bytes!("../../../core/data/a3949-gaming-off.bin"),
+    include_bytes!("../../../core/data/a3949-gaming-on.bin"),
+];
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
 const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
@@ -89,7 +94,7 @@ impl TransportProvider for WithoutEqualizerWrite {
     }
 }
 
-/// A read-only virtual P20i that answers with a measured state response.
+/// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
 
 #[async_trait]
@@ -102,7 +107,7 @@ impl TransportProvider for VirtualA3949 {
         Ok(open_link(Some(Responder::with_state(
             model,
             ResponderOptions {
-                acknowledge_writes: false,
+                acknowledge_writes: true,
                 apply_equalizer: false,
             },
             initial_state(model),
@@ -213,9 +218,26 @@ impl Responder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == GAMING_MODE_COMMAND
+                && self.apply_gaming_mode(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
+    }
+
+    fn apply_gaming_mode(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+        true
     }
 
     fn apply_sound_mode(&self, body: &[u8]) -> bool {

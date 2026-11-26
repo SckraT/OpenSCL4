@@ -394,6 +394,7 @@ impl SessionMachine {
             let (target, preset) = match command.command {
                 SessionCommand::SetSoundMode(setting) => (WriteTarget::SoundMode(setting), None),
                 SessionCommand::SetAmbientSoundMode(mode) => (WriteTarget::AmbientMode(mode), None),
+                SessionCommand::SetGamingMode(enabled) => (WriteTarget::GamingMode(enabled), None),
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -850,6 +851,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
                 observed: state.equalizer,
             },
             confirmed: state,
+        },
+        WriteTarget::GamingMode(requested) => CommandError::GamingModeMismatch {
+            requested,
+            observed: state.gaming_mode,
         },
     }
 }

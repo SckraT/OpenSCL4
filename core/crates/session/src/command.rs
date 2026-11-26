@@ -1,5 +1,6 @@
 use openscl4_models::{
-    Capabilities, EQUALIZER_COMMAND, EqualizerSetting, ModelError, SOUND_MODE_COMMAND,
+    Capabilities, EQUALIZER_COMMAND, EqualizerSetting, GAMING_MODE_COMMAND, ModelError,
+    SOUND_MODE_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -68,6 +69,8 @@ pub enum SessionCommand {
     SetSoundMode(SoundModeSetting),
     /// Set the ambient mode on a device without a position scale.
     SetAmbientSoundMode(SoundMode),
+    /// Enable or disable gaming mode on a supported device.
+    SetGamingMode(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -81,6 +84,9 @@ impl SessionCommand {
             }
             Self::SetAmbientSoundMode(_) if !capabilities.ambient_sound_mode_write => {
                 Err(ModelError::InvalidSoundModeWrite)
+            }
+            Self::SetGamingMode(_) if !capabilities.gaming_mode_write => {
+                Err(ModelError::InvalidGamingModeWrite)
             }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
@@ -110,6 +116,8 @@ pub enum WriteTarget {
     SoundMode(SoundModeSetting),
     /// An ambient-mode change without a scale.
     AmbientMode(SoundMode),
+    /// A gaming-mode flag change.
+    GamingMode(bool),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -119,6 +127,7 @@ impl WriteTarget {
     pub(crate) fn command(self) -> [u8; 2] {
         match self {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
+            Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::Equalizer(_) => EQUALIZER_COMMAND,
         }
     }
@@ -135,6 +144,7 @@ impl WriteTarget {
         match self {
             Self::SoundMode(setting) => Ok(state.sound_mode_write(setting)?.bytes().to_vec()),
             Self::AmbientMode(mode) => Ok(state.ambient_sound_mode_write(mode)?.to_vec()),
+            Self::GamingMode(enabled) => Ok(state.gaming_mode_write(enabled)?.to_vec()),
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state),
         }
     }
@@ -144,6 +154,7 @@ impl WriteTarget {
         match self {
             Self::SoundMode(setting) => state.sound_mode_setting() == Some(setting),
             Self::AmbientMode(mode) => state.sound_mode == Some(mode),
+            Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -208,6 +219,16 @@ pub enum PresetFieldMismatch {
 /// Failure of an accepted command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CommandError {
+    /// The device reported a different gaming-mode flag at the confirmation deadline.
+    #[error(
+        "gaming mode did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    GamingModeMismatch {
+        /// The requested flag.
+        requested: bool,
+        /// The last flag reported by the device.
+        observed: Option<bool>,
+    },
     /// The command expired before it could be sent.
     #[error("session command expired in the queue")]
     QueueTimeout,

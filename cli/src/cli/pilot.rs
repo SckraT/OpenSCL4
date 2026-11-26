@@ -75,27 +75,7 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
         return Ok(snapshot_json(initial));
     }
 
-    let Some(original_mode) = initial.sound_mode else {
-        anyhow::bail!("device model is read-only in the pilot");
-    };
-    let target = match original_mode {
-        SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
-        SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
-        _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
-    };
-    let (change, restore) = if let Some(original) = initial.sound_mode_setting() {
-        initial.sound_mode_write(original)?;
-        (
-            SessionCommand::SetSoundMode(target),
-            SessionCommand::SetSoundMode(original),
-        )
-    } else {
-        initial.ambient_sound_mode_write(original_mode)?;
-        (
-            SessionCommand::SetAmbientSoundMode(target.mode),
-            SessionCommand::SetAmbientSoundMode(original_mode),
-        )
-    };
+    let (change, restore) = mode_cycle_commands(initial)?;
     let changed = apply_mode(handle, change).await?;
     let restored = apply_mode(handle, restore).await?;
 
@@ -107,6 +87,38 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
     Ok(output)
 }
 
+fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, SessionCommand)> {
+    if let Some(original) = initial.gaming_mode
+        && initial.model.capabilities().gaming_mode_write
+    {
+        return Ok((
+            SessionCommand::SetGamingMode(!original),
+            SessionCommand::SetGamingMode(original),
+        ));
+    }
+    let Some(original_mode) = initial.sound_mode else {
+        anyhow::bail!("device model is read-only in the pilot");
+    };
+    let target = match original_mode {
+        SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
+        SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
+        _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
+    };
+    if let Some(original) = initial.sound_mode_setting() {
+        initial.sound_mode_write(original)?;
+        Ok((
+            SessionCommand::SetSoundMode(target),
+            SessionCommand::SetSoundMode(original),
+        ))
+    } else {
+        initial.ambient_sound_mode_write(original_mode)?;
+        Ok((
+            SessionCommand::SetAmbientSoundMode(target.mode),
+            SessionCommand::SetAmbientSoundMode(original_mode),
+        ))
+    }
+}
+
 async fn apply_mode(
     handle: &SessionHandle,
     command: SessionCommand,
@@ -116,6 +128,9 @@ async fn apply_mode(
 }
 
 fn applied_json(state: DeviceState) -> Value {
+    if let Some(enabled) = state.gaming_mode {
+        return json!({"result": "Applied", "gamingMode": enabled});
+    }
     let mut applied = json!({
         "result": "Applied",
         "soundMode": state.sound_mode.map(SoundMode::code),
@@ -156,6 +171,9 @@ fn snapshot_json(device: DeviceState) -> Value {
     });
     if let Some(mode) = device.sound_mode {
         snapshot["soundMode"] = json!(mode.code());
+    }
+    if let Some(enabled) = device.gaming_mode {
+        snapshot["gamingMode"] = json!(enabled);
     }
     snapshot
 }

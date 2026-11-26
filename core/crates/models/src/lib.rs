@@ -9,6 +9,7 @@ mod a3949;
 pub mod registry;
 
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3949::A3949_GAMING_MODE;
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -21,6 +22,9 @@ pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
 
 /// Write the equalizer curve together with the hear-id controls that gate it.
 pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
+
+/// Write the A3949 gaming-mode flag.
+pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
@@ -49,6 +53,7 @@ impl ModelDriver {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3062),
             equalizer_write: matches!(self, Self::A3062),
+            gaming_mode_write: matches!(self, Self::A3949),
         }
     }
 
@@ -97,6 +102,7 @@ impl ModelDriver {
             })),
             firmware_device: None,
             equalizer: None,
+            gaming_mode: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -127,6 +133,8 @@ pub struct Capabilities {
     pub ambient_sound_mode_write: bool,
     /// The session can confirm writes of the equalizer curve.
     pub equalizer_write: bool,
+    /// The session can confirm writes of the gaming-mode flag.
+    pub gaming_mode_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -154,6 +162,8 @@ pub struct DeviceState {
     sound_mode_controls: Option<SoundModeControls>,
     /// The reported equalizer curve, if the model's state response carries one.
     pub equalizer: Option<EqualizerSetting>,
+    /// Whether gaming mode is on, when the device reports a recognized flag.
+    pub gaming_mode: Option<bool>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -192,6 +202,14 @@ impl DeviceState {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3062::ambient_sound_mode_write(mode, controls)
+    }
+
+    /// Builds a gaming-mode write for a device that reports the measured flag.
+    pub fn gaming_mode_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().gaming_mode_write || self.gaming_mode.is_none() {
+            return Err(ModelError::InvalidGamingModeWrite);
+        }
+        Ok([u8::from(enabled)])
     }
 }
 
@@ -441,6 +459,9 @@ pub enum ModelError {
     /// The selected curve does not match the measured equalizer write format.
     #[error("unsupported device equalizer write")]
     InvalidEqualizerWrite,
+    /// The device does not report a writable gaming-mode flag.
+    #[error("unsupported device gaming mode write")]
+    InvalidGamingModeWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
