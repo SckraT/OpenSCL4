@@ -43,6 +43,12 @@
             "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs",
             "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/alarms.rs",
             "evidence": "legacy"
+        },
+        "readLdacState": {
+            "command": "017F",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_ldac_state.rs",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/ldac_state.rs",
+            "evidence": "legacy"
         }
     },
     "models": [
@@ -904,7 +910,8 @@
             "stateParser": "A3930StateUpdatePacket",
             "startup": [
                 "readState",
-                "readIdentity"
+                "readIdentity",
+                "readLdacState"
             ],
             "modules": [
                 "sound_modes",
@@ -1575,7 +1582,8 @@
             "stateParser": "A3951StateUpdatePacket",
             "startup": [
                 "readState",
-                "readIdentity"
+                "readIdentity",
+                "readLdacState"
             ],
             "modules": [
                 "sound_modes",
