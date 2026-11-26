@@ -118,3 +118,27 @@ serial with the A3949 model prefix and recalculates the checksum. Its SHA-256 is
 `26b4102a741f34f9bf2ffa85b312231aa45ac3b6c13dff9268303ff592cf64b3`.
 The left and right levels are 5 and 4 on the five-step scale at body offsets 2
 and 3. Both firmware versions are `14.43` at body offsets 6–10 and 11–15.
+
+## A3949 gaming-mode read-back
+
+[a3949-gaming-off.bin](a3949-gaming-off.bin) and
+[a3949-gaming-on.bin](a3949-gaming-on.bin) are 98-byte inbound `01 01` responses
+captured over Windows RFCOMM from the paired Soundcore P20i (A3949, firmware
+`14.43` on both earbuds) on 2026-11-26. The off frame is the state before and after
+the cycle; the on frame followed the measured write
+`08 EE 00 00 00 01 87 0B 00 01 8A`, and the mode returned with
+`08 EE 00 00 00 01 87 0B 00 00 89`.
+[Measurement ticket](https://github.com/SckraT/OpenSCL4/issues/174)
+
+The capture substituted the device serial at body offsets 16–31 with the synthetic
+`3949TEST00000000` serial and recalculated the checksums. The frames differ only in
+the gaming flag at body offset 71 (`00` off, `01` on) and the trailing checksum
+(`D0` off, `D1` on). The SHA-256 of the concatenated off and on frames in that
+order is
+`fd7324ef5cf2df5203074b59384e9c5a24deae33bc967114082d934294331577`.
+
+The measurement separated the `01 87` acknowledgements from the state responses it
+counted. The device kept reporting the previous mode for four state reads before
+the on write appeared, 1022 ms after the write, and for five reads before the off
+write appeared, 1247 ms after the write. A session test that confirms A3949
+gaming-mode writes by read-back must hold its window past both delays.
