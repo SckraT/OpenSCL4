@@ -34,6 +34,7 @@ jobs:
           -p openscq30-lib -p openscq30-desktop -p openscq30-android
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
           -p openscl4-models -p openscl4-session -p openscl4-transport-bluez
+          -p openscl4-profiles -p openscl4-diagnostics
           -- -D warnings
       - name: Lint the CLI pilots
         run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 -- -D warnings
@@ -69,6 +70,7 @@ jobs:
         run: >-
           cargo fmt --check -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
           -p openscl4-models -p openscl4-session -p openscl4-transport-bluez -p openscl4-transport-windows
+          -p openscl4-profiles -p openscl4-diagnostics
       - name: Check formatting
         run: just format-check
 

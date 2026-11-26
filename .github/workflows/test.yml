@@ -45,6 +45,7 @@ jobs:
           -p openscq30-lib -p openscq30-desktop -p openscq30-android
           -p openscl4-transport -p openscl4-protocol -p openscl4-transport-mock
           -p openscl4-models -p openscl4-session -p openscl4-transport-bluez
+          -p openscl4-profiles -p openscl4-diagnostics
       - name: Generate HTML test coverage report
         run: cargo llvm-cov report --html
       - name: Test the virtual CLI pilots
