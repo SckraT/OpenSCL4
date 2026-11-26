@@ -102,7 +102,8 @@ impl ProfileSnapshot {
             .find(|preset| preset.key.model == model && preset.key.name == name)
     }
 
-    fn validate(&self) -> Result<(), ProfileStoreError> {
+    /// Checks the snapshot before it is accepted for persistence.
+    pub fn validate(&self) -> Result<(), ProfileStoreError> {
         validate_keys(self.equalizer_profiles.iter().map(|profile| &profile.key))?;
         validate_keys(self.quick_presets.iter().map(|preset| &preset.key))?;
         for field in self.quick_presets.iter().flat_map(|preset| &preset.fields) {
@@ -166,6 +167,22 @@ impl ProfileStore {
 
     /// Validates and syncs a new snapshot before atomically replacing the previous file.
     pub fn replace(&self, snapshot: &ProfileSnapshot) -> Result<(), ProfileStoreError> {
+        self.stage(snapshot)?
+            .persist(&self.path)
+            .map_err(|error| error.error)?;
+        Ok(())
+    }
+
+    /// Installs the snapshot if the store is absent. Returns whether it was installed.
+    pub fn create_if_absent(&self, snapshot: &ProfileSnapshot) -> Result<bool, ProfileStoreError> {
+        match self.stage(snapshot)?.persist_noclobber(&self.path) {
+            Ok(_) => Ok(true),
+            Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => Ok(false),
+            Err(error) => Err(error.error.into()),
+        }
+    }
+
+    fn stage(&self, snapshot: &ProfileSnapshot) -> Result<NamedTempFile, ProfileStoreError> {
         snapshot.validate()?;
         let parent = self
             .path
@@ -179,8 +196,7 @@ impl ProfileStore {
         };
         serde_json::to_writer(temporary.as_file_mut(), &stored)?;
         temporary.as_file().sync_all()?;
-        temporary.persist(&self.path).map_err(|error| error.error)?;
-        Ok(())
+        Ok(temporary)
     }
 }
 

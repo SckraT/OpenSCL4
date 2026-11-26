@@ -1,6 +1,7 @@
 mod equalizer_profile;
 mod migration;
 mod paired_device;
+mod profile_migration;
 mod quick_preset;
 mod type_conversions;
 
@@ -23,6 +24,9 @@ use crate::{
 };
 
 pub use paired_device::PairedDevice;
+pub use profile_migration::{
+    ProfileMigrationError, ProfileMigrationOutcome, migrate_legacy_profiles,
+};
 pub use quick_preset::{QuickPreset, QuickPresetField};
 
 // This needs to be Send + Sync, and rusqlite::Connection is not, so we have to spawn a new thread
