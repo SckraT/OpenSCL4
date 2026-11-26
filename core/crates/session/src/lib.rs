@@ -11,7 +11,7 @@ use std::sync::Arc;
 pub use command::{
     CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, SessionCommand,
 };
-pub use machine::{ConnectionState, SessionView};
+pub use machine::{ConnectionState, ReconnectPolicy, SessionView};
 pub use openscl4_models::{DeviceState, ModelDriver, SoundMode, SoundModeSetting, registry};
 use openscl4_protocol::{DecodeError, EncodeError};
 use openscl4_transport::TransportError;

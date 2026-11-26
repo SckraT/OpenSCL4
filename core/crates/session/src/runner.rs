@@ -8,16 +8,19 @@ use std::{
 };
 
 use openscl4_protocol::{Direction, Frame, FrameDecoder, encode_frame};
-use openscl4_transport::{ConnectTarget, LinkRx, TransportError, TransportProvider};
+use openscl4_transport::{
+    ConnectTarget, LinkRx, LinkTx, TransportError, TransportLink, TransportProvider,
+};
 use tokio::{
     sync::{OwnedSemaphorePermit, Semaphore, broadcast, mpsc, oneshot, watch},
-    time::{Instant, timeout, timeout_at},
+    task::JoinHandle,
+    time::{Instant, sleep_until, timeout_at},
 };
 
 use crate::{
-    CommandId, CommandResult, ConnectionState, DispatchError, IoStage, SessionCommand,
-    SessionError, SessionEvent, SessionView,
-    machine::{CLOSE_TIMEOUT, CONNECT_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
+    CommandError, CommandId, CommandResult, ConnectionState, DispatchError, IoStage,
+    ReconnectPolicy, SessionCommand, SessionError, SessionEvent, SessionView,
+    machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
 
 const COMMAND_CAPACITY: usize = 8;
@@ -28,6 +31,7 @@ struct PendingReply {
 }
 
 struct Dispatch {
+    generation: u64,
     command: QueuedCommand,
     reply: PendingReply,
 }
@@ -90,11 +94,14 @@ impl SessionHandle {
         if *self.close_requested.borrow() {
             return Err(DispatchError::Closed);
         }
-        match self.view.borrow().connection {
-            ConnectionState::Ready(_) => {}
-            state if state.is_terminal() => return Err(DispatchError::Closed),
-            _ => return Err(DispatchError::NotReady),
-        }
+        let generation = {
+            let view = self.view.borrow();
+            match view.connection {
+                ConnectionState::Ready(_) => view.generation,
+                state if state.is_terminal() => return Err(DispatchError::Closed),
+                _ => return Err(DispatchError::NotReady),
+            }
+        };
 
         let slot = Arc::clone(&self.slots)
             .try_acquire_owned()
@@ -103,6 +110,7 @@ impl SessionHandle {
         let (result, outcome) = oneshot::channel();
         self.commands
             .try_send(Dispatch {
+                generation,
                 command: QueuedCommand {
                     id,
                     command,
@@ -177,7 +185,16 @@ pub struct SessionRunner {
 impl SessionRunner {
     /// Starts one connection in the current Tokio runtime.
     pub fn start(provider: impl TransportProvider, target: ConnectTarget) -> SessionHandle {
-        let machine = SessionMachine::new();
+        Self::start_with_policy(provider, target, ReconnectPolicy::External)
+    }
+
+    /// Starts a session with an explicit policy for recovering a lost connection.
+    pub fn start_with_policy(
+        provider: impl TransportProvider,
+        target: ConnectTarget,
+        reconnect_policy: ReconnectPolicy,
+    ) -> SessionHandle {
+        let machine = SessionMachine::new(reconnect_policy);
         let (view, view_rx) = watch::channel(Arc::new(machine.view()));
         let (events, events_rx) = broadcast::channel(16);
         let (close, close_requested) = watch::channel(false);
@@ -210,46 +227,60 @@ impl SessionRunner {
         target: ConnectTarget,
         started: Instant,
     ) {
-        let opening = async {
-            timeout(CONNECT_TIMEOUT, provider.connect(&target))
-                .await
-                .map_err(|_| SessionError::Timeout(IoStage::Connect))?
-                .map_err(|error| transport_error(IoStage::Connect, error))
-        };
-        let link = match until_close(&mut self.close_requested, opening).await {
-            Ok(link) => link,
-            Err(error) => {
-                self.machine.input(started.elapsed(), terminal_input(error));
-                self.publish();
-                return;
-            }
-        };
-        let (mut tx, rx) = link.split();
-        let (frames, mut received) = mpsc::channel(16);
-        let receive_order = Arc::new(AtomicU64::new(0));
-        let reader = tokio::spawn(read_link(
-            rx,
-            frames,
-            Arc::clone(&receive_order),
-            self.events.clone(),
-        ));
-        let mut effect = self.machine.input(started.elapsed(), Input::Opened);
+        let mut active = None;
+        let mut last_disconnected = 0;
+        let mut effect = self.machine.open(started.elapsed());
 
         loop {
+            let generation = self.machine.view().generation;
             let input = match effect {
+                Effect::Open { deadline } => {
+                    self.publish();
+                    let opening = async {
+                        timeout_at(started + deadline, provider.connect(&target))
+                            .await
+                            .map_err(|_| SessionError::Timeout(IoStage::Connect))?
+                            .map_err(|error| transport_error(IoStage::Connect, error))
+                    };
+                    match until_close(&mut self.close_requested, opening).await {
+                        Ok(link) => {
+                            active = Some(ActiveLink::new(link, self.events.clone()));
+                            Input::Opened
+                        }
+                        Err(error) => terminal_input(error),
+                    }
+                }
+                Effect::Release { deadline } => {
+                    last_disconnected = generation;
+                    self.publish();
+                    self.finish_disconnected_commands();
+                    match active.take() {
+                        Some(link) => self.release(link, started + deadline).await,
+                        None => Input::Released,
+                    }
+                }
+                Effect::RetryAt(deadline) => {
+                    self.publish();
+                    tokio::select! {
+                        biased;
+                        _ = self.close_requested.wait_for(|requested| *requested) => Input::Close,
+                        () = sleep_until(started + deadline) => Input::RetryElapsed,
+                    }
+                }
                 Effect::Request {
                     command,
                     body,
                     deadline,
                 } => {
                     self.publish();
+                    let link = active.as_mut().expect("requests use the active link");
                     let mut send_started = false;
                     let sending = async {
                         let request = encode_frame(Direction::Outbound, command, &body)?;
-                        let receive_cutoff = receive_order.load(Ordering::SeqCst);
+                        let receive_cutoff = link.receive_order.load(Ordering::SeqCst);
                         timeout_at(started + deadline, async {
                             send_started = true;
-                            tx.send(request).await
+                            link.tx.send(request).await
                         })
                         .await
                         .map_err(|_| SessionError::Timeout(IoStage::Send))?
@@ -266,13 +297,21 @@ impl SessionRunner {
                 }
                 Effect::Receive(deadline) => {
                     self.publish();
-                    let receiving =
-                        receive_input(&mut received, deadline.map(|deadline| started + deadline));
+                    let link = active.as_mut().expect("receives use the active link");
+                    let receiving = receive_input(
+                        &mut link.received,
+                        deadline.map(|deadline| started + deadline),
+                    );
                     tokio::select! {
                         biased;
                         _ = self.close_requested.wait_for(|requested| *requested) => Input::Close,
                         dispatch = self.commands.recv() => {
                             if let Some(dispatch) = dispatch {
+                                if dispatch.generation != generation {
+                                    Self::complete(&self.events, dispatch.command.id, dispatch.reply, Err(CommandError::Disconnected));
+                                    effect = Effect::Receive(deadline);
+                                    continue;
+                                }
                                 self.replies.insert(dispatch.command.id, dispatch.reply);
                                 Input::Command(dispatch.command)
                             } else {
@@ -285,47 +324,89 @@ impl SessionRunner {
                 Effect::Complete(id, result) => {
                     self.publish();
                     if let Some(reply) = self.replies.remove(&id) {
-                        self.complete(id, reply, result);
+                        Self::complete(&self.events, id, reply, result);
                     }
                     effect = self.machine.next_effect(started.elapsed());
                     continue;
                 }
                 Effect::Stop => break,
             };
-            effect = self.machine.input(started.elapsed(), input);
+            effect = self
+                .machine
+                .input_from(generation, started.elapsed(), input)
+                .expect("inputs in this loop belong to the current attempt");
         }
 
-        drop(received);
-        let close_timed_out = timeout(CLOSE_TIMEOUT, tx.close()).await.is_err();
-        drop(tx);
-        reader.abort();
-        let _ = reader.await;
-        if close_timed_out {
-            let error = SessionError::Timeout(IoStage::Close);
-            self.machine
-                .input(started.elapsed(), Input::CleanupFailed(error));
-            let _ = self.events.send(SessionEvent::CleanupFailed(error));
+        if let Some(link) = active {
+            let result = self.release(link, Instant::now() + CLOSE_TIMEOUT).await;
+            if let Input::CleanupFailed(_) = result {
+                self.machine.input(started.elapsed(), result);
+            }
         }
         self.publish();
         self.commands.close();
+        let generation = self.machine.view().generation;
         while let Ok(dispatch) = self.commands.try_recv() {
-            self.replies.insert(dispatch.command.id, dispatch.reply);
+            Self::complete(
+                &self.events,
+                dispatch.command.id,
+                dispatch.reply,
+                Err(
+                    if dispatch.generation == generation && generation > last_disconnected {
+                        self.machine.terminal_command_error(dispatch.command.id)
+                    } else {
+                        CommandError::Disconnected
+                    },
+                ),
+            );
         }
         for (id, reply) in std::mem::take(&mut self.replies) {
-            self.complete(id, reply, Err(self.machine.terminal_command_error(id)));
+            Self::complete(
+                &self.events,
+                id,
+                reply,
+                Err(self.machine.terminal_command_error(id)),
+            );
         }
     }
 
-    fn complete(&self, id: CommandId, reply: PendingReply, result: CommandResult) {
+    async fn release(&self, link: ActiveLink, deadline: Instant) -> Input {
+        if link.close(deadline).await.is_err() {
+            let error = SessionError::Timeout(IoStage::Close);
+            let _ = self.events.send(SessionEvent::CleanupFailed(error));
+            Input::CleanupFailed(error)
+        } else {
+            Input::Released
+        }
+    }
+
+    fn finish_disconnected_commands(&mut self) {
+        for (id, reply) in std::mem::take(&mut self.replies) {
+            Self::complete(&self.events, id, reply, Err(CommandError::Disconnected));
+        }
+        while let Ok(dispatch) = self.commands.try_recv() {
+            Self::complete(
+                &self.events,
+                dispatch.command.id,
+                dispatch.reply,
+                Err(CommandError::Disconnected),
+            );
+        }
+    }
+
+    fn complete(
+        events: &broadcast::Sender<SessionEvent>,
+        id: CommandId,
+        reply: PendingReply,
+        result: CommandResult,
+    ) {
         let PendingReply {
             result: sender,
             _slot: slot,
         } = reply;
         drop(slot);
         let _ = sender.send(result);
-        let _ = self
-            .events
-            .send(SessionEvent::CommandCompleted { id, result });
+        let _ = events.send(SessionEvent::CommandCompleted { id, result });
     }
 
     fn publish(&self) {
@@ -336,6 +417,43 @@ impl SessionRunner {
         let view = Arc::new(next);
         self.view.send_replace(Arc::clone(&view));
         let _ = self.events.send(SessionEvent::ViewChanged(view));
+    }
+}
+
+struct ActiveLink {
+    tx: Box<dyn LinkTx>,
+    received: mpsc::Receiver<Result<ReceivedFrame, TransportError>>,
+    receive_order: Arc<AtomicU64>,
+    reader: JoinHandle<()>,
+}
+
+impl ActiveLink {
+    fn new(link: Box<dyn TransportLink>, events: broadcast::Sender<SessionEvent>) -> Self {
+        let (tx, rx) = link.split();
+        let (frames, received) = mpsc::channel(16);
+        let receive_order = Arc::new(AtomicU64::new(0));
+        let reader = tokio::spawn(read_link(rx, frames, Arc::clone(&receive_order), events));
+        Self {
+            tx,
+            received,
+            receive_order,
+            reader,
+        }
+    }
+
+    async fn close(self, deadline: Instant) -> Result<(), tokio::time::error::Elapsed> {
+        let Self {
+            mut tx,
+            received,
+            reader,
+            ..
+        } = self;
+        drop(received);
+        let result = timeout_at(deadline, tx.close()).await;
+        drop(tx);
+        reader.abort();
+        let _ = reader.await;
+        result
     }
 }
 
