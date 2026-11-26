@@ -20,7 +20,8 @@ use tokio::{
 
 use crate::{
     CommandError, CommandId, CommandResult, ConnectionState, DiagnosticExportError, DispatchError,
-    IoStage, ReconnectPolicy, SessionCommand, SessionError, SessionEvent, SessionView,
+    EqualizerSetting, IoStage, ReconnectPolicy, SessionCommand, SessionError, SessionEvent,
+    SessionView,
     diagnostics::{Capture, CaptureDecoder},
     machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
@@ -44,6 +45,7 @@ pub struct SessionHandle {
     events: broadcast::Receiver<SessionEvent>,
     close_requested: watch::Sender<bool>,
     commands: mpsc::Sender<Dispatch>,
+    live_eq: watch::Sender<Option<(u64, EqualizerSetting)>>,
     slots: Arc<Semaphore>,
     next_id: Arc<AtomicU64>,
     capture: Capture,
@@ -57,6 +59,7 @@ impl Clone for SessionHandle {
             events: self.events.resubscribe(),
             close_requested: self.close_requested.clone(),
             commands: self.commands.clone(),
+            live_eq: self.live_eq.clone(),
             slots: Arc::clone(&self.slots),
             next_id: Arc::clone(&self.next_id),
             capture: self.capture.clone(),
@@ -151,6 +154,27 @@ impl SessionHandle {
         })
     }
 
+    /// Publishes the latest live-equalizer curve for the session to write.
+    ///
+    /// Rapid values coalesce into one pending curve: the queue never fills, the
+    /// write holds a short interval, and the final position is always applied.
+    /// A live value has no completion handle; the confirmed state is its outcome.
+    pub fn set_eq_live(&self, setting: EqualizerSetting) -> Result<(), DispatchError> {
+        if *self.close_requested.borrow() {
+            return Err(DispatchError::Closed);
+        }
+        let generation = {
+            let view = self.view.borrow();
+            match view.connection {
+                ConnectionState::Ready(_) => view.generation,
+                state if state.is_terminal() => return Err(DispatchError::Closed),
+                _ => return Err(DispatchError::NotReady),
+            }
+        };
+        self.live_eq.send_replace(Some((generation, setting)));
+        Ok(())
+    }
+
     /// Closes the session and waits until the link is released.
     pub async fn close(&self) -> Result<(), SessionError> {
         self.close_requested.send_replace(true);
@@ -197,6 +221,7 @@ pub struct SessionRunner {
     events: broadcast::Sender<SessionEvent>,
     close_requested: watch::Receiver<bool>,
     commands: mpsc::Receiver<Dispatch>,
+    live_eq: watch::Receiver<Option<(u64, EqualizerSetting)>>,
     replies: HashMap<CommandId, PendingReply>,
 }
 
@@ -217,6 +242,7 @@ impl SessionRunner {
         let (events, events_rx) = broadcast::channel(16);
         let (close, close_requested) = watch::channel(false);
         let (commands, incoming) = mpsc::channel(COMMAND_CAPACITY);
+        let (live_eq, live_eq_updates) = watch::channel(None);
         let started = Instant::now();
         let capture = Capture::new(started);
         let runner = Self {
@@ -226,6 +252,7 @@ impl SessionRunner {
             events,
             close_requested,
             commands: incoming,
+            live_eq: live_eq_updates,
             replies: HashMap::new(),
         };
         tokio::spawn(runner.run(provider, target, started));
@@ -235,6 +262,7 @@ impl SessionRunner {
             events: events_rx,
             close_requested: close,
             commands,
+            live_eq,
             slots: Arc::new(Semaphore::new(COMMAND_CAPACITY)),
             next_id: Arc::new(AtomicU64::new(1)),
             capture,
@@ -335,6 +363,19 @@ impl SessionRunner {
                     tokio::select! {
                         biased;
                         _ = self.close_requested.wait_for(|requested| *requested) => Input::Close,
+                        live_eq = next_live_eq(&mut self.live_eq) => {
+                            match live_eq {
+                                Some((generation, setting)) if generation == self.machine.view().generation => {
+                                    Input::EqLive(setting)
+                                }
+                                // A value stamped by a previous connection is not a
+                                // new user action and is not replayed on the new one.
+                                Some(_) | None => {
+                                    effect = Effect::Receive(deadline);
+                                    continue;
+                                }
+                            }
+                        }
                         dispatch = self.commands.recv() => {
                             if let Some(dispatch) = dispatch {
                                 if dispatch.generation != generation {
@@ -555,6 +596,20 @@ async fn read_link(
             first_read = current_read;
         }
     }
+}
+
+/// Waits for the next published live-equalizer value.
+///
+/// Once the handle is gone no further values can arrive, and this future
+/// never completes, so the loop keeps waiting on frames and commands instead
+/// of spinning on the closed channel.
+async fn next_live_eq(
+    live_eq: &mut watch::Receiver<Option<(u64, EqualizerSetting)>>,
+) -> Option<(u64, EqualizerSetting)> {
+    if live_eq.changed().await.is_err() {
+        std::future::pending::<()>().await;
+    }
+    *live_eq.borrow_and_update()
 }
 
 async fn receive_input(

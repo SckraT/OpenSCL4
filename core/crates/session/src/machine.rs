@@ -1,14 +1,15 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    DeviceState, IDENTITY_COMMAND, ModelDriver, ModelError, SOUND_MODE_COMMAND, STATE_COMMAND,
+    DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError, STATE_COMMAND,
     registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
 
 use crate::{
-    CommandError, CommandId, CommandOutcome, CommandResult, IoStage, SessionCommand, SessionError,
+    CommandError, CommandId, CommandOutcome, CommandResult, IoStage, QuickPresetValues,
+    SessionCommand, SessionError, WriteTarget,
 };
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -19,6 +20,9 @@ const QUEUE_TIMEOUT: Duration = Duration::from_secs(5);
 pub const CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 const RECOVERY_WINDOW: Duration = Duration::from_secs(30);
 const RETRY_INTERVAL: Duration = Duration::from_millis(250);
+/// The interval a live-equalizer value waits between writes, inside the
+/// 50–80 ms window agreed with the Sans-IO session contract.
+const EQ_WRITE_INTERVAL: Duration = Duration::from_millis(80);
 
 /// Chooses which layer manages recovery after losing a confirmed connection.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -101,6 +105,8 @@ pub enum Input {
     },
     TimerElapsed,
     Command(QueuedCommand),
+    /// A live value replaced the pending equalizer curve.
+    EqLive(EqualizerSetting),
     Close,
     Failed(SessionError),
     CleanupFailed(SessionError),
@@ -152,10 +158,25 @@ enum WriteStage {
     },
 }
 
+/// A deferred live-equalizer curve waiting for its write interval.
 #[derive(Clone, Copy)]
-struct ModeWrite {
-    id: CommandId,
-    command: SessionCommand,
+struct PendingEq {
+    setting: EqualizerSetting,
+    ready_at: Duration,
+}
+
+/// One in-flight device write: a discrete command, one field of a quick preset,
+/// or a coalesced live-equalizer value.
+#[derive(Clone, Copy)]
+struct ActiveWrite {
+    /// The submitter's command id, or none for a coalesced live-equalizer write.
+    id: Option<CommandId>,
+    /// The setting this write changes.
+    target: WriteTarget,
+    /// The preset fields still to apply after this one, or none outside a
+    /// preset. The preset's last field carries the marker with every field
+    /// consumed.
+    preset: Option<QuickPresetValues>,
     model: ModelDriver,
     stage: WriteStage,
     may_have_written: bool,
@@ -175,7 +196,8 @@ pub struct SessionMachine {
     recovery: Option<Recovery>,
     reply_deadline: Option<Duration>,
     receive_cutoff: u64,
-    mode_write: Option<ModeWrite>,
+    active: Option<ActiveWrite>,
+    pending_eq: Option<PendingEq>,
     queue: VecDeque<QueuedCommand>,
 }
 
@@ -191,7 +213,8 @@ impl SessionMachine {
             recovery: None,
             reply_deadline: None,
             receive_cutoff: 0,
-            mode_write: None,
+            active: None,
+            pending_eq: None,
             queue: VecDeque::new(),
         }
     }
@@ -243,8 +266,8 @@ impl SessionMachine {
                 self.mark_write_attempt();
                 self.receive_cutoff = receive_cutoff;
                 let timeout = now + REPLY_TIMEOUT;
-                let deadline = match &mut self.mode_write {
-                    Some(ModeWrite {
+                let deadline = match &mut self.active {
+                    Some(ActiveWrite {
                         stage: WriteStage::ReadBack { deadline, .. },
                         ..
                     }) => *deadline.get_or_insert(timeout),
@@ -268,7 +291,25 @@ impl SessionMachine {
             }
             Input::TimerElapsed => self.on_timer(now),
             Input::Command(command) => {
+                if command.command.replaces_pending_equalizer() {
+                    // The preset's curve replaces the unsent live value.
+                    self.pending_eq = None;
+                }
                 self.queue.push_back(command);
+                self.next_effect(now)
+            }
+            Input::EqLive(setting) => {
+                let ready_at = self
+                    .pending_eq
+                    .as_ref()
+                    .map_or(now + EQ_WRITE_INTERVAL, |pending| pending.ready_at);
+                if let ConnectionState::Ready(device) = self.view.connection
+                    && device.model.capabilities().equalizer_write
+                {
+                    // Rapid values coalesce: the latest curve keeps the interval
+                    // anchored at the first value.
+                    self.pending_eq = Some(PendingEq { setting, ready_at });
+                }
                 self.next_effect(now)
             }
             Input::Frame { frame, first_read } => self.on_frame(now, frame, first_read),
@@ -299,27 +340,69 @@ impl SessionMachine {
             return Effect::Complete(id, Err(CommandError::QueueTimeout));
         }
 
-        if self.mode_write.is_none()
+        if self.active.is_none()
             && let ConnectionState::Ready(device) = self.view.connection
-            && let Some(command) = self.queue.pop_front()
         {
-            if !command.command.supported_by(device.model) {
-                return Effect::Complete(command.id, Err(ModelError::InvalidSoundModeWrite.into()));
+            if let Some(command) = self.queue.pop_front() {
+                if !command.command.supported_by(device.model) {
+                    return Effect::Complete(
+                        command.id,
+                        Err(command.command.unsupported_error(device.model)),
+                    );
+                }
+                let (target, preset) = match command.command {
+                    SessionCommand::SetSoundMode(setting) => {
+                        (WriteTarget::SoundMode(setting), None)
+                    }
+                    SessionCommand::SetAmbientSoundMode(mode) => {
+                        (WriteTarget::AmbientMode(mode), None)
+                    }
+                    SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
+                        Some((target, rest)) => (target, Some(rest)),
+                        None => {
+                            // A preset with no enabled fields confirms the current state.
+                            return Effect::Complete(
+                                command.id,
+                                Ok(CommandOutcome::Applied(device)),
+                            );
+                        }
+                    },
+                };
+                self.active = Some(ActiveWrite {
+                    id: Some(command.id),
+                    target,
+                    preset,
+                    model: device.model,
+                    stage: WriteStage::ReadCurrent,
+                    may_have_written: false,
+                });
+                return Effect::read(now, device.model.state_command());
             }
-            self.mode_write = Some(ModeWrite {
-                id: command.id,
-                command: command.command,
-                model: device.model,
-                stage: WriteStage::ReadCurrent,
-                may_have_written: false,
-            });
-            return Effect::read(now, device.model.state_command());
+            if device.model.capabilities().equalizer_write
+                && let Some(pending) = self.pending_eq.take_if(|pending| now >= pending.ready_at)
+            {
+                self.active = Some(ActiveWrite {
+                    id: None,
+                    target: WriteTarget::Equalizer(pending.setting),
+                    preset: None,
+                    model: device.model,
+                    stage: WriteStage::ReadCurrent,
+                    may_have_written: false,
+                });
+                return Effect::read(now, device.model.state_command());
+            }
         }
 
         let next_deadline = self
             .reply_deadline
             .into_iter()
             .chain(self.queue.front().map(QueuedCommand::expires_at))
+            .chain(
+                self.active
+                    .is_none()
+                    .then(|| self.pending_eq.as_ref().map(|pending| pending.ready_at))
+                    .flatten(),
+            )
             .min();
         Effect::Receive(next_deadline)
     }
@@ -329,7 +412,7 @@ impl SessionMachine {
             return self.next_effect(now);
         }
 
-        if let Some(write) = self.mode_write {
+        if let Some(write) = self.active {
             match write.stage {
                 WriteStage::Ack => return self.read_back(now, write, None, None),
                 WriteStage::WaitForReadBack { deadline, observed } if now < deadline => {
@@ -340,7 +423,7 @@ impl SessionMachine {
                     ..
                 }
                 | WriteStage::WaitForReadBack { observed, .. } => {
-                    return self.finish_write(write, observed);
+                    return self.finish_write(now, write, observed);
                 }
                 _ => {}
             }
@@ -363,7 +446,7 @@ impl SessionMachine {
             return self.next_effect(now);
         }
 
-        if let Some(write) = self.mode_write {
+        if let Some(write) = self.active {
             if first_read <= self.receive_cutoff {
                 return self.next_effect(now);
             }
@@ -371,7 +454,9 @@ impl SessionMachine {
                 WriteStage::ReadCurrent if frame.command == write.model.state_command() => {
                     self.send_write(now, write, &frame.body)
                 }
-                WriteStage::Ack if frame.command == SOUND_MODE_COMMAND && frame.body.is_empty() => {
+                WriteStage::Ack
+                    if frame.command == write.target.command() && frame.body.is_empty() =>
+                {
                     self.read_back(now, write, None, None)
                 }
                 WriteStage::ReadBack {
@@ -425,7 +510,7 @@ impl SessionMachine {
         }
     }
 
-    fn send_write(&mut self, now: Duration, write: ModeWrite, body: &[u8]) -> Effect {
+    fn send_write(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
         let state = match write.model.decode_state(body) {
             Ok(state) => state,
             Err(error) => return self.fail(now, error.into()),
@@ -436,30 +521,36 @@ impl SessionMachine {
             self.transition(ConnectionState::Ready(state));
         }
 
-        match write.command.write_body(state) {
+        match write.target.write_body(state, body) {
             Ok(body) => {
-                self.mode_write = Some(ModeWrite {
+                self.active = Some(ActiveWrite {
                     stage: WriteStage::Ack,
                     ..write
                 });
-                Effect::request(now, SOUND_MODE_COMMAND, body)
+                Effect::request(now, write.target.command(), body)
             }
-            Err(error) => {
-                self.mode_write = None;
-                Effect::Complete(write.id, Err(error.into()))
-            }
+            Err(error) => self.reject_write(now, write, error),
+        }
+    }
+
+    /// Completes a write that could not be encoded without touching the device.
+    fn reject_write(&mut self, now: Duration, write: ActiveWrite, error: CommandError) -> Effect {
+        self.active = None;
+        match write.id {
+            Some(id) => Effect::Complete(id, Err(error)),
+            None => self.next_effect(now),
         }
     }
 
     fn read_back(
         &mut self,
         now: Duration,
-        write: ModeWrite,
+        write: ActiveWrite,
         deadline: Option<Duration>,
         observed: Option<DeviceState>,
     ) -> Effect {
         self.reply_deadline = None;
-        self.mode_write = Some(ModeWrite {
+        self.active = Some(ActiveWrite {
             stage: WriteStage::ReadBack { deadline, observed },
             ..write
         });
@@ -475,19 +566,19 @@ impl SessionMachine {
         &mut self,
         now: Duration,
         deadline: Duration,
-        write: ModeWrite,
+        write: ActiveWrite,
         body: &[u8],
     ) -> Effect {
         let state = match write.model.decode_state(body) {
             Ok(state) => state,
             Err(error) => return self.fail(now, error.into()),
         };
-        if write.command.verify_mode(state).is_ok() {
-            return self.finish_write(write, state);
+        if write.target.matches(state) {
+            return self.finish_write(now, write, state);
         }
 
         // A device can acknowledge the write before the new value appears in a state response.
-        self.mode_write = Some(ModeWrite {
+        self.active = Some(ActiveWrite {
             stage: WriteStage::WaitForReadBack {
                 deadline,
                 observed: state,
@@ -498,19 +589,53 @@ impl SessionMachine {
         self.next_effect(now)
     }
 
-    fn finish_write(&mut self, write: ModeWrite, state: DeviceState) -> Effect {
-        self.mode_write = None;
+    fn finish_write(&mut self, now: Duration, write: ActiveWrite, state: DeviceState) -> Effect {
         self.transition(ConnectionState::Ready(state));
 
-        let result = write
-            .command
-            .verify_mode(state)
-            .map(|()| CommandOutcome::Applied(state));
-        Effect::Complete(write.id, result)
+        if !write.target.matches(state) {
+            self.active = None;
+            return match write.id {
+                Some(id) => Effect::Complete(id, Err(write_failure(write, state))),
+                None => self.continue_live_eq(now),
+            };
+        }
+
+        if let Some(rest) = write.preset
+            && let Some((target, rest)) = rest.first_field()
+        {
+            // The preset confirmed this field; the next one starts fresh.
+            self.active = Some(ActiveWrite {
+                target,
+                preset: Some(rest),
+                stage: WriteStage::ReadCurrent,
+                may_have_written: false,
+                ..write
+            });
+            return Effect::read(now, write.model.state_command());
+        }
+
+        self.active = None;
+        match write.id {
+            Some(id) => Effect::Complete(id, Ok(CommandOutcome::Applied(state))),
+            None => self.continue_live_eq(now),
+        }
+    }
+
+    /// Continues after a live-equalizer write reconciled with the confirmed state.
+    ///
+    /// A value that became ready while the write was in flight waits a full
+    /// interval after this write, keeping the interval between live writes.
+    fn continue_live_eq(&mut self, now: Duration) -> Effect {
+        if let Some(pending) = &mut self.pending_eq
+            && pending.ready_at <= now
+        {
+            pending.ready_at = now + EQ_WRITE_INTERVAL;
+        }
+        self.next_effect(now)
     }
 
     fn mark_write_attempt(&mut self) {
-        if let Some(write) = &mut self.mode_write
+        if let Some(write) = &mut self.active
             && write.stage == WriteStage::Ack
         {
             write.may_have_written = true;
@@ -531,8 +656,8 @@ impl SessionMachine {
         ) {
             CommandError::Disconnected
         } else if self
-            .mode_write
-            .is_some_and(|write| write.id == id && write.may_have_written)
+            .active
+            .is_some_and(|write| write.id == Some(id) && write.may_have_written)
         {
             CommandError::Unconfirmed(failure)
         } else {
@@ -560,7 +685,10 @@ impl SessionMachine {
         }
 
         if self.recovery.is_some() && retryable(error) {
-            self.mode_write = None;
+            // The deferred live value does not survive a lost connection; applying
+            // it again takes a new user action.
+            self.active = None;
+            self.pending_eq = None;
             self.queue.clear();
             self.receive_cutoff = 0;
             self.transition(ConnectionState::Connecting);
@@ -620,9 +748,58 @@ fn retryable(error: SessionError) -> bool {
     )
 }
 
+/// The typed failure for a write whose read-back did not match the request.
+///
+/// A preset field failure carries the last confirmed snapshot, so the fields
+/// confirmed before it stay observable; a live-equalizer write has no
+/// submitter and never reaches this mapping.
+fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
+    match write.target {
+        WriteTarget::SoundMode(requested) => {
+            let Some(observed) = state.sound_mode_setting() else {
+                return CommandError::Model(ModelError::InvalidSoundModeWrite);
+            };
+            if write.preset.is_some() {
+                CommandError::PresetSoundModeMismatch {
+                    requested,
+                    observed,
+                    confirmed: state,
+                }
+            } else {
+                CommandError::ModeMismatch {
+                    requested,
+                    observed,
+                }
+            }
+        }
+        WriteTarget::AmbientMode(requested) => {
+            let Some(observed) = state.sound_mode else {
+                return CommandError::Model(ModelError::InvalidSoundModeWrite);
+            };
+            if write.preset.is_some() {
+                CommandError::PresetAmbientModeMismatch {
+                    requested,
+                    observed,
+                    confirmed: state,
+                }
+            } else {
+                CommandError::AmbientModeMismatch {
+                    requested,
+                    observed,
+                }
+            }
+        }
+        WriteTarget::Equalizer(requested) => CommandError::PresetEqualizerMismatch {
+            requested,
+            observed: state.equalizer,
+            confirmed: state,
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use openscl4_models::{SoundMode, SoundModeSetting};
+    use openscl4_models::{EQUALIZER_COMMAND, SOUND_MODE_COMMAND, SoundMode, SoundModeSetting};
     use openscl4_protocol::encode_frame;
 
     use super::*;
@@ -808,9 +985,10 @@ mod tests {
         let requested = SoundModeSetting::NORMAL;
         let id = CommandId(1);
         let mut machine = SessionMachine::new(ReconnectPolicy::External);
-        machine.mode_write = Some(ModeWrite {
-            id,
-            command: SessionCommand::SetSoundMode(requested),
+        machine.active = Some(ActiveWrite {
+            id: Some(id),
+            target: WriteTarget::SoundMode(requested),
+            preset: None,
             model,
             stage: WriteStage::ReadBack {
                 deadline: None,
@@ -1016,9 +1194,10 @@ mod tests {
         let queued = CommandId(2);
         for send_started in [false, true] {
             let mut machine = SessionMachine::new(ReconnectPolicy::External);
-            machine.mode_write = Some(ModeWrite {
-                id: attempted,
-                command: SessionCommand::SetSoundMode(SoundModeSetting::NORMAL),
+            machine.active = Some(ActiveWrite {
+                id: Some(attempted),
+                target: WriteTarget::SoundMode(SoundModeSetting::NORMAL),
+                preset: None,
                 model: ModelDriver::A3954,
                 stage: WriteStage::Ack,
                 may_have_written: false,
@@ -1042,6 +1221,329 @@ mod tests {
                 machine.terminal_command_error(queued),
                 CommandError::Session(SessionError::Closed)
             );
+        }
+    }
+
+    fn ready_a3062(reconnect_policy: ReconnectPolicy) -> SessionMachine {
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let mut machine = SessionMachine::new(reconnect_policy);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, &[]));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        machine
+    }
+
+    /// One band byte in the measured A3062 wire scale.
+    fn band_wire(gain: i16) -> u8 {
+        (gain + 120) as u8
+    }
+
+    fn curve(preset_id: u16, first_band: i16) -> EqualizerSetting {
+        EqualizerSetting {
+            preset_id,
+            volume_adjustments: [first_band, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        }
+    }
+
+    /// Writes the curve into the A3062 state layout: preset at 23, bands at 25.
+    fn apply_curve(body: &mut [u8], setting: EqualizerSetting) {
+        body[23..25].copy_from_slice(&setting.preset_id.to_le_bytes());
+        body[25..35].copy_from_slice(&setting.volume_adjustments.map(band_wire));
+    }
+
+    fn a3062_state_with_eq(setting: EqualizerSetting) -> Vec<u8> {
+        let mut body = state_body(A3062_STATE).to_vec();
+        apply_curve(&mut body, setting);
+        body
+    }
+
+    fn a3062_transparency_state() -> Vec<u8> {
+        let mut body = state_body(A3062_STATE).to_vec();
+        body[69] = 1; // Transparency on the A3062 sound-mode byte.
+        body
+    }
+
+    #[test]
+    fn live_eq_coalesces_rapid_values_into_one_write() {
+        let mut machine = ready_a3062(ReconnectPolicy::External);
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let first = curve(0xfefe, 60);
+        let second = curve(0xfefe, -60);
+
+        let wait = machine.input(Duration::ZERO, Input::EqLive(first));
+        assert!(matches!(wait, Effect::Receive(Some(at)) if at == EQ_WRITE_INTERVAL));
+        // A value inside the interval replaces the pending curve and keeps the deadline.
+        let wait = machine.input(Duration::from_millis(20), Input::EqLive(second));
+        assert!(matches!(wait, Effect::Receive(Some(at)) if at == EQ_WRITE_INTERVAL));
+
+        let refresh = machine.input(EQ_WRITE_INTERVAL, Input::TimerElapsed);
+        assert!(
+            matches!(refresh, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+        machine.input(EQ_WRITE_INTERVAL, sent());
+        // The write carries the latest curve, not the first one.
+        let Effect::Request {
+            command,
+            body,
+            deadline,
+        } = machine.input(
+            EQ_WRITE_INTERVAL,
+            inbound(STATE_COMMAND, &state_body(A3062_STATE)),
+        )
+        else {
+            panic!("expected a live-equalizer write after the refresh");
+        };
+        assert_eq!(command, EQUALIZER_COMMAND);
+        assert_eq!(deadline, EQ_WRITE_INTERVAL + SEND_TIMEOUT);
+        assert_eq!(&body[0..2], &0xfefe_u16.to_le_bytes());
+        assert_eq!(body[4..14], second.volume_adjustments.map(band_wire));
+        machine.input(EQ_WRITE_INTERVAL, sent());
+
+        let read_back = machine.input(EQ_WRITE_INTERVAL, inbound(EQUALIZER_COMMAND, &[]));
+        assert!(
+            matches!(read_back, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+        machine.input(EQ_WRITE_INTERVAL, sent());
+        // A live write publishes the confirmed state and completes no command.
+        let idle = machine.input(
+            EQ_WRITE_INTERVAL,
+            inbound(STATE_COMMAND, &a3062_state_with_eq(second)),
+        );
+        assert!(matches!(idle, Effect::Receive(None)));
+        assert!(matches!(
+            machine.view().connection,
+            ConnectionState::Ready(state) if state.equalizer == Some(second)
+        ));
+    }
+
+    #[test]
+    fn preset_with_equalizer_supersedes_the_pending_live_value() {
+        let mut machine = ready_a3062(ReconnectPolicy::External);
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let preset_curve = curve(5, -30);
+        machine.input(now, Input::EqLive(curve(0xfefe, 60)));
+
+        let id = CommandId(1);
+        let accepted = machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::ApplyQuickPreset(QuickPresetValues {
+                    sound_mode: None,
+                    ambient_sound_mode: Some(SoundMode::Transparency),
+                    equalizer: Some(preset_curve),
+                }),
+                submitted_at: now,
+            }),
+        );
+        assert!(
+            matches!(accepted, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+        machine.input(now, sent());
+
+        // The ambient field writes first, from a fresh state read. The normal
+        // capture carries the controls of the golden transparency write.
+        let Effect::Request { command, body, .. } =
+            machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_NORMAL)))
+        else {
+            panic!("expected the ambient-mode write");
+        };
+        assert_eq!(command, SOUND_MODE_COMMAND);
+        let wire = encode_frame(Direction::Outbound, command, &body).expect("encode mode write");
+        assert_eq!(wire.as_ref(), A3062_TRANSPARENCY_WRITE);
+        machine.input(now, sent());
+        machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
+        machine.input(now, sent());
+        // The read-back confirms transparency; the preset continues with its curve.
+        let next_field = machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()));
+        assert!(
+            matches!(next_field, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+        machine.input(now, sent());
+        let Effect::Request { command, body, .. } =
+            machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()))
+        else {
+            panic!("expected the preset's equalizer write");
+        };
+        assert_eq!(command, EQUALIZER_COMMAND);
+        assert_eq!(&body[0..2], &5_u16.to_le_bytes());
+        machine.input(now, sent());
+        machine.input(now, inbound(EQUALIZER_COMMAND, &[]));
+        machine.input(now, sent());
+        let mut applied = a3062_transparency_state();
+        apply_curve(&mut applied, preset_curve);
+        let completed = machine.input(now, inbound(STATE_COMMAND, &applied));
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
+                if completed_id == id
+                    && state.sound_mode == Some(SoundMode::Transparency)
+                    && state.equalizer == Some(preset_curve)
+        ));
+        // The superseded live value never writes.
+        assert!(matches!(
+            machine.input(now, Input::TimerElapsed),
+            Effect::Receive(None)
+        ));
+    }
+
+    #[test]
+    fn preset_without_equalizer_keeps_the_pending_live_value() {
+        let mut machine = ready_a3062(ReconnectPolicy::External);
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let live = curve(0xfefe, -60);
+        machine.input(now, Input::EqLive(live));
+
+        let id = CommandId(1);
+        machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::ApplyQuickPreset(QuickPresetValues {
+                    sound_mode: None,
+                    ambient_sound_mode: Some(SoundMode::Transparency),
+                    equalizer: None,
+                }),
+                submitted_at: now,
+            }),
+        );
+        machine.input(now, sent());
+        let write = machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        assert!(matches!(
+            write,
+            Effect::Request {
+                command: SOUND_MODE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now, sent());
+        machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
+        machine.input(now, sent());
+        let completed = machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()));
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
+                if completed_id == id && state.sound_mode == Some(SoundMode::Transparency)
+        ));
+        // The deferred live value keeps its interval and writes after the preset.
+        let wait = machine.input(now, Input::TimerElapsed);
+        assert!(matches!(wait, Effect::Receive(Some(at)) if at == EQ_WRITE_INTERVAL));
+        let live_write = machine.input(EQ_WRITE_INTERVAL, Input::TimerElapsed);
+        assert!(
+            matches!(live_write, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+    }
+
+    #[test]
+    fn a_lost_connection_clears_the_pending_live_value() {
+        let mut machine = ready_a3062(ReconnectPolicy::Internal);
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        machine.input(Duration::ZERO, Input::EqLive(curve(0xfefe, 60)));
+
+        let reason = SessionError::Transport {
+            stage: IoStage::Receive,
+            error: TransportError::Disconnected,
+        };
+        assert!(matches!(
+            machine.input(Duration::ZERO, Input::Failed(reason)),
+            Effect::Release { .. }
+        ));
+        machine.input(Duration::ZERO, Input::Released);
+        assert!(matches!(
+            machine.input(RETRY_INTERVAL, Input::RetryElapsed),
+            Effect::Open { .. }
+        ));
+        machine.input(RETRY_INTERVAL, Input::Opened);
+        machine.input(RETRY_INTERVAL, sent());
+        machine.input(RETRY_INTERVAL, inbound(IDENTITY_COMMAND, &[]));
+        machine.input(RETRY_INTERVAL, sent());
+        machine.input(
+            RETRY_INTERVAL,
+            inbound(STATE_COMMAND, &state_body(A3062_STATE)),
+        );
+
+        // The deferred curve was cleared with the connection.
+        let idle = machine.input(RETRY_INTERVAL, Input::TimerElapsed);
+        assert!(matches!(idle, Effect::Receive(None)));
+    }
+
+    #[test]
+    fn a_failed_preset_field_keeps_the_confirmed_fields() {
+        let mut machine = ready_a3062(ReconnectPolicy::External);
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let preset_curve = curve(0xfefe, -60);
+        let id = CommandId(1);
+        machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::ApplyQuickPreset(QuickPresetValues {
+                    sound_mode: None,
+                    ambient_sound_mode: Some(SoundMode::Transparency),
+                    equalizer: Some(preset_curve),
+                }),
+                submitted_at: now,
+            }),
+        );
+        // The ambient field confirms first.
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        machine.input(now, sent());
+        machine.input(now, inbound(SOUND_MODE_COMMAND, &[]));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()));
+
+        // The equalizer field writes, but the read-back never shows the curve.
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()));
+        machine.input(now, sent());
+
+        // The unanswered write ACK and the repeated read-backs each wait their
+        // turn on the virtual clock; the state never carries the preset's curve.
+        let mut now = REPLY_TIMEOUT;
+        loop {
+            match machine.input(now, Input::TimerElapsed) {
+                Effect::Request { command, body, .. }
+                    if command == STATE_COMMAND && body.is_empty() =>
+                {
+                    machine.input(now, sent());
+                    machine.input(now, inbound(STATE_COMMAND, &a3062_transparency_state()));
+                }
+                Effect::Receive(Some(deadline)) => {
+                    now = deadline;
+                    continue;
+                }
+                Effect::Complete(
+                    completed_id,
+                    Err(CommandError::PresetEqualizerMismatch {
+                        requested,
+                        observed,
+                        confirmed,
+                    }),
+                ) => {
+                    assert_eq!(completed_id, id);
+                    assert_eq!(requested, preset_curve);
+                    // The fixture reports the Soundcore Signature curve.
+                    assert_eq!(
+                        observed,
+                        Some(EqualizerSetting {
+                            preset_id: 0,
+                            volume_adjustments: [0, 0, 0, 0, 0, 0, 0, 0, 0, -120],
+                        })
+                    );
+                    // The sound-mode field confirmed before the failure stays applied.
+                    assert_eq!(confirmed.sound_mode, Some(SoundMode::Transparency));
+                    break;
+                }
+                _ => panic!("unexpected effect while waiting for the preset deadline"),
+            }
+            now += READ_BACK_INTERVAL;
         }
     }
 

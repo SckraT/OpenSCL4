@@ -9,12 +9,16 @@ mod runner;
 
 use std::sync::Arc;
 
+pub(crate) use command::WriteTarget;
 pub use command::{
-    CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, SessionCommand,
+    CommandError, CommandId, CommandOutcome, CommandResult, DispatchError, QuickPresetValues,
+    SessionCommand,
 };
 pub use diagnostics::DiagnosticExportError;
 pub use machine::{ConnectionState, ReconnectPolicy, SessionView};
-pub use openscl4_models::{DeviceState, ModelDriver, SoundMode, SoundModeSetting, registry};
+pub use openscl4_models::{
+    DeviceState, EqualizerSetting, ModelDriver, SoundMode, SoundModeSetting, registry,
+};
 use openscl4_protocol::{DecodeError, EncodeError};
 use openscl4_transport::TransportError;
 pub use runner::{PendingCommand, SessionHandle, SessionRunner};
