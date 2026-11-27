@@ -20,7 +20,7 @@ pub use machine::{
 };
 pub use openscl4_models::{
     AutoPowerOff, AutoPowerOffSetting, DeviceState, EqualizerSetting, ModelDriver, SoundMode,
-    SoundModeSetting, registry,
+    SoundModeSetting, SpatialAudioContentMode, SpatialAudioMode, SpatialAudioState, registry,
 };
 use openscl4_protocol::{DecodeError, EncodeError};
 use openscl4_transport::TransportError;

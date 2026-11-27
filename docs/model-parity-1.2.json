@@ -1637,6 +1637,45 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3957"
+            ],
+            "operation": "a3957_sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3957/packets/inbound/state_update.rs::A3957StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs",
+            "availabilitySource": "lib/src/devices/soundcore/a3957/modules/sound_modes.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The legacy driver plans a multi-step migration for sound-mode transitions. The session confirms one write at a time, so the planned sequence and its replies are not recorded yet.",
+            "reference": "core/crates/session/tests/a3953_a3957.rs"
+        },
+        {
+            "models": [
+                "A3953"
+            ],
+            "operation": "a3953_misc_toggles",
+            "inbound": "lib/src/devices/soundcore/a3953/packets/state_update.rs::A3953StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3953/modules/misc_toggles.rs",
+            "availabilitySource": "lib/src/devices/soundcore/a3953/structures.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The ambient sound prompt flag is a single-byte 10 83 write. The session does not expose shared flag writes yet, so no reply pair is recorded.",
+            "reference": "core/crates/session/tests/a3953_a3957.rs"
+        },
+        {
+            "models": [
+                "A3953"
+            ],
+            "operation": "a3953_sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3953/packets/state_update.rs::A3953StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3953/structures.rs",
+            "availabilitySource": "lib/src/devices/soundcore/a3953/modules/sound_modes/setting_handler.rs",
+            "evidence": "legacy",
+            "result": "confirmedReadBack",
+            "missing": "The wind-noise suppression field is preserved on write but the session does not change it separately from the ambient mode.",
+            "reference": "core/crates/session/tests/a3953_a3957.rs"
         }
     ],
     "models": [
@@ -3546,7 +3585,57 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3953/packets/state_update.rs::A3953StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3953/packets/state_update.rs::A3953StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "03.23",
+                    "outbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs",
+                    "inbound": "core/data/a3953-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "03.23",
+                    "outbound": "core/data/a3953-pilot-state.bin",
+                    "inbound": "core/data/a3953-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3953/structures.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_and_restores_the_a3953_ambient_mode"
+                },
+                {
+                    "operation": "writeSpatialAudio",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3953/modules/spatial_audio/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_the_a3953_spatial_audio_write"
+                },
+                {
+                    "operation": "writePressSensitivity",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3953/modules/press_sensitivity/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_the_a3953_press_sensitivity_write"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3953/packets/set_equalizer_configuration.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_the_a3953_custom_equalizer_curve"
+                }
+            ]
         },
         {
             "code": "A3954",
@@ -3852,7 +3941,49 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3957/packets/inbound/state_update.rs::A3957StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3957/packets/inbound/state_update.rs::A3957StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "03.90",
+                    "outbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs",
+                    "inbound": "core/data/a3957-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "03.90",
+                    "outbound": "core/data/a3957-pilot-state.bin",
+                    "inbound": "core/data/a3957-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readSoundSettings",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3957-pilot-state.bin",
+                    "inbound": "core/data/a3957-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/src/a3957.rs::tests::reads_the_documented_sound_settings"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3957/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_and_restores_the_a3957_gaming_mode"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3957/packets/outbound.rs",
+                    "inbound": "core/crates/session/tests/a3953_a3957.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3953_a3957.rs::confirms_the_a3957_custom_equalizer_curve"
+                }
+            ]
         },
         {
             "code": "A3959",

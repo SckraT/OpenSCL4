@@ -193,3 +193,99 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## A3953 pilot state
+
+[a3953-pilot-state.bin](a3953-pilot-state.bin) is the 158-byte `01 01` body from
+the legacy A3953 driver's `parses_known_packet` capture
+([driver](../../lib/src/devices/soundcore/a3953.rs), capture of firmware 03.23).
+There is no separate JSON export; the capture is checked in as the legacy test's
+byte array.
+
+The capture already carried the device's own serial at body offsets 16–31. This
+fixture substitutes the synthetic `3953TEST00000000` serial at the same offsets
+and recalculates the checksum. The resulting 168-byte frame SHA-256 is
+`93f3b67b545bc4c8a2a8e12c93380d3c526a266056af805d8e1f41310fa13d13`.
+
+The state carries both earbud batteries and the case battery on the five-step
+scale at body offsets 2, 3 and 136, firmware 03.23 at offsets 6–15, the normal
+sound mode with its five controls at offsets 121–126, spatial audio at offsets
+146–148 (disabled, fixed, music) and press sensitivity 0 at offset 155
+([parser](../../lib/src/devices/soundcore/a3953/packets/state_update.rs)).
+The identity response reuses the shared dual-firmware layout: 03.23 for both
+earbuds and the masked serial. Its 36-byte frame SHA-256 is
+`54f4ed24705136024737692a894ddc5d3e07747822ff885bcba24441f3b03c65`.
+
+## A3953 spatial audio, press sensitivity and equalizer writes
+
+The write formats are the legacy driver's own builders
+([spatial and press modifiers](../../lib/src/devices/soundcore/a3953/modules), [equalizer builder](../../lib/src/devices/soundcore/a3953/packets/set_equalizer_configuration.rs)).
+The session reference test sends these frames and compares them byte for byte
+([test](../crates/session/tests/a3953_a3957.rs)).
+
+| Operation        | Outbound body                                   | Frame SHA-256                                                      |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| Ambient normal   | `02 30 00 00 01 01` on `06 81`                  | `9d00bfe83541450e4679f680ced1d770355b2d48de66cfd741f2b0412d475dc0` |
+| Ambient ANC      | `00 30 00 00 01 01` on `06 81`                  | `dd8dd1f47843e2a4ed2b9977c0d0f73217bb88b2ec9e2806223840b635b17f33` |
+| Spatial on       | `01 01 00` on `10 81`                           | `8b4a1389ad7d8908f3d75b7dd3c93c287e6b4cb883d4149ff3fe651313a03d87` |
+| Press 3          | `03` on `04 85`                                 | `d004fdd2fa867321b6400a052ce0d0a75537effe97691c13aed6eb76e6d371db` |
+| Custom equalizer | preset `FE FE`, captured hear-id, 8 bands twice | `eed04c12b628ec81f365e1d8eaeb839e0d1ffe9e4a1624c5ded28a5946255c98` |
+
+The two after-state replies apply only the documented effect: the sound-mode
+block, the three spatial controls, the press-sensitivity byte, or the preset and
+ten-band curve at body offsets 32–53. The custom curve is
+`[60, -60, 60, -60, 60, -60, 60, -60, 0, 0]` with preset id `FEFE`, the sixteen
+bands of the legacy `sets_custom_equalizer` test. The resulting state reply has
+frame SHA-256
+`ee1431c67c6a2503faf4ee3dfad7ef5a1a8b21b559b332512b346cee2ab0f2ba`.
+
+The ambient sound prompt flag and the remaining shared flag modules are not
+exposed by the session yet, so their single-byte `10 83` write is not part of
+this reference.
+
+## A3957 pilot state
+
+[a3957-pilot-state.bin](a3957-pilot-state.bin) is the 154-byte `01 01` body from
+the legacy A3957 driver's `with_liberty5_packet_from_issue_226` capture
+([driver](../../lib/src/devices/soundcore/a3957.rs), Liberty 5 firmware 03.90
+from issue #226).
+
+The capture carried the device serial at body offsets 16–31. This fixture
+substitutes the synthetic `3957TEST00000000` serial and recalculates the
+checksum. The resulting 164-byte frame SHA-256 is
+`fe4d3bfe31b9189f4341fbd6adf654201ec099a36cb22d33e30b39aba3386230`.
+
+The state exercises the model's charging formats: both earbuds and the case use
+the ten-level scale with a one-level offset, so raw 8 displays as 9/10 and raw 2
+as 3/10 ([battery configuration](../../lib/src/devices/soundcore/a3957.rs)).
+It also carries firmware 03.90 at offsets 6–15, the noise-canceling sound modes
+at offsets 119–125 (manual strength 5, transportation plane), gaming mode off at
+offset 146, the equalizer preset at offsets 38–39 and its channels at 40–59, and
+the spatial-audio-like immersive byte at 136
+([parser](../../lib/src/devices/soundcore/a3957/packets/inbound/state_update.rs)).
+The identity response follows the shared dual-firmware layout; its 36-byte frame
+SHA-256 is
+`64c88a0e230256973f12a348e4061a798af3807bdb4cb8706f653faf3766d19e`.
+
+## A3957 gaming mode and equalizer writes
+
+The gaming flag is the shared one-byte flag on `10 85`
+([module](../../lib/src/devices/soundcore/a3957/modules/flag.rs)) and the
+equalizer builder is the A3957-specific `03 87` body
+([outbound](../../lib/src/devices/soundcore/a3957/packets/outbound.rs)).
+
+| Operation        | Outbound body                                   | Frame SHA-256                                                      |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| Gaming on        | `01` on `10 85`                                 | `2b2973815f577b2405710499937dfaa2b519cf65b14e4323c58a621f5e0ec007` |
+| Custom equalizer | preset `FE FE`, captured hear-id, 8 bands twice | `c436dc495c1bb32ca2f8a8aa79dc9e8cb5e6b5090188e9647c79c166b1a0a741` |
+
+The gaming after-state sets offset 146 to one; its frame SHA-256 is
+`47fff677fbaac9be4fb83c20af547a829e9cabb1bf068d5147416faf91bc4e63`. The
+equalizer after-state sets offsets 38–59 and has frame SHA-256
+`f98848da355607750ca198c9f1692ffaf52d39a95204023f782eb42a3b48724b`.
+
+The legacy A3957 sound-mode writer plans a multi-step migration for transitions
+between ambient modes and their sub-controls
+([planner](../../lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_planner.rs)).
+The session accepts one confirmed write at a time, so sound-mode writes stay out
+of the pilot until a planned sequence and its replies are recorded.

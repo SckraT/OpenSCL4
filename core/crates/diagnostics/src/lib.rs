@@ -195,6 +195,11 @@ fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize
     let fields: &[(usize, usize)] = match model {
         ModelDriver::A3062 if body.len() == 95 => &[(7, 23)],
         ModelDriver::A3949 if body.len() == 88 => &[(16, 32)],
+        // The Liberty decoders accept one measured body length each and reject
+        // a serial from another model, so the trailing decode below makes these
+        // masks match decode_confirmed_state exactly.
+        ModelDriver::A3953 if body.len() == 158 => &[(16, 32)],
+        ModelDriver::A3957 if body.len() == 154 => &[(16, 32)],
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {
             &[(16, 32), (38, 44)]
         }
