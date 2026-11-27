@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = ROOT / "docs/model-parity-1.2.json"
 REFERENCE_PATH = ROOT / "core/data/a3028-a3029-mode-reference.json"
+A3931_REFERENCE_PATH = ROOT / "core/data/a3931-a3935-state-reference.json"
+A3933_REFERENCE_PATH = ROOT / "core/data/a3933-a3939-state-reference.json"
 
 
 class ModelParityTest(unittest.TestCase):
@@ -100,6 +102,114 @@ class ModelParityTest(unittest.TestCase):
                 self.assertEqual(initial[:mode_offset], noise_canceling[:mode_offset])
                 self.assertEqual(initial[mode_offset + 1:], noise_canceling[mode_offset + 1:])
         self.assertEqual(set(reference["inbound"]), {"A3028", "A3029"})
+
+    def test_a3931_a3935_reference_frames(self):
+        reference = json.loads(A3931_REFERENCE_PATH.read_text(encoding="utf-8"))
+        outgoing = reference["outbound"]
+        for name, command in (
+            ("readState", bytes.fromhex("01 01")),
+            ("readIdentity", bytes.fromhex("01 05")),
+            ("writeNoiseCanceling", bytes.fromhex("06 81")),
+            ("restoreNormal", bytes.fromhex("06 81")),
+            ("writeCustomEqualizer", bytes.fromhex("02 83")),
+            ("writeSignatureEqualizer", bytes.fromhex("02 83")),
+            ("writeAutoPowerOffDisabled", bytes.fromhex("01 86")),
+            ("writeAutoPowerOffEnabledDuration3", bytes.fromhex("01 86")),
+        ):
+            with self.subTest(command=name):
+                self.assert_frame(outgoing[name], bytes.fromhex("08 ee"), command)
+
+        offsets = reference["stateBodyOffsets"]
+        state = self.assert_frame(
+            reference["inbound"]["state"], bytes.fromhex("09 ff"), bytes.fromhex("01 01")
+        )
+        body = state[9:-1]
+        self.assertEqual(len(body), reference["stateLength"])
+        self.assertEqual(
+            body[offsets["equalizerPreset"]:offsets["equalizerPreset"] + 2],
+            bytes.fromhex("00 00"),
+        )
+        self.assertEqual(
+            body[offsets["soundModes"]:offsets["soundModes"] + 4],
+            bytes.fromhex("00 00 01 00"),
+        )
+        self.assertEqual(
+            body[offsets["autoPowerOff"]:offsets["autoPowerOff"] + 2],
+            bytes.fromhex("00 00"),
+        )
+
+        equalizer = self.assert_frame(
+            outgoing["writeCustomEqualizer"], bytes.fromhex("08 ee"), bytes.fromhex("02 83")
+        )
+        equalizer_body = equalizer[9:-1]
+        self.assertEqual(len(equalizer_body), 34)
+        self.assertEqual(equalizer_body[0:2], bytes.fromhex("fe fe"))
+        self.assertEqual(equalizer_body[2:10], equalizer_body[10:18])
+        self.assertEqual(equalizer_body[18:26], equalizer_body[26:34])
+
+        serials = {}
+        for code, identity_hex in reference["inbound"]["identities"].items():
+            identity = self.assert_frame(
+                identity_hex, bytes.fromhex("09 ff"), bytes.fromhex("01 05")
+            )
+            identity_body = identity[9:-1]
+            self.assertEqual(len(identity_body), 26)
+            self.assertEqual(identity_body[:10], b"00.0000.00")
+            serial = identity_body[10:26]
+            serials[code] = serial
+            self.assertEqual(serial, f"{code[1:]}TEST00000000".encode("ascii"))
+        self.assertEqual(set(serials), {"A3931", "A3935"})
+
+    def test_a3933_a3939_reference_frames(self):
+        reference = json.loads(A3933_REFERENCE_PATH.read_text(encoding="utf-8"))
+        outgoing = reference["outbound"]
+        for name, command in (
+            ("readState", bytes.fromhex("01 01")),
+            ("writeNoiseCanceling", bytes.fromhex("06 81")),
+            ("restoreNormal", bytes.fromhex("06 81")),
+            ("writeCustomEqualizer", bytes.fromhex("02 81")),
+            ("writeTrebleReducerEqualizer", bytes.fromhex("02 81")),
+            ("writeGamingModeOff", bytes.fromhex("01 87")),
+            ("writeGamingModeOn", bytes.fromhex("01 87")),
+        ):
+            with self.subTest(command=name):
+                self.assert_frame(outgoing[name], bytes.fromhex("08 ee"), command)
+
+        offsets = reference["stateBodyOffsets"]
+        self.assertEqual(set(reference["inbound"]), {"A3933", "A3939"})
+        for code, state_hex in reference["inbound"].items():
+            with self.subTest(model=code):
+                expected_serial = f"{code[1:]}TEST00000000".encode("ascii")
+                state = self.assert_frame(
+                    state_hex, bytes.fromhex("09 ff"), bytes.fromhex("01 01")
+                )
+                body = state[9:-1]
+                self.assertEqual(len(body), reference["stateLength"])
+                self.assertEqual(
+                    body[offsets["serial"]:offsets["serial"] + 16], expected_serial
+                )
+                self.assertEqual(
+                    body[offsets["firmware"]:offsets["firmware"] + 10], b"00.0000.00"
+                )
+                self.assertEqual(
+                    body[offsets["soundModes"]:offsets["soundModes"] + 4],
+                    bytes.fromhex("00 00 01 00"),
+                )
+                self.assertEqual(body[offsets["gamingMode"]], 0)
+
+        equalizer = self.assert_frame(
+            outgoing["writeCustomEqualizer"], bytes.fromhex("08 ee"), bytes.fromhex("02 81")
+        )
+        equalizer_body = equalizer[9:-1]
+        self.assertEqual(len(equalizer_body), 22)
+        self.assertEqual(equalizer_body[0:2], bytes.fromhex("fe fe"))
+        self.assertEqual(equalizer_body[2:12], equalizer_body[12:22])
+
+        for name, enabled in (("writeGamingModeOff", 0), ("writeGamingModeOn", 1)):
+            frame = self.assert_frame(
+                outgoing[name], bytes.fromhex("08 ee"), bytes.fromhex("01 87")
+            )
+            self.assertEqual(frame[9:-1], bytes([enabled]))
 
     def assert_frame(self, hex_frame, prefix, command):
         frame = bytes.fromhex(hex_frame)

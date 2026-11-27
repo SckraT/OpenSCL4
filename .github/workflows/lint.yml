@@ -37,7 +37,7 @@ jobs:
           -p openscl4-profiles -p openscl4-diagnostics
           -- -D warnings
       - name: Lint the CLI pilots
-        run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 -- -D warnings
+        run: cargo clippy --locked -p openscq30-cli --bin openscq30 --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 --test pilot_a3931 --test pilot_a3933 -- -D warnings
 
   documentation:
     runs-on: ubuntu-24.04

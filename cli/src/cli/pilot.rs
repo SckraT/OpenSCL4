@@ -5,8 +5,9 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3931, VirtualA3933, VirtualA3935,
+    VirtualA3939, VirtualA3949, VirtualIncompatibleA3954, VirtualSoundcoreDevice,
+    VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -28,6 +29,10 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3931 => SessionRunner::start(VirtualA3931, target),
+                ModelDriver::A3933 => SessionRunner::start(VirtualA3933, target),
+                ModelDriver::A3935 => SessionRunner::start(VirtualA3935, target),
+                ModelDriver::A3939 => SessionRunner::start(VirtualA3939, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
             },
@@ -172,12 +177,20 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
+        ModelDriver::A3931
+        | ModelDriver::A3933
+        | ModelDriver::A3935
+        | ModelDriver::A3939
+        | ModelDriver::A3949
+        | ModelDriver::A3954 => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
+            if matches!(
+                device.model,
+                ModelDriver::A3933 | ModelDriver::A3939 | ModelDriver::A3954
+            ) {
                 battery["casePercent"] = json!(device.battery.case);
             }
             (

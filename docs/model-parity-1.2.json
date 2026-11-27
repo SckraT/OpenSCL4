@@ -1637,6 +1637,62 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3931",
+                "A3935"
+            ],
+            "operation": "equalizer_with_drc_tws",
+            "inbound": "lib/src/devices/soundcore/a3931/packets/state_update_packet.rs::A3931StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3931-a3935-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "No physical A3931 or A3935 capture exists; the DRC echo is verified against the legacy encoder output on the virtual transport."
+        },
+        {
+            "models": [
+                "A3933",
+                "A3939"
+            ],
+            "operation": "equalizer_tws",
+            "inbound": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "command": "0281",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3933-a3939-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "No physical A3933 or A3939 capture exists; both ten-band channels are written identically and the first channel is reported."
+        },
+        {
+            "models": [
+                "A3933",
+                "A3939"
+            ],
+            "operation": "gaming_mode",
+            "inbound": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::GamingMode",
+            "command": "0187",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/a3933_family.rs",
+            "result": "confirmedReadBack",
+            "missing": "The gaming-mode flag lives in the optional extra fields: a 122-byte state reports no confirmed value and the write is rejected before transmission."
+        },
+        {
+            "models": [
+                "A3931",
+                "A3935"
+            ],
+            "operation": "auto_power_off",
+            "inbound": "lib/src/devices/soundcore/a3931/packets/state_update_packet.rs::A3931StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+            "command": "0186",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3931-a3935-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "No physical A3931 or A3935 capture exists; the four-duration table and the preserved duration index are verified on the virtual transport."
         }
     ],
     "models": [
@@ -2740,7 +2796,49 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_the_family_curve_from_the_drc_write_and_read_back"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_enable_and_disable_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3933",
@@ -2804,7 +2902,46 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "legacyFixture",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_the_ten_band_curve_from_the_family_write_and_read_back"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_and_restores_gaming_mode_from_independent_replies"
+                }
+            ]
         },
         {
             "code": "A3935",
@@ -2869,7 +3006,49 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_the_family_curve_from_the_drc_write_and_read_back"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3931-a3935-state-reference.json",
+                    "inbound": "core/data/a3931-a3935-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3931_family.rs::confirms_enable_and_disable_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3936",
@@ -3009,7 +3188,46 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "legacyFixture",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_the_ten_band_curve_from_the_family_write_and_read_back"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3933-a3939-state-reference.json",
+                    "inbound": "core/data/a3933-a3939-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3933_family.rs::confirms_and_restores_gaming_mode_from_independent_replies"
+                }
+            ]
         },
         {
             "code": "A3944",

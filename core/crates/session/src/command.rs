@@ -1,6 +1,6 @@
 use openscl4_models::{
-    AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    AUTO_POWER_OFF_COMMAND, AutoPowerOff, AutoPowerOffSetting, Capabilities, EqualizerSetting,
+    GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -91,7 +91,8 @@ impl SessionCommand {
                 Err(ModelError::InvalidGamingModeWrite)
             }
             Self::SetAutoPowerOff(AutoPowerOffSetting::Enabled(index))
-                if !capabilities.auto_power_off_write || index >= AUTO_POWER_OFF_DURATION_COUNT =>
+                if !capabilities.auto_power_off_write
+                    || index >= model.auto_power_off_duration_count() =>
             {
                 Err(ModelError::InvalidAutoPowerOffWrite)
             }
@@ -168,10 +169,8 @@ impl WriteTarget {
         };
         resolved.body = match self {
             Self::SoundMode(setting) => state.sound_mode_write(setting)?.bytes().to_vec(),
-            Self::AmbientMode(mode)
-                if matches!(state.model, ModelDriver::A3028 | ModelDriver::A3029) =>
-            {
-                state.family_sound_mode_write(mode)?.to_vec()
+            Self::AmbientMode(mode) if state.model == ModelDriver::A3062 => {
+                state.a3062_sound_mode_write(mode)?.to_vec()
             }
             Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
