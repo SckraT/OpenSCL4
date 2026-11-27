@@ -5,8 +5,9 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3330, VirtualA3388, VirtualA3876,
+    VirtualA3949, VirtualD1101, VirtualIncompatibleA3954, VirtualSoundcoreDevice,
+    VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -28,8 +29,12 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3330 => SessionRunner::start(VirtualA3330, target),
+                ModelDriver::A3388 => SessionRunner::start(VirtualA3388, target),
+                ModelDriver::A3876 => SessionRunner::start(VirtualA3876, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
+                ModelDriver::D1101 => SessionRunner::start(VirtualD1101, target),
             },
         },
     };
@@ -172,12 +177,17 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
+        ModelDriver::A3330
+        | ModelDriver::A3388
+        | ModelDriver::A3876
+        | ModelDriver::A3949
+        | ModelDriver::A3954
+        | ModelDriver::D1101 => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
+            if device.model.capabilities().case_battery {
                 battery["casePercent"] = json!(device.battery.case);
             }
             (
@@ -199,6 +209,52 @@ fn snapshot_json(device: DeviceState) -> Value {
     }
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
+    }
+    if let Some(auto_power_off) = device.auto_power_off {
+        snapshot["autoPowerOff"] = json!({
+            "enabled": auto_power_off.enabled,
+            "durationIndex": auto_power_off.duration,
+        });
+    }
+    if let Some(paired) = device.paired {
+        snapshot["tws"] = json!({
+            "connected": paired.tws.connected,
+            "hostDevice": paired.tws.host.code(),
+        });
+        if let Some(enabled) = paired.buttons_enabled {
+            snapshot["buttonsEnabled"] = json!(enabled);
+        }
+        if let Some(enabled) = paired.ldac {
+            snapshot["ldac"] = json!(enabled);
+        }
+        if let Some(lights) = paired.colorful_lights {
+            snapshot["colorfulLights"] = json!({
+                "enabled": lights.enabled,
+                "brightness": lights.brightness,
+                "autoLightsOffMinutes": lights.auto_lights_off_minutes,
+                "mode": lights.mode.code(),
+                "color": {
+                    "red": lights.color.red,
+                    "green": lights.color.green,
+                    "blue": lights.color.blue,
+                },
+            });
+        }
+        if let Some(balance) = paired.volume_balance {
+            snapshot["volumeBalance"] = json!(balance);
+        }
+        if let Some(enabled) = paired.low_battery_prompt {
+            snapshot["lowBatteryPrompt"] = json!(enabled);
+        }
+        if let Some(enabled) = paired.touch_tone {
+            snapshot["touchTone"] = json!(enabled);
+        }
+        if let Some(enabled) = paired.voice_prompt {
+            snapshot["voicePrompt"] = json!(enabled);
+        }
+        if let Some(enabled) = paired.dual_connections_enabled {
+            snapshot["dualConnections"] = json!(enabled);
+        }
     }
     snapshot
 }

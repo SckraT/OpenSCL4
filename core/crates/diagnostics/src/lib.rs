@@ -194,10 +194,14 @@ fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize
     // Use only the measured state layouts cited in core/data/README.md.
     let fields: &[(usize, usize)] = match model {
         ModelDriver::A3062 if body.len() == 95 => &[(7, 23)],
+        ModelDriver::A3330 if body.len() == 70 => &[(14, 30)],
+        ModelDriver::A3388 if body.len() == 66 => &[(14, 30)],
+        ModelDriver::A3876 if body.len() == 94 => &[(14, 30)],
         ModelDriver::A3949 if body.len() == 88 => &[(16, 32)],
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {
             &[(16, 32), (38, 44)]
         }
+        ModelDriver::D1101 if body.len() == 69 => &[(14, 30)],
         _ => return None,
     };
     model.decode_state(body).ok()?;

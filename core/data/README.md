@@ -157,6 +157,85 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3330, A3388, A3876 and D1101 paired state references
+
+These four models share the `dualWithPeers` startup: a `01 01` state response,
+two five-byte firmware versions and a 16-byte serial at body offsets 4–13 and
+14–29, conditional `0B 01` peer reads, and model-specific batteries, equalizer,
+flags and write commands. The fixtures are the state examples of the legacy
+driver tests at the matrix revision `7e90bb78`:
+
+- A3330: `settings_match_soundcore_app` in
+  [a3330.rs](../../lib/src/devices/soundcore/a3330.rs) (70-byte body, firmware
+  `04.27`).
+- A3388: `settings_match_soundcore_app` and
+  `out_of_case_packet_has_no_case_battery` in
+  [a3388.rs](../../lib/src/devices/soundcore/a3388.rs) (66-byte body, firmware
+  `01.49`; the second example reports the case byte as `0xFF` when both earbuds
+  are out of the case).
+- A3876: `parses_known_packet` in
+  [a3876.rs](../../lib/src/devices/soundcore/a3876.rs) (94-byte body, firmware
+  `03.15`).
+- D1101: `settings_match_soundcore_app` in
+  [d1101.rs](../../lib/src/devices/soundcore/d1101.rs) (69-byte body, firmware
+  `01.28`).
+
+The A3388 legacy tests describe their examples as reads from a real AeroClip;
+the A3330, A3876 and D1101 examples are recorded reference states without a
+stated capture. **No new physical run was made for this transfer.** The
+per-model virtual transports replay these bodies and apply the writes of the
+legacy builders, so the before/after replies are protocol fixtures, not
+captures.
+
+Each fixture replaces the full 16-byte serial at body offsets 14–29 with the
+synthetic model-specific value `3330TEST00000000`, `3388TEST00000000`,
+`3876TEST00000000` or `1101TEST00000000` and recalculates the trailing checksum.
+The bytes after the parsed layout are retained as captured. No parsed field of
+the layouts carries a Bluetooth address; the only identifier is the serial.
+
+| Fixture                                              | Body | Parsed prefix | Full frame | SHA-256                                                            |
+| ---------------------------------------------------- | ---- | ------------- | ---------- | ------------------------------------------------------------------ |
+| [a3330-paired-state.bin](a3330-paired-state.bin)     | 70   | 67            | 80         | `efa36692dcaeda006c2a08b27c6f2586face65f68b27d2efe5482b4c4bcf8134` |
+| [a3388-paired-state.bin](a3388-paired-state.bin)     | 66   | 62            | 76         | `3509cfd6717b96f0e40d209004d77db7bae59cd5e6d9114fc2411fc2e95df92a` |
+| [a3876-paired-state.bin](a3876-paired-state.bin)     | 94   | 82            | 104        | `f42ab56f2b44af3273743bcd1f515da852d65fd1e76cb522c20da5c598eaab0a` |
+| [d1101-paired-state.bin](d1101-paired-state.bin)     | 69   | 58            | 79         | `bfd402562130a1efa0bd7ea7b1694929d64b8a930fd510dd25393ee2d697b54a` |
+
+The body SHA-256 values, in the same order, are
+`ca2c90b79aef84536e87e50c2f623391fb7e59380a27479f552006bcc30286f5`,
+`4b00317e76da8b4359b2b5a3e074d23a4095d965a4bad6244eb66b02707ec291`,
+`299e315a18223696bbef3a2778ac71190980cf3e175a9714a7963fbab747d868` and
+`648077dd9e48406bf6261cdde22b112d62635e0be620c634bfc42c5f0e5df202`.
+The traced layout starts with the TWS status at 0–1, the left and right battery
+levels at 2 and 3, the two firmware strings at 4–13 and the serial at 14–29:
+
+| Model | Case battery | Buttons disabled | Equalizer                        | Flags                                                                                               |
+| ----- | ------------ | ---------------- | -------------------------------- | --------------------------------------------------------------------------------------------------- |
+| A3330 | 35 (scale 5) | 48               | preset 50–51, bands 52–61        | touch 45, low battery 46, dual connections 47                                                       |
+| A3388 | 35 (scale 10) | 48              | preset 50–51, bands 52–61        | touch 45, low battery 46, dual connections 47                                                       |
+| A3876 | absent       | absent           | preset 36–37, first channel 38–47 | lights 67–73, voice 75, auto power off 76–77, gaming 79, balance 80, dual connections 81            |
+| D1101 | absent       | 54               | preset 30–31, first channel 32–41 | low battery 52, dual connections 53, auto power off 55–56, LDAC 57                                   |
+
+The buttons blocks at body 37–42 (A3330), 37–40 with the long-press slots at
+41–42 (A3388), 59–66 (A3876) and 43–50 (D1101) are preserved in the fixtures but
+are not decoded by the new driver: the session has no button-configuration command yet, so the matrix
+keeps the gestures and their reset as legacy-only. The models also differ in
+their auto power off duration tables: A3876 uses 10, 20, 30 and 60 minutes,
+while D1101 uses 30, 60, 90 and 120 minutes; both write the same
+`[enabled, duration index]` body.
+
+The write bodies come from the legacy builders and were checked against their
+fixed examples. The equalizer writes repeat the preset and curve; A3330 and
+A3876 repeat the first eight bands through the legacy DRC transform, while
+A3388 and D1101 send the same curve for both channels. For the reference curve
+`[-60, 60, 23, 120, 22, -120, -4, 16, 0, -120]` the DRC block is
+`6D 86 70 88 7B 66 7E 79 78 00`, matching the legacy
+`set_equalizer_with_drc` and A3876 `set_custom_eq` examples. The commands are
+`02 83` for A3330, A3388 and A3876, and `02 81` for D1101. The remaining flag
+writes are `01 87` for gaming, `01 86` for auto power off, `01 FF` for LDAC and
+the inverted `10 94` for the button controls. The virtual transports also
+answer a `01 05` identity read with the two firmware strings and the synthetic
+serial, so both the identity and the state-only discovery paths are exercised.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response
