@@ -1,0 +1,74 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "evidence": "legacyFixture",
+    "sourceModelPrefix": "A3116",
+    "derivation": "One legacy A3116 driver test supplies the state body. Both fixtures replace the full serial with the synthetic 3116TEST00000000 value. The older-firmware variant changes only the five firmware bytes. The frames carry no checksum, so the length field counts the nine header bytes and the body only.",
+    "sources": {
+        "state": "lib/src/devices/soundcore/a3116.rs::manually_crafted_packet_matches_soundcore_app",
+        "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+        "outboundVoicePrompt": "lib/src/devices/soundcore/a3116/packets/outbound.rs::request_voice_prompt",
+        "outboundVolume": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_volume",
+        "outboundEqualizerPreset": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_equalizer_preset",
+        "outboundEqualizerBands": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_equalizer_volume_adjustments",
+        "outboundAutoPowerOff": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_auto_power_off",
+        "outboundPowerOff": "lib/src/devices/soundcore/a3116/packets/outbound.rs::power_off"
+    },
+    "framing": {
+        "checksum": "none",
+        "note": "The A3116 appends no trailing additive checksum. The little-endian length counts the nine header bytes and the body. The new session probes the checksummed framing first and retries the same connection with this framing when no measured state arrives."
+    },
+    "stateBodyOffsets": {
+        "charging": 0,
+        "batteryLevel": 1,
+        "volume": 2,
+        "unknown": 3,
+        "autoPowerOffDuration": 4,
+        "firmware": [5, 9],
+        "serial": [10, 25],
+        "equalizerPreset": 26,
+        "equalizerBands": [27, 35]
+    },
+    "firmwareInExample": "38.39",
+    "voicePromptFirmwareBoundary": "38.39",
+    "masking": "The legacy fixture serial ABCDEFABCDEFABCD at body offsets 10-25 is replaced with the synthetic model-prefixed 3116TEST00000000. Neither a real serial number nor a MAC address appears in the fixtures, and there is no checksum to recompute.",
+    "expectedEqualizerBandsTenthsDb": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        0,
+        -10,
+        -20,
+        -30,
+        0
+    ],
+    "expectedAutoPowerOff": {
+        "enabled": true,
+        "durationIndex": 1
+    },
+    "outbound": {
+        "identityProbeChecksummed": "08 EE 00 00 00 01 05 0A 00 06",
+        "stateReadChecksummed": "08 EE 00 00 00 01 01 0A 00 02",
+        "stateRead": "08 EE 00 00 00 01 01 09 00",
+        "readVoicePrompt": "08 EE 00 00 00 01 10 09 00",
+        "writeVolume": "08 EE 00 00 00 01 81 0A 00 0C",
+        "writeEqualizerPreset": "08 EE 00 00 00 02 81 0A 00 0F",
+        "writeEqualizerBands": "08 EE 00 00 00 02 83 12 00 00 01 02 03 04 05 06 07 08",
+        "writeVoicePromptOff": "08 EE 00 00 00 01 90 0A 00 00",
+        "writeAutoPowerOff": "08 EE 00 00 00 01 83 0A 00 04",
+        "powerOff": "08 EE 00 00 00 01 85 09 00"
+    },
+    "inbound": {
+        "pilotState": "09 FF 00 00 01 01 01 2D 00 00 05 07 00 02 33 38 2E 33 39 33 31 31 36 54 45 53 54 30 30 30 30 30 30 30 30 FF 06 07 08 09 0A 06 05 04 03",
+        "oldFirmwareState": "09 FF 00 00 01 01 01 2D 00 00 05 07 00 02 30 30 2E 39 39 33 31 31 36 54 45 53 54 30 30 30 30 30 30 30 30 FF 06 07 08 09 0A 06 05 04 03",
+        "voicePromptOn": "09 FF 00 00 01 01 10 0A 00 01",
+        "voicePromptOff": "09 FF 00 00 01 01 10 0A 00 00"
+    },
+    "fixtures": {
+        "a3116-pilot-state.bin": "270d6caba495808d2ffea3cb89e9f4711493c209277a09acbc5182c047c8db7d",
+        "a3116-old-firmware-state.bin": "c76dd7152a1bf53d5c7522b43a3b3248918f519e57a0491b4019cc2a0779ee63",
+        "a3116-voice-prompt-on.bin": "5cda820c414c0d179977a3117eb42bfa8d1467fd7dc5dc9bf471b03ca51b1256",
+        "a3116-voice-prompt-off.bin": "ac8777331aaea8d907783db8e84fd0ae323eab5ebec19c1957c28ec0fadb8876"
+    }
+}

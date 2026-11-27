@@ -6,7 +6,7 @@ use std::{
 
 use openscl4_diagnostics::{ExportError, UndecodedFrame, WireTap, export_zip};
 use openscl4_models::{STATE_COMMAND, registry};
-use openscl4_protocol::{DecodeError, Direction, Frame, FrameDecoder};
+use openscl4_protocol::{ChecksumKind, DecodeError, Direction, Frame, FrameDecoder};
 use tokio::{sync::watch, time::Instant};
 
 use crate::{ConnectionState, SessionView};
@@ -94,11 +94,15 @@ pub struct CaptureDecoder {
 }
 
 impl CaptureDecoder {
-    pub(super) fn new(capture: Capture, view: watch::Receiver<Arc<SessionView>>) -> Self {
+    pub(super) fn new(
+        capture: Capture,
+        view: watch::Receiver<Arc<SessionView>>,
+        checksum_kind: ChecksumKind,
+    ) -> Self {
         Self {
             capture,
             view,
-            decoder: FrameDecoder::default(),
+            decoder: FrameDecoder::new(checksum_kind),
         }
     }
 

@@ -4,8 +4,11 @@
 
 use std::fmt;
 
+use openscl4_protocol::ChecksumKind;
+
 mod a3028;
 mod a3062;
+mod a3116;
 mod a3949;
 pub mod registry;
 
@@ -14,6 +17,12 @@ pub use a3028::{
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3116::{
+    A3116_AUTO_POWER_OFF_COMMAND, A3116_AUTO_POWER_OFF_FIELD, A3116_EQUALIZER_BANDS,
+    A3116_EQUALIZER_BANDS_COMMAND, A3116_EQUALIZER_PRESET, A3116_EQUALIZER_PRESET_COMMAND,
+    A3116_POWER_OFF_COMMAND, A3116_VOICE_PROMPT_COMMAND, A3116_VOICE_PROMPT_READ_COMMAND,
+    A3116_VOLUME_COMMAND, A3116_VOLUME_FIELD, VOLUME_MAX,
+};
 pub use a3949::A3949_GAMING_MODE;
 
 /// Probe for the firmware versions and the device identifier.
@@ -38,6 +47,12 @@ const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
 const A3954_SOUND_MODE: usize = 125;
 
+/// One wire request: the command and the body to transmit.
+pub type WireRequest = ([u8; 2], Vec<u8>);
+
+/// The wire requests of one model write, in transmission order.
+pub type WireRequests = Vec<WireRequest>;
+
 /// A driver selected from a checked identity response.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelDriver {
@@ -47,6 +62,8 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Motion+ (A3116).
+    A3116,
     /// Soundcore P20i, P25i and R50i.
     A3949,
     /// Soundcore Liberty 4 Pro.
@@ -64,9 +81,12 @@ impl ModelDriver {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062 | Self::A3116),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3116),
+            volume_write: matches!(self, Self::A3116),
+            voice_prompt_write: matches!(self, Self::A3116),
+            power_off: matches!(self, Self::A3116),
         }
     }
 
@@ -76,8 +96,22 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3116 => "A3116",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
+        }
+    }
+
+    /// The framing this model uses on the wire.
+    ///
+    /// The A3116 speaker sends and receives frames without the trailing
+    /// additive checksum the other measured models use.
+    pub const fn framing(self) -> ChecksumKind {
+        match self {
+            Self::A3116 => ChecksumKind::None,
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => {
+                ChecksumKind::Suffix
+            }
         }
     }
 
@@ -90,6 +124,7 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3116 => a3116::EQUALIZER_BAND_COUNT,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
@@ -98,7 +133,18 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::A3116 => A3116_EQUALIZER_BANDS_COMMAND,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+        }
+    }
+
+    /// The wire command for the model's auto power off write.
+    pub const fn auto_power_off_command(self) -> [u8; 2] {
+        match self {
+            Self::A3116 => A3116_AUTO_POWER_OFF_COMMAND,
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => {
+                AUTO_POWER_OFF_COMMAND
+            }
         }
     }
 
@@ -109,6 +155,41 @@ impl ModelDriver {
             && setting.volume_adjustments[self.equalizer_bands()..]
                 .iter()
                 .all(|gain| *gain == 0)
+            && match self {
+                Self::A3116 => a3116::equalizer_is_writable(setting),
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => true,
+            }
+    }
+
+    /// Whether the requested volume is inside this model's range.
+    pub const fn volume_is_writable(self, volume: u8) -> bool {
+        matches!(self, Self::A3116) && volume <= a3116::VOLUME_MAX
+    }
+
+    /// The wire requests for the model's equalizer write.
+    ///
+    /// Most models send one frame. The A3116 sends the preset and the band
+    /// block as two commands when both change.
+    pub fn equalizer_write_requests(
+        self,
+        setting: EqualizerSetting,
+        state: &[u8],
+    ) -> Result<WireRequests, ModelError> {
+        if !self.equalizer_is_writable(setting) {
+            return Err(ModelError::InvalidEqualizerWrite);
+        }
+        match self {
+            Self::A3116 => a3116::equalizer_write_requests(setting, state),
+            Self::A3028 | Self::A3029 => Ok(vec![(
+                a3028::A3028_EQUALIZER_COMMAND,
+                a3028::equalizer_write_body(setting, state)?,
+            )]),
+            Self::A3062 => Ok(vec![(
+                EQUALIZER_COMMAND,
+                a3062::equalizer_write_body(setting, state)?,
+            )]),
+            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+        }
     }
 
     /// Decodes the state response for the selected model.
@@ -116,6 +197,7 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::A3116 => a3116::decode_state(self, body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
@@ -126,11 +208,12 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family and A3116 need the serial that selects their code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3116 => a3116::has_confirmed_layout(body),
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
@@ -138,12 +221,40 @@ impl ModelDriver {
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
+            Self::A3116 => a3116::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
         };
         (layout_matches && serial_matches)
             .then(|| self.decode_state(body).ok())
             .flatten()
+    }
+
+    /// Extra state reads the model needs after its bulk state response.
+    ///
+    /// The A3116 reads its voice prompt flag separately when its firmware
+    /// supports the targeted command; the returned reads run before the
+    /// session reports the state as confirmed.
+    pub fn post_state_reads(self, state: &DeviceState) -> Vec<[u8; 2]> {
+        match self {
+            Self::A3116 => a3116::post_state_reads(state),
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => Vec::new(),
+        }
+    }
+
+    /// Applies one of the extra state reads to the decoded state.
+    pub fn apply_state_read(
+        self,
+        state: &mut DeviceState,
+        command: [u8; 2],
+        body: &[u8],
+    ) -> Result<(), ModelError> {
+        match self {
+            Self::A3116 => a3116::apply_state_read(state, command, body),
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => {
+                Err(ModelError::IncompleteState)
+            }
+        }
     }
 
     fn decode_a3954_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
@@ -160,6 +271,8 @@ impl ModelDriver {
         Ok(DeviceState {
             model: self,
             battery,
+            battery_charging: None,
+            volume: None,
             sound_mode: Some(sound_mode),
             sound_mode_controls: Some(SoundModeControls::A3954(A3954SoundModeControls {
                 position: body[A3954_SOUND_MODE + 1],
@@ -170,6 +283,7 @@ impl ModelDriver {
             equalizer: None,
             gaming_mode: None,
             auto_power_off: None,
+            voice_prompt: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -179,7 +293,8 @@ impl ModelDriver {
     ///
     /// The write echoes the state's hear-id fields with hear-id disabled, so the
     /// requested curve is the one in effect. The A3028 family writes only its
-    /// eight bands and has no hear-id block.
+    /// eight bands and has no hear-id block. The A3116 needs two frames and is
+    /// served by [`Self::equalizer_write_requests`] instead.
     pub fn equalizer_write_body(
         self,
         setting: EqualizerSetting,
@@ -188,7 +303,7 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
-            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3116 | Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
 }
@@ -206,6 +321,12 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the reported volume.
+    pub volume_write: bool,
+    /// The session can confirm writes of the targeted voice prompt flag.
+    pub voice_prompt_write: bool,
+    /// The session can accept the power off action.
+    pub power_off: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -229,6 +350,10 @@ pub struct DeviceState {
     pub model: ModelDriver,
     /// Reported battery percentages.
     pub battery: BatteryLevels,
+    /// Whether the battery is charging, when the model reports it.
+    pub battery_charging: Option<bool>,
+    /// The reported volume, when it is part of the state response.
+    pub volume: Option<u8>,
     /// Current sound mode, if the device reports one for the pilot.
     pub sound_mode: Option<SoundMode>,
     sound_mode_controls: Option<SoundModeControls>,
@@ -238,6 +363,8 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// Whether voice prompts are enabled, when the model exposes the targeted flag.
+    pub voice_prompt: Option<bool>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -294,6 +421,36 @@ impl DeviceState {
         Ok([u8::from(enabled)])
     }
 
+    /// Builds a volume write for a model that reports its volume.
+    pub fn volume_write(self, volume: u8) -> Result<([u8; 2], Vec<u8>), ModelError> {
+        if !self.model.capabilities().volume_write || !self.model.volume_is_writable(volume) {
+            return Err(ModelError::InvalidVolumeWrite);
+        }
+        Ok((A3116_VOLUME_COMMAND, a3116::volume_write_body(volume)?))
+    }
+
+    /// Builds a voice prompt write for a model that exposes the targeted flag.
+    ///
+    /// The flag is only writable when the current state reports it, which
+    /// requires firmware that answers the targeted read.
+    pub fn voice_prompt_write(self, enabled: bool) -> Result<([u8; 2], Vec<u8>), ModelError> {
+        if !self.model.capabilities().voice_prompt_write || self.voice_prompt.is_none() {
+            return Err(ModelError::InvalidVoicePromptWrite);
+        }
+        Ok((
+            A3116_VOICE_PROMPT_COMMAND,
+            a3116::voice_prompt_write_body(enabled),
+        ))
+    }
+
+    /// Builds the power off action request for a model that supports it.
+    pub fn power_off_request(self) -> Result<([u8; 2], Vec<u8>), ModelError> {
+        if !self.model.capabilities().power_off {
+            return Err(ModelError::InvalidPowerOffAction);
+        }
+        Ok((A3116_POWER_OFF_COMMAND, Vec::new()))
+    }
+
     /// Builds an auto power off write, available only when the state carries
     /// the documented extra fields of a supporting model.
     ///
@@ -310,10 +467,13 @@ impl DeviceState {
         let current = self
             .auto_power_off
             .ok_or(ModelError::InvalidAutoPowerOffWrite)?;
+        if self.model == ModelDriver::A3116 {
+            return a3116::auto_power_off_write(setting);
+        }
         let (body, expected) = match setting {
             AutoPowerOffSetting::Enabled(index) if index < a3028::AUTO_POWER_OFF_DURATION_COUNT => {
                 (
-                    [1, index],
+                    vec![1, index],
                     AutoPowerOff {
                         enabled: true,
                         duration: index,
@@ -322,14 +482,18 @@ impl DeviceState {
             }
             AutoPowerOffSetting::Enabled(_) => return Err(ModelError::InvalidAutoPowerOffWrite),
             AutoPowerOffSetting::Disabled => (
-                [0, current.duration],
+                vec![0, current.duration],
                 AutoPowerOff {
                     enabled: false,
                     duration: current.duration,
                 },
             ),
         };
-        Ok(AutoPowerOffWrite { body, expected })
+        Ok(AutoPowerOffWrite::new(
+            self.model.auto_power_off_command(),
+            body,
+            expected,
+        ))
     }
 }
 
@@ -521,51 +685,72 @@ impl EqualizerSetting {
     }
 }
 
-/// Auto power off value reported by the optional extra fields of the A3028 family.
+/// Auto power off value reported by the optional extra fields of the A3028
+/// family or by the A3116 duration byte.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AutoPowerOff {
     /// Whether the device powers off after the selected idle duration.
     pub enabled: bool,
-    /// Index into the family's half-hour duration table.
+    /// Index into the model's duration table.
     pub duration: u8,
 }
 
 /// A requested auto power off change.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AutoPowerOffSetting {
-    /// Enable auto power off with an index into the half-hour duration table.
+    /// Enable auto power off with an index into the model's duration table.
     Enabled(u8),
     /// Disable auto power off and keep the device's previous duration index.
     Disabled,
 }
 
-/// The wire body and the value that confirms an auto power off write.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// The wire request and the value that confirms an auto power off write.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AutoPowerOffWrite {
-    body: [u8; 2],
+    command: [u8; 2],
+    body: Vec<u8>,
     expected: AutoPowerOff,
 }
 
 impl AutoPowerOffWrite {
-    /// The `01 86` body.
-    pub const fn body(self) -> [u8; 2] {
-        self.body
+    /// Creates a resolved write for the model's auto power off command.
+    pub fn new(command: [u8; 2], body: Vec<u8>, expected: AutoPowerOff) -> Self {
+        Self {
+            command,
+            body,
+            expected,
+        }
+    }
+
+    /// The command that carries the write.
+    pub const fn command(&self) -> [u8; 2] {
+        self.command
+    }
+
+    /// The command body.
+    pub fn body(&self) -> &[u8] {
+        &self.body
     }
 
     /// The value a fresh state response must report for this write.
-    pub const fn expected(self) -> AutoPowerOff {
+    pub const fn expected(&self) -> AutoPowerOff {
         self.expected
     }
 }
 
 /// A validated firmware version in the device's two-part decimal format.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FirmwareVersion {
     major: u8,
     minor: u8,
 }
 
 impl FirmwareVersion {
+    /// Creates a version for comparison with the reported firmware.
+    pub const fn new(major: u8, minor: u8) -> Self {
+        Self { major, minor }
+    }
+
     fn parse(bytes: &[u8]) -> Result<Option<Self>, ModelError> {
         if matches!(bytes, [0, 0, 0, 0, 0] | [255, 255, 255, 255, 255]) {
             return Ok(None);
@@ -622,6 +807,15 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable volume or the value is out of range.
+    #[error("unsupported device volume write")]
+    InvalidVolumeWrite,
+    /// The device does not report the targeted voice prompt flag.
+    #[error("unsupported device voice prompt write")]
+    InvalidVoicePromptWrite,
+    /// The model does not implement the power off action.
+    #[error("unsupported device power off action")]
+    InvalidPowerOffAction,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

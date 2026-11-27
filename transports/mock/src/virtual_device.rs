@@ -5,11 +5,14 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3116_AUTO_POWER_OFF_COMMAND, A3116_AUTO_POWER_OFF_FIELD,
+    A3116_EQUALIZER_BANDS, A3116_EQUALIZER_BANDS_COMMAND, A3116_EQUALIZER_PRESET,
+    A3116_EQUALIZER_PRESET_COMMAND, A3116_POWER_OFF_COMMAND, A3116_VOICE_PROMPT_COMMAND,
+    A3116_VOICE_PROMPT_READ_COMMAND, A3116_VOLUME_COMMAND, A3116_VOLUME_FIELD, A3949_GAMING_MODE,
+    AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver,
+    SOUND_MODE_COMMAND, STATE_COMMAND, SoundModeWrite,
 };
-use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
+use openscl4_protocol::{Direction, FrameDecoder, encode_frame, encode_frame_with};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
 
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
@@ -26,6 +29,12 @@ const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
     include_bytes!("../../../core/data/a3062-mode-normal.bin"),
 ];
+/// A3116 state responses derived from the legacy driver fixture. The frames
+/// carry no checksum, and the firmware variant decides whether the targeted
+/// voice prompt read is available.
+const A3116_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3116-pilot-state.bin");
+const A3116_OLD_FIRMWARE_STATE_REPLY: &[u8] =
+    include_bytes!("../../../core/data/a3116-old-firmware-state.bin");
 /// A3028 and A3029 state bodies from `core/data/a3028-a3029-mode-reference.json`.
 /// The reference starts from one legacy example with an A3029 serial prefix and
 /// replaces the full serial at body offsets 44–59 with the synthetic
@@ -115,6 +124,54 @@ impl TransportProvider for WithoutEqualizerWrite {
             acknowledge_writes: true,
             apply_equalizer: false,
         }))
+    }
+}
+
+/// A virtual A3116 speaker whose frames carry no checksum.
+pub struct VirtualA3116;
+
+impl VirtualA3116 {
+    /// Opens a link with a handle for simulating the link loss after power off.
+    pub fn connect_with_disconnect(&self) -> (Box<dyn TransportLink>, MockDisconnect) {
+        a3116_link(A3116_STATE_REPLY)
+    }
+
+    /// Serves firmware 00.99, which does not expose the voice prompt flag.
+    pub fn with_old_firmware() -> impl TransportProvider {
+        A3116OldFirmware
+    }
+}
+
+fn a3116_link(state: &[u8]) -> (Box<dyn TransportLink>, MockDisconnect) {
+    open_link(Some(Responder::with_state(
+        ModelDriver::A3116,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        Arc::new(Mutex::new(fixture_body(ModelDriver::A3116, state))),
+    )))
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3116 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(a3116_link(A3116_STATE_REPLY).0)
+    }
+}
+
+struct A3116OldFirmware;
+
+#[async_trait]
+impl TransportProvider for A3116OldFirmware {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(a3116_link(A3116_OLD_FIRMWARE_STATE_REPLY).0)
     }
 }
 
@@ -282,6 +339,8 @@ struct DeviceResponder {
     decoder: FrameDecoder,
     state: Arc<Mutex<Vec<u8>>>,
     options: ResponderOptions,
+    /// The A3116 voice prompt flag, which is read by its own command.
+    voice_prompt: bool,
 }
 
 impl DeviceResponder {
@@ -304,15 +363,17 @@ impl DeviceResponder {
     ) -> Self {
         Self {
             model,
-            decoder: FrameDecoder::default(),
+            decoder: FrameDecoder::new(model.framing()),
             state,
             options,
+            voice_prompt: true,
         }
     }
 
     fn reply(&mut self, chunk: &[u8]) -> Option<Bytes> {
         self.decoder.push(chunk);
         let mut replies = BytesMut::new();
+        let checksum_kind = self.model.framing();
         loop {
             let frame = match self.decoder.next_frame() {
                 Ok(Some(frame)) => frame,
@@ -328,7 +389,9 @@ impl DeviceResponder {
                 }
             } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
-                if let Ok(state) = encode_frame(Direction::Inbound, frame.command, &state) {
+                if let Ok(state) =
+                    encode_frame_with(checksum_kind, Direction::Inbound, frame.command, &state)
+                {
                     replies.extend_from_slice(&state);
                 }
             } else if self.model == ModelDriver::A3954
@@ -372,6 +435,85 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_VOLUME_COMMAND
+                && self.a3116_volume_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) =
+                    encode_frame_with(checksum_kind, Direction::Inbound, A3116_VOLUME_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_EQUALIZER_PRESET_COMMAND
+                && self.a3116_equalizer_preset_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_EQUALIZER_PRESET_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_EQUALIZER_BANDS_COMMAND
+                && self.a3116_equalizer_bands_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_EQUALIZER_BANDS_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_AUTO_POWER_OFF_COMMAND
+                && self.a3116_auto_power_off_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_AUTO_POWER_OFF_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_VOICE_PROMPT_READ_COMMAND
+                && frame.body.is_empty()
+                && let Ok(reply) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_VOICE_PROMPT_READ_COMMAND,
+                    &[u8::from(self.voice_prompt)],
+                )
+            {
+                replies.extend_from_slice(&reply);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_VOICE_PROMPT_COMMAND
+                && self.a3116_voice_prompt_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_VOICE_PROMPT_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3116
+                && frame.command == A3116_POWER_OFF_COMMAND
+                && frame.body.is_empty()
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame_with(
+                    checksum_kind,
+                    Direction::Inbound,
+                    A3116_POWER_OFF_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
@@ -409,7 +551,7 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
-            ModelDriver::A3949 => false,
+            ModelDriver::A3949 | ModelDriver::A3116 => false,
         }
     }
 
@@ -439,7 +581,7 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3949 | ModelDriver::A3954 => false,
+            ModelDriver::A3949 | ModelDriver::A3954 | ModelDriver::A3116 => false,
         }
     }
 
@@ -453,6 +595,50 @@ impl DeviceResponder {
             return false;
         };
         value.copy_from_slice(body);
+        true
+    }
+
+    fn a3116_volume_applied(&self, body: &[u8]) -> bool {
+        let [volume @ 0..=16] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3116_VOLUME_FIELD] = *volume;
+        true
+    }
+
+    fn a3116_equalizer_preset_applied(&self, body: &[u8]) -> bool {
+        let [preset] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3116_EQUALIZER_PRESET] = *preset;
+        true
+    }
+
+    fn a3116_equalizer_bands_applied(&self, body: &[u8]) -> bool {
+        if body.len() != A3116_EQUALIZER_BANDS.len() {
+            return false;
+        }
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3116_EQUALIZER_BANDS].copy_from_slice(body);
+        true
+    }
+
+    fn a3116_auto_power_off_applied(&self, body: &[u8]) -> bool {
+        let [duration @ 1..=4] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3116_AUTO_POWER_OFF_FIELD] = *duration;
+        true
+    }
+
+    fn a3116_voice_prompt_applied(&mut self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        self.voice_prompt = *enabled == 1;
         true
     }
 }
@@ -541,6 +727,7 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3116 => fixture_body(model, A3116_STATE_REPLY),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
     };
@@ -548,7 +735,7 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
 }
 
 fn fixture_body(model: ModelDriver, bytes: &[u8]) -> Vec<u8> {
-    let mut decoder = FrameDecoder::default();
+    let mut decoder = FrameDecoder::new(model.framing());
     decoder.push(bytes);
     let state = decoder
         .next_frame()

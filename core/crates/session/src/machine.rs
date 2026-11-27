@@ -4,7 +4,7 @@ use openscl4_models::{
     AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
     STATE_COMMAND, registry,
 };
-use openscl4_protocol::{Direction, Frame};
+use openscl4_protocol::{ChecksumKind, Direction, Frame};
 use openscl4_transport::TransportError;
 
 use crate::{
@@ -141,6 +141,8 @@ pub enum Input {
 pub enum Effect {
     Open {
         deadline: Duration,
+        /// The framing to use for this connection attempt.
+        checksum_kind: ChecksumKind,
     },
     Release {
         deadline: Duration,
@@ -195,7 +197,7 @@ struct PendingEq {
 
 /// One in-flight device write: a discrete command, one field of a quick preset,
 /// or a coalesced live-equalizer value.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct ActiveWrite {
     /// The submitter's command id, or none for a coalesced live-equalizer write.
     id: Option<CommandId>,
@@ -211,6 +213,10 @@ struct ActiveWrite {
     may_have_written: bool,
     /// The value a read-back must report, resolved from the fresh state.
     expected_auto_power_off: Option<AutoPowerOff>,
+    /// The wire requests of this write, in order.
+    requests: Vec<([u8; 2], Vec<u8>)>,
+    /// Index of the request awaiting its acknowledgement.
+    next_request: usize,
 }
 
 impl ActiveWrite {
@@ -230,6 +236,14 @@ struct Recovery {
     reason: SessionError,
 }
 
+/// A model's extra state read in progress before the initial state is confirmed.
+struct SyncExtras {
+    model: ModelDriver,
+    state: DeviceState,
+    command: [u8; 2],
+    pending: Vec<[u8; 2]>,
+}
+
 /// The state transition logic has no runtime or transport access.
 pub struct SessionMachine {
     view: SessionView,
@@ -241,6 +255,14 @@ pub struct SessionMachine {
     pending_eq: Option<PendingEq>,
     last_eq_preset: CommandId,
     queue: VecDeque<QueuedCommand>,
+    /// The framing of the current connection attempt.
+    checksum_kind: ChecksumKind,
+    /// Whether the alternate framing was already probed for this session.
+    alternate_probe: bool,
+    /// The identity failure that made the session retry with the alternate framing.
+    fallback_reason: Option<SessionError>,
+    /// Extra model-specific reads that run before the state is confirmed.
+    syncing_extras: Option<SyncExtras>,
 }
 
 impl SessionMachine {
@@ -260,6 +282,10 @@ impl SessionMachine {
             pending_eq: None,
             last_eq_preset: CommandId(0),
             queue: VecDeque::new(),
+            checksum_kind: ChecksumKind::Suffix,
+            alternate_probe: false,
+            fallback_reason: None,
+            syncing_extras: None,
         }
     }
 
@@ -281,6 +307,7 @@ impl SessionMachine {
         self.transition(ConnectionState::Connecting);
         self.limit_to_recovery(Effect::Open {
             deadline: now + CONNECT_TIMEOUT,
+            checksum_kind: self.checksum_kind,
         })
     }
 
@@ -301,8 +328,16 @@ impl SessionMachine {
 
         let effect = match input {
             Input::Opened => {
-                self.transition(ConnectionState::ProbingIdentity);
-                Effect::read(now, IDENTITY_COMMAND)
+                // After an identity probe failed in the first framing, the
+                // retried connection starts from the measured state read in the
+                // alternate framing: the identity is already known unavailable.
+                if let Some(reason) = self.fallback_reason {
+                    self.transition(ConnectionState::ProbingState(reason));
+                    Effect::read(now, STATE_COMMAND)
+                } else {
+                    self.transition(ConnectionState::ProbingIdentity);
+                    Effect::read(now, IDENTITY_COMMAND)
+                }
             }
             Input::Released => Effect::RetryAt(now + RETRY_INTERVAL),
             Input::RetryElapsed => self.open(now),
@@ -420,6 +455,11 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetVolume(volume) => (WriteTarget::Volume(volume), None),
+                SessionCommand::SetVoicePrompt(enabled) => {
+                    (WriteTarget::VoicePrompt(enabled), None)
+                }
+                SessionCommand::PowerOff => (WriteTarget::PowerOff, None),
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -437,6 +477,8 @@ impl SessionMachine {
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
                 expected_auto_power_off: None,
+                requests: Vec::new(),
+                next_request: 0,
             });
             return Effect::read(now, device.model.state_command());
         }
@@ -471,14 +513,20 @@ impl SessionMachine {
                     stage: WriteStage::ReadCurrent,
                     may_have_written: false,
                     expected_auto_power_off: None,
+                    requests: Vec::new(),
+                    next_request: 0,
                 });
                 return Effect::read(now, device.model.state_command());
             }
             return self.next_effect(now);
         }
 
-        if let Some(write) = self.active {
+        if let Some(write) = self.active.clone() {
             match write.stage {
+                // An action has no readable state to reconcile a missing
+                // acknowledgement with; the state read still proves the
+                // connection, so a lost acknowledgement surfaces as an
+                // unconfirmed action instead of a silent success.
                 WriteStage::Ack => return self.read_back(now, write, None, None),
                 WriteStage::WaitForReadBack { deadline, observed } if now < deadline => {
                     return self.read_back(now, write, Some(deadline), Some(observed));
@@ -497,8 +545,30 @@ impl SessionMachine {
             ConnectionState::ProbingIdentity => {
                 self.probe_state(now, SessionError::Timeout(IoStage::Receive))
             }
+            // A model without an identity response is probed by its state. If
+            // that fails in the first framing, the session retries the same
+            // connection with the other framing before giving up: the A3116
+            // frames carry no checksum and the other measured models do.
+            ConnectionState::ProbingState(reason) if !self.alternate_probe => {
+                self.start_alternate_probe(now, reason)
+            }
             ConnectionState::ProbingState(identity_error) => self.fail(now, identity_error),
             _ => self.fail(now, SessionError::Timeout(IoStage::Receive)),
+        }
+    }
+
+    /// Retries the probe in the other framing after the first one timed out.
+    fn start_alternate_probe(&mut self, now: Duration, reason: SessionError) -> Effect {
+        self.alternate_probe = true;
+        self.checksum_kind = match self.checksum_kind {
+            ChecksumKind::Suffix => ChecksumKind::None,
+            ChecksumKind::None => ChecksumKind::Suffix,
+        };
+        self.fallback_reason = Some(reason);
+        self.transition(ConnectionState::Connecting);
+        Effect::Release {
+            deadline: now + CLOSE_TIMEOUT,
+            interrupted_preset: None,
         }
     }
 
@@ -511,7 +581,7 @@ impl SessionMachine {
             return self.next_effect(now);
         }
 
-        if let Some(write) = self.active {
+        if let Some(write) = self.active.clone() {
             if first_read <= self.receive_cutoff {
                 return self.next_effect(now);
             }
@@ -520,15 +590,18 @@ impl SessionMachine {
                     self.send_write(now, write, &frame.body)
                 }
                 WriteStage::Ack
-                    if frame.command == write.target.command(write.model)
+                    if write
+                        .requests
+                        .get(write.next_request)
+                        .is_some_and(|(command, _)| *command == frame.command)
                         && frame.body.is_empty() =>
                 {
-                    self.read_back(now, write, None, None)
+                    self.ack_write(now, write)
                 }
                 WriteStage::ReadBack {
                     deadline: Some(deadline),
                     ..
-                } if frame.command == write.model.state_command() => {
+                } if frame.command == write.target.read_back_command(write.model) => {
                     self.observe_write(now, deadline, write, &frame.body)
                 }
                 _ => self.next_effect(now),
@@ -571,10 +644,15 @@ impl SessionMachine {
                     ),
                 }
             }
-            ConnectionState::SyncingState(model)
-                if frame.command == model.state_command() && first_read > self.receive_cutoff =>
-            {
-                self.confirm_state(now, model, &frame.body)
+            ConnectionState::SyncingState(model) if first_read > self.receive_cutoff => {
+                if let Some(extras) = &self.syncing_extras {
+                    if frame.command == extras.command {
+                        return self.apply_extra_state(now, &frame.body);
+                    }
+                } else if frame.command == model.state_command() {
+                    return self.confirm_state(now, model, &frame.body);
+                }
+                self.next_effect(now)
             }
             _ => self.next_effect(now),
         }
@@ -589,8 +667,21 @@ impl SessionMachine {
         match model.decode_confirmed_state(body) {
             Some(state) => {
                 self.recovery = None;
-                self.transition(ConnectionState::Ready(state));
-                self.next_effect(now)
+                self.checksum_kind = model.framing();
+                self.transition(ConnectionState::SyncingState(model));
+                let mut pending = model.post_state_reads(&state);
+                if pending.is_empty() {
+                    self.transition(ConnectionState::Ready(state));
+                    return self.next_effect(now);
+                }
+                let command = pending.remove(0);
+                self.syncing_extras = Some(SyncExtras {
+                    model,
+                    state,
+                    command,
+                    pending,
+                });
+                Effect::read(now, command)
             }
             None => self.unidentified(
                 now,
@@ -602,6 +693,30 @@ impl SessionMachine {
         }
     }
 
+    /// Merges one extra state read into the state being synchronized.
+    fn apply_extra_state(&mut self, now: Duration, body: &[u8]) -> Effect {
+        let Some(mut extras) = self.syncing_extras.take() else {
+            return self.next_effect(now);
+        };
+        if extras
+            .model
+            .apply_state_read(&mut extras.state, extras.command, body)
+            .is_err()
+        {
+            // Keep waiting for a usable reply until the receive deadline.
+            self.syncing_extras = Some(extras);
+            return self.next_effect(now);
+        }
+        if extras.pending.is_empty() {
+            self.transition(ConnectionState::Ready(extras.state));
+            return self.next_effect(now);
+        }
+        extras.command = extras.pending.remove(0);
+        let command = extras.command;
+        self.syncing_extras = Some(extras);
+        Effect::read(now, command)
+    }
+
     /// Publishes a read-only view and keeps only safe reads available.
     fn unidentified(&mut self, now: Duration, state: UnidentifiedState) -> Effect {
         // A read-only connection cannot recover a confirmed snapshot by retrying.
@@ -611,11 +726,14 @@ impl SessionMachine {
     }
 
     fn send_write(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
-        let Some(state) = write.model.decode_confirmed_state(body) else {
+        let Some(mut state) = write.model.decode_confirmed_state(body) else {
             // A matching command with an unusable payload keeps the confirmed
             // state and the original deadline; the command waits for a valid reply.
             return self.next_effect(now);
         };
+        // The bulk response does not carry the targeted fields, so their last
+        // confirmed values are preserved between state reads.
+        preserve_extra_state(&mut state, self.view.connection);
         if self.view.connection == ConnectionState::Ready(state) {
             self.reply_deadline = None;
         } else {
@@ -624,15 +742,48 @@ impl SessionMachine {
 
         match write.target.write_body(state, body) {
             Ok(resolved) => {
+                if resolved.requests.is_empty() {
+                    // The requested value already matches the fresh state.
+                    return self.finish_write(now, write, state);
+                }
+                let (command, request_body) = resolved.requests[0].clone();
                 self.active = Some(ActiveWrite {
                     stage: WriteStage::Ack,
                     expected_auto_power_off: resolved.expected_auto_power_off,
+                    requests: resolved.requests,
+                    next_request: 0,
                     ..write
                 });
-                Effect::request(now, write.target.command(write.model), resolved.body)
+                Effect::request(now, command, request_body)
             }
             Err(error) => self.reject_write(now, write, error),
         }
+    }
+
+    /// Handles the acknowledgement of the request currently awaiting one.
+    fn ack_write(&mut self, now: Duration, write: ActiveWrite) -> Effect {
+        if write.target.is_action() {
+            // The action has no readable state. A matching acknowledgement is
+            // the agreed confirmation of receipt.
+            self.active = None;
+            let state = match self.view.connection {
+                ConnectionState::Ready(state) => state,
+                _ => return self.next_effect(now),
+            };
+            return match write.id {
+                Some(id) => Effect::Complete(id, Ok(CommandOutcome::Accepted(state))),
+                None => self.next_effect(now),
+            };
+        }
+
+        let mut write = write;
+        write.next_request += 1;
+        if write.next_request < write.requests.len() {
+            let (command, body) = write.requests[write.next_request].clone();
+            self.active = Some(write);
+            return Effect::request(now, command, body);
+        }
+        self.read_back(now, write, None, None)
     }
 
     /// Completes a write that could not be encoded without touching the device.
@@ -657,13 +808,14 @@ impl SessionMachine {
         observed: Option<DeviceState>,
     ) -> Effect {
         self.reply_deadline = None;
+        let command = write.target.read_back_command(write.model);
         self.active = Some(ActiveWrite {
             stage: WriteStage::ReadBack { deadline, observed },
             ..write
         });
         let send_deadline = now + SEND_TIMEOUT;
         Effect::Request {
-            command: write.model.state_command(),
+            command,
             body: Vec::new(),
             deadline: deadline.map_or(send_deadline, |deadline| deadline.min(send_deadline)),
         }
@@ -676,7 +828,7 @@ impl SessionMachine {
         write: ActiveWrite,
         body: &[u8],
     ) -> Effect {
-        let Some(state) = write.model.decode_confirmed_state(body) else {
+        let Some(state) = self.read_back_state(&write, body) else {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
@@ -694,6 +846,31 @@ impl SessionMachine {
         });
         self.reply_deadline = Some((now + READ_BACK_INTERVAL).min(deadline));
         self.next_effect(now)
+    }
+
+    /// Decodes a write's confirmation response into the confirmed state.
+    ///
+    /// Most writes are confirmed by the bulk state response. The targeted voice
+    /// prompt write is confirmed by its own one-byte read, which is merged into
+    /// the last confirmed state.
+    fn read_back_state(&self, write: &ActiveWrite, body: &[u8]) -> Option<DeviceState> {
+        if !matches!(write.target, WriteTarget::VoicePrompt(_)) {
+            let mut state = write.model.decode_confirmed_state(body)?;
+            preserve_extra_state(&mut state, self.view.connection);
+            return Some(state);
+        }
+        let ConnectionState::Ready(mut state) = self.view.connection else {
+            return None;
+        };
+        write
+            .model
+            .apply_state_read(
+                &mut state,
+                write.target.read_back_command(write.model),
+                body,
+            )
+            .ok()?;
+        Some(state)
     }
 
     fn finish_write(&mut self, now: Duration, write: ActiveWrite, state: DeviceState) -> Effect {
@@ -717,6 +894,9 @@ impl SessionMachine {
                 confirmed_preset: Some(state),
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
+                expected_auto_power_off: None,
+                requests: Vec::new(),
+                next_request: 0,
                 ..write
             });
             return Effect::read(now, write.model.state_command());
@@ -755,7 +935,8 @@ impl SessionMachine {
             ConnectionState::Failed(error) => error,
             _ => SessionError::Closed,
         };
-        let write = self.active.filter(|write| write.id == Some(id));
+        let write = self.active.clone().filter(|write| write.id == Some(id));
+        let may_have_written = write.as_ref().is_some_and(|write| write.may_have_written);
         if let Some(partial) = write.and_then(|write| write.interrupted_preset(failure)) {
             return partial;
         }
@@ -767,7 +948,7 @@ impl SessionMachine {
             }
         ) {
             CommandError::Disconnected
-        } else if write.is_some_and(|write| write.may_have_written) {
+        } else if may_have_written {
             CommandError::Unconfirmed(failure)
         } else {
             failure.into()
@@ -822,7 +1003,7 @@ impl SessionMachine {
     fn limit_to_recovery(&self, mut effect: Effect) -> Effect {
         if let Some(recovery) = self.recovery {
             match &mut effect {
-                Effect::Open { deadline }
+                Effect::Open { deadline, .. }
                 | Effect::Release { deadline, .. }
                 | Effect::RetryAt(deadline)
                 | Effect::Request { deadline, .. } => {
@@ -924,6 +1105,24 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.auto_power_off,
         },
+        WriteTarget::Volume(requested) => CommandError::VolumeMismatch {
+            requested,
+            observed: state.volume,
+        },
+        WriteTarget::VoicePrompt(requested) => CommandError::VoicePromptMismatch {
+            requested,
+            observed: state.voice_prompt,
+        },
+        WriteTarget::PowerOff => CommandError::PowerOffUnconfirmed,
+    }
+}
+
+/// Keeps the last confirmed values of fields that are outside the bulk state.
+fn preserve_extra_state(state: &mut DeviceState, connection: ConnectionState) {
+    if let ConnectionState::Ready(previous) = connection
+        && state.voice_prompt.is_none()
+    {
+        state.voice_prompt = previous.voice_prompt;
     }
 }
 
@@ -942,6 +1141,7 @@ mod tests {
     const A3062_TRANSPARENCY_WRITE: &[u8] =
         b"\x08\xee\0\0\0\x06\x81\x10\0\x01\x51\x01\x01\0\x05\xe6";
     const A3949_STATE: &[u8] = include_bytes!("../../../data/a3949-pilot-state.bin");
+    const A3116_STATE: &[u8] = include_bytes!("../../../data/a3116-pilot-state.bin");
     /// The published A3028 body from `core/data/a3028-a3029-mode-reference.json`.
     const A3028_STATE: &[u8] = &[
         0x05, 0x00, 0xfe, 0xfe, 0x3c, 0xb4, 0x8f, 0xa0, 0x8e, 0xb4, 0x74, 0x88, 0x00, 0x00, 0x00,
@@ -1038,7 +1238,32 @@ mod tests {
             }
         ));
         machine.input(expected, Input::RequestSent { receive_cutoff: 0 });
-        let stopped = machine.input(expected + REPLY_TIMEOUT, Input::TimerElapsed);
+        // The alternate framing is probed before the session gives up.
+        let fallback = machine.input(expected + REPLY_TIMEOUT, Input::TimerElapsed);
+        assert!(matches!(fallback, Effect::Release { .. }));
+        let now = expected + REPLY_TIMEOUT;
+        assert!(matches!(
+            machine.input(now, Input::Released),
+            Effect::RetryAt(_)
+        ));
+        let now = now + RETRY_INTERVAL;
+        assert!(matches!(
+            machine.input(now, Input::RetryElapsed),
+            Effect::Open {
+                checksum_kind: ChecksumKind::None,
+                ..
+            }
+        ));
+        let probe = machine.input(now, Input::Opened);
+        assert!(matches!(
+            probe,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        let stopped = machine.input(now + REPLY_TIMEOUT, Input::TimerElapsed);
         assert!(matches!(stopped, Effect::Stop));
         assert_eq!(
             machine.view().connection,
@@ -1134,6 +1359,8 @@ mod tests {
             },
             may_have_written: true,
             expected_auto_power_off: None,
+            requests: Vec::new(),
+            next_request: 0,
         });
         machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
         let retry = machine.input(Duration::ZERO, inbound(model.state_command(), &original));
@@ -1171,6 +1398,18 @@ mod tests {
         assert_eq!(frame.command, STATE_COMMAND);
         assert_eq!(frame.direction, Direction::Inbound);
         frame.body
+    }
+
+    /// The A3116 state body from the checksum-less pilot fixture.
+    fn a3116_state_body() -> Vec<u8> {
+        let mut decoder = openscl4_protocol::FrameDecoder::new(ChecksumKind::None);
+        decoder.push(A3116_STATE);
+        let frame = decoder
+            .next_frame()
+            .expect("valid A3116 state frame")
+            .expect("complete A3116 state frame");
+        assert_eq!(frame.command, STATE_COMMAND);
+        frame.body.to_vec()
     }
 
     #[test]
@@ -1428,6 +1667,8 @@ mod tests {
                 stage: WriteStage::Ack,
                 may_have_written: false,
                 expected_auto_power_off: None,
+                requests: Vec::new(),
+                next_request: 0,
             });
             let effect = machine.input(
                 Duration::ZERO,
@@ -1856,7 +2097,7 @@ mod tests {
     }
 
     #[test]
-    fn an_identity_and_state_timeout_still_fails() {
+    fn an_identity_and_both_framing_state_timeouts_still_fail() {
         let now = Duration::ZERO;
         let mut machine = SessionMachine::new(ReconnectPolicy::External);
         machine.input(now, Input::Opened);
@@ -1872,12 +2113,75 @@ mod tests {
         ));
         machine.input(REPLY_TIMEOUT, Input::RequestSent { receive_cutoff: 1 });
 
-        let stopped = machine.input(REPLY_TIMEOUT + REPLY_TIMEOUT, Input::TimerElapsed);
+        assert!(matches!(
+            machine.input(REPLY_TIMEOUT + REPLY_TIMEOUT, Input::TimerElapsed),
+            Effect::Release { .. }
+        ));
+        let now = REPLY_TIMEOUT + REPLY_TIMEOUT;
+        machine.input(now, Input::Released);
+        let now = now + RETRY_INTERVAL;
+        assert!(matches!(
+            machine.input(now, Input::RetryElapsed),
+            Effect::Open {
+                checksum_kind: ChecksumKind::None,
+                ..
+            }
+        ));
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+
+        let stopped = machine.input(now + REPLY_TIMEOUT, Input::TimerElapsed);
         assert!(matches!(stopped, Effect::Stop));
         assert_eq!(
             machine.view().connection,
             ConnectionState::Failed(SessionError::Timeout(IoStage::Receive))
         );
+    }
+
+    #[test]
+    fn alternate_framing_state_probe_syncs_the_a3116_voice_prompt() {
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(Duration::ZERO, Input::Opened);
+        machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
+        machine.input(REPLY_TIMEOUT, Input::TimerElapsed);
+        machine.input(REPLY_TIMEOUT, Input::RequestSent { receive_cutoff: 1 });
+        let now = REPLY_TIMEOUT + REPLY_TIMEOUT;
+        machine.input(now, Input::TimerElapsed);
+        machine.input(now, Input::Released);
+        let now = now + RETRY_INTERVAL;
+        machine.input(now, Input::RetryElapsed);
+        let probe = machine.input(now, Input::Opened);
+        assert!(matches!(
+            probe,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+
+        let state_body = a3116_state_body();
+        let state_read = machine.input(now, inbound(STATE_COMMAND, &state_body));
+        assert!(matches!(
+            state_read,
+            Effect::Request {
+                command: [0x01, 0x10],
+                ..
+            }
+        ));
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::SyncingState(ModelDriver::A3116)
+        );
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        let synced = machine.input(now, inbound([0x01, 0x10], &[1]));
+        assert!(matches!(synced, Effect::Receive(None)));
+        let ConnectionState::Ready(state) = machine.view().connection else {
+            panic!("expected a confirmed A3116 state");
+        };
+        assert_eq!(state.model, ModelDriver::A3116);
+        assert_eq!(state.voice_prompt, Some(true));
+        assert_eq!(machine.checksum_kind, ChecksumKind::None);
     }
 
     #[test]

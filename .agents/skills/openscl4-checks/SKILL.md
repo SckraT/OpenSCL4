@@ -43,6 +43,7 @@ Done when the relevant package and scenario tests pass. The session suites `live
 For changes to model discovery or session write admission, use the same package command and exercise the affected paths.
 
 - Through `SessionHandle` and the virtual transport, assert the typed rejection and record the outbound commands. Each read-only scenario sends only the verified reads used to identify or synchronize the device. Keep the measured known-model path working.
+- For a model with its own framing, assert the checksummed probe fallback, the exact checksum-less frame bytes and the targeted read-back. The A3116 test covers the firmware 38.39 voice-prompt boundary and the power-off acceptance and link termination. [A3116 session test](../../../core/crates/session/tests/a3116.rs)
 - In `SessionMachine` with virtual time, deliver a state frame received before the request and assert that it cannot complete synchronization. During a write, assert that an unrelated frame preserves confirmed state and the existing deadline. Deliver the matching reply and assert completion for the original command ID. Include events from a prior connection generation when changing generation handling.
 - For diagnostic capture changes, check each unrecognized inbound record in `frames.jsonl` for `metadata_only` and the absence of `frame_hex`. Check the archive and the exposed state or events for raw MAC addresses and serial numbers, including their hexadecimal representations.
 
@@ -53,7 +54,7 @@ For changes to the core, transports, their fixtures or CLI pilots, run `cargo te
 Run the virtual CLI pilots on both hosts.
 
 ```sh
-cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028
+cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 --test pilot_a3116
 ```
 
 Use CI for any host unavailable locally. Done when the tests on both hosts and the applicable lint checks pass on the submitted commit.

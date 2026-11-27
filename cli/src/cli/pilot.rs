@@ -5,7 +5,7 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3116, VirtualA3949, VirtualIncompatibleA3954,
     VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
@@ -28,6 +28,7 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3116 => SessionRunner::start(VirtualA3116, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
             },
@@ -137,7 +138,9 @@ async fn apply_mode(
     handle: &SessionHandle,
     command: SessionCommand,
 ) -> anyhow::Result<DeviceState> {
-    let CommandOutcome::Applied(state) = handle.dispatch(command)?.wait().await?;
+    let CommandOutcome::Applied(state) = handle.dispatch(command)?.wait().await? else {
+        anyhow::bail!("the device did not confirm the change");
+    };
     Ok(state)
 }
 
@@ -168,10 +171,16 @@ fn unidentified_json(state: UnidentifiedState) -> Value {
 
 fn snapshot_json(device: DeviceState) -> Value {
     let (firmware, battery) = match device.model {
-        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 => (
-            json!({"device": device.firmware_device.map(|version| version.to_string())}),
-            json!({"devicePercent": device.battery.device}),
-        ),
+        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 | ModelDriver::A3116 => {
+            let mut battery = json!({"devicePercent": device.battery.device});
+            if let Some(charging) = device.battery_charging {
+                battery["charging"] = json!(charging);
+            }
+            (
+                json!({"device": device.firmware_device.map(|version| version.to_string())}),
+                battery,
+            )
+        }
         ModelDriver::A3949 | ModelDriver::A3954 => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
@@ -194,6 +203,26 @@ fn snapshot_json(device: DeviceState) -> Value {
         "firmware": firmware,
         "battery": battery,
     });
+    if device.model == ModelDriver::A3116 {
+        if let Some(volume) = device.volume {
+            snapshot["volume"] = json!(volume);
+        }
+        if let Some(equalizer) = device.equalizer {
+            snapshot["equalizer"] = json!({
+                "presetId": equalizer.preset_id,
+                "volumeAdjustments": equalizer.volume_adjustments,
+            });
+        }
+        if let Some(auto_power_off) = device.auto_power_off {
+            snapshot["autoPowerOff"] = json!({
+                "enabled": auto_power_off.enabled,
+                "duration": auto_power_off.duration,
+            });
+        }
+        if let Some(enabled) = device.voice_prompt {
+            snapshot["voicePrompt"] = json!(enabled);
+        }
+    }
     if let Some(mode) = device.sound_mode {
         snapshot["soundMode"] = json!(mode.code());
     }

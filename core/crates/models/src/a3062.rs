@@ -44,6 +44,8 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
             right: None,
             case: None,
         },
+        battery_charging: None,
+        volume: None,
         sound_mode: Some(sound_mode),
         sound_mode_controls: body
             .get(SOUND_MODE_CONTROLS)
@@ -52,6 +54,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         equalizer: equalizer_setting(body),
         gaming_mode: None,
         auto_power_off: None,
+        voice_prompt: None,
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,
