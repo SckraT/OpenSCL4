@@ -91,6 +91,81 @@ mod tests {
     }
 
     #[test]
+    fn clears_state_serials_for_the_dual_state_family() {
+        let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
+        tap.set_enabled(true);
+        for (model, fixture, serial) in [
+            (
+                ModelDriver::A3944,
+                include_bytes!("../../../data/a3944-pilot-state.bin").as_slice(),
+                "3944TEST00000000",
+            ),
+            (
+                ModelDriver::A3945,
+                include_bytes!("../../../data/a3945-pilot-state.bin").as_slice(),
+                "3945TEST00000000",
+            ),
+            (
+                ModelDriver::A3948,
+                include_bytes!("../../../data/a3948-pilot-state.bin").as_slice(),
+                "3948TEST00000000",
+            ),
+            (
+                ModelDriver::A3959,
+                include_bytes!("../../../data/a3959-pilot-state.bin").as_slice(),
+                "3959TEST00000000",
+            ),
+        ] {
+            let frame = decode(fixture);
+            tap.record_frame(Duration::ZERO, Some(model), &frame);
+            let record = tap.records().last().unwrap();
+            assert_eq!(record.metadata.outcome, CaptureOutcome::Sanitized);
+            assert_eq!(record.metadata.length, fixture.len());
+            let sanitized = decode(record.frame_bytes().unwrap());
+            let mut expected = frame.body.to_vec();
+            expected[16..32].fill(0);
+            assert_eq!(sanitized.body.as_ref(), expected);
+            let debug = format!("{tap:?}");
+            assert!(!debug.contains(serial), "{} serial leaked", model.code());
+        }
+    }
+
+    #[test]
+    fn accepts_the_a3944_documented_prefix_and_rejects_foreign_states() {
+        let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
+        tap.set_enabled(true);
+        let fixture = decode(include_bytes!("../../../data/a3944-pilot-state.bin"));
+        let prefix = make_frame(Direction::Inbound, [0x01, 0x01], &fixture.body[..73]);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3944), &prefix);
+        assert_eq!(
+            tap.records().last().unwrap().metadata.outcome,
+            CaptureOutcome::Sanitized
+        );
+
+        // One byte short of the documented prefix stays metadata-only.
+        let short = make_frame(Direction::Inbound, [0x01, 0x01], &fixture.body[..72]);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3944), &short);
+        assert_eq!(
+            tap.records().last().unwrap().metadata.outcome,
+            CaptureOutcome::MetadataOnly
+        );
+
+        // A body whose serial names another model stays metadata-only.
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3945), &fixture);
+        assert_eq!(
+            tap.records().last().unwrap().metadata.outcome,
+            CaptureOutcome::MetadataOnly
+        );
+
+        // A confirmed state recorded under an unrelated model stays metadata-only.
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3954), &fixture);
+        assert_eq!(
+            tap.records().last().unwrap().metadata.outcome,
+            CaptureOutcome::MetadataOnly
+        );
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

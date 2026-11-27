@@ -192,14 +192,29 @@ fn sanitized_frame(model: Option<ModelDriver>, frame: &Frame) -> Option<Bytes> {
 
 fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize, usize)]> {
     // Use only the measured state layouts cited in core/data/README.md.
+    // The dual-state layouts carry their serial at body offsets 16-31. A3944
+    // documents a 73-byte prefix and ignores the legacy example's trailing 15
+    // bytes; A3945 tolerates the same trailing bytes, while A3948 and A3959
+    // document their full body length including padding.
+    const DUAL_STATE_SERIAL: (usize, usize) = (16, 32);
+    const A3944_DOCUMENTED_PREFIX: usize = 73;
+    const A3945_DOCUMENTED_LENGTH: usize = 72;
+    const A3948_DOCUMENTED_LENGTH: usize = 88;
+    const A3959_DOCUMENTED_LENGTH: usize = 91;
     let fields: &[(usize, usize)] = match model {
         ModelDriver::A3062 if body.len() == 95 => &[(7, 23)],
+        ModelDriver::A3944 if body.len() >= A3944_DOCUMENTED_PREFIX => &[DUAL_STATE_SERIAL],
+        ModelDriver::A3945 if body.len() >= A3945_DOCUMENTED_LENGTH => &[DUAL_STATE_SERIAL],
+        ModelDriver::A3948 if body.len() == A3948_DOCUMENTED_LENGTH => &[DUAL_STATE_SERIAL],
         ModelDriver::A3949 if body.len() == 88 => &[(16, 32)],
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {
             &[(16, 32), (38, 44)]
         }
+        ModelDriver::A3959 if body.len() == A3959_DOCUMENTED_LENGTH => &[DUAL_STATE_SERIAL],
         _ => return None,
     };
+    // The decoder admits only states whose serial names this model, so an
+    // A3944-sized body with another model's serial stays metadata-only.
     model.decode_state(body).ok()?;
     Some(fields)
 }

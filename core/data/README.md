@@ -157,6 +157,46 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3944, A3945, A3948 and A3959 state reference
+
+[a3944-a3945-a3948-a3959-state-reference.json](a3944-a3945-a3948-a3959-state-reference.json)
+records the derived bodies and the golden write frames of the four
+`dualState`/`dualWithPeers` drivers. Each `01 01` body comes from a legacy driver
+test example documented by that driver's state parser. The 16-byte serial at
+body offsets 16–31 is replaced with the synthetic model-prefixed
+`3944TEST00000000`, `3945TEST00000000`, `3948TEST00000000` or
+`3959TEST00000000` value, and the additive frame checksum is recomputed. **No
+physical capture of these models is recorded**; the virtual transport replays
+the derived frames.
+
+| Fixture                                                                 | Body | SHA-256                                                            |
+| ----------------------------------------------------------------------- | ---- | ------------------------------------------------------------------ |
+| [a3944-pilot-state.bin](a3944-pilot-state.bin)                           | 88   | `f4229f6f9449cecd8f483e985e6d41fc9b31e1697d05df1f606c96c1a383f64c` |
+| [a3945-pilot-state.bin](a3945-pilot-state.bin)                           | 72   | `cb3956e551d585e79072980d9e8e67cd64be75ee225b67b76fb56161ca1ce91d` |
+| [a3948-pilot-state.bin](a3948-pilot-state.bin)                           | 88   | `002c1f6bf007aefd1abcbb85bd1915a11bc3754c506afe247e3e9f52db38aa0e` |
+| [a3959-pilot-state.bin](a3959-pilot-state.bin)                           | 91   | `7bb620e70a87b5ee10b56522e05ef6effd86109e5ff5d71437cd782db05cea64` |
+| [a3959-gaming-unavailable-state.bin](a3959-gaming-unavailable-state.bin) | 91   | `078a978829b855c2b13356f725ff75925a2f9ba06e606b27326970c04e6ca63d` |
+
+The family shares the serial, firmware and battery fields at offsets 16–31,
+6–10, 11–15, 2 and 3. A3944, A3945 and A3948 read the five-step battery scale;
+A3959 reads the ten-step scale at the same offsets. A3945 additionally reports
+the case battery at offset 69 on the five-step scale. The equalizer preset id is
+at offset 32–33 in every layout. A3944, A3948 and A3959 carry one ten-band curve
+at 34–43; A3945 carries a second channel at 44–53. A3944's parser documents 73
+bytes and ignores the example's trailing 15 bytes, while A3948's parser
+documents the same trailing block. A3945 documents 72 bytes. The gaming-mode
+flag is at A3945 offset 68 and A3959 offset 78. A3959 sound modes are at 64–70,
+auto power off at 75–76, and the P30i firmware boundary for gaming mode is
+`01.60`: the captured 01.59 body has no flag and the captured 01.64 body does.
+
+The A3944 and A3948 writes use `02 83`, the A3959 write uses `02 83`, and the
+A3945 two-channel write uses `02 81`. The DRC writes append the legacy
+`apply_drc` copy of the curve; the A3944 Acoustic and A3959 legacy equalizer
+bodies are reproduced byte for byte by the new driver. The A3959 `06 81`
+ambient-mode write repeats the mode around the five preserved controls. Gaming
+mode writes `01 87` with one byte, and auto power off writes `01 86` with the
+enabled flag and the ten-minute-step duration index.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

@@ -66,6 +66,26 @@ and restore its original value. Each result requires a fresh state response.
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3949
 ```
 
+The A3944, A3945, A3948 and A3959 pilots are discovered from their state
+responses because no identity response is recorded for the family. The A3944,
+A3945 and A3948 states report both earbud batteries, the two firmware versions
+and the equalizer curve; A3945 also reports its case battery. The A3959 state
+reports the two batteries on a ten-step scale, the sound mode, auto power off,
+the equalizer curve and the gaming-mode flag. The flag exists only when both
+firmware versions are at least 01.60, so `--cycle-mode` switches gaming mode for
+A3959 above the boundary and falls back to the ambient-mode cycle below it.
+A3945 cycles its gaming mode, and A3944 and A3948 reject `--cycle-mode` because
+their layouts carry no sound or gaming mode.
+The virtual states and the golden write frames are described in
+[`core/data`](../core/data/README.md#a3944-a3945-a3948-and-a3959-state-reference).
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3944
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3945
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3948
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3959
+```
+
 An unrecognized identity or a registered model with an incompatible state
 switch the pilot to a read-only result. An identity naming no registered model
 sends only the verified identity read; a registered model with an incompatible

@@ -43,4 +43,4 @@ jobs:
           -p openscl4-models -p openscl4-session -p openscl4-transport-windows
           -p openscl4-profiles -p openscl4-diagnostics
       - name: Test the virtual CLI pilots
-        run: cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028
+        run: cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 --test pilot_a3944_family

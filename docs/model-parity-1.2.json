@@ -1637,6 +1637,123 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3944"
+            ],
+            "operation": "equalizer_with_drc",
+            "inbound": "lib/src/devices/soundcore/a3944/packets/inbound/state_update.rs::A3944StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "Only the derived legacy state and the legacy write body are replayed; no physical A3944 capture exists.",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3944_acoustic_curve_from_a_preset_reply"
+        },
+        {
+            "models": [
+                "A3945"
+            ],
+            "operation": "equalizer_tws",
+            "inbound": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "command": "0281",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The two channel curves are confirmed from a derived legacy state; no physical A3945 capture exists.",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3945_two_channel_curve_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3945"
+            ],
+            "operation": "gaming_mode",
+            "availability": "Reported from the gaming-mode flag at body offset 68; the legacy driver has no firmware condition.",
+            "availabilitySource": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket",
+            "inbound": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "0187",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3945_gaming_mode_cycle_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3948"
+            ],
+            "operation": "equalizer_with_drc_tws",
+            "inbound": "lib/src/devices/soundcore/a3948/packets/inbound/state_update.rs::A3948StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+            "command": "0283",
+            "evidence": "protocolFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The DRC write body is derived from the shared legacy builder; no legacy or physical A3948 equalizer example is recorded.",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3948_drc_curve_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3959"
+            ],
+            "operation": "equalizer_with_drc_tws",
+            "inbound": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_drc_curve_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3959"
+            ],
+            "operation": "a3959_sound_modes",
+            "availability": "Reported from the sound modes at body offsets 64-70.",
+            "availabilitySource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "inbound": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs",
+            "command": "0681",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "Only the ambient-mode selection is confirmed; noise canceling mode, manual and adaptive strengths, wind noise and multi-scene transitions stay parityPending.",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_ambient_mode_cycle_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3959"
+            ],
+            "operation": "auto_power_off",
+            "availability": "Reported from body offsets 75-76; an unrecognized flag or a duration index above 3 is not a confirmed value.",
+            "availabilitySource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "inbound": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+            "command": "0186",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_auto_power_off_values_from_preset_replies"
+        },
+        {
+            "models": [
+                "A3959"
+            ],
+            "operation": "gaming_mode",
+            "availability": "Available only when both firmware versions are at least 01.60; the captured 01.59 state reports no flag.",
+            "availabilitySource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "inbound": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "0187",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The captured 01.59 and 01.64 states bracket the boundary; no physical P30i write run is recorded.",
+            "test": "core/crates/session/tests/a3944_family.rs::a3959_gaming_mode_follows_the_firmware_boundary"
         }
     ],
     "models": [
@@ -3052,7 +3169,41 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3944/packets/inbound/state_update.rs::A3944StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3944/packets/inbound/state_update.rs::A3944StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "02.27",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/a3944_family.rs::reads_the_reference_state_of_each_model"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3944_acoustic_curve_from_a_preset_reply"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/data/a3959-gaming-unavailable-state.bin",
+                    "result": "rejectedBeforeTransmission",
+                    "test": "core/crates/session/tests/a3944_family.rs::a3944_rejects_gaming_and_ambient_writes_before_transmission"
+                }
+            ]
         },
         {
             "code": "A3945",
@@ -3108,7 +3259,41 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "00.00",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/a3944_family.rs::reads_the_reference_state_of_each_model"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3945_two_channel_curve_from_preset_replies"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3945_gaming_mode_cycle_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3947",
@@ -3241,7 +3426,33 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3948/packets/inbound/state_update.rs::A3948StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3948/packets/inbound/state_update.rs::A3948StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "24.56",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/a3944_family.rs::reads_the_reference_state_of_each_model"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+                    "inbound": "core/crates/session/tests/a3944_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3948_drc_curve_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3949",
@@ -3933,7 +4144,58 @@
             "variants": [
                 "gamingModeSince01.60"
             ],
-            "stateParserSource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.64",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/a3944_family.rs::reads_the_reference_state_of_each_model"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_ambient_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_drc_curve_from_preset_replies"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "availability": "Only when both firmware versions are at least 01.60.",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3959-gaming-unavailable-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::a3959_gaming_mode_follows_the_firmware_boundary"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "inbound": "core/data/a3944-a3945-a3948-a3959-state-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3944_family.rs::confirms_the_a3959_auto_power_off_values_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3968",
