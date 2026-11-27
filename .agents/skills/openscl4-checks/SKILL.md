@@ -53,7 +53,7 @@ For changes to the core, transports, their fixtures or CLI pilots, run `cargo te
 Run the virtual CLI pilots on both hosts.
 
 ```sh
-cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028
+cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 --test pilot_a3035
 ```
 
 Use CI for any host unavailable locally. Done when the tests on both hosts and the applicable lint checks pass on the submitted commit.

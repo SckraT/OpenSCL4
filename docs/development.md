@@ -58,6 +58,19 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The Space One and Space Q45 pilots are also discovered from their state
+response because no identity response is recorded for the single-peer family.
+The A3035 reports firmware 06.87 and one 100% device battery, the A3040 reports
+firmware 02.34 and one 60% device battery, both from the reference state in
+[`core/data`](../core/data/README.md#a3035-and-a3040-state-reference). Both
+report noise canceling as the current mode. Add `--cycle-mode` to write Normal
+and restore NoiseCanceling, each confirmed by a fresh state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3035
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3040
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

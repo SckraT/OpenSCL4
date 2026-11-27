@@ -4,10 +4,19 @@ use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
-    A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3028_SOUND_MODE_FIELDS, A3035_AUTO_PLAY_PAUSE, A3035_AUTO_POWER_OFF, A3035_BATTERY_ALERT,
+    A3035_BUTTON_CONFIGURATION, A3035_DUAL_CONNECTIONS, A3035_EQUALIZER_BANDS,
+    A3035_EQUALIZER_PRESET, A3035_LDAC, A3035_LIMIT_HIGH_VOLUME, A3035_SOUND_MODE_CYCLE,
+    A3035_SOUND_MODE_FIELDS, A3035_VOICE_PROMPT, A3040_AUTO_POWER_OFF, A3040_BUTTON_CONFIGURATION,
+    A3040_DUAL_CONNECTIONS, A3040_EQUALIZER_BANDS, A3040_EQUALIZER_PRESET, A3040_LDAC,
+    A3040_LIMIT_HIGH_VOLUME, A3040_LOW_BATTERY_PROMPT, A3040_SOUND_MODE_CYCLE,
+    A3040_SOUND_MODE_FIELDS, A3040_VOICE_PROMPT, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_PLAY_PAUSE_COMMAND, AUTO_POWER_OFF_COMMAND,
+    BATTERY_PROMPT_COMMAND, BUTTON_CONFIGURATION_COMMAND, DUAL_CONNECTIONS_COMMAND,
+    EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, LDAC_COMMAND, LDAC_STATE_COMMAND,
+    LIMIT_HIGH_VOLUME_COMMAND, LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND, ModelDriver,
+    SOUND_MODE_COMMAND, SOUND_MODE_CYCLE_COMMAND, STATE_COMMAND, SoundModeWrite,
+    VOICE_PROMPT_COMMAND,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -15,6 +24,8 @@ use openscl4_transport::{ConnectTarget, TransportError, TransportLink, Transport
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
+const A3035_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3035-state-reference.bin");
+const A3040_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3040-state-reference.bin");
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
 const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-off.bin"),
@@ -48,7 +59,7 @@ const A3029_STATE_BODY: &[u8] = &[
 /// ambient and battery alert prompt tones. The matrix lists this block as
 /// derived from the known layout, not a separate capture.
 const AUTO_POWER_OFF_EXTRA_FIELDS: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01];
-const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
+const DUAL_CONNECTIONS_READ_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
 /// A virtual Soundcore Liberty 4 Pro with per-connection sound-mode state.
@@ -170,6 +181,44 @@ impl TransportProvider for VirtualA3029 {
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
         Ok(family_link(ModelDriver::A3029))
+    }
+}
+
+/// A virtual Space One that answers state reads from the reference fixture.
+pub struct VirtualA3035;
+
+/// A virtual Space Q45 that answers state reads from the reference fixture.
+pub struct VirtualA3040;
+
+fn single_peer_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3035 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(single_peer_link(ModelDriver::A3035))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3040 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(single_peer_link(ModelDriver::A3040))
     }
 }
 
@@ -331,8 +380,17 @@ impl DeviceResponder {
                 if let Ok(state) = encode_frame(Direction::Inbound, frame.command, &state) {
                     replies.extend_from_slice(&state);
                 }
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == LDAC_STATE_COMMAND
+                && frame.body.is_empty()
+            {
+                let state = self.state.lock().expect("virtual state lock");
+                let body = ldac_offset(self.model).map_or(0, |offset| state[offset]);
+                if let Ok(reply) = encode_frame(Direction::Inbound, frame.command, &[body]) {
+                    replies.extend_from_slice(&reply);
+                }
             } else if self.model == ModelDriver::A3954
-                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && frame.command == DUAL_CONNECTIONS_READ_COMMAND
                 && frame.body.is_empty()
             {
                 // The fixture has no stored peers. Reply with one empty list segment.
@@ -344,8 +402,10 @@ impl DeviceResponder {
                 && self.options.acknowledge_writes
             {
                 replies.extend_from_slice(SOUND_MODE_ACK);
-            } else if self.model == ModelDriver::A3062
-                && frame.command == EQUALIZER_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3035 | ModelDriver::A3040 | ModelDriver::A3062
+            ) && frame.command == EQUALIZER_COMMAND
                 && self.options.acknowledge_writes
                 && self.equalizer_applied(&frame.body)
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
@@ -365,13 +425,70 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3035 | ModelDriver::A3040
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == BUTTON_CONFIGURATION_COMMAND
+                && self.apply_button_configuration(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, BUTTON_CONFIGURATION_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == SOUND_MODE_CYCLE_COMMAND
+                && self.apply_sound_mode_cycle(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, SOUND_MODE_CYCLE_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == LIMIT_HIGH_VOLUME_COMMAND
+                && self.apply_limit_high_volume(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, LIMIT_HIGH_VOLUME_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND
+                && self.apply_limit_high_volume_refresh_rate(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(
+                    Direction::Inbound,
+                    LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND,
+                    &[],
+                )
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && self.apply_dual_connections(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, DUAL_CONNECTIONS_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == LDAC_COMMAND
+                && self.apply_ldac(&frame.body)
+            {
+                // The legacy driver sets this flag without waiting for a response.
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && frame.command == VOICE_PROMPT_COMMAND
+                && self.apply_prompt_flag(VOICE_PROMPT_COMMAND, &frame.body)
+            {
+                // Flags are set without a response; the state read confirms them.
+            } else if matches!(self.model, ModelDriver::A3035 | ModelDriver::A3040)
+                && (frame.command == BATTERY_PROMPT_COMMAND
+                    || (self.model == ModelDriver::A3035
+                        && frame.command == AUTO_PLAY_PAUSE_COMMAND))
+                && self.apply_prompt_flag(frame.command, &frame.body)
+            {
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
@@ -409,6 +526,39 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
+            ModelDriver::A3035 | ModelDriver::A3040 => {
+                let [
+                    mode @ 0..=2,
+                    packed,
+                    _unused_or_transparency,
+                    noise_canceling,
+                    wind,
+                    custom,
+                ] = body
+                else {
+                    return false;
+                };
+                if !(1..=5).contains(&(packed >> 4)) || packed & 0x0f > 5 {
+                    return false;
+                }
+                let Some(fields) = sound_mode_fields(self.model) else {
+                    return false;
+                };
+                if self.model == ModelDriver::A3035 {
+                    // The third byte repeats the ambient mode on the A3035.
+                    state[fields].copy_from_slice(&[
+                        *mode,
+                        *packed,
+                        *mode,
+                        *noise_canceling,
+                        *wind,
+                        *custom,
+                    ]);
+                } else {
+                    state[fields].copy_from_slice(body);
+                }
+                true
+            }
             ModelDriver::A3949 => false,
         }
     }
@@ -420,14 +570,19 @@ impl DeviceResponder {
         }
         let mut state = self.state.lock().expect("virtual state lock");
         match self.model {
-            ModelDriver::A3062 => {
+            ModelDriver::A3062 | ModelDriver::A3035 | ModelDriver::A3040 => {
                 // The write body starts with the preset, the hear-id genre, and the bands.
                 let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..14)) else {
                     return false;
                 };
                 // The state carries the curve at the offsets the models crate measured.
-                state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
-                state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
+                let (Some(requested_preset), Some(requested_bands)) =
+                    (equalizer_preset(self.model), equalizer_bands(self.model))
+                else {
+                    return false;
+                };
+                state[requested_preset].copy_from_slice(preset);
+                state[requested_bands].copy_from_slice(bands);
                 true
             }
             ModelDriver::A3028 | ModelDriver::A3029 => {
@@ -443,17 +598,177 @@ impl DeviceResponder {
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write only when the state carries the field.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let offset = match self.model {
+            ModelDriver::A3028 | ModelDriver::A3029 => A3028_AUTO_POWER_OFF.start,
+            ModelDriver::A3035 => A3035_AUTO_POWER_OFF.start,
+            ModelDriver::A3040 => A3040_AUTO_POWER_OFF.start,
+            _ => return false,
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        state[offset..offset + 2].copy_from_slice(body);
+        true
+    }
+
+    fn apply_button_configuration(&self, body: &[u8]) -> bool {
+        let [0, 0, action] = body else {
             return false;
         };
-        value.copy_from_slice(body);
+        let Some(offset) = button_configuration_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *action;
         true
+    }
+
+    fn apply_sound_mode_cycle(&self, body: &[u8]) -> bool {
+        let [cycle] = body else {
+            return false;
+        };
+        let Some(offset) = sound_mode_cycle_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *cycle;
+        true
+    }
+
+    fn apply_limit_high_volume(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1, db_limit] = body else {
+            return false;
+        };
+        let Some(offset) = limit_high_volume_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *enabled;
+        state[offset + 1] = *db_limit;
+        true
+    }
+
+    fn apply_limit_high_volume_refresh_rate(&self, body: &[u8]) -> bool {
+        let [refresh_rate @ 0..=2] = body else {
+            return false;
+        };
+        let Some(offset) = limit_high_volume_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset + 2] = *refresh_rate;
+        true
+    }
+
+    fn apply_dual_connections(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let Some(offset) = dual_connections_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *enabled;
+        true
+    }
+
+    fn apply_ldac(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let Some(offset) = ldac_offset(self.model) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *enabled;
+        true
+    }
+
+    /// Applies a one-byte prompt flag at the offset its command targets.
+    fn apply_prompt_flag(&self, command: [u8; 2], body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let offset = match (self.model, command) {
+            (ModelDriver::A3035, VOICE_PROMPT_COMMAND) => A3035_VOICE_PROMPT,
+            (ModelDriver::A3035, BATTERY_PROMPT_COMMAND) => A3035_BATTERY_ALERT,
+            (ModelDriver::A3035, AUTO_PLAY_PAUSE_COMMAND) => A3035_AUTO_PLAY_PAUSE,
+            (ModelDriver::A3040, VOICE_PROMPT_COMMAND) => A3040_VOICE_PROMPT,
+            (ModelDriver::A3040, BATTERY_PROMPT_COMMAND) => A3040_LOW_BATTERY_PROMPT,
+            _ => return false,
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[offset] = *enabled;
+        true
+    }
+}
+
+const fn sound_mode_fields(model: ModelDriver) -> Option<std::ops::Range<usize>> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_SOUND_MODE_FIELDS),
+        ModelDriver::A3040 => Some(A3040_SOUND_MODE_FIELDS),
+        _ => None,
+    }
+}
+
+const fn equalizer_preset(model: ModelDriver) -> Option<std::ops::Range<usize>> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_EQUALIZER_PRESET),
+        ModelDriver::A3040 => Some(A3040_EQUALIZER_PRESET),
+        ModelDriver::A3062 => Some(A3062_EQUALIZER_PRESET),
+        _ => None,
+    }
+}
+
+const fn equalizer_bands(model: ModelDriver) -> Option<std::ops::Range<usize>> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_EQUALIZER_BANDS),
+        ModelDriver::A3040 => Some(A3040_EQUALIZER_BANDS),
+        ModelDriver::A3062 => Some(A3062_EQUALIZER_BANDS),
+        _ => None,
+    }
+}
+
+const fn button_configuration_offset(model: ModelDriver) -> Option<usize> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_BUTTON_CONFIGURATION),
+        ModelDriver::A3040 => Some(A3040_BUTTON_CONFIGURATION),
+        _ => None,
+    }
+}
+
+const fn sound_mode_cycle_offset(model: ModelDriver) -> Option<usize> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_SOUND_MODE_CYCLE),
+        ModelDriver::A3040 => Some(A3040_SOUND_MODE_CYCLE),
+        _ => None,
+    }
+}
+
+const fn limit_high_volume_offset(model: ModelDriver) -> Option<usize> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_LIMIT_HIGH_VOLUME.start),
+        ModelDriver::A3040 => Some(A3040_LIMIT_HIGH_VOLUME.start),
+        _ => None,
+    }
+}
+
+const fn dual_connections_offset(model: ModelDriver) -> Option<usize> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_DUAL_CONNECTIONS),
+        ModelDriver::A3040 => Some(A3040_DUAL_CONNECTIONS),
+        _ => None,
+    }
+}
+
+const fn ldac_offset(model: ModelDriver) -> Option<usize> {
+    match model {
+        ModelDriver::A3035 => Some(A3035_LDAC),
+        ModelDriver::A3040 => Some(A3040_LDAC),
+        _ => None,
     }
 }
 
@@ -540,6 +855,8 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
+        ModelDriver::A3035 => fixture_body(model, A3035_STATE_REPLY),
+        ModelDriver::A3040 => fixture_body(model, A3040_STATE_REPLY),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),

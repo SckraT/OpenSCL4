@@ -157,6 +157,66 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3035 and A3040 state reference
+
+[a3035-state-reference.bin](a3035-state-reference.bin) and
+[a3040-state-reference.bin](a3040-state-reference.bin) are the complete inbound
+`01 01` frames built from the single state example in the legacy driver unit
+tests `with_known_good_packet` at revision `7e90bb78`
+([A3035 driver](../../lib/src/devices/soundcore/a3035.rs),
+[A3040 driver](../../lib/src/devices/soundcore/a3040.rs)). The state bodies are
+95 bytes and 142 bytes; the legacy parser reads a known prefix and tolerates the
+trailing unknown bytes, which the published frames keep (3 for A3035, 7 for
+A3040). The fixtures are derived from those legacy examples, not from a new
+physical capture.
+
+The source example carries a device serial at body offsets 7–23. The A3040
+serial includes the reversed Bluetooth address, so both serials are replaced
+with the synthetic model-prefixed values `3035TEST00000000` and
+`3040TEST00000000` at the same offsets and each checksum is recalculated. No
+real serial number or MAC address is committed. The frame SHA-256 values are
+A3035 `8b363db428a9fc91e1847c13ae360b1ff416eadd1795f21ad4582fd40e3d73ae`
+and A3040 `e51f12a778001a8c3b20b2ee73976e010fbe70585c478bed635bdea67115a55f`.
+
+The A3035 reference reports firmware `06.87`, 100% device battery, noise
+canceling, the SoundcoreSignature curve, auto power off `90m`, the BassUp
+double-press action, a noise-canceling and transparency cycle without normal
+mode, the high-volume limiter disabled at 90 dB, dual connections disabled,
+LDAC enabled, auto play/pause enabled, the power-on battery notice enabled and
+the voice prompt enabled. The A3040 reference reports firmware `02.34`, 60%
+device battery, noise canceling, the Rock preset curve, auto power off `30m`,
+the BassUp double-press action, all three modes in the cycle, the high-volume
+limiter disabled at 90 dB, dual connections enabled, LDAC disabled, the voice
+prompt and the low battery prompt enabled, and no auto play/pause flag.
+
+The write bodies are derived from the legacy builders and their unit-test
+examples; the session tests compare the complete outgoing frames against them:
+
+- The `06 81` sound-mode body is six bytes. A3035 sends
+  `ambient, (custom<<4)|adaptive, ambient, noise-canceling mode, wind, custom transparency`;
+  A3040 sends
+  `ambient, (manual<<4)|adaptive, transparency mode, noise-canceling mode, wind, manual transparency`.
+  Both models clamp the packed noise-canceling values the way the legacy
+  structures do.
+- The `03 87` equalizer write is 53 bytes for A3035 and 93 bytes for A3040. Both
+  repeat the requested ten-band curve, echo the state's hear-id fields with hear
+  id disabled, and append the curve after the legacy dynamic range compression.
+  The reference bodies for the SoundcoreSignature, Acoustic and custom curves
+  are recorded in
+  [the model tests](../../core/crates/models/tests/a3035_a3040.rs).
+- The `01 86` auto power off body is `enabled, duration index` with the same
+  half-hour table the A3028 family uses.
+- The remaining settings use the legacy commands with their measured state
+  offsets: `04 81` button double-press, `06 82` ambient sound-mode cycle,
+  `20 82` and `20 81` high-volume limiter, `0b 84` dual connections, `01 ff`
+  LDAC (confirmed through the dedicated `01 7f` request), `01 81` auto
+  play/pause, `01 ae` voice prompt and `01 af` battery/low battery prompt.
+
+No identity response is recorded for either model, so the pilots discover them
+from the state serial, as the A3028 family does. No physical A3035 or A3040
+capture exists for these sessions: the virtual transport replays the reference
+state with its checksums recomputed and applies the documented write effects.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

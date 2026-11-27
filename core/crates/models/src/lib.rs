@@ -5,6 +5,8 @@
 use std::fmt;
 
 mod a3028;
+mod a3035;
+mod a3040;
 mod a3062;
 mod a3949;
 pub mod registry;
@@ -12,6 +14,16 @@ pub mod registry;
 pub use a3028::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
+};
+pub use a3035::{
+    A3035_AUTO_PLAY_PAUSE, A3035_AUTO_POWER_OFF, A3035_BATTERY_ALERT, A3035_BUTTON_CONFIGURATION,
+    A3035_DUAL_CONNECTIONS, A3035_EQUALIZER_BANDS, A3035_EQUALIZER_PRESET, A3035_LDAC,
+    A3035_LIMIT_HIGH_VOLUME, A3035_SOUND_MODE_CYCLE, A3035_SOUND_MODE_FIELDS, A3035_VOICE_PROMPT,
+};
+pub use a3040::{
+    A3040_AUTO_POWER_OFF, A3040_BUTTON_CONFIGURATION, A3040_DUAL_CONNECTIONS,
+    A3040_EQUALIZER_BANDS, A3040_EQUALIZER_PRESET, A3040_LDAC, A3040_LIMIT_HIGH_VOLUME,
+    A3040_LOW_BATTERY_PROMPT, A3040_SOUND_MODE_CYCLE, A3040_SOUND_MODE_FIELDS, A3040_VOICE_PROMPT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
@@ -34,6 +46,39 @@ pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 /// Write the auto power off value of a model that reports its extra fields.
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
 
+/// Write the double-press button action.
+pub const BUTTON_CONFIGURATION_COMMAND: [u8; 2] = [0x04, 0x81];
+
+/// Write the ambient sound mode cycle flags.
+pub const SOUND_MODE_CYCLE_COMMAND: [u8; 2] = [0x06, 0x82];
+
+/// Write the high-volume limiter enable flag and limit.
+pub const LIMIT_HIGH_VOLUME_COMMAND: [u8; 2] = [0x20, 0x82];
+
+/// Write the high-volume limiter's level reading refresh rate.
+pub const LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND: [u8; 2] = [0x20, 0x81];
+
+/// Write the dual-connections enabled flag.
+pub const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x84];
+
+/// Write the LDAC flag.
+pub const LDAC_COMMAND: [u8; 2] = [0x01, 0xff];
+
+/// Read the LDAC flag back with a dedicated request.
+pub const LDAC_STATE_COMMAND: [u8; 2] = [0x01, 0x7f];
+
+/// Write the auto play/pause flag.
+pub const AUTO_PLAY_PAUSE_COMMAND: [u8; 2] = [0x01, 0x81];
+
+/// Write the voice prompt flag.
+pub const VOICE_PROMPT_COMMAND: [u8; 2] = [0x01, 0xae];
+
+/// Write the battery notice flag (A3035 power-on notice, A3040 low battery).
+pub const BATTERY_PROMPT_COMMAND: [u8; 2] = [0x01, 0xaf];
+
+/// Write the low battery prompt flag.
+pub const LOW_BATTERY_PROMPT_COMMAND: [u8; 2] = [0x01, 0xaf];
+
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
 const A3954_SOUND_MODE: usize = 125;
@@ -45,6 +90,10 @@ pub enum ModelDriver {
     A3028,
     /// Soundcore Life Tune (A3029).
     A3029,
+    /// Soundcore Space One (A3035).
+    A3035,
+    /// Soundcore Space Q45 (A3040).
+    A3040,
     /// Soundcore Space One Pro.
     A3062,
     /// Soundcore P20i, P25i and R50i.
@@ -63,10 +112,28 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3035 | Self::A3040 | Self::A3062
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3035 | Self::A3040 | Self::A3062
+            ),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3035 | Self::A3040
+            ),
+            button_configuration_write: matches!(self, Self::A3035 | Self::A3040),
+            ambient_sound_mode_cycle_write: matches!(self, Self::A3035 | Self::A3040),
+            limit_high_volume_write: matches!(self, Self::A3035 | Self::A3040),
+            dual_connections_write: matches!(self, Self::A3035 | Self::A3040),
+            ldac_write: matches!(self, Self::A3035 | Self::A3040),
+            auto_play_pause_write: matches!(self, Self::A3035),
+            battery_alert_write: matches!(self, Self::A3035),
+            voice_prompt_write: matches!(self, Self::A3035 | Self::A3040),
+            low_battery_prompt_write: matches!(self, Self::A3040),
         }
     }
 
@@ -75,6 +142,8 @@ impl ModelDriver {
         match self {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
+            Self::A3035 => "A3035",
+            Self::A3040 => "A3040",
             Self::A3062 => "A3062",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
@@ -90,6 +159,8 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3035 => a3035::EQUALIZER_BAND_COUNT,
+            Self::A3040 => a3040::EQUALIZER_BAND_COUNT,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
@@ -98,7 +169,9 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3035 | Self::A3040 | Self::A3062 | Self::A3949 | Self::A3954 => {
+                EQUALIZER_COMMAND
+            }
         }
     }
 
@@ -115,6 +188,8 @@ impl ModelDriver {
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
+            Self::A3035 => a3035::decode_state(body),
+            Self::A3040 => a3040::decode_state(body),
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
@@ -126,10 +201,13 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family and A3035/A3040 need the serial that selects their
+    /// public code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
+            Self::A3035 => a3035::has_confirmed_layout(body),
+            Self::A3040 => a3040::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
@@ -138,6 +216,8 @@ impl ModelDriver {
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
+            Self::A3035 => a3035::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
+            Self::A3040 => a3040::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
         };
@@ -172,6 +252,7 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            settings: SettingsSnapshot::default(),
         })
     }
 
@@ -187,6 +268,8 @@ impl ModelDriver {
     ) -> Result<Vec<u8>, ModelError> {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
+            Self::A3035 => a3035::equalizer_write_body(setting, state),
+            Self::A3040 => a3040::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
@@ -206,11 +289,31 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the double-press button action.
+    pub button_configuration_write: bool,
+    /// The session can confirm writes of the ambient sound mode cycle flags.
+    pub ambient_sound_mode_cycle_write: bool,
+    /// The session can confirm writes of the high-volume limiter.
+    pub limit_high_volume_write: bool,
+    /// The session can confirm writes of the dual-connections flag.
+    pub dual_connections_write: bool,
+    /// The session can confirm writes of the LDAC flag.
+    pub ldac_write: bool,
+    /// The session can confirm writes of the auto play/pause flag.
+    pub auto_play_pause_write: bool,
+    /// The session can confirm writes of the battery notice flag.
+    pub battery_alert_write: bool,
+    /// The session can confirm writes of the voice prompt flag.
+    pub voice_prompt_write: bool,
+    /// The session can confirm writes of the low battery prompt flag.
+    pub low_battery_prompt_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SoundModeControls {
     A3028([u8; 3]),
+    A3035([u8; 4]),
+    A3040([u8; 5]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
 }
@@ -244,6 +347,8 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Additional settings the model's state reports.
+    pub settings: SettingsSnapshot,
 }
 
 impl DeviceState {
@@ -272,10 +377,14 @@ impl DeviceState {
 
     /// Builds an ambient-mode write from the latest measured A3062 controls.
     pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
-        let Some(SoundModeControls::A3062(controls)) = self.sound_mode_controls else {
-            return Err(ModelError::InvalidSoundModeWrite);
-        };
-        a3062::ambient_sound_mode_write(mode, controls)
+        match self.sound_mode_controls {
+            Some(SoundModeControls::A3035(controls)) => a3035::sound_mode_write(mode, controls),
+            Some(SoundModeControls::A3040(controls)) => a3040::sound_mode_write(mode, controls),
+            Some(SoundModeControls::A3062(controls)) => {
+                a3062::ambient_sound_mode_write(mode, controls)
+            }
+            _ => Err(ModelError::InvalidSoundModeWrite),
+        }
     }
 
     /// Builds an ambient-mode write from the latest A3028/A3029 controls.
@@ -512,13 +621,267 @@ impl EqualizerSetting {
 
     /// Encodes one band gain in the measured wire scale.
     pub(crate) fn band_byte(gain: i16) -> u8 {
-        (gain - EQUALIZER_MIN_GAIN) as u8
+        band_byte(gain)
     }
 
     /// Decodes one band gain from the measured wire scale.
     pub(crate) fn band_gain(byte: u8) -> i16 {
-        i16::from(byte) + EQUALIZER_MIN_GAIN
+        band_gain(byte)
     }
+}
+
+/// Encodes one band gain in the measured wire scale.
+pub(crate) fn band_byte(gain: i16) -> u8 {
+    (gain - EQUALIZER_MIN_GAIN) as u8
+}
+
+/// Decodes one band gain from the measured wire scale.
+pub(crate) fn band_gain(byte: u8) -> i16 {
+    i16::from(byte) + EQUALIZER_MIN_GAIN
+}
+
+/// Applies the A3035/A3040 dynamic range compression to a requested curve.
+///
+/// The legacy write sends the same curve through the compression before the
+/// device applies it; the last two hidden bands keep the family defaults.
+pub(crate) fn apply_drc(gains: [i16; EQUALIZER_BANDS]) -> [i16; EQUALIZER_BANDS] {
+    const SMALLER_COEFFICIENT: f64 = 0.85;
+    const LARGER_COEFFICIENT: f64 = 0.95;
+    const BAND_COEFFICIENTS: [[f64; 8]; 8] = [
+        [
+            1.26,
+            -0.71 * SMALLER_COEFFICIENT,
+            0.177,
+            -0.0494,
+            0.0345,
+            -0.0197,
+            0.0075,
+            -0.00217,
+        ],
+        [
+            -0.71 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            0.0,
+            0.204,
+            -0.068,
+            0.045,
+            -0.0235,
+            0.0075,
+        ],
+        [
+            0.177,
+            -0.81 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            -0.81 * SMALLER_COEFFICIENT,
+            0.208,
+            -0.07,
+            0.045,
+            -0.0197,
+        ],
+        [
+            -0.0494,
+            0.204,
+            0.0,
+            1.73 * LARGER_COEFFICIENT,
+            -0.82 * SMALLER_COEFFICIENT,
+            0.208,
+            -0.068,
+            0.0345,
+        ],
+        [
+            0.0345,
+            -0.068,
+            0.208,
+            -0.82 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            0.0,
+            0.204,
+            -0.0494,
+        ],
+        [
+            -0.0197,
+            0.045,
+            -0.07,
+            0.208,
+            -0.81 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            -0.81 * SMALLER_COEFFICIENT,
+            0.177,
+        ],
+        [
+            0.0075,
+            -0.0235,
+            0.045,
+            -0.068,
+            0.204,
+            0.0,
+            1.83 * LARGER_COEFFICIENT,
+            -0.71 * SMALLER_COEFFICIENT,
+        ],
+        [
+            -0.00217,
+            0.0075,
+            -0.0197,
+            0.0345,
+            -0.0494,
+            0.177,
+            -0.71 * SMALLER_COEFFICIENT,
+            1.5,
+        ],
+    ];
+
+    // The legacy curve keeps one fractional digit, so its integers are tenths
+    // of a decibel and the matrix expects decibels.
+    let adjustments = gains.map(|gain| f64::from(gain) / 10.0);
+    let lows_subtraction = adjustments[2] * 0.81 * SMALLER_COEFFICIENT;
+    let highs_subtraction = adjustments[5] * 0.81 * SMALLER_COEFFICIENT;
+    let compressed: [f64; 8] = std::array::from_fn(|coefficient_index| {
+        let coefficients = BAND_COEFFICIENTS[coefficient_index];
+        let value = adjustments
+            .iter()
+            .take(8)
+            .enumerate()
+            .fold(0.0, |sum, (index, adjustment)| {
+                if (coefficient_index == 1 || coefficient_index == 3) && index == 2 {
+                    sum - lows_subtraction
+                } else if (coefficient_index == 4 || coefficient_index == 6) && index == 5 {
+                    sum - highs_subtraction
+                } else {
+                    sum + adjustment * coefficients[index]
+                }
+            });
+        value / 10.0
+    });
+    let mut result = [0_i16; EQUALIZER_BANDS];
+    for (index, band) in compressed.iter().enumerate() {
+        let tenths = (band * 10.0).round() as i16;
+        result[index] = tenths.clamp(EQUALIZER_MIN_GAIN, EQUALIZER_MAX_GAIN);
+    }
+    // The compression only affects the first eight bands; the two hidden bands
+    // keep their family defaults.
+    result[EQUALIZER_BANDS - 2] = 0;
+    result[EQUALIZER_BANDS - 1] = -120;
+    result
+}
+
+/// The double-press action a model exposes in its button configuration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ButtonAction {
+    /// BassUp, the only action the family's state parser recognizes.
+    BassUp,
+}
+
+impl ButtonAction {
+    /// The action's wire value.
+    pub const fn wire(self) -> u8 {
+        match self {
+            Self::BassUp => 7,
+        }
+    }
+
+    /// Reads an action from its wire value; unrecognized values mean disabled,
+    /// as the legacy parser does.
+    pub fn decode(byte: u8) -> Option<Self> {
+        match byte {
+            7 => Some(Self::BassUp),
+            _ => None,
+        }
+    }
+}
+
+/// Which modes the device's ambient-mode cycle includes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AmbientSoundModeCycle {
+    /// Whether the cycle includes noise canceling.
+    pub noise_canceling: bool,
+    /// Whether the cycle includes transparency.
+    pub transparency: bool,
+    /// Whether the cycle includes normal sound.
+    pub normal: bool,
+}
+
+impl AmbientSoundModeCycle {
+    /// Reads the model's flag byte.
+    pub const fn decode(byte: u8) -> Self {
+        Self {
+            noise_canceling: byte & 1 != 0,
+            transparency: byte & 2 != 0,
+            normal: byte & 4 != 0,
+        }
+    }
+
+    /// Encodes the model's flag byte.
+    pub const fn encode(self) -> u8 {
+        (self.noise_canceling as u8) | ((self.transparency as u8) << 1) | ((self.normal as u8) << 2)
+    }
+}
+
+/// How often the high-volume limiter refreshes its level reading.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VolumeLimitRefreshRate {
+    /// Every reading.
+    RealTime,
+    /// Every ten seconds.
+    TenSeconds,
+    /// Every minute.
+    OneMinute,
+}
+
+impl VolumeLimitRefreshRate {
+    /// Reads the model's wire value; unknown values mean the legacy default.
+    pub const fn decode(byte: u8) -> Self {
+        match byte {
+            1 => Self::TenSeconds,
+            2 => Self::OneMinute,
+            _ => Self::RealTime,
+        }
+    }
+
+    /// Encodes the model's wire value.
+    pub const fn encode(self) -> u8 {
+        match self {
+            Self::RealTime => 0,
+            Self::TenSeconds => 1,
+            Self::OneMinute => 2,
+        }
+    }
+}
+
+/// The high-volume limiter setting reported by the state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LimitHighVolume {
+    /// Whether the limiter is enabled.
+    pub enabled: bool,
+    /// The limit in decibels, on the model's five-decibel grid.
+    pub db_limit: u8,
+    /// How often the level reading refreshes.
+    pub refresh_rate: VolumeLimitRefreshRate,
+}
+
+/// Additional settings decoded from a model's measured state.
+///
+/// A field is `None` when the model's state does not report that setting, so a
+/// write is admitted only for values the device can confirm.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SettingsSnapshot {
+    /// The double-press button action, when the state reports one.
+    pub button_double_press: Option<ButtonAction>,
+    /// The ambient sound mode cycle flags, when the state reports them.
+    pub ambient_sound_mode_cycle: Option<AmbientSoundModeCycle>,
+    /// The high-volume limiter, when the state reports it.
+    pub limit_high_volume: Option<LimitHighVolume>,
+    /// Whether two simultaneous connections are enabled.
+    pub dual_connections: Option<bool>,
+    /// Whether LDAC is enabled.
+    pub ldac: Option<bool>,
+    /// Whether auto play/pause is enabled.
+    pub auto_play_pause: Option<bool>,
+    /// Whether the battery notice prompt is enabled.
+    pub battery_alert: Option<bool>,
+    /// Whether the voice prompt is enabled.
+    pub voice_prompt: Option<bool>,
+    /// Whether the low battery prompt is enabled.
+    pub low_battery_prompt: Option<bool>,
 }
 
 /// Auto power off value reported by the optional extra fields of the A3028 family.
@@ -622,6 +985,33 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable button configuration.
+    #[error("unsupported device button configuration write")]
+    InvalidButtonConfigurationWrite,
+    /// The device does not report a writable ambient sound mode cycle.
+    #[error("unsupported device ambient sound mode cycle write")]
+    InvalidAmbientSoundModeCycleWrite,
+    /// The device does not report a writable high-volume limiter.
+    #[error("unsupported device high-volume limiter write")]
+    InvalidLimitHighVolumeWrite,
+    /// The device does not report a writable dual-connections flag.
+    #[error("unsupported device dual connections write")]
+    InvalidDualConnectionsWrite,
+    /// The device does not report a writable LDAC flag.
+    #[error("unsupported device LDAC write")]
+    InvalidLdacWrite,
+    /// The device does not report a writable auto play/pause flag.
+    #[error("unsupported device auto play/pause write")]
+    InvalidAutoPlayPauseWrite,
+    /// The device does not report a writable battery notice flag.
+    #[error("unsupported device battery notice write")]
+    InvalidBatteryAlertWrite,
+    /// The device does not report a writable voice prompt flag.
+    #[error("unsupported device voice prompt write")]
+    InvalidVoicePromptWrite,
+    /// The device does not report a writable low battery prompt flag.
+    #[error("unsupported device low battery prompt write")]
+    InvalidLowBatteryPromptWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

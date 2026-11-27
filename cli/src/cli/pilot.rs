@@ -5,8 +5,8 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3035, VirtualA3040, VirtualA3062, VirtualA3949,
+    VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -27,6 +27,8 @@ pub async fn handle(
             _ => match mock_model {
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
+                ModelDriver::A3035 => SessionRunner::start(VirtualA3035, target),
+                ModelDriver::A3040 => SessionRunner::start(VirtualA3040, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
@@ -168,7 +170,11 @@ fn unidentified_json(state: UnidentifiedState) -> Value {
 
 fn snapshot_json(device: DeviceState) -> Value {
     let (firmware, battery) = match device.model {
-        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 => (
+        ModelDriver::A3028
+        | ModelDriver::A3029
+        | ModelDriver::A3035
+        | ModelDriver::A3040
+        | ModelDriver::A3062 => (
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
