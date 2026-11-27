@@ -193,6 +193,10 @@ fn sanitized_frame(model: Option<ModelDriver>, frame: &Frame) -> Option<Bytes> {
 fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize, usize)]> {
     // Use only the measured state layouts cited in core/data/README.md.
     let fields: &[(usize, usize)] = match model {
+        ModelDriver::A3027 | ModelDriver::A3030 if matches!(body.len(), 61 | 62) => &[(44, 60)],
+        // The A3031 state carries no identifier; its serial is in the 01 05
+        // identity response.
+        ModelDriver::A3031 if body.len() == 44 => &[],
         ModelDriver::A3062 if body.len() == 95 => &[(7, 23)],
         ModelDriver::A3949 if body.len() == 88 => &[(16, 32)],
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {

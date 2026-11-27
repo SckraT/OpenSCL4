@@ -1,6 +1,7 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
     Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    WEARING_DETECTION_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +74,8 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Enable or disable wearing detection on a model that reports the flag.
+    SetWearingDetection(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -97,6 +100,9 @@ impl SessionCommand {
             }
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
+            }
+            Self::SetWearingDetection(_) if !capabilities.wearing_detection_write => {
+                Err(ModelError::InvalidWearingDetectionWrite)
             }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
@@ -138,6 +144,8 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A wearing-detection flag change.
+    WearingDetection(bool),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,8 +157,18 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::WearingDetection(_) => WEARING_DETECTION_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
         }
+    }
+
+    /// Whether the legacy driver expects a same-command acknowledgement.
+    ///
+    /// The flag writes of the shared write pipeline are sent without waiting for
+    /// a response and confirmed by the next state read; every other measured
+    /// write has a captured acknowledgement.
+    pub(crate) fn expects_ack(self) -> bool {
+        !matches!(self, Self::WearingDetection(_))
     }
 
     /// Builds the write body from a fresh state response and its raw bytes.
@@ -169,9 +187,16 @@ impl WriteTarget {
         resolved.body = match self {
             Self::SoundMode(setting) => state.sound_mode_write(setting)?.bytes().to_vec(),
             Self::AmbientMode(mode)
-                if matches!(state.model, ModelDriver::A3028 | ModelDriver::A3029) =>
+                if matches!(
+                    state.model,
+                    ModelDriver::A3027
+                        | ModelDriver::A3030
+                        | ModelDriver::A3028
+                        | ModelDriver::A3029
+                        | ModelDriver::A3031
+                ) =>
             {
-                state.family_sound_mode_write(mode)?.to_vec()
+                state.sound_modes_write(mode)?.to_vec()
             }
             Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
@@ -180,6 +205,7 @@ impl WriteTarget {
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
+            Self::WearingDetection(enabled) => state.wearing_detection_write(enabled)?.to_vec(),
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
         Ok(resolved)
@@ -197,6 +223,7 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::WearingDetection(enabled) => state.wearing_detection == Some(enabled),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -269,6 +296,16 @@ pub enum CommandError {
         "gaming mode did not match the device read-back (requested {requested}, observed {observed:?})"
     )]
     GamingModeMismatch {
+        /// The requested flag.
+        requested: bool,
+        /// The last flag reported by the device.
+        observed: Option<bool>,
+    },
+    /// The device reported a different wearing-detection flag at the confirmation deadline.
+    #[error(
+        "wearing detection did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    WearingDetectionMismatch {
         /// The requested flag.
         requested: bool,
         /// The last flag reported by the device.

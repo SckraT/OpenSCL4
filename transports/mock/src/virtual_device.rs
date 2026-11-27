@@ -3,11 +3,13 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
-    A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
+    A3027_WEARING_DETECTION, A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND,
+    A3028_EQUALIZER_PRESET, A3028_SOUND_MODE_FIELDS, A3031_AUTO_POWER_OFF,
+    A3031_EQUALIZER_CHANNEL_1, A3031_EQUALIZER_CHANNEL_2, A3031_EQUALIZER_PRESET,
+    A3031_SOUND_MODE_FIELDS, A3031_TWS_CONNECTED, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
     A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
     GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    SoundModeWrite, WEARING_DETECTION_COMMAND,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -26,6 +28,14 @@ const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
     include_bytes!("../../../core/data/a3062-mode-normal.bin"),
 ];
+/// A3027 and A3030 state frames built from the legacy state-update layout with
+/// synthetic `3027TEST00000000` and `3030TEST00000000` serials. No physical
+/// capture exists for the pair; see `core/data/README.md`.
+const A3027_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3027-state.bin");
+const A3030_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3030-state.bin");
+/// The A3031 state frame and its separate `01 05` identity response.
+const A3031_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3031-state.bin");
+const A3031_IDENTITY_REPLY: &[u8] = include_bytes!("../../../core/data/a3031-identity.bin");
 /// A3028 and A3029 state bodies from `core/data/a3028-a3029-mode-reference.json`.
 /// The reference starts from one legacy example with an A3029 serial prefix and
 /// replaces the full serial at body offsets 44–59 with the synthetic
@@ -121,27 +131,49 @@ impl TransportProvider for WithoutEqualizerWrite {
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
 
+/// A virtual A3027 that answers state reads from the synthetic legacy layout.
+pub struct VirtualA3027;
+
+/// A virtual A3030 that answers state reads from the synthetic legacy layout.
+pub struct VirtualA3030;
+
+/// A virtual A3031 that answers the separate identity read and its state read.
+pub struct VirtualA3031;
+
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
-
-impl VirtualA3028 {
-    /// Serves the same state with the documented auto power off extra fields.
-    pub fn with_auto_power_off() -> impl TransportProvider {
-        FamilyWithAutoPowerOff(ModelDriver::A3028)
-    }
-}
 
 /// A virtual A3029 that answers state reads from the family reference.
 pub struct VirtualA3029;
 
-fn family_link(model: ModelDriver) -> Box<dyn TransportLink> {
-    family_link_with_state(model, initial_state(model))
+impl VirtualA3031 {
+    /// Serves the same state with the TWS-connected flag cleared.
+    pub fn with_disconnected_tws() -> impl TransportProvider {
+        DisconnectedTws
+    }
 }
 
-fn family_link_with_state(
-    model: ModelDriver,
-    state: Arc<Mutex<Vec<u8>>>,
-) -> Box<dyn TransportLink> {
+struct DisconnectedTws;
+
+#[async_trait]
+impl TransportProvider for DisconnectedTws {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let mut body = initial_state(ModelDriver::A3031)
+            .lock()
+            .expect("virtual state lock")
+            .clone();
+        body[A3031_TWS_CONNECTED] = 0;
+        Ok(link_with_state(
+            ModelDriver::A3031,
+            Arc::new(Mutex::new(body)),
+        ))
+    }
+}
+
+fn link_with_state(model: ModelDriver, state: Arc<Mutex<Vec<u8>>>) -> Box<dyn TransportLink> {
     open_link(Some(Responder::with_state(
         model,
         ResponderOptions {
@@ -153,13 +185,54 @@ fn family_link_with_state(
     .0
 }
 
+fn state_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    link_with_state(model, initial_state(model))
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3027 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(state_link(ModelDriver::A3027))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3030 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(state_link(ModelDriver::A3030))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3031 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(state_link(ModelDriver::A3031))
+    }
+}
+
 #[async_trait]
 impl TransportProvider for VirtualA3028 {
     async fn connect(
         &self,
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
-        Ok(family_link(ModelDriver::A3028))
+        Ok(state_link(ModelDriver::A3028))
+    }
+}
+
+impl VirtualA3028 {
+    /// Serves the same state with the documented auto power off extra fields.
+    pub fn with_auto_power_off() -> impl TransportProvider {
+        FamilyWithAutoPowerOff(ModelDriver::A3028)
     }
 }
 
@@ -169,7 +242,7 @@ impl TransportProvider for VirtualA3029 {
         &self,
         _target: &ConnectTarget,
     ) -> Result<Box<dyn TransportLink>, TransportError> {
-        Ok(family_link(ModelDriver::A3029))
+        Ok(state_link(ModelDriver::A3029))
     }
 }
 
@@ -186,7 +259,7 @@ impl TransportProvider for FamilyWithAutoPowerOff {
             .expect("virtual state lock")
             .clone();
         body.extend_from_slice(&AUTO_POWER_OFF_EXTRA_FIELDS);
-        Ok(family_link_with_state(self.0, Arc::new(Mutex::new(body))))
+        Ok(link_with_state(self.0, Arc::new(Mutex::new(body))))
     }
 }
 
@@ -323,8 +396,13 @@ impl DeviceResponder {
                 continue;
             }
             if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
-                if self.model == ModelDriver::A3954 {
-                    replies.extend_from_slice(IDENTITY_REPLY);
+                match self.model {
+                    ModelDriver::A3954 => replies.extend_from_slice(IDENTITY_REPLY),
+                    // A3031 reads its identity with the separate 01 05 command.
+                    ModelDriver::A3031 => replies.extend_from_slice(A3031_IDENTITY_REPLY),
+                    // No identity response is recorded for the other drivers;
+                    // the session falls back to the state probe.
+                    _ => {}
                 }
             } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
@@ -351,13 +429,25 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == A3028_EQUALIZER_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3027
+                    | ModelDriver::A3030
+                    | ModelDriver::A3028
+                    | ModelDriver::A3029
+                    | ModelDriver::A3031
+            ) && frame.command == A3028_EQUALIZER_COMMAND
                 && self.options.acknowledge_writes
                 && self.equalizer_applied(&frame.body)
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3027 | ModelDriver::A3030)
+                && frame.command == WEARING_DETECTION_COMMAND
+            {
+                // The legacy flag write is sent without waiting for a response;
+                // the next state read confirms it.
+                self.apply_wearing_detection(&frame.body);
             } else if self.model == ModelDriver::A3949
                 && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
@@ -365,8 +455,10 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3031
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
@@ -402,15 +494,32 @@ impl DeviceResponder {
                 state[A3062_SOUND_MODE_FIELDS].copy_from_slice(&captured[A3062_SOUND_MODE_FIELDS]);
                 true
             }
-            ModelDriver::A3028 | ModelDriver::A3029 => {
+            ModelDriver::A3027 | ModelDriver::A3030 | ModelDriver::A3028 | ModelDriver::A3029 => {
                 let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
                     return false;
                 };
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
+            ModelDriver::A3031 => {
+                let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
+                    return false;
+                };
+                state[A3031_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
             ModelDriver::A3949 => false,
         }
+    }
+
+    /// Applies a wearing-detection flag write to the measured state byte.
+    fn apply_wearing_detection(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3027_WEARING_DETECTION] = *enabled;
+        true
     }
 
     /// Applies an equalizer write; a withheld application answers nothing.
@@ -430,7 +539,7 @@ impl DeviceResponder {
                 state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3028 | ModelDriver::A3029 => {
+            ModelDriver::A3027 | ModelDriver::A3030 | ModelDriver::A3028 | ModelDriver::A3029 => {
                 // The family write is the preset followed directly by eight bands.
                 let (Some(preset), Some(bands)) = (body.get(0..2), body.get(2..10)) else {
                     return false;
@@ -439,17 +548,33 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
+            ModelDriver::A3031 => {
+                // The TWS write applies the same curve to both channels.
+                let (Some(preset), Some(channel_1), Some(channel_2)) =
+                    (body.get(0..2), body.get(2..10), body.get(10..18))
+                else {
+                    return false;
+                };
+                state[A3031_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3031_EQUALIZER_CHANNEL_1].copy_from_slice(channel_1);
+                state[A3031_EQUALIZER_CHANNEL_2].copy_from_slice(channel_2);
+                true
+            }
             ModelDriver::A3949 | ModelDriver::A3954 => false,
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write to the measured state fields.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let offsets = match self.model {
+            ModelDriver::A3031 => A3031_AUTO_POWER_OFF,
+            _ => A3028_AUTO_POWER_OFF,
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let Some(value) = state.get_mut(offsets) else {
             return false;
         };
         value.copy_from_slice(body);
@@ -538,8 +663,11 @@ impl ReadOnlyResponder {
 
 fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
+        ModelDriver::A3027 => fixture_body(model, A3027_STATE_REPLY),
+        ModelDriver::A3030 => fixture_body(model, A3030_STATE_REPLY),
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
+        ModelDriver::A3031 => fixture_body(model, A3031_STATE_REPLY),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),

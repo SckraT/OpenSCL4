@@ -1637,6 +1637,81 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3027",
+                "A3030"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3027_family.rs",
+            "result": "confirmedReadBack",
+            "missing": "The synthetic state cannot exercise the legacy multi-write workaround for changing the ANC submode from Normal or Transparency."
+        },
+        {
+            "models": [
+                "A3027",
+                "A3030"
+            ],
+            "operation": "equalizer",
+            "inbound": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3027_family.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3027",
+                "A3030"
+            ],
+            "operation": "wearing_detection",
+            "inbound": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound.rs::SET_WEARING_DETECTION_COMMAND",
+            "command": "0181",
+            "availability": "The wearing-detection flag is present in every confirmed A3027StateUpdatePacket body.",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3027_family.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3031"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3031/packets/state_update_packet.rs::A3031StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3031.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3031"
+            ],
+            "operation": "equalizer_tws",
+            "inbound": "lib/src/devices/soundcore/a3031/packets/state_update_packet.rs::A3031StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs::set_equalizer",
+            "availability": "Unavailable while the state reports TWS disconnected.",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3031.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3031"
+            ],
+            "operation": "auto_power_off",
+            "inbound": "lib/src/devices/soundcore/a3031/packets/state_update_packet.rs::A3031StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3031.rs",
+            "result": "confirmedReadBack"
         }
     ],
     "models": [
@@ -1749,7 +1824,50 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.20",
+                    "outbound": "core/data/a3027-state.bin",
+                    "inbound": "core/data/a3027-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3027_family.rs::reads_the_reference_state_for_each_public_code"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3027-state.bin",
+                    "inbound": "core/data/a3027-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3027_family.rs::reads_the_reference_state_for_each_public_code"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+                    "inbound": "core/data/a3027-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_the_reference_mode_cycle_from_fresh_state_reads"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/data/a3027-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_the_eight_band_curve_from_the_state_read_back"
+                },
+                {
+                    "operation": "writeWearingDetection",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound.rs::SET_WEARING_DETECTION_COMMAND",
+                    "inbound": "core/data/a3027-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_wearing_detection_from_the_state_read_back"
+                }
+            ]
         },
         {
             "code": "A3028",
@@ -1954,7 +2072,50 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.20",
+                    "outbound": "core/data/a3030-state.bin",
+                    "inbound": "core/data/a3030-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3027_family.rs::reads_the_reference_state_for_each_public_code"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3030-state.bin",
+                    "inbound": "core/data/a3030-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3027_family.rs::reads_the_reference_state_for_each_public_code"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+                    "inbound": "core/data/a3030-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_the_reference_mode_cycle_from_fresh_state_reads"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/data/a3030-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_the_eight_band_curve_from_the_state_read_back"
+                },
+                {
+                    "operation": "writeWearingDetection",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound.rs::SET_WEARING_DETECTION_COMMAND",
+                    "inbound": "core/data/a3030-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3027_family.rs::confirms_wearing_detection_from_the_state_read_back"
+                }
+            ]
         },
         {
             "code": "A3031",
@@ -2008,7 +2169,50 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.10/01.20",
+                    "outbound": "core/data/a3031-identity.bin",
+                    "inbound": "core/data/a3031-identity.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3031.rs::reads_the_identity_and_state_of_the_vortex"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3031-state.bin",
+                    "inbound": "core/data/a3031-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/a3031.rs::reads_the_identity_and_state_of_the_vortex"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+                    "inbound": "core/data/a3031-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3031.rs::confirms_sound_mode_writes_and_keeps_the_identity_firmware"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs::set_equalizer",
+                    "inbound": "core/data/a3031-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3031.rs::confirms_the_two_channel_curve_from_the_state_read_back"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+                    "inbound": "core/data/a3031-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3031.rs::confirms_auto_power_off_writes_from_the_state_read_back"
+                }
+            ]
         },
         {
             "code": "A3033",

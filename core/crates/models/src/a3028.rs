@@ -74,7 +74,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
             case: None,
         },
         sound_mode: Some(sound_mode),
-        sound_mode_controls: Some(SoundModeControls::A3028([
+        sound_mode_controls: Some(SoundModeControls::Ambient([
             noise_canceling,
             transparency,
             custom,
@@ -82,6 +82,8 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         equalizer: equalizer_setting(body),
         auto_power_off: auto_power_off(body),
         gaming_mode: None,
+        wearing_detection: None,
+        tws_connected: None,
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,
@@ -91,7 +93,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
 /// Reads the eight-band curve. A band block that starts with the absent marker
 /// reports no curve. The shared curve keeps the family's two fixed invisible
 /// bands at zero, as the legacy preset settings do.
-fn equalizer_setting(body: &[u8]) -> Option<EqualizerSetting> {
+pub fn equalizer_setting(body: &[u8]) -> Option<EqualizerSetting> {
     let preset_id: [u8; 2] = body.get(A3028_EQUALIZER_PRESET)?.try_into().ok()?;
     let bands: [u8; EQUALIZER_BAND_COUNT] = body.get(A3028_EQUALIZER_BANDS)?.try_into().ok()?;
     if bands[0] == u8::MAX {

@@ -157,6 +157,62 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3027 and A3030 state reference
+
+[a3027-state.bin](a3027-state.bin) and [a3030-state.bin](a3030-state.bin) are
+71-byte inbound `01 01` frames with a 61-byte body. The body layout is taken from
+[the legacy A3027 state parser](../../lib/src/devices/soundcore/a3027/packets/state_update_packet.rs):
+a single battery at 0, the eight-band custom curve at 2–11, gender and age range
+at 12–13, the two absent hear-id channels and their timestamp at 14–34, normal
+sound modes at 35–38, firmware `01.20` at 39–43, a 16-byte serial at 44–59 and
+the wearing-detection flag at 60. The optional touch flag documented at body
+offset 61 is absent, so both frames are 61 bytes.
+
+**No physical A3027 or A3030 capture exists** for these sessions: the bodies are
+reconstructed from the legacy layout, not measured over RFCOMM. The serials are
+the synthetic model-prefixed values `3027TEST00000000` and `3030TEST00000000`. No
+real serial or Bluetooth address was used, so no identifier needed masking; the
+frame checksums were computed with the protocol encoder. The frame SHA-256 values
+are `3fc4763b27cd5b566feb6832a4aea363ea8b826cad3ce1c442756ced11262fc1` and
+`2dfd0d8f00495c36f5712ad92da103afb00a5dd8b0409b05de92306130f24e16`.
+
+The pair's state shares the A3028 body through offset 59 and then carries the
+wearing-detection flag instead of the A3028 extra-fields block. The legacy flag
+pipeline writes it with `01 81` and a one-byte body, does not wait for a
+response, and verifies the change with a state read
+[flag write](../../lib/src/devices/soundcore/common/write.rs). The virtual
+transport replays these bodies, applies the writes and confirms each result with
+a fresh state read; when the virtual device recognizes a `01 81` body it updates
+offset 60 without an acknowledgement.
+
+## A3031 identity and state
+
+[a3031-identity.bin](a3031-identity.bin) is a 36-byte inbound `01 05` frame with a
+26-byte body: the two five-byte firmware versions `01.10` and `01.20` followed by
+the synthetic 16-byte serial `A3031TEST0000000`. Its layout is
+[the shared serial-number-and-firmware parser](../../lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs).
+[a3031-state.bin](a3031-state.bin) is a 54-byte inbound `01 01` frame with a
+44-byte body: TWS status at 0–1, the two battery levels at 2–3, the equalizer
+preset and both eight-band channels at 6–23, six button statuses at 24–35, normal
+sound modes at 36–39, side tone at 40, touch tone at 41 and auto power off at
+42–43. The state carries no serial by design; the model code comes from the
+separate identity response.
+
+**No physical A3031 capture exists** for these sessions: both bodies are
+reconstructed from
+[the legacy A3031 state parser](../../lib/src/devices/soundcore/a3031/packets/state_update_packet.rs).
+The serial is the synthetic model-prefixed value above. No real serial or
+Bluetooth address was used, so no identifier needed masking; the frame checksums
+were computed with the protocol encoder. The identity and state frame SHA-256
+values are
+`cf11cdc112fc500291bccec2d889b605a14579ee610b9510c4c3e510aa0fc929` and
+`64a58a0007a3a3f9fc9a8d860ded36cb3e1899adecddfaeb38bdc7f6b644fef7`.
+
+The legacy equalizer setting is unavailable while the earbuds report TWS
+disconnected; the virtual device exposes that variant for the session test. The
+two-channel `02 81` write applies the same curve to both channels
+[equalizer builder](../../lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs).
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

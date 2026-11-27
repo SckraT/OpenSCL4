@@ -58,6 +58,31 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The A3027 (Life Q35) and A3030 (Life Tune Pro) pilots share one driver and are
+also discovered from their state response because no identity response is
+recorded for the pair. Both report firmware 01.20, one device battery, normal
+mode and the wearing-detection flag from the synthetic reference state in
+[`core/data`](../core/data/README.md#a3027-and-a3030-state-reference). Add
+`--cycle-mode` to write the reference Normal → ANC Transport → Normal sequence,
+each confirmed by a new state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3027
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3030
+```
+
+The A3031 (Vortex) pilot reads its firmware versions and serial with the separate
+`01 05` identity command and then reads `01 01` for the TWS status, both earbud
+batteries, equalizer, sound modes and auto power off. The equalizer stays
+unavailable while TWS reports a disconnected earbud. Add `--cycle-mode` to write
+and restore the ambient mode; each result comes from a fresh state response. The
+identity comes from
+[`core/data`](../core/data/README.md#a3031-identity-and-state).
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3031
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.
