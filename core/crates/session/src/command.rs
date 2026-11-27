@@ -1,6 +1,7 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    Capabilities, DUAL_CONNECTIONS_COMMAND, EqualizerSetting, GAMING_MODE_COMMAND, ModelError,
+    SOUND_MODE_COMMAND, WEARING_DETECTION_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +74,10 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Enable or disable wearing detection on a supported device.
+    SetWearingDetection(bool),
+    /// Enable or disable dual connections on a supported device.
+    SetDualConnections(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -97,6 +102,12 @@ impl SessionCommand {
             }
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
+            }
+            Self::SetWearingDetection(_) if !capabilities.wearing_detection_write => {
+                Err(ModelError::InvalidWearingDetectionWrite)
+            }
+            Self::SetDualConnections(_) if !capabilities.dual_connections_write => {
+                Err(ModelError::InvalidDualConnectionsWrite)
             }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
@@ -138,6 +149,10 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A wearing-detection flag change.
+    WearingDetection(bool),
+    /// A dual-connections flag change.
+    DualConnections(bool),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,6 +164,8 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::WearingDetection(_) => WEARING_DETECTION_COMMAND,
+            Self::DualConnections(_) => DUAL_CONNECTIONS_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
         }
     }
@@ -168,6 +185,9 @@ impl WriteTarget {
         };
         resolved.body = match self {
             Self::SoundMode(setting) => state.sound_mode_write(setting)?.bytes().to_vec(),
+            Self::AmbientMode(mode) if state.model == ModelDriver::A3004 => {
+                state.a3004_sound_mode_write(mode)?.to_vec()
+            }
             Self::AmbientMode(mode)
                 if matches!(state.model, ModelDriver::A3028 | ModelDriver::A3029) =>
             {
@@ -180,6 +200,8 @@ impl WriteTarget {
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
+            Self::WearingDetection(enabled) => state.wearing_detection_write(enabled)?.to_vec(),
+            Self::DualConnections(enabled) => state.dual_connections_write(enabled)?.to_vec(),
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
         Ok(resolved)
@@ -197,6 +219,8 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::WearingDetection(enabled) => state.wearing_detection == Some(enabled),
+            Self::DualConnections(enabled) => state.dual_connections == Some(enabled),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -289,6 +313,26 @@ pub enum CommandError {
         requested: AutoPowerOffSetting,
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
+    },
+    /// The read-back did not match the requested wearing-detection flag.
+    #[error(
+        "wearing detection did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    WearingDetectionMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported a recognized one.
+        observed: Option<bool>,
+    },
+    /// The read-back did not match the requested dual-connections flag.
+    #[error(
+        "dual connections did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    DualConnectionsMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported a recognized one.
+        observed: Option<bool>,
     },
     /// The read-back did not match the requested mode or position.
     #[error(

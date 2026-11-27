@@ -52,6 +52,8 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         equalizer: equalizer_setting(body),
         gaming_mode: None,
         auto_power_off: None,
+        wearing_detection: None,
+        dual_connections: None,
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,

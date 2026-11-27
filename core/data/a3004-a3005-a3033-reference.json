@@ -1,0 +1,101 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "evidence": "legacyFixture for A3004 and A3005; protocolFixture for A3033",
+    "masking": "Every published state and reply replaces the device serial at the parser's serial offsets with the synthetic ASCII value 3004TEST00000000, 3005TEST00000000 or 3033TEST00000000 and recalculates the frame checksum. The A3004 capture carried a MAC-derived serial; no real serial or MAC is published.",
+    "checksum": "Soundcore additive checksum over every preceding frame byte.",
+    "sources": {
+        "A3004": "tools/soundcore-device-faker/devices/a3004.toml (captured Soundcore Q20i state, added in 7bf41ef3)",
+        "A3005": "lib/src/devices/soundcore/a3005.rs::matches_soundcore_app (captured example state)",
+        "A3033": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::ToPacket (serializer layout; no capture exists)",
+        "equalizerWithDrc": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+        "eightBandEqualizer": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+        "soundModes": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+        "autoPowerOff": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+        "dualConnections": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::set_dual_connections_enabled",
+        "wearingDetection": "lib/src/devices/soundcore/common/modules/flag.rs::WearingDetection"
+    },
+    "drc": {
+        "source": "lib/src/devices/soundcore/common/structures/volume_adjustments.rs::apply_drc",
+        "legacyTest": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs::it_matches_a_manually_crafted_packet",
+        "derivation": "The curve is the legacy DRC test curve. The first eight transformed bands match the legacy test bytes 6D 86 70 88 7B 66 7E 79 for gains -60, 60, 23, 120, 22, -120, -4, 16. The last two bands are the transform's fixed defaults 0 dB and the lowest gain, which the legacy code appends for a ten-band configuration.",
+        "curveTenthsDb": [-60, 60, 23, 120, 22, -120, -4, 16, 0, -120],
+        "writeBody": "FE FE 3C B4 8F F0 8E 00 74 88 78 00 6D 86 70 88 7B 66 7E 79 78 00",
+        "outboundFrame": "08 EE 00 00 00 02 83 20 00 FE FE 3C B4 8F F0 8E 00 74 88 78 00 6D 86 70 88 7B 66 7E 79 78 00 43"
+    },
+    "models": {
+        "A3004": {
+            "evidence": "legacyFixture",
+            "stateBodyOffsets": {
+                "battery": 0,
+                "firmware": 2,
+                "serial": 7,
+                "equalizerPreset": 23,
+                "equalizerBands": 25,
+                "soundModes": 35
+            },
+            "derivation": "The 61-byte captured body starts with the fields the legacy parser reads. The legacy parser consumes 39 bytes; the remaining 22 bytes are preserved verbatim and are not interpreted. The ambient mode at body offset 35 is NoiseCanceling, and the unexposed control bytes 36-38 are 3F 02 FF, which are echoed unchanged on a mode write.",
+            "stateBody": "04 00 30 30 2E 32 36 33 30 30 34 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 78 78 78 78 78 78 78 78 78 78 00 3F 02 FF 01 FF 01 31 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
+            "outbound": {
+                "writeNormal": "08 EE 00 00 00 06 81 0E 00 02 3F 02 FF CD",
+                "writeNoiseCanceling": "08 EE 00 00 00 06 81 0E 00 00 3F 02 FF CB",
+                "writeEqualizer": "08 EE 00 00 00 02 83 20 00 FE FE 3C B4 8F F0 8E 00 74 88 78 00 6D 86 70 88 7B 66 7E 79 78 00 43"
+            },
+            "inbound": {
+                "initial": "09 FF 00 00 01 01 01 47 00 04 00 30 30 2E 32 36 33 30 30 34 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 78 78 78 78 78 78 78 78 78 78 00 3F 02 FF 01 FF 01 31 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF DF",
+                "normal": "09 FF 00 00 01 01 01 47 00 04 00 30 30 2E 32 36 33 30 30 34 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 78 78 78 78 78 78 78 78 78 78 02 3F 02 FF 01 FF 01 31 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF E1",
+                "equalizer": "09 FF 00 00 01 01 01 47 00 04 00 30 30 2E 32 36 33 30 30 34 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 3C B4 8F F0 8E 00 74 88 78 00 00 3F 02 FF 01 FF 01 31 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF A0"
+            }
+        },
+        "A3005": {
+            "evidence": "legacyFixture",
+            "stateBodyOffsets": {
+                "battery": 0,
+                "firmware": 2,
+                "serial": 7,
+                "equalizerPreset": 23,
+                "equalizerBands": 25,
+                "dualConnections": 41,
+                "autoPowerOff": 46
+            },
+            "derivation": "The 55-byte captured body starts with the fields the legacy parser reads. The legacy parser consumes 48 bytes; the remaining seven bytes are preserved verbatim and are not interpreted. The captured state has the ten-band signature curve, dual connections enabled and auto power off enabled with duration index 1 (60 minutes in the half-hour table).",
+            "stateBody": "07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 FF FF FF FF FF FF 01 31 00 00 00 01 01 FF FF FF FF FF FF FF",
+            "outbound": {
+                "writeDualConnectionsOff": "08 EE 00 00 00 0B 84 0B 00 00 90",
+                "writeDualConnectionsOn": "08 EE 00 00 00 0B 84 0B 00 01 91",
+                "writeAutoPowerOffOff": "08 EE 00 00 00 01 86 0C 00 00 01 8A",
+                "writeAutoPowerOff120": "08 EE 00 00 00 01 86 0C 00 01 03 8D",
+                "writeEqualizer": "08 EE 00 00 00 02 83 20 00 FE FE 3C B4 8F F0 8E 00 74 88 78 00 6D 86 70 88 7B 66 7E 79 78 00 43"
+            },
+            "inbound": {
+                "initial": "09 FF 00 00 01 01 01 41 00 07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 FF FF FF FF FF FF 01 31 00 00 00 01 01 FF FF FF FF FF FF FF 2C",
+                "dualConnectionsOff": "09 FF 00 00 01 01 01 41 00 07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 FF FF FF FF FF FF 00 31 00 00 00 01 01 FF FF FF FF FF FF FF 2B",
+                "autoPowerOffOff": "09 FF 00 00 01 01 01 41 00 07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 FF FF FF FF FF FF 01 31 00 00 00 00 01 FF FF FF FF FF FF FF 2B",
+                "autoPowerOff120": "09 FF 00 00 01 01 01 41 00 07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 FF FF FF FF FF FF 01 31 00 00 00 01 03 FF FF FF FF FF FF FF 2E",
+                "equalizer": "09 FF 00 00 01 01 01 41 00 07 00 30 31 2E 32 31 33 30 30 35 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 3C B4 8F F0 8E 00 74 88 78 00 FF FF FF FF FF FF 01 31 00 00 00 01 01 FF FF FF FF FF FF FF 61"
+            }
+        },
+        "A3033": {
+            "evidence": "protocolFixture",
+            "stateBodyOffsets": {
+                "battery": 0,
+                "equalizerPreset": 2,
+                "equalizerBands": 4,
+                "firmware": 12,
+                "serial": 17,
+                "wearingDetection": 33
+            },
+            "derivation": "No Life 2 Neo capture exists. The 34-byte body is derived from the legacy serializer with a synthetic firmware 01.21, the synthetic serial, the eight-band signature curve and wearing detection enabled. The legacy serializer writes the battery pair as charging-then-level while its parser reads level-then-charging; the published body follows the parser, which is the path real device responses take.",
+            "stateBody": "04 00 00 00 78 78 78 78 78 78 78 78 30 31 2E 32 31 33 30 33 33 54 45 53 54 30 30 30 30 30 30 30 30 01",
+            "outbound": {
+                "writeWearingDetectionOff": "08 EE 00 00 00 01 81 0B 00 00 83",
+                "writeWearingDetectionOn": "08 EE 00 00 00 01 81 0B 00 01 84",
+                "writeEqualizer": "08 EE 00 00 00 02 81 14 00 FE FE 3C B4 8F A0 8E B4 74 88 E6"
+            },
+            "inbound": {
+                "initial": "09 FF 00 00 01 01 01 2C 00 04 00 00 00 78 78 78 78 78 78 78 78 30 31 2E 32 31 33 30 33 33 54 45 53 54 30 30 30 30 30 30 30 30 01 77",
+                "wearingDetectionOff": "09 FF 00 00 01 01 01 2C 00 04 00 00 00 78 78 78 78 78 78 78 78 30 31 2E 32 31 33 30 33 33 54 45 53 54 30 30 30 30 30 30 30 30 00 76",
+                "equalizer": "09 FF 00 00 01 01 01 2C 00 04 00 FE FE 3C B4 8F A0 8E B4 74 88 30 31 2E 32 31 33 30 33 33 54 45 53 54 30 30 30 30 30 30 30 30 01 10"
+            }
+        }
+    }
+}

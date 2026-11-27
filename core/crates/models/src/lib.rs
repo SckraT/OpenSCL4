@@ -4,15 +4,24 @@
 
 use std::fmt;
 
+mod a3004;
+mod a3005;
 mod a3028;
+mod a3033;
 mod a3062;
 mod a3949;
+mod equalizer_with_drc;
 pub mod registry;
 
+pub use a3004::{A3004_EQUALIZER_BANDS, A3004_EQUALIZER_PRESET, A3004_SOUND_MODE_FIELDS};
+pub use a3005::{
+    A3005_AUTO_POWER_OFF, A3005_DUAL_CONNECTIONS, A3005_EQUALIZER_BANDS, A3005_EQUALIZER_PRESET,
+};
 pub use a3028::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
+pub use a3033::{A3033_EQUALIZER_BANDS, A3033_EQUALIZER_PRESET, A3033_WEARING_DETECTION};
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
 
@@ -34,6 +43,15 @@ pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 /// Write the auto power off value of a model that reports its extra fields.
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
 
+/// Write the A3004/A3005 ten-band curve together with its DRC block.
+pub const EQUALIZER_WITH_DRC_COMMAND: [u8; 2] = [0x02, 0x83];
+
+/// Write the A3033 wearing-detection flag.
+pub const WEARING_DETECTION_COMMAND: [u8; 2] = [0x01, 0x81];
+
+/// Write the A3005 dual-connections enabled flag.
+pub const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x84];
+
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
 const A3954_SOUND_MODE: usize = 125;
@@ -41,10 +59,16 @@ const A3954_SOUND_MODE: usize = 125;
 /// A driver selected from a checked identity response.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelDriver {
+    /// Soundcore Q20i (A3004).
+    A3004,
+    /// Soundcore Q11i (A3005).
+    A3005,
     /// Soundcore Q30 / Life Q30 (A3028).
     A3028,
     /// Soundcore Life Tune (A3029).
     A3029,
+    /// Soundcore Life 2 Neo (A3033).
+    A3033,
     /// Soundcore Space One Pro.
     A3062,
     /// Soundcore P20i, P25i and R50i.
@@ -63,18 +87,29 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3004 | Self::A3028 | Self::A3029 | Self::A3062
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3004 | Self::A3005 | Self::A3028 | Self::A3029 | Self::A3033 | Self::A3062
+            ),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(self, Self::A3005 | Self::A3028 | Self::A3029),
+            wearing_detection_write: matches!(self, Self::A3033),
+            dual_connections_write: matches!(self, Self::A3005),
         }
     }
 
     /// Returns the stable model code.
     pub const fn code(self) -> &'static str {
         match self {
+            Self::A3004 => "A3004",
+            Self::A3005 => "A3005",
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
+            Self::A3033 => "A3033",
             Self::A3062 => "A3062",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
@@ -89,7 +124,8 @@ impl ModelDriver {
     /// Number of equalizer bands carried in the model's curve.
     pub const fn equalizer_bands(self) -> usize {
         match self {
-            Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3004 | Self::A3005 => equalizer_with_drc::BAND_COUNT,
+            Self::A3028 | Self::A3029 | Self::A3033 => a3028::EQUALIZER_BAND_COUNT,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
@@ -97,7 +133,8 @@ impl ModelDriver {
     /// The wire command for the model's equalizer write.
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
-            Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::A3004 | Self::A3005 => EQUALIZER_WITH_DRC_COMMAND,
+            Self::A3028 | Self::A3029 | Self::A3033 => a3028::A3028_EQUALIZER_COMMAND,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
         }
     }
@@ -114,7 +151,10 @@ impl ModelDriver {
     /// Decodes the state response for the selected model.
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         match self {
+            Self::A3004 => a3004::decode_state(self, body),
+            Self::A3005 => a3005::decode_state(self, body),
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
+            Self::A3033 => a3033::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
@@ -126,18 +166,25 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3004, A3005, A3028 family and A3033 need the serial that
+    /// selects their public code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
+            Self::A3004 => a3004::has_confirmed_layout(body),
+            Self::A3005 => a3005::has_confirmed_layout(body),
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
+            Self::A3033 => a3033::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
         let serial_matches = match self {
+            Self::A3004 => a3004::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
+            Self::A3005 => a3005::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
+            Self::A3033 => a3033::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
         };
@@ -170,6 +217,8 @@ impl ModelDriver {
             equalizer: None,
             gaming_mode: None,
             auto_power_off: None,
+            wearing_detection: None,
+            dual_connections: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -177,16 +226,19 @@ impl ModelDriver {
 
     /// Builds the driver's measured equalizer write body from a fresh state response.
     ///
-    /// The write echoes the state's hear-id fields with hear-id disabled, so the
-    /// requested curve is the one in effect. The A3028 family writes only its
-    /// eight bands and has no hear-id block.
+    /// The A3062 write echoes the state's hear-id fields with hear-id disabled, so
+    /// the requested curve is the one in effect. The A3028 family and the A3033
+    /// write only eight bands and have no hear-id block. The A3004 and A3005
+    /// write the ten-band curve followed by its DRC block.
     pub fn equalizer_write_body(
         self,
         setting: EqualizerSetting,
         state: &[u8],
     ) -> Result<Vec<u8>, ModelError> {
         match self {
+            Self::A3004 | Self::A3005 => equalizer_with_drc::write_body(setting),
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
+            Self::A3033 => a3033::equalizer_write_body(setting),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
@@ -206,10 +258,15 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the wearing-detection flag.
+    pub wearing_detection_write: bool,
+    /// The session can confirm writes of the dual-connections enabled flag.
+    pub dual_connections_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SoundModeControls {
+    A3004([u8; 3]),
     A3028([u8; 3]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
@@ -238,6 +295,12 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// Whether wearing detection is enabled, when the state reports a recognized
+    /// flag.
+    pub wearing_detection: Option<bool>,
+    /// Whether dual connections are enabled, when the state reports a recognized
+    /// flag.
+    pub dual_connections: Option<bool>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -284,6 +347,33 @@ impl DeviceState {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3028::sound_mode_write(mode, controls)
+    }
+
+    /// Builds an ambient-mode write from the captured A3004 controls.
+    ///
+    /// The model exposes only the ambient mode, so its unexposed control bytes
+    /// are echoed unchanged.
+    pub fn a3004_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 4], ModelError> {
+        let Some(SoundModeControls::A3004(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        a3004::sound_mode_write(mode, controls)
+    }
+
+    /// Builds a wearing-detection write for a device that reports the flag.
+    pub fn wearing_detection_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().wearing_detection_write || self.wearing_detection.is_none() {
+            return Err(ModelError::InvalidWearingDetectionWrite);
+        }
+        Ok([u8::from(enabled)])
+    }
+
+    /// Builds a dual-connections write for a device that reports the flag.
+    pub fn dual_connections_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().dual_connections_write || self.dual_connections.is_none() {
+            return Err(ModelError::InvalidDualConnectionsWrite);
+        }
+        Ok([u8::from(enabled)])
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.
@@ -622,6 +712,12 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable wearing-detection flag.
+    #[error("unsupported device wearing detection write")]
+    InvalidWearingDetectionWrite,
+    /// The device does not report a writable dual-connections flag.
+    #[error("unsupported device dual connections write")]
+    InvalidDualConnectionsWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

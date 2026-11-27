@@ -193,6 +193,16 @@ fn sanitized_frame(model: Option<ModelDriver>, frame: &Frame) -> Option<Bytes> {
 fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize, usize)]> {
     // Use only the measured state layouts cited in core/data/README.md.
     let fields: &[(usize, usize)] = match model {
+        // The captured Q20i state is 61 bytes; the legacy parser reads a
+        // 39-byte prefix and the 16-byte serial sits at 7-22.
+        ModelDriver::A3004 if body.len() == 61 => &[(7, 23)],
+        // The captured Q11i state is 55 bytes; the legacy parser reads a
+        // 48-byte prefix and the 16-byte serial sits at 7-22.
+        ModelDriver::A3005 if body.len() == 55 => &[(7, 23)],
+        // The derived Life 2 Neo state is 34 bytes; the 16-byte serial sits at
+        // 17-32 after the battery, equalizer, firmware and before the
+        // wearing-detection flag.
+        ModelDriver::A3033 if body.len() == 34 => &[(17, 33)],
         ModelDriver::A3062 if body.len() == 95 => &[(7, 23)],
         ModelDriver::A3949 if body.len() == 88 => &[(16, 32)],
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {

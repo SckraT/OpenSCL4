@@ -1,11 +1,14 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3004, a3005, a3028, a3033, a3062, a3949};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 8] = [
+    ModelDriver::A3004,
+    ModelDriver::A3005,
     ModelDriver::A3028,
     ModelDriver::A3029,
+    ModelDriver::A3033,
     ModelDriver::A3062,
     ModelDriver::A3949,
     ModelDriver::A3954,
@@ -34,6 +37,27 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
             model @ (ModelDriver::A3028 | ModelDriver::A3029) => Ok(model),
             _ => Err(ModelError::UnknownModel),
         };
+    }
+    match body.len() {
+        a3004::STATE_LENGTH => {
+            return match from_serial(&a3004::state_serial(body)?)? {
+                ModelDriver::A3004 => Ok(ModelDriver::A3004),
+                _ => Err(ModelError::UnknownModel),
+            };
+        }
+        a3005::STATE_LENGTH => {
+            return match from_serial(&a3005::state_serial(body)?)? {
+                ModelDriver::A3005 => Ok(ModelDriver::A3005),
+                _ => Err(ModelError::UnknownModel),
+            };
+        }
+        a3033::STATE_LENGTH => {
+            return match from_serial(&a3033::state_serial(body)?)? {
+                ModelDriver::A3033 => Ok(ModelDriver::A3033),
+                _ => Err(ModelError::UnknownModel),
+            };
+        }
+        _ => {}
     }
     match a3062::state_serial(body).and_then(|serial| from_serial(&serial)) {
         Ok(ModelDriver::A3062) => Ok(ModelDriver::A3062),
