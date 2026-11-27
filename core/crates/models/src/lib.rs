@@ -6,6 +6,8 @@ use std::fmt;
 
 mod a3028;
 mod a3062;
+mod a3931;
+mod a3933;
 mod a3949;
 pub mod registry;
 
@@ -14,6 +16,23 @@ pub use a3028::{
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3931::{
+    AUTO_POWER_OFF as A3931_AUTO_POWER_OFF, EQUALIZER_BAND_COUNT as A3931_EQUALIZER_BAND_COUNT,
+    EQUALIZER_CHANNEL_1 as A3931_EQUALIZER_CHANNEL_1,
+    EQUALIZER_CHANNEL_2 as A3931_EQUALIZER_CHANNEL_2, EQUALIZER_COMMAND as A3931_EQUALIZER_COMMAND,
+    EQUALIZER_PRESET as A3931_EQUALIZER_PRESET, SOUND_MODE_FIELDS as A3931_SOUND_MODE_FIELDS,
+    STATE_LENGTH as A3931_STATE_LENGTH,
+};
+pub use a3933::{
+    CASE_BATTERY_LEVEL as A3933_CASE_BATTERY_LEVEL,
+    EQUALIZER_BAND_COUNT as A3933_EQUALIZER_BAND_COUNT,
+    EQUALIZER_CHANNEL_1 as A3933_EQUALIZER_CHANNEL_1,
+    EQUALIZER_CHANNEL_2 as A3933_EQUALIZER_CHANNEL_2, EQUALIZER_COMMAND as A3933_EQUALIZER_COMMAND,
+    EQUALIZER_PRESET as A3933_EQUALIZER_PRESET, FIRMWARE as A3933_FIRMWARE,
+    GAMING_MODE as A3933_GAMING_MODE, SERIAL as A3933_SERIAL,
+    SOUND_MODE_FIELDS as A3933_SOUND_MODE_FIELDS, STATE_LENGTH as A3933_STATE_LENGTH,
+    STATE_LENGTH_WITHOUT_EXTRA_FIELDS as A3933_STATE_LENGTH_WITHOUT_EXTRA_FIELDS,
+};
 pub use a3949::A3949_GAMING_MODE;
 
 /// Probe for the firmware versions and the device identifier.
@@ -47,6 +66,14 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Life Dot 2 NC (A3931).
+    A3931,
+    /// Soundcore Life Note 3 (A3933).
+    A3933,
+    /// Soundcore Life A2 NC (A3935).
+    A3935,
+    /// Soundcore Life P3 (A3939).
+    A3939,
     /// Soundcore P20i, P25i and R50i.
     A3949,
     /// Soundcore Liberty 4 Pro.
@@ -63,10 +90,31 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028
+                    | Self::A3029
+                    | Self::A3062
+                    | Self::A3931
+                    | Self::A3933
+                    | Self::A3935
+                    | Self::A3939
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028
+                    | Self::A3029
+                    | Self::A3062
+                    | Self::A3931
+                    | Self::A3933
+                    | Self::A3935
+                    | Self::A3939
+            ),
+            gaming_mode_write: matches!(self, Self::A3933 | Self::A3939 | Self::A3949),
+            auto_power_off_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3931 | Self::A3935
+            ),
         }
     }
 
@@ -76,6 +124,10 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3931 => "A3931",
+            Self::A3933 => "A3933",
+            Self::A3935 => "A3935",
+            Self::A3939 => "A3939",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
         }
@@ -90,7 +142,8 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            Self::A3931 | Self::A3935 => a3931::EQUALIZER_BAND_COUNT,
+            Self::A3062 | Self::A3933 | Self::A3939 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
 
@@ -98,7 +151,20 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::A3931 | Self::A3935 => a3931::EQUALIZER_COMMAND,
+            Self::A3933 | Self::A3939 => a3933::EQUALIZER_COMMAND,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+        }
+    }
+
+    /// Number of durations in the model's auto power off table.
+    ///
+    /// A model without the write capability reports zero.
+    pub const fn auto_power_off_duration_count(self) -> u8 {
+        match self {
+            Self::A3028 | Self::A3029 => a3028::AUTO_POWER_OFF_DURATION_COUNT,
+            Self::A3931 | Self::A3935 => a3931::AUTO_POWER_OFF_DURATION_COUNT,
+            Self::A3062 | Self::A3933 | Self::A3939 | Self::A3949 | Self::A3954 => 0,
         }
     }
 
@@ -116,6 +182,8 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::A3931 | Self::A3935 => a3931::decode_state(self, body),
+            Self::A3933 | Self::A3939 => a3933::decode_state(self, body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
@@ -126,17 +194,25 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// the A3028 family needs the serial that selects its public code, and the
+    /// A3933 family needs the serial in its state. The A3931 pair carries no
+    /// serial in its state: the separate identity response selects the code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3931 | Self::A3935 => a3931::has_confirmed_layout(body),
+            Self::A3933 | Self::A3939 => a3933::has_confirmed_layout(body),
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
         let serial_matches = match self {
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+            }
+            Self::A3931 | Self::A3935 => true,
+            Self::A3933 | Self::A3939 => {
+                a3933::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
@@ -179,7 +255,8 @@ impl ModelDriver {
     ///
     /// The write echoes the state's hear-id fields with hear-id disabled, so the
     /// requested curve is the one in effect. The A3028 family writes only its
-    /// eight bands and has no hear-id block.
+    /// eight bands and has no hear-id block; the A3931 pair adds the DRC echo
+    /// the legacy builder sends after both channels.
     pub fn equalizer_write_body(
         self,
         setting: EqualizerSetting,
@@ -188,6 +265,8 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::A3931 | Self::A3935 => a3931::equalizer_write_body(setting, state),
+            Self::A3933 | Self::A3939 => a3933::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
@@ -210,7 +289,7 @@ pub struct Capabilities {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SoundModeControls {
-    A3028([u8; 3]),
+    Ambient([u8; 3]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
 }
@@ -271,19 +350,20 @@ impl DeviceState {
     }
 
     /// Builds an ambient-mode write from the latest measured A3062 controls.
-    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
+    pub fn a3062_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
         let Some(SoundModeControls::A3062(controls)) = self.sound_mode_controls else {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3062::ambient_sound_mode_write(mode, controls)
     }
 
-    /// Builds an ambient-mode write from the latest A3028/A3029 controls.
-    pub fn family_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 4], ModelError> {
-        let Some(SoundModeControls::A3028(controls)) = self.sound_mode_controls else {
+    /// Builds the shared four-byte ambient-mode write from the latest measured
+    /// controls of the A3028, A3029, A3931, A3933, A3935 and A3939 families.
+    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 4], ModelError> {
+        let Some(SoundModeControls::Ambient(controls)) = self.sound_mode_controls else {
             return Err(ModelError::InvalidSoundModeWrite);
         };
-        a3028::sound_mode_write(mode, controls)
+        ambient_sound_mode_write_body(mode, controls)
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.
@@ -311,7 +391,9 @@ impl DeviceState {
             .auto_power_off
             .ok_or(ModelError::InvalidAutoPowerOffWrite)?;
         let (body, expected) = match setting {
-            AutoPowerOffSetting::Enabled(index) if index < a3028::AUTO_POWER_OFF_DURATION_COUNT => {
+            AutoPowerOffSetting::Enabled(index)
+                if index < self.model.auto_power_off_duration_count() =>
+            {
                 (
                     [1, index],
                     AutoPowerOff {
@@ -674,6 +756,56 @@ fn battery_percent(raw: u8, scale: u8, offset: u8) -> Result<Option<u8>, ModelEr
         return Err(ModelError::InvalidBattery);
     }
     Ok(Some((u16::from(step) * 100 / u16::from(scale)) as u8))
+}
+
+/// Validates the unexposed ambient-sound-mode control bytes shared by the
+/// four-byte families.
+///
+/// The legacy `SoundModes` structure accepts the documented noise-canceling and
+/// transparency values and clamps the custom noise-canceling field, keeping
+/// `255` as its unset marker.
+fn ambient_sound_mode_controls(
+    noise_canceling: u8,
+    transparency: u8,
+    custom: u8,
+) -> Result<[u8; 3], ModelError> {
+    if noise_canceling > 3 || transparency > 1 {
+        return Err(ModelError::UnknownSoundMode);
+    }
+    Ok([
+        noise_canceling,
+        transparency,
+        clamp_custom_noise_canceling(custom),
+    ])
+}
+
+fn clamp_custom_noise_canceling(value: u8) -> u8 {
+    if value == u8::MAX {
+        value
+    } else {
+        value.min(10)
+    }
+}
+
+/// Builds the four-byte ambient sound-mode write shared by the A3028, A3029,
+/// A3931, A3933, A3935 and A3939 families.
+fn ambient_sound_mode_write_body(
+    mode: SoundMode,
+    controls: [u8; 3],
+) -> Result<[u8; 4], ModelError> {
+    let [noise_canceling @ 0..=3, transparency @ 0..=1, custom] = controls else {
+        return Err(ModelError::InvalidSoundModeWrite);
+    };
+    if mode == SoundMode::AirplaneMode {
+        return Err(ModelError::InvalidSoundModeWrite);
+    }
+    // The legacy structure clamps this unexposed field; echo its effective value.
+    Ok([
+        mode.wire(),
+        noise_canceling,
+        transparency,
+        clamp_custom_noise_canceling(custom),
+    ])
 }
 
 #[cfg(test)]

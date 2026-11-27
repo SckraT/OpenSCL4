@@ -55,16 +55,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         .get(SOUND_MODE_CONTROLS)
         .and_then(|controls| controls.try_into().ok())
         .ok_or(ModelError::IncompleteState)?;
-    // Legacy `SoundModes::take` accepts the documented ANC and transparency
-    // values and clamps the unexposed custom value.
-    if noise_canceling > 3 || transparency > 1 {
-        return Err(ModelError::UnknownSoundMode);
-    }
-    let custom = if custom == u8::MAX {
-        custom
-    } else {
-        custom.min(10)
-    };
+    let controls = crate::ambient_sound_mode_controls(noise_canceling, transparency, custom)?;
     Ok(DeviceState {
         model,
         battery: BatteryLevels {
@@ -74,11 +65,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
             case: None,
         },
         sound_mode: Some(sound_mode),
-        sound_mode_controls: Some(SoundModeControls::A3028([
-            noise_canceling,
-            transparency,
-            custom,
-        ])),
+        sound_mode_controls: Some(SoundModeControls::Ambient(controls)),
         equalizer: equalizer_setting(body),
         auto_power_off: auto_power_off(body),
         gaming_mode: None,
@@ -124,22 +111,6 @@ fn auto_power_off(body: &[u8]) -> Option<AutoPowerOff> {
         return None;
     }
     Some(AutoPowerOff { enabled, duration })
-}
-
-pub fn sound_mode_write(mode: SoundMode, controls: [u8; 3]) -> Result<[u8; 4], ModelError> {
-    let [noise_canceling @ 0..=3, transparency @ 0..=1, custom] = controls else {
-        return Err(ModelError::InvalidSoundModeWrite);
-    };
-    if mode == SoundMode::AirplaneMode {
-        return Err(ModelError::InvalidSoundModeWrite);
-    }
-    // The legacy structure clamps this unexposed field; echo its effective value.
-    let custom = if custom == u8::MAX {
-        custom
-    } else {
-        custom.min(10)
-    };
-    Ok([mode.wire(), noise_canceling, transparency, custom])
 }
 
 /// Builds the eight-band equalizer write; the shared fixed bands must stay zero.

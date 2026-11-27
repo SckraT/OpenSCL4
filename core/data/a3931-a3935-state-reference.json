@@ -1,0 +1,63 @@
+{
+    "legacyRevision": "1791f1518581271f95247272c05903b50df616b0",
+    "evidence": "legacyFixture",
+    "derivation": "The state body is the inherited device-faker response for command 01 01. The faker config carries a synthetic MAC (00:00:00:00:39:31) and its state body has no device or peer identifier. The identity body is the same config's 01 05 response; its all-zero serial is replaced with the synthetic model-prefixed value and the checksum is recomputed. The state is identical for both public codes because the A3931 driver reads the serial from 01 05.",
+    "sources": {
+        "state": "tools/soundcore-device-faker/devices/a3931.toml::01 01 response",
+        "identity": "tools/soundcore-device-faker/devices/a3931.toml::01 05 response",
+        "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+        "outboundIdentity": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+        "outboundSoundMode": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+        "outboundEqualizer": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+        "outboundAutoPowerOff": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs"
+    },
+    "stateBodyOffsets": {
+        "twsStatus": 0,
+        "battery": 2,
+        "equalizerPreset": 6,
+        "equalizerChannel1": 8,
+        "equalizerChannel2": 16,
+        "buttonConfiguration": 24,
+        "soundModes": 36,
+        "sideTone": 40,
+        "touchTone": 41,
+        "autoPowerOff": 42
+    },
+    "identityBodyOffsets": {
+        "firmware": 0,
+        "serial": 10
+    },
+    "identityFirmwareInExample": "00.00",
+    "stateLength": 44,
+    "expectedEqualizerBandsTenthsDb": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "ambientModeSequence": [
+        "NoiseCanceling",
+        "Normal"
+    ],
+    "outbound": {
+        "readState": "08 EE 00 00 00 01 01 0A 00 02",
+        "readIdentity": "08 EE 00 00 00 01 05 0A 00 06",
+        "writeNoiseCanceling": "08 EE 00 00 00 06 81 0E 00 00 00 01 00 8C",
+        "restoreNormal": "08 EE 00 00 00 06 81 0E 00 02 00 01 00 8E",
+        "writeCustomEqualizer": "08 EE 00 00 00 02 83 2C 00 FE FE 3C B4 8F A0 8E B4 74 88 3C B4 8F A0 8E B4 74 88 6D 85 74 7E 74 82 72 7C 6D 85 74 7E 74 82 72 7C ED",
+        "writeSignatureEqualizer": "08 EE 00 00 00 02 83 2C 00 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 A7",
+        "writeAutoPowerOffDisabled": "08 EE 00 00 00 01 86 0C 00 00 01 8A",
+        "writeAutoPowerOffEnabledDuration3": "08 EE 00 00 00 01 86 0C 00 01 03 8D"
+    },
+    "inbound": {
+        "state": "09 FF 00 00 01 01 01 36 00 00 01 00 00 00 00 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 C3",
+        "identities": {
+            "A3931": "09 FF 00 00 01 01 05 24 00 30 30 2E 30 30 30 30 2E 30 30 33 39 33 31 54 45 53 54 30 30 30 30 30 30 30 30 9F",
+            "A3935": "09 FF 00 00 01 01 05 24 00 30 30 2E 30 30 30 30 2E 30 30 33 39 33 35 54 45 53 54 30 30 30 30 30 30 30 30 A3"
+        }
+    }
+}

@@ -107,15 +107,15 @@ mod tests {
             .decode_confirmed_state(A3028_BODY)
             .expect("confirmed state");
         assert_eq!(
-            state.family_sound_mode_write(SoundMode::NoiseCanceling),
+            state.ambient_sound_mode_write(SoundMode::NoiseCanceling),
             Ok([0x00, 0x00, 0x01, 0x00])
         );
         assert_eq!(
-            state.family_sound_mode_write(SoundMode::Normal),
+            state.ambient_sound_mode_write(SoundMode::Normal),
             Ok([0x02, 0x00, 0x01, 0x00])
         );
         assert_eq!(
-            state.ambient_sound_mode_write(SoundMode::NoiseCanceling),
+            state.a3062_sound_mode_write(SoundMode::NoiseCanceling),
             Err(ModelError::InvalidSoundModeWrite)
         );
     }
@@ -304,7 +304,7 @@ mod tests {
                 .decode_confirmed_state(&body)
                 .expect("custom value is accepted and clamped");
             assert_eq!(
-                state.family_sound_mode_write(SoundMode::Normal),
+                state.ambient_sound_mode_write(SoundMode::Normal),
                 Ok([0x02, 0x00, 0x01, expected])
             );
         }

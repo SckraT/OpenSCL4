@@ -5,9 +5,13 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3931_AUTO_POWER_OFF, A3931_EQUALIZER_CHANNEL_1,
+    A3931_EQUALIZER_CHANNEL_2, A3931_EQUALIZER_COMMAND, A3931_EQUALIZER_PRESET,
+    A3931_SOUND_MODE_FIELDS, A3931_STATE_LENGTH, A3933_EQUALIZER_CHANNEL_1,
+    A3933_EQUALIZER_CHANNEL_2, A3933_EQUALIZER_COMMAND, A3933_EQUALIZER_PRESET, A3933_GAMING_MODE,
+    A3933_SOUND_MODE_FIELDS, A3933_STATE_LENGTH, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND,
+    EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND,
+    STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -48,6 +52,49 @@ const A3029_STATE_BODY: &[u8] = &[
 /// ambient and battery alert prompt tones. The matrix lists this block as
 /// derived from the known layout, not a separate capture.
 const AUTO_POWER_OFF_EXTRA_FIELDS: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01];
+/// A3931 and A3935 state body from `core/data/a3931-a3935-state-reference.json`.
+/// The inherited device-faker config carries a synthetic MAC and no serial in
+/// its `01 01` state, so both public codes share the body.
+const A3931_STATE_BODY: &[u8] = &[
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+/// The faker `01 05` identity body with the synthetic A3931 serial.
+const A3931_IDENTITY_BODY: &[u8] = &[
+    0x30, 0x30, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x2e, 0x30, 0x30, 0x33, 0x39, 0x33, 0x31, 0x54, 0x45,
+    0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+];
+/// The same identity body with the synthetic A3935 serial.
+const A3935_IDENTITY_BODY: &[u8] = &[
+    0x30, 0x30, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x2e, 0x30, 0x30, 0x33, 0x39, 0x33, 0x35, 0x54, 0x45,
+    0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+];
+/// The A3933 state body from `core/data/a3933-a3939-state-reference.json` with
+/// the synthetic A3933 serial.
+const A3933_STATE_BODY: &[u8] = &[
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x30, 0x30, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x2e, 0x30, 0x30,
+    0x33, 0x39, 0x33, 0x33, 0x54, 0x45, 0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+    0xfe, 0xfe, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
+    0x00, 0x01, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+];
+/// The same faker body with the synthetic A3939 serial.
+const A3939_STATE_BODY: &[u8] = &[
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x30, 0x30, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x2e, 0x30, 0x30,
+    0x33, 0x39, 0x33, 0x39, 0x54, 0x45, 0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+    0xfe, 0xfe, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+    0x78, 0x78, 0x78, 0x78, 0x78, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
+    0x00, 0x01, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+];
 const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
@@ -190,6 +237,70 @@ impl TransportProvider for FamilyWithAutoPowerOff {
     }
 }
 
+/// A virtual A3931 that answers the shared driver's identity and state reads.
+pub struct VirtualA3931;
+
+/// A virtual A3935 that answers the shared driver's identity and state reads.
+pub struct VirtualA3935;
+
+/// A virtual A3933 that answers the shared driver's state reads.
+pub struct VirtualA3933;
+
+/// A virtual A3939 that answers the shared driver's state reads.
+pub struct VirtualA3939;
+
+fn model_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3931 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(model_link(ModelDriver::A3931))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3935 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(model_link(ModelDriver::A3935))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3933 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(model_link(ModelDriver::A3933))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3939 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(model_link(ModelDriver::A3939))
+    }
+}
+
 #[async_trait]
 impl TransportProvider for VirtualA3949 {
     async fn connect(
@@ -323,8 +434,23 @@ impl DeviceResponder {
                 continue;
             }
             if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
-                if self.model == ModelDriver::A3954 {
-                    replies.extend_from_slice(IDENTITY_REPLY);
+                match self.model {
+                    ModelDriver::A3954 => replies.extend_from_slice(IDENTITY_REPLY),
+                    ModelDriver::A3931 => {
+                        if let Ok(reply) =
+                            encode_frame(Direction::Inbound, IDENTITY_COMMAND, A3931_IDENTITY_BODY)
+                        {
+                            replies.extend_from_slice(&reply);
+                        }
+                    }
+                    ModelDriver::A3935 => {
+                        if let Ok(reply) =
+                            encode_frame(Direction::Inbound, IDENTITY_COMMAND, A3935_IDENTITY_BODY)
+                        {
+                            replies.extend_from_slice(&reply);
+                        }
+                    }
+                    _ => {}
                 }
             } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
@@ -358,15 +484,33 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if self.model == ModelDriver::A3949
-                && frame.command == GAMING_MODE_COMMAND
+            } else if matches!(self.model, ModelDriver::A3931 | ModelDriver::A3935)
+                && frame.command == A3931_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3931_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3933 | ModelDriver::A3939)
+                && frame.command == A3933_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3933_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(
+                self.model,
+                ModelDriver::A3933 | ModelDriver::A3939 | ModelDriver::A3949
+            ) && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3931 | ModelDriver::A3935
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
@@ -381,9 +525,23 @@ impl DeviceResponder {
         let [enabled @ 0..=1] = body else {
             return false;
         };
-        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
         let mut state = self.state.lock().expect("virtual state lock");
-        state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+        match self.model {
+            ModelDriver::A3949 => {
+                let captured =
+                    fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
+                state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+            }
+            ModelDriver::A3933 | ModelDriver::A3939 => {
+                state[A3933_GAMING_MODE] = *enabled;
+            }
+            ModelDriver::A3028
+            | ModelDriver::A3029
+            | ModelDriver::A3062
+            | ModelDriver::A3931
+            | ModelDriver::A3935
+            | ModelDriver::A3954 => return false,
+        }
         true
     }
 
@@ -407,6 +565,20 @@ impl DeviceResponder {
                     return false;
                 };
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
+            ModelDriver::A3931 | ModelDriver::A3935 => {
+                let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
+                    return false;
+                };
+                state[A3931_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
+            ModelDriver::A3933 | ModelDriver::A3939 => {
+                let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
+                    return false;
+                };
+                state[A3933_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
             ModelDriver::A3949 => false,
@@ -439,17 +611,50 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
+            ModelDriver::A3931 | ModelDriver::A3935 => {
+                // Preset, both eight-band channels, then the DRC echo of each channel.
+                let (Some(preset), Some(left), Some(right)) =
+                    (body.get(0..2), body.get(2..10), body.get(10..18))
+                else {
+                    return false;
+                };
+                state[A3931_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3931_EQUALIZER_CHANNEL_1].copy_from_slice(left);
+                state[A3931_EQUALIZER_CHANNEL_2].copy_from_slice(right);
+                true
+            }
+            ModelDriver::A3933 | ModelDriver::A3939 => {
+                // Preset followed by both ten-band channels.
+                let (Some(preset), Some(left), Some(right)) =
+                    (body.get(0..2), body.get(2..12), body.get(12..22))
+                else {
+                    return false;
+                };
+                state[A3933_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3933_EQUALIZER_CHANNEL_1].copy_from_slice(left);
+                state[A3933_EQUALIZER_CHANNEL_2].copy_from_slice(right);
+                true
+            }
             ModelDriver::A3949 | ModelDriver::A3954 => false,
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write only for models whose state carries it.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let range = match self.model {
+            ModelDriver::A3028 | ModelDriver::A3029 => A3028_AUTO_POWER_OFF,
+            ModelDriver::A3931 | ModelDriver::A3935 => A3931_AUTO_POWER_OFF,
+            ModelDriver::A3062
+            | ModelDriver::A3933
+            | ModelDriver::A3939
+            | ModelDriver::A3949
+            | ModelDriver::A3954 => return false,
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let Some(value) = state.get_mut(range) else {
             return false;
         };
         value.copy_from_slice(body);
@@ -541,6 +746,18 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3931 | ModelDriver::A3935 => {
+            debug_assert_eq!(A3931_STATE_BODY.len(), A3931_STATE_LENGTH);
+            A3931_STATE_BODY.to_vec()
+        }
+        ModelDriver::A3933 => {
+            debug_assert_eq!(A3933_STATE_BODY.len(), A3933_STATE_LENGTH);
+            A3933_STATE_BODY.to_vec()
+        }
+        ModelDriver::A3939 => {
+            debug_assert_eq!(A3939_STATE_BODY.len(), A3933_STATE_LENGTH);
+            A3939_STATE_BODY.to_vec()
+        }
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
     };

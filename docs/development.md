@@ -58,6 +58,32 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The A3931 and A3935 pilots use the shared Life Dot 2 NC driver and are selected
+by the separate `01 05` identity response, then read the shared `01 01` state.
+Both report the two earbud batteries and the ambient sound mode from the
+reference state in
+[`core/data`](../core/data/README.md#a3931-and-a3935-state-reference). Add
+`--cycle-mode` to write the reference Noise Canceling → Normal → Noise Canceling
+sequence, each confirmed by a new state response. The new session does not expose
+the firmware or serial carried by the separate identity response yet.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3931
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3935
+```
+
+The A3933 and A3939 pilots use the shared Life Note 3 driver and are discovered
+from the serial in their `01 01` state. Both report the two earbud batteries, the
+case level, firmware and gaming mode from the reference state in
+[`core/data`](../core/data/README.md#a3933-and-a3939-state-reference). Add
+`--cycle-mode` to switch gaming mode and restore the original value; each result
+requires a fresh state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3933
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3939
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

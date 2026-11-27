@@ -1,0 +1,67 @@
+{
+    "legacyRevision": "1791f1518581271f95247272c05903b50df616b0",
+    "evidence": "legacyFixture",
+    "derivation": "Both state bodies are the inherited device-faker responses for command 01 01; the A3933 and A3939 configs carry byte-identical states. The configs use synthetic MACs (00:00:00:00:39:33 and 00:00:00:00:39:39) and an all-zero serial. Each published variant replaces the full serial at body offsets 16-31 with the synthetic model-prefixed value and recomputes the checksum.",
+    "sources": {
+        "state": "tools/soundcore-device-faker/devices/a3933.toml::01 01 response",
+        "duplicateState": "tools/soundcore-device-faker/devices/a3939.toml::01 01 response",
+        "stateParser": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket",
+        "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+        "outboundSoundMode": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+        "outboundEqualizer": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+        "outboundGamingMode": "lib/src/devices/soundcore/common/modules/flag.rs::GamingMode"
+    },
+    "stateBodyOffsets": {
+        "twsStatus": 0,
+        "battery": 2,
+        "firmware": 6,
+        "serial": 16,
+        "equalizerPreset": 32,
+        "equalizerChannel1": 34,
+        "equalizerChannel2": 44,
+        "ageRange": 54,
+        "hearId": 55,
+        "buttonConfiguration": 103,
+        "ambientSoundModeCycle": 115,
+        "soundModes": 116,
+        "unknown": 120,
+        "touchTone": 122,
+        "wearingDetection": 123,
+        "gamingMode": 124,
+        "caseBatteryLevel": 125,
+        "deviceColor": 127,
+        "windNoiseDetection": 128
+    },
+    "firmwareInExample": "00.00",
+    "stateLength": 132,
+    "stateLengthWithoutExtraFields": 122,
+    "expectedEqualizerBandsTenthsDb": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "ambientModeSequence": [
+        "NoiseCanceling",
+        "Normal"
+    ],
+    "outbound": {
+        "readState": "08 EE 00 00 00 01 01 0A 00 02",
+        "writeNoiseCanceling": "08 EE 00 00 00 06 81 0E 00 00 00 01 00 8C",
+        "restoreNormal": "08 EE 00 00 00 06 81 0E 00 02 00 01 00 8E",
+        "writeCustomEqualizer": "08 EE 00 00 00 02 81 20 00 FE FE 3C B4 8F A0 8E B4 74 88 78 00 3C B4 8F A0 8E B4 74 88 78 00 3F",
+        "writeTrebleReducerEqualizer": "08 EE 00 00 00 02 81 20 00 15 00 78 78 78 64 5A 50 50 3C 78 00 78 78 78 64 5A 50 50 3C 78 00 A2",
+        "writeGamingModeOff": "08 EE 00 00 00 01 87 0B 00 00 89",
+        "writeGamingModeOn": "08 EE 00 00 00 01 87 0B 00 01 8A"
+    },
+    "inbound": {
+        "A3933": "09 FF 00 00 01 01 01 8E 00 00 01 00 00 00 00 30 30 2E 30 30 30 30 2E 30 30 33 39 33 33 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 00 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 01 00 01 00 01 00 01 00 01 00 01 00 07 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 32",
+        "A3939": "09 FF 00 00 01 01 01 8E 00 00 01 00 00 00 00 30 30 2E 30 30 30 30 2E 30 30 33 39 33 39 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 00 00 00 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 00 00 01 00 01 00 01 00 01 00 01 00 01 00 07 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 38"
+    }
+}
