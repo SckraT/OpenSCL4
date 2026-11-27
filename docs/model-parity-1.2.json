@@ -1637,6 +1637,305 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3909"
+            ],
+            "operation": "serial_number_and_dual_firmware_version",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "command": "0105",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3909"
+            ],
+            "operation": "dual_battery",
+            "inbound": "lib/src/devices/soundcore/a3909/packets/inbound/state_update.rs::A3909StateUpdatePacket",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3909"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3909/packets/inbound/state_update.rs::A3909StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The modular core has no button action table or gesture setting surface yet, so button configuration is not ported."
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "serial_number_and_dual_firmware_version",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "command": "0105",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "dual_battery",
+            "inbound": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The modular core has no button action table or gesture setting surface yet, so button configuration is not ported."
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "tws_status",
+            "inbound": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "TWS status is not part of the confirmed snapshot yet."
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "serial_number_and_dual_firmware_version",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "command": "0105",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "dual_battery",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The modular core has no button action table or gesture setting surface yet, so button configuration is not ported."
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "tws_status",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "TWS status is not part of the confirmed snapshot yet."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "serial_number_and_dual_firmware_version",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "command": "0105",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "dual_battery",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedState"
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The modular core has no button action table or gesture setting surface yet, so button configuration is not ported."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "tws_status",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "TWS status is not part of the confirmed snapshot yet."
+        },
+        {
+            "models": [
+                "A3909"
+            ],
+            "operation": "a3909_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3909/packets/inbound/state_update.rs::A3909StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The state body carries only the equalizer preset id, so a curve write cannot be confirmed by read-back. The legacy driver derives the curve from a fixed preset table; a preset-only write contract is needed."
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "equalizer_with_basic_hear_id_tws",
+            "inbound": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "equalizer_with_custom_hear_id_tws",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/sound_modes/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedReadBack",
+            "missing": "The A3930 driver offers only the normal and transparency ambient modes."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "equalizer_with_custom_hear_id_tws",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/models/tests/separate_identity_family.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/sound_modes/setting_handler.rs",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedReadBack",
+            "missing": "The noise-canceling and transparency sub-modes are echoed from the state and are not selectable in the new session."
+        },
+        {
+            "models": [
+                "A3926"
+            ],
+            "operation": "reset_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "Button configuration is not ported yet."
+        },
+        {
+            "models": [
+                "A3930"
+            ],
+            "operation": "reset_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "Button configuration is not ported yet."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "reset_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "Button configuration is not ported yet."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/ldac_state.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_ldac_state.rs",
+            "command": "017F",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/separate_identity_family.rs",
+            "result": "confirmedState",
+            "missing": "The 01 FF flag write is not ported; the session reads the flag only."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "touch_tone",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The state field is not decoded into a setting yet."
+        },
+        {
+            "models": [
+                "A3951"
+            ],
+            "operation": "wearing_detection",
+            "inbound": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The state field is not decoded into a setting yet."
         }
     ],
     "models": [
@@ -2554,7 +2853,33 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.28",
+                    "outbound": "core/data/a3909-identity.bin",
+                    "inbound": "core/data/a3909-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3909-state.bin",
+                    "inbound": "core/data/a3909-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacy",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "lib/src/devices/soundcore/a3909/packets/inbound/state_update.rs::A3909StateUpdatePacket",
+                    "result": "parityPending",
+                    "missing": "The state carries only the preset id; the legacy driver derives the curve from a fixed preset table, so the curve write is not ported."
+                }
+            ]
         },
         {
             "code": "A3926",
@@ -2612,7 +2937,33 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.60",
+                    "outbound": "core/data/a3926-identity.bin",
+                    "inbound": "core/data/a3926-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3926-state.bin",
+                    "inbound": "core/data/a3926-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+                    "inbound": "core/crates/models/tests/separate_identity_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::confirms_the_family_equalizer_write_from_read_back_replies"
+                }
+            ]
         },
         {
             "code": "A3930",
@@ -2675,7 +3026,49 @@
                         "readIdentity"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.70",
+                    "outbound": "core/data/a3930-identity.bin",
+                    "inbound": "core/data/a3930-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3930-state.bin",
+                    "inbound": "core/data/a3930-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "readLdacState",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_ldac_state.rs",
+                    "inbound": "core/data/a3930-ldac.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+                    "inbound": "core/crates/session/tests/separate_identity_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::confirms_the_ambient_mode_cycle_from_read_back_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+                    "inbound": "core/crates/models/tests/separate_identity_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::confirms_the_family_equalizer_write_from_read_back_replies"
+                }
+            ]
         },
         {
             "code": "A3931",
@@ -3394,7 +3787,49 @@
                         "readLdacState"
                     ]
                 }
-            }
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.80",
+                    "outbound": "core/data/a3951-identity.bin",
+                    "inbound": "core/data/a3951-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/a3951-state.bin",
+                    "inbound": "core/data/a3951-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "readLdacState",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_ldac_state.rs",
+                    "inbound": "core/data/a3951-ldac.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::reads_the_family_snapshots_from_its_separate_reads"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+                    "inbound": "core/crates/session/tests/separate_identity_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::confirms_the_ambient_mode_cycle_from_read_back_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+                    "inbound": "core/crates/models/tests/separate_identity_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/separate_identity_family.rs::confirms_the_family_equalizer_write_from_read_back_replies"
+                }
+            ]
         },
         {
             "code": "A3952",

@@ -84,7 +84,9 @@ impl SessionCommand {
             Self::SetSoundMode(_) if !capabilities.positioned_sound_mode_write => {
                 Err(ModelError::InvalidSoundModeWrite)
             }
-            Self::SetAmbientSoundMode(_) if !capabilities.ambient_sound_mode_write => {
+            Self::SetAmbientSoundMode(mode)
+                if !capabilities.ambient_sound_mode_write || !model.supports_ambient_mode(mode) =>
+            {
                 Err(ModelError::InvalidSoundModeWrite)
             }
             Self::SetGamingMode(_) if !capabilities.gaming_mode_write => {
@@ -120,6 +122,8 @@ impl SessionCommand {
 
 /// A requested write resolved against a fresh state response.
 pub struct ResolvedWrite {
+    /// The command to transmit, when the resolved body selects it.
+    pub command: Option<[u8; 2]>,
     /// The command body to transmit.
     pub body: Vec<u8>,
     /// The value a read-back must report for an auto power off write.
@@ -163,6 +167,7 @@ impl WriteTarget {
         raw_state: &[u8],
     ) -> Result<ResolvedWrite, ModelError> {
         let mut resolved = ResolvedWrite {
+            command: None,
             body: Vec::new(),
             expected_auto_power_off: None,
         };
@@ -173,14 +178,19 @@ impl WriteTarget {
             {
                 state.family_sound_mode_write(mode)?.to_vec()
             }
-            Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
+            Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?,
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
             Self::AutoPowerOff(setting) => {
                 let write = state.auto_power_off_write(setting)?;
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
-            Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
+            Self::Equalizer(setting) => {
+                let write = state.model.equalizer_write(setting, raw_state)?;
+                let (command, body) = write.into_parts();
+                resolved.command = Some(command);
+                body
+            }
         };
         Ok(resolved)
     }

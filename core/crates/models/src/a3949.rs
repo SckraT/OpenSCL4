@@ -38,6 +38,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
             _ => None,
         },
         auto_power_off: None,
+        ldac: None,
         firmware_device: None,
         firmware_left: FirmwareVersion::parse(&body[6..11])?,
         firmware_right: FirmwareVersion::parse(&body[11..16])?,
