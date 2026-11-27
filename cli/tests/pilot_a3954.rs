@@ -15,6 +15,32 @@ mod tests {
 
     use serde_json::{Value, json};
 
+    /// The state the virtual Liberty 4 Pro serves from
+    /// `core/data/a3954-pilot-state.bin`.
+    fn snapshot_state() -> Value {
+        json!({
+            "model": "A3954",
+            "firmware": {"left": "04.29", "right": "04.29", "case": "01.58"},
+            "battery": {"leftPercent": 96, "rightPercent": 98, "casePercent": 100},
+            "soundMode": "NoiseCanceling",
+            "twsConnected": true,
+            "equalizer": {
+                "presetId": 65278,
+                "volumeAdjustments": [18, 8, 0, 0, 0, 0, 0, 0, 0, 0],
+            },
+            "autoPowerOff": {"enabled": true, "duration": 2},
+            "caseFeatures": {
+                "atmospheric": false,
+                "remoteCamera": false,
+                "findDevice": true,
+                "caseSpatialAudio": false,
+            },
+            "spatialAudio": {"enabled": false, "mode": "Music", "musicMode": "Fixed"},
+            "soundLeakCompensation": false,
+            "caseLanguage": "English",
+        })
+    }
+
     #[test]
     fn pilot_reads_virtual_a3954() {
         let directory = tempfile::tempdir().expect("create isolated configuration directory");
@@ -31,15 +57,7 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
         let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot snapshot JSON");
-        assert_eq!(
-            snapshot,
-            json!({
-                "model": "A3954",
-                "firmware": {"left": "04.29", "right": "04.29"},
-                "battery": {"leftPercent": 96, "rightPercent": 98, "casePercent": 100},
-                "soundMode": "NoiseCanceling",
-            })
-        );
+        assert_eq!(snapshot, snapshot_state());
         assert!(
             !database.exists(),
             "pilot should leave the legacy database untouched"
@@ -67,6 +85,35 @@ mod tests {
                 "restored": {"result": "Applied", "soundMode": "NoiseCanceling", "position": 11},
             })
         );
+    }
+
+    #[test]
+    fn pilot_applies_and_restores_the_parity_settings() {
+        let output = Command::new(env!("CARGO_BIN_EXE_openscq30"))
+            .args(["pilot", "--cycle-settings"])
+            .output()
+            .expect("run the CLI settings cycle");
+
+        assert!(
+            output.status.success(),
+            "pilot settings cycle failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot snapshot JSON");
+        assert_eq!(
+            snapshot["settingsCycle"],
+            json!([
+                {"setting": "caseFeatures", "changed": "Applied", "restored": "Applied"},
+                {"setting": "spatialAudio", "changed": "Applied", "restored": "Applied"},
+                {"setting": "soundLeakCompensation", "changed": "Applied", "restored": "Applied"},
+                {"setting": "autoPowerOff", "changed": "Applied", "restored": "Applied"},
+                {"setting": "caseLanguage", "changed": "Applied", "restored": "Applied"},
+            ])
+        );
+        // The restored snapshot keeps every measured value.
+        for (key, value) in snapshot_state().as_object().expect("object").iter() {
+            assert_eq!(&snapshot[key], value, "restored {key}");
+        }
     }
 
     #[test]
@@ -119,6 +166,18 @@ mod tests {
         assert!(
             stderr.contains("read-only"),
             "expected a read-only rejection, got: {stderr}"
+        );
+        assert!(output.stdout.is_empty(), "a rejected cycle printed output");
+    }
+
+    #[test]
+    fn pilot_settings_cycle_is_rejected_for_a_model_without_the_settings() {
+        let output = run(&["pilot", "--mock-model", "A3949", "--cycle-settings"]);
+        assert!(!output.status.success());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("A3954"),
+            "expected an A3954-only rejection, got: {stderr}"
         );
         assert!(output.stdout.is_empty(), "a rejected cycle printed output");
     }

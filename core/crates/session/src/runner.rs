@@ -20,8 +20,8 @@ use tokio::{
 
 use crate::{
     CommandError, CommandId, CommandResult, ConnectionState, DeviceState, DiagnosticExportError,
-    DispatchError, EqualizerSetting, IoStage, ReconnectPolicy, SessionCommand, SessionError,
-    SessionEvent, SessionView,
+    DispatchError, EqualizerSetting, IoStage, ModelDriver, ReconnectPolicy, SessionCommand,
+    SessionError, SessionEvent, SessionView,
     diagnostics::{Capture, CaptureDecoder},
     machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
 };
@@ -186,6 +186,11 @@ impl SessionHandle {
         let last_command = self.last_command.lock().expect("session submission order");
         let (generation, device) = self.ready_device()?;
         if !device.model.capabilities().equalizer_write {
+            return Err(DispatchError::UnsupportedEqualizer);
+        }
+        // The legacy A3954 marks the curve unavailable until both earbuds are
+        // connected; the state layout then reports no curve.
+        if device.model == ModelDriver::A3954 && device.equalizer.is_none() {
             return Err(DispatchError::UnsupportedEqualizer);
         }
         if !device.model.equalizer_is_writable(setting) {

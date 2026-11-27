@@ -72,6 +72,56 @@ fixture appended `FF`. With that fifth byte, the hardware run reported the
 previous mode after the write. [Windows hardware run](https://github.com/SckraT/OpenSCL4/issues/154)
 [SoundcoreNext measurements](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3954-sound-modes.json)
 
+## A3954 legacy reference state
+
+[a3954-legacy-state.bin](a3954-legacy-state.bin) is a 175-byte inbound `01 01`
+frame whose 165-byte body is the known-packet example of the legacy A3954
+driver test (`lib/src/devices/soundcore/a3954.rs::parses_known_packet`). The
+legacy test carries a measured device serial and case serial. This fixture
+replaces the 16-byte device serial at body offset 16 with ASCII zeroes and the
+six-byte case serial at body offset 38 with zeroes, then recomputes the
+checksum. The resulting frame SHA-256 is
+`815ccc2c05cf8a803672db1d0257c0ce90d3a2db56a3f6e9c6b76b175bcfaf57`.
+
+The body reports normal mode at position 6, firmware `03.29` on both earbuds,
+case firmware `02.58`, the `FE FE` custom preset with a flat ten-band curve,
+auto power off enabled at the first duration index, and the hear-id block the
+A3954 equalizer write echoes. The legacy test does not cite a separate capture
+revision: the checked-in example is the source, and it names neither peers nor
+any other Bluetooth identifier that would need masking. The core decodes it as
+a second measured layout next to the pilot capture:
+
+| Field | Body offsets |
+| --- | --- |
+| Case firmware | 32–36 |
+| Equalizer preset and two channel curves | 44–65 |
+| Hear-id block echoed by the equalizer write | 67–114 |
+| Case features | 132–135 |
+| Auto power off | 143–144 |
+| Spatial audio | 148–150 |
+| Sound leak compensation | 153 |
+| Case language | 157 |
+
+The transferred A3954 writes take their wire bodies from the legacy driver and
+its tests, and the session replays an independent reply for each operation:
+
+| Operation | Command | Wire body reference | Read-back |
+| --- | --- | --- | --- |
+| Equalizer | `03 87` | 114-byte body asserted by the legacy `set_eq_packet` test: preset `FE FE`, the requested curve on both channels, the state's hear-id block with hear id disabled, and the active curve interleaved with zeroes | Case features and spatial audio reflect the documented side effects |
+| Case features | `07 87` | `00 00 00 01` from the legacy `case_spatial_audio_is_separate_from_the_earbuds_spatial_audio` test | Case features at 132–135 |
+| Spatial audio | `10 81` | `01 01 00` from the same legacy test | Spatial audio at 148–150 |
+| Sound leak compensation | `10 9A` | `01` from the legacy `set_sound_leak_compensation` test | Flag at 153 |
+| Case language | `07 8A` | One language byte from the legacy outbound builder | Language at 157 |
+| Auto power off | `01 86` | Enable flag and duration index from the common outbound builder; the duration table is 10, 20, 30 and 60 minutes | Value at 143–144 |
+
+The A3954 duration table has four entries, the same count as the A3028 family,
+so the shared auto power off command body is used unchanged. The legacy driver
+marks the equalizer unavailable until both earbuds are connected; the core
+decodes no curve while the TWS flag at body offset 1 is unset and rejects the
+write before transmission.
+[Legacy driver](../lib/src/devices/soundcore/a3954.rs) ·
+[Session parity tests](../core/crates/session/tests/a3954_parity.rs)
+
 ## A3062 pilot state
 
 [a3062-pilot-state.bin](a3062-pilot-state.bin) contains the 105-byte inbound

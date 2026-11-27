@@ -52,9 +52,15 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         equalizer: equalizer_setting(body),
         gaming_mode: None,
         auto_power_off: None,
+        tws_connected: None,
+        case_features: None,
+        spatial_audio: None,
+        sound_leak_compensation: None,
+        case_language: None,
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,
+        firmware_case: None,
     })
 }
 
@@ -221,7 +227,7 @@ mod tests {
             volume_adjustments: [0; 10],
         };
         assert_eq!(
-            ModelDriver::A3954.equalizer_write_body(setting, state_body(STATE)),
+            ModelDriver::A3949.equalizer_write_body(setting, state_body(STATE)),
             Err(ModelError::InvalidEqualizerWrite)
         );
     }

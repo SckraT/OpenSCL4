@@ -5,9 +5,13 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, A3954_AUTO_POWER_OFF, A3954_CASE_FEATURES,
+    A3954_CASE_LANGUAGE, A3954_EQUALIZER_BANDS, A3954_EQUALIZER_BANDS_SECOND,
+    A3954_EQUALIZER_PRESET, A3954_EQUALIZER_WRITE_BANDS, A3954_EQUALIZER_WRITE_HEAR_ID_ENABLED,
+    A3954_EQUALIZER_WRITE_PRESET, A3954_SOUND_LEAK_COMPENSATION, A3954_SPATIAL_AUDIO,
+    AUTO_POWER_OFF_COMMAND, CASE_FEATURES_COMMAND, CASE_LANGUAGE_COMMAND, EQUALIZER_COMMAND,
+    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_LEAK_COMPENSATION_COMMAND,
+    SOUND_MODE_COMMAND, SPATIAL_AUDIO_COMMAND, STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -358,13 +362,6 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if self.model == ModelDriver::A3949
-                && frame.command == GAMING_MODE_COMMAND
-                && self.apply_gaming_mode(&frame.body)
-                && self.options.acknowledge_writes
-                && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
-            {
-                replies.extend_from_slice(&ack);
             } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
                 && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
@@ -372,9 +369,92 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == GAMING_MODE_COMMAND
+                && self.apply_gaming_mode(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3954
+                && self.a3954_write_applied(frame.command, &frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, frame.command, &[])
+            {
+                replies.extend_from_slice(&ack);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
+    }
+
+    /// Applies a measured A3954 write to the virtual state.
+    fn a3954_write_applied(&self, command: [u8; 2], body: &[u8]) -> bool {
+        match command {
+            EQUALIZER_COMMAND => self.apply_a3954_equalizer(body),
+            CASE_FEATURES_COMMAND => self.apply_a3954_copy(A3954_CASE_FEATURES, body, |body| {
+                body.iter().all(|byte| *byte <= 1)
+            }),
+            SPATIAL_AUDIO_COMMAND => self.apply_a3954_copy(A3954_SPATIAL_AUDIO, body, |body| {
+                body[0] <= 1 && (1..=2).contains(&body[1]) && body[2] <= 3
+            }),
+            SOUND_LEAK_COMPENSATION_COMMAND => self.apply_a3954_copy(
+                A3954_SOUND_LEAK_COMPENSATION..A3954_SOUND_LEAK_COMPENSATION + 1,
+                body,
+                |body| body.iter().all(|byte| *byte <= 1),
+            ),
+            CASE_LANGUAGE_COMMAND => {
+                self.apply_a3954_copy(A3954_CASE_LANGUAGE..A3954_CASE_LANGUAGE + 1, body, |body| {
+                    body.iter().all(|byte| *byte <= 2)
+                })
+            }
+            AUTO_POWER_OFF_COMMAND => self.apply_a3954_copy(A3954_AUTO_POWER_OFF, body, |body| {
+                body[0] <= 1 && body[1] <= 3
+            }),
+            _ => false,
+        }
+    }
+
+    /// Replaces one measured state field with a write body of the same length.
+    fn apply_a3954_copy(
+        &self,
+        range: std::ops::Range<usize>,
+        body: &[u8],
+        valid: impl Fn(&[u8]) -> bool,
+    ) -> bool {
+        if body.len() != range.len() || !valid(body) {
+            return false;
+        }
+        let mut state = self.state.lock().expect("virtual state lock");
+        let Some(field) = state.get_mut(range) else {
+            return false;
+        };
+        field.copy_from_slice(body);
+        true
+    }
+
+    /// Applies the measured A3954 equalizer write and its documented side effects.
+    ///
+    /// The legacy state modifier writes the requested curve to both channels,
+    /// disables hear id so the curve takes effect, and turns spatial audio off.
+    fn apply_a3954_equalizer(&self, body: &[u8]) -> bool {
+        let (Some(preset), Some(bands)) = (
+            body.get(A3954_EQUALIZER_WRITE_PRESET),
+            body.get(A3954_EQUALIZER_WRITE_BANDS),
+        ) else {
+            return false;
+        };
+        if body.len() != 114 || body[A3954_EQUALIZER_WRITE_HEAR_ID_ENABLED] != 0 {
+            return false;
+        }
+        let mut state = self.state.lock().expect("virtual state lock");
+        if state.len() < A3954_EQUALIZER_BANDS_SECOND.end {
+            return false;
+        }
+        state[A3954_EQUALIZER_PRESET].copy_from_slice(preset);
+        state[A3954_EQUALIZER_BANDS].copy_from_slice(&bands[..10]);
+        state[A3954_EQUALIZER_BANDS_SECOND].copy_from_slice(&bands[10..]);
+        state[A3954_SPATIAL_AUDIO.start] = 0;
+        true
     }
 
     fn apply_gaming_mode(&self, body: &[u8]) -> bool {

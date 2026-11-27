@@ -32,8 +32,12 @@ cargo run --locked -p openscq30-cli -- pilot
 ```
 
 The command prints the confirmed model, firmware, battery levels and sound mode as JSON after closing the link.
+For the Liberty 4 Pro it also reports the case firmware, TWS status, equalizer, auto power off, case features, spatial audio, sound leak compensation and case language decoded from the measured state.
 Pass `--cycle-mode` after `pilot` to switch between normal and noise canceling modes, then restore the original mode and position.
 The JSON includes the separately confirmed `changed` and `restored` results.
+
+Pass `--cycle-settings` after `pilot` to write and restore the transferred Liberty 4 Pro settings: the atmospheric case toggle, spatial audio, sound leak compensation, auto power off and case language.
+Each step is confirmed by a fresh state response and the JSON lists the `settingsCycle` results before the restored snapshot. The cycle is available for the A3954 only.
 
 To read the virtual Space One Pro, run:
 
@@ -85,6 +89,7 @@ cargo run --locked -p openscq30-cli -- pilot --bluetooth "soundcore Liberty 4 Pr
 ```
 
 Start with the read-only run. Add `--cycle-mode` to test the writes once the read-only run succeeds.
+Add `--cycle-settings` to exercise the transferred Liberty 4 Pro settings and restore them; it writes each setting and confirms the result from a fresh state response.
 A hardware run uses a separate connection to the device. Close any other app that holds a Soundcore control connection before starting it.
 
 The Linux CI job also uploads `openscl4-a3954-pilot-linux-x86_64`, built on Ubuntu 24.04. Extract its archive and run `./openscq30 pilot --bluetooth "soundcore Liberty 4 Pro"`. Add `--cycle-mode` for the write check.

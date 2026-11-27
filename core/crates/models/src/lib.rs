@@ -28,6 +28,18 @@ pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
 /// Write the equalizer curve together with the hear-id controls that gate it.
 pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
 
+/// Write the A3954 case toggles.
+pub const CASE_FEATURES_COMMAND: [u8; 2] = [0x07, 0x87];
+
+/// Write the A3954 case language.
+pub const CASE_LANGUAGE_COMMAND: [u8; 2] = [0x07, 0x8A];
+
+/// Write the A3954 spatial-audio controls.
+pub const SPATIAL_AUDIO_COMMAND: [u8; 2] = [0x10, 0x81];
+
+/// Write the A3954-specific sound leak compensation flag.
+pub const SOUND_LEAK_COMPENSATION_COMMAND: [u8; 2] = [0x10, 0x9A];
+
 /// Write the A3949 gaming-mode flag.
 pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 
@@ -35,8 +47,41 @@ pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
 
 const A3954_STATE_LENGTH: usize = 165;
+const A3954_CASE_FIRMWARE: std::ops::Range<usize> = 32..37;
 const A3954_CASE_BATTERY: usize = 37;
+/// Body offset of the TWS-connected flag; the preceding byte is the host device.
+const A3954_TWS_CONNECTED: usize = 1;
+/// Body offsets of the equalizer preset id and the first measured channel.
+pub const A3954_EQUALIZER_PRESET: std::ops::Range<usize> = 44..46;
+/// Body offsets of the first equalizer channel in the measured state layout.
+pub const A3954_EQUALIZER_BANDS: std::ops::Range<usize> = 46..56;
+/// Body offsets of the second channel, used when the first is absent.
+pub const A3954_EQUALIZER_BANDS_SECOND: std::ops::Range<usize> = 56..66;
+/// Body offsets of the custom hear-id block echoed by an equalizer write.
+const A3954_HEAR_ID_VOLUME: std::ops::Range<usize> = 68..88;
+const A3954_HEAR_ID_TIME: std::ops::Range<usize> = 88..92;
+const A3954_HEAR_ID_TYPE: usize = 92;
+const A3954_HEAR_ID_CUSTOM: std::ops::Range<usize> = 93..113;
+const A3954_HEAR_ID_GENRE: std::ops::Range<usize> = 113..115;
 const A3954_SOUND_MODE: usize = 125;
+/// Body offsets of the case-feature toggles.
+pub const A3954_CASE_FEATURES: std::ops::Range<usize> = 132..136;
+/// Body offsets of the auto power off value.
+pub const A3954_AUTO_POWER_OFF: std::ops::Range<usize> = 143..145;
+/// Body offsets of the earbud spatial-audio controls.
+pub const A3954_SPATIAL_AUDIO: std::ops::Range<usize> = 148..151;
+/// Body offset of the sound leak compensation flag.
+pub const A3954_SOUND_LEAK_COMPENSATION: usize = 153;
+/// Body offset of the case language.
+pub const A3954_CASE_LANGUAGE: usize = 157;
+/// Length of the measured A3954 equalizer write body.
+const A3954_EQUALIZER_WRITE_LENGTH: usize = 114;
+/// Offsets of the preset and the two channel curves inside the equalizer write.
+pub const A3954_EQUALIZER_WRITE_PRESET: std::ops::Range<usize> = 0..2;
+/// Offsets of the two channel curves inside the equalizer write.
+pub const A3954_EQUALIZER_WRITE_BANDS: std::ops::Range<usize> = 4..24;
+/// Offset of the disabled hear-id flag inside the equalizer write.
+pub const A3954_EQUALIZER_WRITE_HEAR_ID_ENABLED: usize = 26;
 
 /// A driver selected from a checked identity response.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,9 +109,13 @@ impl ModelDriver {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062 | Self::A3954),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3954),
+            case_features_write: matches!(self, Self::A3954),
+            spatial_audio_write: matches!(self, Self::A3954),
+            sound_leak_compensation_write: matches!(self, Self::A3954),
+            case_language_write: matches!(self, Self::A3954),
         }
     }
 
@@ -156,6 +205,7 @@ impl ModelDriver {
             right: battery_percent(body[3], 100, 0)?,
             case: battery_percent(body[A3954_CASE_BATTERY], 10, 1)?,
         };
+        let tws_connected = a3954_bool(body[A3954_TWS_CONNECTED]);
         let sound_mode = SoundMode::decode(body[A3954_SOUND_MODE])?;
         Ok(DeviceState {
             model: self,
@@ -166,12 +216,24 @@ impl ModelDriver {
                 airplane_mode: body[A3954_SOUND_MODE + 2],
                 wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
             })),
-            firmware_device: None,
-            equalizer: None,
+            // The legacy driver marks the curve unavailable until both earbuds
+            // are connected; a write then must be rejected before transmission.
+            equalizer: if tws_connected == Some(true) {
+                a3954_equalizer_setting(body)
+            } else {
+                None
+            },
             gaming_mode: None,
-            auto_power_off: None,
+            auto_power_off: a3954_auto_power_off(body),
+            tws_connected,
+            case_features: CaseFeatures::decode(&body[A3954_CASE_FEATURES]),
+            spatial_audio: SpatialAudio::decode(&body[A3954_SPATIAL_AUDIO]),
+            sound_leak_compensation: a3954_bool(body[A3954_SOUND_LEAK_COMPENSATION]),
+            case_language: CaseLanguage::decode(body[A3954_CASE_LANGUAGE]),
+            firmware_device: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            firmware_case: FirmwareVersion::parse(&body[A3954_CASE_FIRMWARE])?,
         })
     }
 
@@ -188,7 +250,8 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
-            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3949 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3954 => a3954_equalizer_write_body(setting, state),
         }
     }
 }
@@ -206,6 +269,211 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the case-feature toggles.
+    pub case_features_write: bool,
+    /// The session can confirm writes of the earbud spatial-audio controls.
+    pub spatial_audio_write: bool,
+    /// The session can confirm writes of the sound leak compensation flag.
+    pub sound_leak_compensation_write: bool,
+    /// The session can confirm writes of the case language.
+    pub case_language_write: bool,
+}
+
+/// Case toggles carried by one A3954 case-feature write.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CaseFeatures {
+    /// Atmospheric pressure detection during descent.
+    pub atmospheric: bool,
+    /// Remote camera shutter from the case.
+    pub remote_camera: bool,
+    /// Find-my-device ringing from the case.
+    pub find_device: bool,
+    /// Spatial audio controlled from the case.
+    pub case_spatial_audio: bool,
+}
+
+impl CaseFeatures {
+    /// Encodes the four toggles in the measured wire order.
+    pub const fn bytes(self) -> [u8; 4] {
+        [
+            self.atmospheric as u8,
+            self.remote_camera as u8,
+            self.find_device as u8,
+            self.case_spatial_audio as u8,
+        ]
+    }
+
+    /// Reads the four toggles; a non-boolean byte makes the field unknown.
+    fn decode(body: &[u8]) -> Option<Self> {
+        let [
+            atmospheric @ 0..=1,
+            remote_camera @ 0..=1,
+            find_device @ 0..=1,
+            case_spatial_audio @ 0..=1,
+        ] = body
+        else {
+            return None;
+        };
+        Some(Self {
+            atmospheric: *atmospheric == 1,
+            remote_camera: *remote_camera == 1,
+            find_device: *find_device == 1,
+            case_spatial_audio: *case_spatial_audio == 1,
+        })
+    }
+}
+
+/// Spatial-audio playback mode reported by an A3954.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SpatialAudioMode {
+    /// Music.
+    #[default]
+    Music,
+    /// Podcast.
+    Podcast,
+    /// Movie.
+    Movie,
+    /// Gaming.
+    Gaming,
+}
+
+impl SpatialAudioMode {
+    /// The measured value for a valid wire byte.
+    const fn decode(byte: u8) -> Option<Self> {
+        match byte {
+            0 => Some(Self::Music),
+            1 => Some(Self::Podcast),
+            2 => Some(Self::Movie),
+            3 => Some(Self::Gaming),
+            _ => None,
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Music => 0,
+            Self::Podcast => 1,
+            Self::Movie => 2,
+            Self::Gaming => 3,
+        }
+    }
+
+    /// Returns the stable identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Music => "Music",
+            Self::Podcast => "Podcast",
+            Self::Movie => "Movie",
+            Self::Gaming => "Gaming",
+        }
+    }
+}
+
+/// Head-tracking variant of the A3954 spatial-audio music mode.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SpatialAudioMusicMode {
+    /// Fixed.
+    #[default]
+    Fixed,
+    /// Head tracking.
+    HeadTracking,
+}
+
+impl SpatialAudioMusicMode {
+    /// The measured value for a valid wire byte; the legacy parser falls back
+    /// to its default for an unrecognized byte.
+    const fn decode(byte: u8) -> Self {
+        match byte {
+            2 => Self::HeadTracking,
+            _ => Self::Fixed,
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Fixed => 1,
+            Self::HeadTracking => 2,
+        }
+    }
+
+    /// Returns the stable identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Fixed => "Fixed",
+            Self::HeadTracking => "HeadTracking",
+        }
+    }
+}
+
+/// Earbud spatial-audio controls carried by one A3954 write.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SpatialAudio {
+    /// Whether spatial audio is on.
+    pub enabled: bool,
+    /// Playback mode.
+    pub mode: SpatialAudioMode,
+    /// Music mode.
+    pub music_mode: SpatialAudioMusicMode,
+}
+
+impl SpatialAudio {
+    /// Encodes the three controls in the measured wire order.
+    pub const fn bytes(self) -> [u8; 3] {
+        [self.enabled as u8, self.music_mode.wire(), self.mode.wire()]
+    }
+
+    /// Reads the three controls; a non-boolean enable flag makes the field unknown.
+    fn decode(body: &[u8]) -> Option<Self> {
+        let [enabled @ 0..=1, music_mode, mode] = body else {
+            return None;
+        };
+        Some(Self {
+            enabled: *enabled == 1,
+            mode: SpatialAudioMode::decode(*mode)?,
+            music_mode: SpatialAudioMusicMode::decode(*music_mode),
+        })
+    }
+}
+
+/// Language of the A3954 charging case prompts.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CaseLanguage {
+    /// Japanese.
+    #[default]
+    Japanese,
+    /// English.
+    English,
+    /// Chinese.
+    Chinese,
+}
+
+impl CaseLanguage {
+    /// The measured value for a valid wire byte.
+    const fn decode(byte: u8) -> Option<Self> {
+        match byte {
+            0 => Some(Self::Japanese),
+            1 => Some(Self::English),
+            2 => Some(Self::Chinese),
+            _ => None,
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Japanese => 0,
+            Self::English => 1,
+            Self::Chinese => 2,
+        }
+    }
+
+    /// Returns the stable identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Japanese => "Japanese",
+            Self::English => "English",
+            Self::Chinese => "Chinese",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -238,12 +506,24 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// Whether both earbuds are connected, when the state reports TWS status.
+    pub tws_connected: Option<bool>,
+    /// The reported case-feature toggles, if the state carries them.
+    pub case_features: Option<CaseFeatures>,
+    /// The reported earbud spatial-audio controls, if the state carries them.
+    pub spatial_audio: Option<SpatialAudio>,
+    /// Whether sound leak compensation is on, if the state reports the flag.
+    pub sound_leak_compensation: Option<bool>,
+    /// The reported case language, if the state carries it.
+    pub case_language: Option<CaseLanguage>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Charging-case firmware, if reported.
+    pub firmware_case: Option<FirmwareVersion>,
 }
 
 impl DeviceState {
@@ -330,6 +610,40 @@ impl DeviceState {
             ),
         };
         Ok(AutoPowerOffWrite { body, expected })
+    }
+
+    /// Builds a case-feature write for a device that reports the toggles.
+    pub fn case_features_write(self, setting: CaseFeatures) -> Result<[u8; 4], ModelError> {
+        if !self.model.capabilities().case_features_write || self.case_features.is_none() {
+            return Err(ModelError::InvalidCaseFeaturesWrite);
+        }
+        Ok(setting.bytes())
+    }
+
+    /// Builds a spatial-audio write for a device that reports the controls.
+    pub fn spatial_audio_write(self, setting: SpatialAudio) -> Result<[u8; 3], ModelError> {
+        if !self.model.capabilities().spatial_audio_write || self.spatial_audio.is_none() {
+            return Err(ModelError::InvalidSpatialAudioWrite);
+        }
+        Ok(setting.bytes())
+    }
+
+    /// Builds a sound leak compensation write for a device that reports the flag.
+    pub fn sound_leak_compensation_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().sound_leak_compensation_write
+            || self.sound_leak_compensation.is_none()
+        {
+            return Err(ModelError::InvalidSoundLeakCompensationWrite);
+        }
+        Ok([u8::from(enabled)])
+    }
+
+    /// Builds a case language write for a device that reports the language.
+    pub fn case_language_write(self, language: CaseLanguage) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().case_language_write || self.case_language.is_none() {
+            return Err(ModelError::InvalidCaseLanguageWrite);
+        }
+        Ok([language.wire()])
     }
 }
 
@@ -622,9 +936,101 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report writable case-feature toggles.
+    #[error("unsupported device case feature write")]
+    InvalidCaseFeaturesWrite,
+    /// The device does not report writable spatial-audio controls.
+    #[error("unsupported device spatial audio write")]
+    InvalidSpatialAudioWrite,
+    /// The device does not report a writable sound leak compensation flag.
+    #[error("unsupported device sound leak compensation write")]
+    InvalidSoundLeakCompensationWrite,
+    /// The device does not report a writable case language.
+    #[error("unsupported device case language write")]
+    InvalidCaseLanguageWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
+}
+
+/// Reads the A3954 curve from the first measured channel. A channel that
+/// starts with the absent marker reports no curve.
+fn a3954_equalizer_setting(body: &[u8]) -> Option<EqualizerSetting> {
+    let preset_id: [u8; 2] = body.get(A3954_EQUALIZER_PRESET)?.try_into().ok()?;
+    for range in [A3954_EQUALIZER_BANDS, A3954_EQUALIZER_BANDS_SECOND] {
+        let bands: [u8; 10] = body.get(range.clone())?.try_into().ok()?;
+        if bands[0] == u8::MAX {
+            continue;
+        }
+        return Some(EqualizerSetting {
+            preset_id: u16::from_le_bytes(preset_id),
+            volume_adjustments: bands.map(EqualizerSetting::band_gain),
+        });
+    }
+    None
+}
+
+/// Reads the A3954 auto power off value. An unrecognized flag or duration index
+/// is not reported as a confirmed value.
+fn a3954_auto_power_off(body: &[u8]) -> Option<AutoPowerOff> {
+    let [enabled, duration] = body.get(A3954_AUTO_POWER_OFF)?.try_into().ok()?;
+    let enabled = a3954_bool(enabled)?;
+    (duration < a3028::AUTO_POWER_OFF_DURATION_COUNT).then_some(AutoPowerOff { enabled, duration })
+}
+
+/// Reads a byte the legacy parser treats as `true` only at one.
+fn a3954_bool(byte: u8) -> Option<bool> {
+    match byte {
+        0 => Some(false),
+        1 => Some(true),
+        _ => None,
+    }
+}
+
+/// Builds the measured A3954 equalizer write from the current state.
+///
+/// The write repeats the requested curve on both channels, carries the state's
+/// hear-id fields with hear-id disabled so the curve takes effect, and ends with
+/// the active curve interleaved with zeroes. Both earbuds must be connected for
+/// the legacy driver to expose the curve, so a state that reports only one
+/// earbud rejects the write before transmission.
+fn a3954_equalizer_write_body(
+    setting: EqualizerSetting,
+    state: &[u8],
+) -> Result<Vec<u8>, ModelError> {
+    if !setting.is_writable() {
+        return Err(ModelError::InvalidEqualizerWrite);
+    }
+    if state.len() < A3954_STATE_LENGTH {
+        return Err(ModelError::IncompleteState);
+    }
+    if state[A3954_TWS_CONNECTED] != 1 {
+        return Err(ModelError::InvalidEqualizerWrite);
+    }
+    let bands = setting.volume_adjustments.map(EqualizerSetting::band_byte);
+    let mut body = Vec::with_capacity(A3954_EQUALIZER_WRITE_LENGTH);
+    body.extend_from_slice(&setting.preset_id.to_le_bytes());
+    // The favorite music genre precedes the curve on the write.
+    body.extend_from_slice(&state[A3954_HEAR_ID_GENRE]);
+    body.extend_from_slice(&bands);
+    body.extend_from_slice(&bands);
+    body.extend_from_slice(&[0, 0]);
+    // The measured write disables hear id so the requested curve is in effect.
+    body.push(0);
+    body.extend_from_slice(&state[A3954_HEAR_ID_VOLUME]);
+    body.extend_from_slice(&state[A3954_HEAR_ID_TIME]);
+    body.push(state[A3954_HEAR_ID_TYPE]);
+    body.extend_from_slice(&state[A3954_HEAR_ID_CUSTOM]);
+    // The active curve repeats as interleaved gain/zero pairs after the hear-id fields.
+    for _ in 0..2 {
+        for band in bands {
+            body.push(band);
+            body.push(0);
+        }
+    }
+    body.extend_from_slice(&[0, 0]);
+    debug_assert_eq!(body.len(), A3954_EQUALIZER_WRITE_LENGTH);
+    Ok(body)
 }
 
 fn a3954_state_serial_is_recognized(body: &[u8]) -> bool {
@@ -776,6 +1182,231 @@ mod tests {
             ModelDriver::A3954
                 .decode_confirmed_state(&contradictory)
                 .is_some()
+        );
+    }
+
+    /// The state body of a complete inbound fixture frame.
+    fn fixture_body(fixture: &[u8]) -> &[u8] {
+        &fixture[9..fixture.len() - 1]
+    }
+
+    #[test]
+    fn reads_the_measured_a3954_capture() {
+        let state = ModelDriver::A3954
+            .decode_state(fixture_body(include_bytes!(
+                "../../../data/a3954-pilot-state.bin"
+            )))
+            .expect("captured A3954 state");
+        assert_eq!(state.tws_connected, Some(true));
+        assert_eq!(state.battery.left, Some(96));
+        assert_eq!(state.battery.right, Some(98));
+        assert_eq!(state.battery.case, Some(100));
+        assert_eq!(
+            state.firmware_left.map(|version| version.to_string()),
+            Some("04.29".to_owned())
+        );
+        assert_eq!(
+            state.firmware_right.map(|version| version.to_string()),
+            Some("04.29".to_owned())
+        );
+        assert_eq!(
+            state.firmware_case.map(|version| version.to_string()),
+            Some("01.58".to_owned())
+        );
+        assert_eq!(state.sound_mode, Some(SoundMode::NoiseCanceling));
+        assert_eq!(
+            state.equalizer,
+            Some(EqualizerSetting {
+                preset_id: 0xfefe,
+                volume_adjustments: [18, 8, 0, 0, 0, 0, 0, 0, 0, 0],
+            })
+        );
+        assert_eq!(
+            state.auto_power_off,
+            Some(AutoPowerOff {
+                enabled: true,
+                duration: 2,
+            })
+        );
+        assert_eq!(
+            state.case_features,
+            Some(CaseFeatures {
+                atmospheric: false,
+                remote_camera: false,
+                find_device: true,
+                case_spatial_audio: false,
+            })
+        );
+        assert_eq!(
+            state.spatial_audio,
+            Some(SpatialAudio {
+                enabled: false,
+                mode: SpatialAudioMode::Music,
+                music_mode: SpatialAudioMusicMode::Fixed,
+            })
+        );
+        assert_eq!(state.sound_leak_compensation, Some(false));
+        assert_eq!(state.case_language, Some(CaseLanguage::English));
+    }
+
+    #[test]
+    fn reads_the_legacy_a3954_reference_state() {
+        let state = ModelDriver::A3954
+            .decode_state(fixture_body(include_bytes!(
+                "../../../data/a3954-legacy-state.bin"
+            )))
+            .expect("legacy reference state");
+        assert_eq!(state.battery.left, Some(99));
+        assert_eq!(state.battery.right, Some(100));
+        assert_eq!(state.battery.case, Some(100));
+        assert_eq!(state.sound_mode, Some(SoundMode::Normal));
+        assert_eq!(
+            state.equalizer,
+            Some(EqualizerSetting {
+                preset_id: 0xfefe,
+                volume_adjustments: [0; 10],
+            })
+        );
+        assert_eq!(
+            state.auto_power_off,
+            Some(AutoPowerOff {
+                enabled: true,
+                duration: 0,
+            })
+        );
+        assert_eq!(state.case_features, Some(CaseFeatures::default()));
+        assert_eq!(state.sound_leak_compensation, Some(false));
+        assert_eq!(state.case_language, Some(CaseLanguage::English));
+    }
+
+    #[test]
+    fn a3954_equalizer_write_matches_the_legacy_reference_frame() {
+        let body = fixture_body(include_bytes!("../../../data/a3954-legacy-state.bin"));
+        let curve = EqualizerSetting {
+            preset_id: 0xfefe,
+            volume_adjustments: [60, 0, 0, 0, 0, 0, 0, -60, 0, 0],
+        };
+        let write = ModelDriver::A3954
+            .equalizer_write_body(curve, body)
+            .expect("legacy equalizer write");
+        let expected: [u8; 114] = [
+            0xfe, 0xfe, 0x00, 0x00, 0xb4, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x3c, 0x78, 0x78,
+            0xb4, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x3c, 0x78, 0x78, 0x00, 0x00, 0x00, 0x91,
+            0x93, 0x8b, 0x8d, 0x7a, 0x6f, 0x69, 0x64, 0x3c, 0x3c, 0x91, 0x93, 0x8b, 0x8d, 0x7a,
+            0x6f, 0x69, 0x64, 0x3c, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x91, 0x93, 0x8b, 0x82,
+            0x7a, 0x85, 0x85, 0x72, 0x3c, 0x3c, 0x91, 0x93, 0x8b, 0x82, 0x7a, 0x85, 0x85, 0x72,
+            0x3c, 0x3c, 0xb4, 0x00, 0x78, 0x00, 0x78, 0x00, 0x78, 0x00, 0x78, 0x00, 0x78, 0x00,
+            0x78, 0x00, 0x3c, 0x00, 0x78, 0x00, 0x78, 0x00, 0xb4, 0x00, 0x78, 0x00, 0x78, 0x00,
+            0x78, 0x00, 0x78, 0x00, 0x78, 0x00, 0x78, 0x00, 0x3c, 0x00, 0x78, 0x00, 0x78, 0x00,
+            0x00, 0x00,
+        ];
+        assert_eq!(write, expected);
+    }
+
+    #[test]
+    fn a3954_equalizer_requires_both_earbuds() {
+        let mut body = fixture_body(include_bytes!("../../../data/a3954-pilot-state.bin")).to_vec();
+        body[1] = 0;
+        let state = ModelDriver::A3954
+            .decode_state(&body)
+            .expect("one-earbud state");
+        assert_eq!(state.tws_connected, Some(false));
+        assert_eq!(state.equalizer, None);
+        assert_eq!(
+            ModelDriver::A3954.equalizer_write_body(
+                EqualizerSetting {
+                    preset_id: 0xfefe,
+                    volume_adjustments: [0; 10],
+                },
+                &body,
+            ),
+            Err(ModelError::InvalidEqualizerWrite)
+        );
+    }
+
+    #[test]
+    fn a3954_writes_use_the_legacy_wire_formats() {
+        let body = fixture_body(include_bytes!("../../../data/a3954-legacy-state.bin"));
+        let state = ModelDriver::A3954
+            .decode_state(body)
+            .expect("legacy reference state");
+        assert_eq!(
+            state
+                .case_features_write(CaseFeatures {
+                    case_spatial_audio: true,
+                    ..CaseFeatures::default()
+                })
+                .expect("case feature write"),
+            [0x00, 0x00, 0x00, 0x01]
+        );
+        assert_eq!(
+            state
+                .spatial_audio_write(SpatialAudio {
+                    enabled: true,
+                    mode: SpatialAudioMode::Music,
+                    music_mode: SpatialAudioMusicMode::Fixed,
+                })
+                .expect("spatial audio write"),
+            [0x01, 0x01, 0x00]
+        );
+        assert_eq!(
+            state
+                .sound_leak_compensation_write(true)
+                .expect("sound leak compensation write"),
+            [0x01]
+        );
+        assert_eq!(
+            state
+                .case_language_write(CaseLanguage::Chinese)
+                .expect("case language write"),
+            [0x02]
+        );
+        let enabled = state
+            .auto_power_off_write(AutoPowerOffSetting::Enabled(3))
+            .expect("auto power off write");
+        assert_eq!(enabled.body(), [0x01, 0x03]);
+        assert_eq!(
+            enabled.expected(),
+            AutoPowerOff {
+                enabled: true,
+                duration: 3,
+            }
+        );
+        let disabled = state
+            .auto_power_off_write(AutoPowerOffSetting::Disabled)
+            .expect("auto power off disable");
+        assert_eq!(disabled.body(), [0x00, 0x00]);
+        assert_eq!(
+            disabled.expected(),
+            AutoPowerOff {
+                enabled: false,
+                duration: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn a3954_unknown_fields_are_not_reported_as_confirmed() {
+        let captured = fixture_body(include_bytes!("../../../data/a3954-pilot-state.bin"));
+        let decode = |offset: usize, value: u8| {
+            let mut body = captured.to_vec();
+            body[offset] = value;
+            ModelDriver::A3954
+                .decode_state(&body)
+                .expect("measured layout with one changed field")
+        };
+
+        assert_eq!(decode(A3954_CASE_FEATURES.start, 2).case_features, None);
+        assert_eq!(decode(A3954_SPATIAL_AUDIO.start, 2).spatial_audio, None);
+        assert_eq!(decode(A3954_SPATIAL_AUDIO.start + 2, 4).spatial_audio, None);
+        assert_eq!(
+            decode(A3954_SOUND_LEAK_COMPENSATION, 2).sound_leak_compensation,
+            None
+        );
+        assert_eq!(decode(A3954_CASE_LANGUAGE, 3).case_language, None);
+        assert_eq!(
+            decode(A3954_AUTO_POWER_OFF.start + 1, 4).auto_power_off,
+            None
         );
     }
 }
