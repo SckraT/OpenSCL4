@@ -24,6 +24,7 @@ use crate::{
     SessionEvent, SessionView,
     diagnostics::{Capture, CaptureDecoder},
     machine::{CLOSE_TIMEOUT, Effect, Input, QueuedCommand, SessionMachine},
+    registry,
 };
 
 const COMMAND_CAPACITY: usize = 8;
@@ -261,7 +262,9 @@ impl SessionRunner {
         target: ConnectTarget,
         reconnect_policy: ReconnectPolicy,
     ) -> SessionHandle {
-        let machine = SessionMachine::new(reconnect_policy);
+        let model_hint = target.service.as_ref().and_then(registry::identify_service);
+        let mut machine = SessionMachine::new(reconnect_policy);
+        machine.set_model_hint(model_hint);
         let (view, view_rx) = watch::channel(Arc::new(machine.view()));
         let (events, events_rx) = broadcast::channel(16);
         let (close, close_requested) = watch::channel(false);

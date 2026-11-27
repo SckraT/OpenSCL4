@@ -1,12 +1,12 @@
 use openscl4_session::{
     CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
     SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
-    UnidentifiedState,
+    UnidentifiedState, registry,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualD1202, VirtualD1202C,
+    VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -16,20 +16,26 @@ pub async fn handle(
     mock_model: ModelDriver,
     scenario: Option<&str>,
 ) -> anyhow::Result<()> {
-    let target = ConnectTarget {
-        mac: RedactedMac::from_octets([0; 6]),
+    let target = ConnectTarget::from_mac(RedactedMac::from_octets([0; 6]));
+    let mock_target = match registry::service_id(mock_model) {
+        Some(service) => target.with_service(service),
+        None => target,
     };
     let handle = match device {
         Some(name) => start_bluetooth(name).await?,
         None => match scenario {
-            Some("unknown-identity") => SessionRunner::start(VirtualUnknownIdentity, target),
-            Some("incompatible-state") => SessionRunner::start(VirtualIncompatibleA3954, target),
+            Some("unknown-identity") => SessionRunner::start(VirtualUnknownIdentity, mock_target),
+            Some("incompatible-state") => {
+                SessionRunner::start(VirtualIncompatibleA3954, mock_target)
+            }
             _ => match mock_model {
-                ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
-                ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
-                ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
-                ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
-                ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
+                ModelDriver::A3028 => SessionRunner::start(VirtualA3028, mock_target),
+                ModelDriver::A3029 => SessionRunner::start(VirtualA3029, mock_target),
+                ModelDriver::A3062 => SessionRunner::start(VirtualA3062, mock_target),
+                ModelDriver::A3949 => SessionRunner::start(VirtualA3949, mock_target),
+                ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, mock_target),
+                ModelDriver::D1202 => SessionRunner::start(VirtualD1202, mock_target),
+                ModelDriver::D1202C => SessionRunner::start(VirtualD1202C, mock_target),
             },
         },
     };
@@ -172,12 +178,15 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
+        ModelDriver::A3949 | ModelDriver::A3954 | ModelDriver::D1202 | ModelDriver::D1202C => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
+            if matches!(
+                device.model,
+                ModelDriver::A3954 | ModelDriver::D1202 | ModelDriver::D1202C
+            ) {
                 battery["casePercent"] = json!(device.battery.case);
             }
             (
@@ -199,6 +208,18 @@ fn snapshot_json(device: DeviceState) -> Value {
     }
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
+    }
+    if let Some(spatial_audio) = device.spatial_audio {
+        snapshot["spatialAudio"] = json!({
+            "enabled": spatial_audio.enabled,
+            "mode": spatial_audio.mode.code(),
+        });
+    }
+    if let Some(auto_power_off) = device.auto_power_off {
+        snapshot["autoPowerOff"] = json!({
+            "enabled": auto_power_off.enabled,
+            "durationIndex": auto_power_off.duration,
+        });
     }
     snapshot
 }

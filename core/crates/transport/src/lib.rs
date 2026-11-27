@@ -39,6 +39,28 @@ impl fmt::Display for RedactedMac {
 pub struct ConnectTarget {
     /// Bluetooth address of the target device.
     pub mac: RedactedMac,
+    /// The Soundcore RFCOMM service seen during discovery, when the platform
+    /// reports it.
+    ///
+    /// The D1202 family needs this connection metadata to select between its
+    /// two public codes: both report the same state serial and the same
+    /// protocol formats.
+    pub service: Option<[u8; 16]>,
+}
+
+impl ConnectTarget {
+    /// Creates a target with the address alone.
+    pub const fn from_mac(mac: RedactedMac) -> Self {
+        Self { mac, service: None }
+    }
+
+    /// Adds the Soundcore RFCOMM service seen during discovery.
+    pub const fn with_service(self, service: [u8; 16]) -> Self {
+        Self {
+            mac: self.mac,
+            service: Some(service),
+        }
+    }
 }
 
 /// A transport failure.

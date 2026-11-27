@@ -137,6 +137,7 @@ mod tests {
     async fn pilot_closes_the_session_and_notifies_other_handles() {
         let target = ConnectTarget {
             mac: RedactedMac::from_octets([0; 6]),
+            service: None,
         };
         let handle = SessionRunner::start(VirtualSoundcoreDevice, target);
         let observer = handle.clone();

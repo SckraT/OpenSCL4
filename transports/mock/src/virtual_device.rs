@@ -5,8 +5,10 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, D1202_AUTO_POWER_OFF,
+    D1202_EQUALIZER_BANDS, D1202_EQUALIZER_COMMAND, D1202_EQUALIZER_PRESET,
+    D1202_SOUND_MODE_FIELDS, D1202_SPATIAL_AUDIO, EQUALIZER_COMMAND, GAMING_MODE_COMMAND,
+    IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, SPATIAL_AUDIO_COMMAND, STATE_COMMAND,
     SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
@@ -16,6 +18,8 @@ use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
+const D1202_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/d1202-pilot-state.bin");
+const D1202C_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/d1202c-pilot-state.bin");
 const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-off.bin"),
     include_bytes!("../../../core/data/a3949-gaming-on.bin"),
@@ -120,6 +124,44 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual P31i that answers state reads from the measured family capture.
+pub struct VirtualD1202;
+
+/// A virtual R60i NC that answers state reads from the measured family capture.
+pub struct VirtualD1202C;
+
+fn d1202_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualD1202 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(d1202_link(ModelDriver::D1202))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualD1202C {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(d1202_link(ModelDriver::D1202C))
+    }
+}
 
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
@@ -344,6 +386,13 @@ impl DeviceResponder {
                 && self.options.acknowledge_writes
             {
                 replies.extend_from_slice(SOUND_MODE_ACK);
+            } else if matches!(self.model, ModelDriver::D1202 | ModelDriver::D1202C)
+                && frame.command == SPATIAL_AUDIO_COMMAND
+                && self.spatial_audio_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, SPATIAL_AUDIO_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
             } else if self.model == ModelDriver::A3062
                 && frame.command == EQUALIZER_COMMAND
                 && self.options.acknowledge_writes
@@ -358,6 +407,13 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::D1202 | ModelDriver::D1202C)
+                && frame.command == D1202_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, D1202_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
             } else if self.model == ModelDriver::A3949
                 && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
@@ -365,8 +421,10 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::D1202 | ModelDriver::D1202C
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
@@ -409,6 +467,16 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
+            ModelDriver::D1202 | ModelDriver::D1202C => {
+                let [_mode @ 0..=2, ..] = body else {
+                    return false;
+                };
+                if body.len() != D1202_SOUND_MODE_FIELDS.len() {
+                    return false;
+                }
+                state[D1202_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
             ModelDriver::A3949 => false,
         }
     }
@@ -439,17 +507,45 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
+            ModelDriver::D1202 | ModelDriver::D1202C => {
+                // The write is the preset, the hear-id genre, then both channels.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..14)) else {
+                    return false;
+                };
+                state[D1202_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[D1202_EQUALIZER_BANDS].copy_from_slice(bands);
+                // The legacy path disables spatial audio with the equalizer write.
+                state[D1202_SPATIAL_AUDIO.start] = 0;
+                true
+            }
             ModelDriver::A3949 | ModelDriver::A3954 => false,
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an enabled spatial audio write.
+    fn spatial_audio_applied(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1, 0, mode] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        let start = D1202_SPATIAL_AUDIO.start;
+        state[start] = *enabled;
+        state[start + 1] = *mode;
+        true
+    }
+
+    /// Applies an auto power off write only when the state carries the value.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let offset = if matches!(self.model, ModelDriver::D1202 | ModelDriver::D1202C) {
+            D1202_AUTO_POWER_OFF.start
+        } else {
+            A3028_AUTO_POWER_OFF.start
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let Some(value) = state.get_mut(offset..offset + 2) else {
             return false;
         };
         value.copy_from_slice(body);
@@ -543,6 +639,8 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
+        ModelDriver::D1202 => fixture_body(model, D1202_STATE_REPLY),
+        ModelDriver::D1202C => fixture_body(model, D1202C_STATE_REPLY),
     };
     Arc::new(Mutex::new(bytes))
 }

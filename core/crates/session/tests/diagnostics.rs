@@ -74,6 +74,7 @@ mod tests {
             VirtualUnknownIdentity,
             ConnectTarget {
                 mac: RedactedMac::from_octets(*MAC),
+                service: None,
             },
         );
         let mut events = handle.events();
@@ -124,6 +125,7 @@ mod tests {
             VirtualIncompatibleA3954,
             ConnectTarget {
                 mac: RedactedMac::from_octets(*MAC),
+                service: None,
             },
         );
         let mut events = handle.events();
@@ -205,6 +207,7 @@ mod tests {
             Device,
             ConnectTarget {
                 mac: RedactedMac::from_octets(*MAC),
+                service: None,
             },
         )
     }

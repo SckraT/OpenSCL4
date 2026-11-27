@@ -60,13 +60,32 @@ pub async fn connected_target(name: &str) -> Result<ConnectTarget, TransportErro
     }
 
     let address = found.ok_or(TransportError::DeviceNotFound)?;
+    let service = soundcore_service_uuid(address).await;
     Ok(ConnectTarget {
         mac: RedactedMac::from_octets(
             address.to_be_bytes()[2..]
                 .try_into()
                 .map_err(|_| TransportError::Io)?,
         ),
+        service,
     })
+}
+
+/// Returns the Soundcore RFCOMM service UUID seen during discovery, when the
+/// device reports one. The D1202 family needs it to select its public code.
+async fn soundcore_service_uuid(address: u64) -> Option<[u8; 16]> {
+    let device = BluetoothDevice::FromBluetoothAddressAsync(address)
+        .map_err(classify_error)
+        .ok()?
+        .await
+        .ok()?;
+    let service = soundcore_service(&device).await.ok()?;
+    let uuid = service
+        .ServiceId()
+        .and_then(|id| id.Uuid())
+        .map_err(classify_error)
+        .ok()?;
+    Some(uuid.to_u128().to_be_bytes())
 }
 
 /// Opens and owns a Windows socket without exposing device identifiers or raw packet data.

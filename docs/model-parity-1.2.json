@@ -893,8 +893,9 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/d1202/modules/equalizer/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "legacyFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/d1202_family.rs"
         },
         "d1202_sound_modes": {
             "registration": "lib/src/devices/soundcore/d1202/modules.rs::d1202_sound_modes",
@@ -906,8 +907,9 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "legacyFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/d1202_family.rs",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
             ]
@@ -922,8 +924,9 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/d1202/modules/equalizer/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "legacyFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/d1202_family.rs"
         },
         "d1301_alarms": {
             "registration": "lib/src/devices/soundcore/d1301/modules.rs::d1301_alarms",
@@ -4147,9 +4150,61 @@
                 ]
             },
             "variants": [
-                "d1202cSharesDriver"
+                "sharedDriverWithD1202C",
+                "sharedFamilySerial"
             ],
-            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.83",
+                    "outbound": "core/data/d1202-pilot-state.bin",
+                    "inbound": "core/data/d1202-pilot-state.bin",
+                    "result": "confirmedState",
+                    "metadata": "core/data/README.md#d1202-and-d1202c-pilot-states"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "01.83",
+                    "outbound": "core/data/d1202-pilot-state.bin",
+                    "inbound": "core/data/d1202-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_the_ambient_mode_write_for_both_codes"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/d1202/packets/outbound.rs::set_equalizer_configuration",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_the_equalizer_write_for_both_codes"
+                },
+                {
+                    "operation": "writeSpatialAudio",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/d1202/packets/outbound.rs::set_spatial_audio",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_spatial_audio_enable_and_disable"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_auto_power_off_from_a_fresh_read_back"
+                }
+            ]
         },
         {
             "code": "D1202C",
@@ -4233,9 +4288,60 @@
                 ]
             },
             "variants": [
-                "wireModelDiscriminatorUnresolved"
+                "recordedServiceMetadata"
             ],
-            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "04.89",
+                    "outbound": "core/data/d1202c-pilot-state.bin",
+                    "inbound": "core/data/d1202c-pilot-state.bin",
+                    "result": "confirmedState",
+                    "metadata": "core/data/README.md#d1202-and-d1202c-pilot-states"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "04.89",
+                    "outbound": "core/data/d1202c-pilot-state.bin",
+                    "inbound": "core/data/d1202c-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_the_ambient_mode_write_for_both_codes"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/d1202/packets/outbound.rs::set_equalizer_configuration",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_the_equalizer_write_for_both_codes"
+                },
+                {
+                    "operation": "writeSpatialAudio",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/d1202/packets/outbound.rs::set_spatial_audio",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_spatial_audio_enable_and_disable"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+                    "inbound": "core/crates/session/tests/d1202_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1202_family.rs::confirms_auto_power_off_from_a_fresh_read_back"
+                }
+            ]
         },
         {
             "code": "D1301",

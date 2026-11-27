@@ -448,6 +448,7 @@ mod tests {
     fn target() -> ConnectTarget {
         ConnectTarget {
             mac: RedactedMac::from_octets([0; 6]),
+            service: None,
         }
     }
 

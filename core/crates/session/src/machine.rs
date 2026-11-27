@@ -209,6 +209,8 @@ struct ActiveWrite {
     model: ModelDriver,
     stage: WriteStage,
     may_have_written: bool,
+    /// The command carrying the write, when it differs from the target's default.
+    command: Option<[u8; 2]>,
     /// The value a read-back must report, resolved from the fresh state.
     expected_auto_power_off: Option<AutoPowerOff>,
 }
@@ -234,6 +236,8 @@ struct Recovery {
 pub struct SessionMachine {
     view: SessionView,
     reconnect_policy: ReconnectPolicy,
+    /// Connection metadata that selects a public code with shared wire formats.
+    model_hint: Option<ModelDriver>,
     recovery: Option<Recovery>,
     reply_deadline: Option<Duration>,
     receive_cutoff: u64,
@@ -253,6 +257,7 @@ impl SessionMachine {
                 last_confirmed: None,
             },
             reconnect_policy,
+            model_hint: None,
             recovery: None,
             reply_deadline: None,
             receive_cutoff: 0,
@@ -274,6 +279,15 @@ impl SessionMachine {
             },
             None => self.view,
         }
+    }
+
+    /// Records the connection metadata that selects an overlapping public code.
+    ///
+    /// The D1202 family reports one state serial for both public codes, so the
+    /// RFCOMM service seen during discovery selects the code. A missing or
+    /// unrelated value leaves the family on its canonical code.
+    pub fn set_model_hint(&mut self, hint: Option<ModelDriver>) {
+        self.model_hint = hint;
     }
 
     pub fn open(&mut self, now: Duration) -> Effect {
@@ -420,6 +434,9 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetSpatialAudio(enabled) => {
+                    (WriteTarget::SpatialAudio(enabled), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -436,6 +453,7 @@ impl SessionMachine {
                 model: device.model,
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
+                command: None,
                 expected_auto_power_off: None,
             });
             return Effect::read(now, device.model.state_command());
@@ -470,6 +488,7 @@ impl SessionMachine {
                     model: device.model,
                     stage: WriteStage::ReadCurrent,
                     may_have_written: false,
+                    command: None,
                     expected_auto_power_off: None,
                 });
                 return Effect::read(now, device.model.state_command());
@@ -520,7 +539,10 @@ impl SessionMachine {
                     self.send_write(now, write, &frame.body)
                 }
                 WriteStage::Ack
-                    if frame.command == write.target.command(write.model)
+                    if frame.command
+                        == write
+                            .command
+                            .unwrap_or_else(|| write.target.command(write.model))
                         && frame.body.is_empty() =>
                 {
                     self.read_back(now, write, None, None)
@@ -539,7 +561,7 @@ impl SessionMachine {
             ConnectionState::ProbingIdentity
                 if frame.command == IDENTITY_COMMAND && first_read > self.receive_cutoff =>
             {
-                match ModelDriver::identify(&frame.body) {
+                match registry::identify_identity_hinted(&frame.body, self.model_hint) {
                     Ok(model) => {
                         self.transition(ConnectionState::SyncingState(model));
                         Effect::read(now, model.state_command())
@@ -559,7 +581,7 @@ impl SessionMachine {
             ConnectionState::ProbingState(_)
                 if frame.command == STATE_COMMAND && first_read > self.receive_cutoff =>
             {
-                match registry::identify_state(&frame.body) {
+                match registry::identify_state_hinted(&frame.body, self.model_hint) {
                     Ok(model) => self.confirm_state(now, model, &frame.body),
                     // The requested safe read was answered but selects no pilot.
                     Err(_) => self.unidentified(
@@ -626,10 +648,17 @@ impl SessionMachine {
             Ok(resolved) => {
                 self.active = Some(ActiveWrite {
                     stage: WriteStage::Ack,
+                    command: resolved.command,
                     expected_auto_power_off: resolved.expected_auto_power_off,
                     ..write
                 });
-                Effect::request(now, write.target.command(write.model), resolved.body)
+                Effect::request(
+                    now,
+                    resolved
+                        .command
+                        .unwrap_or_else(|| write.target.command(write.model)),
+                    resolved.body,
+                )
             }
             Err(error) => self.reject_write(now, write, error),
         }
@@ -924,6 +953,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.auto_power_off,
         },
+        WriteTarget::SpatialAudio(requested) => CommandError::SpatialAudioMismatch {
+            requested,
+            observed: state.spatial_audio,
+        },
     }
 }
 
@@ -1133,6 +1166,7 @@ mod tests {
                 observed: None,
             },
             may_have_written: true,
+            command: None,
             expected_auto_power_off: None,
         });
         machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
@@ -1427,6 +1461,7 @@ mod tests {
                 model: ModelDriver::A3954,
                 stage: WriteStage::Ack,
                 may_have_written: false,
+                command: None,
                 expected_auto_power_off: None,
             });
             let effect = machine.input(

@@ -46,6 +46,7 @@ async fn reconnects_explicitly_through_legacy_after_a_disconnected_write() {
         device.clone(),
         ConnectTarget {
             mac: RedactedMac::from_octets(mac),
+            service: None,
         },
     );
     let initial = pilot

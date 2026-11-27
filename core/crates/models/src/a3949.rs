@@ -41,5 +41,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         firmware_device: None,
         firmware_left: FirmwareVersion::parse(&body[6..11])?,
         firmware_right: FirmwareVersion::parse(&body[11..16])?,
+        spatial_audio: None,
+        connection: None,
     })
 }
