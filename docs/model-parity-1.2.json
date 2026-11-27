@@ -437,8 +437,10 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/a3947/modules/equalizer/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3947-eq-write.bin",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies"
         },
         "a3947_gaming_mode": {
             "registration": "lib/src/devices/soundcore/a3947/modules.rs::a3947_gaming_mode",
@@ -451,8 +453,10 @@
                 "lib/src/devices/soundcore/a3947/modules/flag.rs::add_a3947_gaming_mode",
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3947-pilot-state.bin",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
             ]
@@ -468,8 +472,11 @@
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3947-pilot-state.bin",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies",
+            "missing": "Only the ambient mode is written; the remaining six extended sound-mode fields are echoed from the state. Sub-mode transitions that need the legacy migration sequence are not replayed.",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
             ]
@@ -676,8 +683,10 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/a3955/modules/equalizer/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3955-eq-write.bin",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3947_a3955.rs::confirms_p40i_sound_mode_and_equalizer_from_preset_replies"
         },
         "a3955_immersive_experience": {
             "registration": "lib/src/devices/soundcore/a3955/modules.rs::a3955_immersive_experience",
@@ -687,10 +696,13 @@
                 "readState"
             ],
             "outboundWrite": [
+                "lib/src/devices/soundcore/a3955/packets/outbound.rs::set_immersive_experience",
                 "lib/src/devices/soundcore/a3955/modules/immersive_experience/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "acceptedAcknowledgement",
+            "test": "core/crates/session/tests/a3947_a3955.rs::accepts_the_p40i_immersive_experience_from_an_acknowledgement",
+            "missing": "The state update does not report the current immersive experience, so the session confirms only the device acknowledgement."
         },
         "a3955_sound_modes": {
             "registration": "lib/src/devices/soundcore/a3955/modules.rs::a3955_sound_modes",
@@ -703,8 +715,11 @@
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3955-pilot-state.bin",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3947_a3955.rs::confirms_p40i_sound_mode_and_equalizer_from_preset_replies",
+            "missing": "Only the ambient mode is written; the remaining six extended sound-mode fields are echoed from the state. Sub-mode transitions that need the legacy migration sequence are not replayed.",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
             ]
@@ -3191,7 +3206,51 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3947/packets/state_update.rs::A3947StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3947/packets/state_update.rs::A3947StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "05.88",
+                    "outbound": "core/data/a3947-pilot-state.bin",
+                    "inbound": "core/data/a3947-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3947-pilot-state.bin",
+                    "inbound": "core/data/a3947-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "firmware": "05.88",
+                    "outbound": "core/crates/session/tests/a3947_a3955.rs",
+                    "inbound": "core/data/a3947-pilot-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "legacyFixture",
+                    "firmware": "05.88",
+                    "outbound": "lib/src/devices/soundcore/a3947/modules/flag.rs::add_a3947_gaming_mode",
+                    "inbound": "core/data/a3947-pilot-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "firmware": "05.88",
+                    "outbound": "core/data/a3947-eq-write.bin",
+                    "inbound": "core/data/a3947-pilot-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::confirms_liberty_sound_mode_gaming_and_equalizer_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3948",
@@ -3762,7 +3821,52 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3955/packets/inbound/state_update.rs::A3955StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3955/packets/inbound/state_update.rs::A3955StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.61",
+                    "outbound": "core/data/a3955-pilot-state.bin",
+                    "inbound": "core/data/a3955-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "01.61",
+                    "outbound": "core/data/a3955-pilot-state.bin",
+                    "inbound": "core/data/a3955-pilot-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "firmware": "01.61",
+                    "outbound": "core/crates/session/tests/a3947_a3955.rs",
+                    "inbound": "core/data/a3955-pilot-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::confirms_p40i_sound_mode_and_equalizer_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "firmware": "01.61",
+                    "outbound": "core/data/a3955-eq-write.bin",
+                    "inbound": "core/data/a3955-pilot-state.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::confirms_p40i_sound_mode_and_equalizer_from_preset_replies"
+                },
+                {
+                    "operation": "writeImmersiveExperience",
+                    "core": "legacy",
+                    "firmware": "01.61",
+                    "outbound": "lib/src/devices/soundcore/a3955/packets/outbound.rs::set_immersive_experience",
+                    "inbound": "core/crates/session/tests/a3947_a3955.rs",
+                    "result": "acceptedAcknowledgement",
+                    "test": "core/crates/session/tests/a3947_a3955.rs::accepts_the_p40i_immersive_experience_from_an_acknowledgement"
+                }
+            ]
         },
         {
             "code": "A3957",

@@ -193,3 +193,83 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## A3947 and A3955 state reference
+
+[a3947-pilot-state.bin](a3947-pilot-state.bin) and
+[a3955-pilot-state.bin](a3955-pilot-state.bin) are `01 01` state frames derived
+from the legacy driver tests at base `1791f151`, not new hardware captures. The
+A3947 body comes from
+[the Liberty 4 NC test](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3947.rs)
+(`with_known_good_packet`) and reports firmware `05.88` on both earbuds. The A3955
+body comes from
+[the P40i test](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3955.rs)
+(`with_packet_from_firmware_1_6_1`, the packet from upstream issue 159) and
+reports firmware `01.61` on both earbuds.
+
+Both legacy test vectors carry a trailing tail the legacy parser tolerates and
+does not map to any field: one byte for A3947 and twelve bytes for A3955. The
+published fixtures keep only the parsed body, so the measured layout is exactly
+158 bytes for A3947 and 143 bytes for A3955. The original test vectors keep a
+real device serial at body offsets 16–31. The fixtures substitute the synthetic
+model-specific `3947TEST00000000` and `3955TEST00000000` values at the same
+offsets and recalculate the trailing checksum. The resulting frame SHA-256 values
+are
+`4ef8a7a262cf9e1e9768f64add38fe54f7ca3686ea65171aee984a982f308eaf`
+(168 bytes) and
+`05f61cfb7ec8d35bd68fb568cd5bb3f0a02905ddeb70117d29842e68268d80b6`
+(153 bytes).
+
+The A3947 body layout is the TWS status at 0–1, the two batteries at 2–3, both
+firmware versions at 6–15, the serial at 16–31, the equalizer preset at 37–38
+and its two channels at 39–58, the hear-id block at 60–107, the seven extended
+sound-mode fields at 126–132, the case battery at 139, the gaming flag at 143,
+auto power off at 154–155 and the remaining flags through 157. The A3955 body
+layout is the TWS status at 0–1, the two batteries at 2–3, both firmware versions
+at 6–15, the serial at 16–31, the case battery at 37, the equalizer preset at
+38–39 and its two channels at 40–59, the hear-id status and block at 60–108, the
+seven extended sound-mode fields at 119–125, auto power off at 139–140 and the
+remaining flags through 142. Neither device has a recorded `01 05` identity
+response, so the session selects both drivers from the measured state length and
+serial, like the A3028 family. A body with the TWS status byte at offset 1 set to
+zero is a test-only variant of the same layout: the legacy TWS equalizer module
+is unavailable while the earbuds are not both connected, and the session rejects
+equalizer writes before transmission.
+
+The seven-byte `06 81` writes change only the ambient-mode byte and echo the
+other six measured controls. The A3947 Normal body `02 50 01 00 01 01 03` is the
+legacy `set_sound_mode_normal` golden value for the state above. The A3947 gaming
+write is the one-byte `10 85` body from
+[its flag module](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3947/modules/flag.rs),
+and the P40i immersive-experience write is the one-byte `12 81` body from
+[its outbound builder](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3955/packets/outbound.rs).
+The state does not report the current immersive experience, so no read-back
+fixture exists for it.
+
+## A3947 and A3955 equalizer write reference
+
+[a3947-eq-write.bin](a3947-eq-write.bin) and
+[a3955-eq-write.bin](a3955-eq-write.bin) are the 93-byte `03 87` bodies from the
+legacy equalizer golden tests
+([A3947](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3947.rs)
+`it_turns_off_hear_id` and
+[A3955](https://github.com/SckraT/OpenSCL4/blob/1791f1518581271f95247272c05903b50df616b0/lib/src/devices/soundcore/a3955.rs)
+`set_equalizer_with_hear_id_uninitialized_byte_set`). They contain the preset id,
+the favorite music genre, both requested channel curves, the hear-id block with
+hear-id disabled, the DRC-transformed active curve and a trailing zero. No serial
+number or Bluetooth address appears in these bodies, so no masking was needed.
+Their SHA-256 values are
+`a3acf3adca336dd7b3c5d3e09085183043d870732f94d74637980f89ed87538b` and
+`163abaa26844958eb299d980f4eb87ba95ef44fb5a00cde216b7ac9c8a16823f`.
+
+The A3947 golden write uses preset `FEFE`, the curve
+`00 01 02 03 04 05 06 07 00 00` in tenths of a decibel and the hear-id fields of
+the A3947 state above. The A3955 golden write uses the same preset and the curve
+`60 -60 60 -60 60 -60 60 -60 00 00` in tenths of a decibel, and echoes the
+absent hear-id profile of its state. The write repeats the DRC curve, which the
+models crate ports from the legacy `VolumeAdjustments::apply_drc`. The read-back
+state used by the session tests is derived from the same body by applying the
+documented effect: the preset id and both channel curves take the written
+values, and every other field stays unchanged, with the checksum recomputed by
+the frame encoder. Those derived bodies are not separate fixtures.
+

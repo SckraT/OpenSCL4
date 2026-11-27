@@ -337,7 +337,7 @@ impl SessionMachine {
             Input::Command(command) => {
                 if command.command.replaces_pending_equalizer()
                     && let ConnectionState::Ready(device) = self.view.connection
-                    && command.command.validate(device.model).is_ok()
+                    && command.command.validate(device).is_ok()
                     && now < command.expires_at()
                 {
                     self.last_eq_preset = command.id;
@@ -410,7 +410,7 @@ impl SessionMachine {
             && let ConnectionState::Ready(device) = self.view.connection
             && let Some(command) = self.queue.pop_front()
         {
-            if let Err(error) = command.command.validate(device.model) {
+            if let Err(error) = command.command.validate(device) {
                 return Effect::Complete(command.id, Err(error.into()));
             }
             let (target, preset) = match command.command {
@@ -419,6 +419,9 @@ impl SessionMachine {
                 SessionCommand::SetGamingMode(enabled) => (WriteTarget::GamingMode(enabled), None),
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
+                }
+                SessionCommand::SetImmersiveExperience(experience) => {
+                    (WriteTarget::ImmersiveExperience(experience), None)
                 }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
@@ -479,6 +482,9 @@ impl SessionMachine {
 
         if let Some(write) = self.active {
             match write.stage {
+                WriteStage::Ack if write.target.is_ack_only() => {
+                    return self.ack_timeout(now, write);
+                }
                 WriteStage::Ack => return self.read_back(now, write, None, None),
                 WriteStage::WaitForReadBack { deadline, observed } if now < deadline => {
                     return self.read_back(now, write, Some(deadline), Some(observed));
@@ -518,6 +524,12 @@ impl SessionMachine {
             return match write.stage {
                 WriteStage::ReadCurrent if frame.command == write.model.state_command() => {
                     self.send_write(now, write, &frame.body)
+                }
+                WriteStage::Ack
+                    if frame.command == write.target.command(write.model)
+                        && write.target.is_ack_only() =>
+                {
+                    self.finish_accepted(now, write)
                 }
                 WriteStage::Ack
                     if frame.command == write.target.command(write.model)
@@ -694,6 +706,38 @@ impl SessionMachine {
         });
         self.reply_deadline = Some((now + READ_BACK_INTERVAL).min(deadline));
         self.next_effect(now)
+    }
+
+    /// Completes an acknowledgement-only write with the last confirmed snapshot.
+    ///
+    /// The device does not report this setting in its state, so a matching
+    /// acknowledgement is the confirmation the legacy driver accepts.
+    fn finish_accepted(&mut self, now: Duration, write: ActiveWrite) -> Effect {
+        self.reply_deadline = None;
+        let ConnectionState::Ready(state) = self.view.connection else {
+            return self.stop_with(SessionError::Closed);
+        };
+        self.active = None;
+        match write.id {
+            Some(id) => Effect::Complete(id, Ok(CommandOutcome::Accepted(state))),
+            // A live-equalizer value always has a read-back confirmation.
+            None => self.continue_live_eq(now),
+        }
+    }
+
+    /// Ends an acknowledgement-only write whose acknowledgement never arrived.
+    fn ack_timeout(&mut self, now: Duration, write: ActiveWrite) -> Effect {
+        self.reply_deadline = None;
+        self.active = None;
+        match write.id {
+            Some(id) => Effect::Complete(
+                id,
+                Err(CommandError::Unconfirmed(SessionError::Timeout(
+                    IoStage::Receive,
+                ))),
+            ),
+            None => self.next_effect(now),
+        }
     }
 
     fn finish_write(&mut self, now: Duration, write: ActiveWrite, state: DeviceState) -> Effect {
@@ -924,6 +968,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.auto_power_off,
         },
+        // An acknowledgement-only write never reaches read-back confirmation.
+        WriteTarget::ImmersiveExperience(_) => {
+            CommandError::Model(ModelError::InvalidImmersiveExperienceWrite)
+        }
     }
 }
 

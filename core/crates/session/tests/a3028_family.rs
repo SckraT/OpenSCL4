@@ -117,7 +117,9 @@ mod tests {
                     .expect("queue noise canceling"),
             )
             .await
-            .expect("confirm noise canceling");
+            .expect("confirm noise canceling") else {
+                panic!("expected an applied outcome");
+            };
             assert_eq!(changed.sound_mode, Some(SoundMode::NoiseCanceling));
             assert_eq!(changed.equalizer, initial_state.equalizer);
 
@@ -127,7 +129,9 @@ mod tests {
                     .expect("queue normal"),
             )
             .await
-            .expect("confirm normal");
+            .expect("confirm normal") else {
+                panic!("expected an applied outcome");
+            };
             assert_eq!(restored.sound_mode, Some(SoundMode::Normal));
             assert_eq!(restored.equalizer, initial_state.equalizer);
             assert_eq!(ready(&handle).await, restored);
@@ -201,7 +205,9 @@ mod tests {
                     .expect("queue disable"),
             )
             .await
-            .expect("confirm disable");
+            .expect("confirm disable") else {
+                panic!("expected an applied outcome");
+            };
             assert_eq!(
                 disabled.auto_power_off,
                 Some(AutoPowerOff {
@@ -218,7 +224,9 @@ mod tests {
                     .expect("queue enable"),
             )
             .await
-            .expect("confirm enable");
+            .expect("confirm enable") else {
+                panic!("expected an applied outcome");
+            };
             assert_eq!(
                 enabled.auto_power_off,
                 Some(AutoPowerOff {

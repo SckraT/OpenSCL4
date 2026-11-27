@@ -24,9 +24,14 @@ mod tests {
             .expect("queue restore");
         assert_ne!(change.id(), restore.id());
 
-        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm change");
+        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm change") else {
+            panic!("expected an applied outcome");
+        };
         assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
-        let CommandOutcome::Applied(restored) = restore.wait().await.expect("confirm restore");
+        let CommandOutcome::Applied(restored) = restore.wait().await.expect("confirm restore")
+        else {
+            panic!("expected an applied outcome");
+        };
         assert_eq!(restored.sound_mode_setting(), Some(original));
         assert_eq!(mode(&handle).await, original);
         handle.close().await.expect("close virtual link");
@@ -42,7 +47,10 @@ mod tests {
             .dispatch(SessionCommand::SetSoundMode(SoundModeSetting::NORMAL))
             .expect("queue change");
 
-        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm without ACK");
+        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm without ACK")
+        else {
+            panic!("expected an applied outcome");
+        };
         assert!(dispatched_at.elapsed() >= Duration::from_millis(1500));
         assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
         assert_eq!(mode(&handle).await, SoundModeSetting::NORMAL);
@@ -60,7 +68,10 @@ mod tests {
         let change = handle
             .dispatch(SessionCommand::SetAmbientSoundMode(SoundMode::Transparency))
             .expect("queue transparency");
-        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm transparency");
+        let CommandOutcome::Applied(changed) = change.wait().await.expect("confirm transparency")
+        else {
+            panic!("expected an applied outcome");
+        };
         assert_eq!(changed.sound_mode, Some(SoundMode::Transparency));
         handle.close().await.expect("close virtual link");
     }
@@ -75,7 +86,10 @@ mod tests {
         drop(handle);
 
         let CommandOutcome::Applied(changed) =
-            change.wait().await.expect("confirm without subscriber");
+            change.wait().await.expect("confirm without subscriber")
+        else {
+            panic!("expected an applied outcome");
+        };
         assert_eq!(changed.sound_mode_setting(), Some(SoundModeSetting::NORMAL));
     }
 

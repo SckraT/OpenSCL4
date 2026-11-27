@@ -190,4 +190,67 @@ mod tests {
             [Duration::from_millis(2), Duration::from_millis(3)]
         );
     }
+
+    #[test]
+    fn clears_state_serials_for_the_liberty_and_p40i() {
+        let mut tap = WireTap::new(NonZeroUsize::new(2).unwrap());
+        tap.set_enabled(true);
+        for (model, fixture, serial) in [
+            (
+                ModelDriver::A3947,
+                include_bytes!("../../../data/a3947-pilot-state.bin").as_slice(),
+                b"3947TEST00000000".as_slice(),
+            ),
+            (
+                ModelDriver::A3955,
+                include_bytes!("../../../data/a3955-pilot-state.bin").as_slice(),
+                b"3955TEST00000000".as_slice(),
+            ),
+        ] {
+            let frame = decode(fixture);
+            assert_eq!(&frame.body[16..32], serial);
+            tap.record_frame(Duration::ZERO, Some(model), &frame);
+            let record = tap.records().last().unwrap();
+            assert_eq!(record.metadata.outcome, CaptureOutcome::Sanitized);
+            assert_eq!(
+                record.metadata.length,
+                10 + frame.body.len(),
+                "{model:?} frame length"
+            );
+            let sanitized = decode(record.frame_bytes().unwrap());
+            let mut expected = frame.body.to_vec();
+            expected[16..32].fill(0);
+            assert_eq!(sanitized.body.as_ref(), expected, "{model:?}");
+        }
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("3947TEST00000000"));
+        assert!(!debug.contains("3955TEST00000000"));
+    }
+
+    #[test]
+    fn keeps_state_metadata_when_the_body_or_model_does_not_match() {
+        let mut tap = WireTap::new(NonZeroUsize::new(3).unwrap());
+        tap.set_enabled(true);
+        let liberty = decode(include_bytes!("../../../data/a3947-pilot-state.bin"));
+        let p40i = decode(include_bytes!("../../../data/a3955-pilot-state.bin"));
+
+        // The two measured body lengths are fixed, so a mismatched pair is
+        // fail-closed instead of clearing an unknown layout.
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3955), &liberty);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3947), &p40i);
+
+        // A recognized length with a contradictory serial also stays metadata-only.
+        let mut contradictory = liberty.body.to_vec();
+        contradictory[16..32].copy_from_slice(b"3955TEST00000000");
+        let contradictory = make_frame(Direction::Inbound, [0x01, 0x01], &contradictory);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3947), &contradictory);
+
+        for record in tap.records() {
+            assert_eq!(record.metadata.outcome, CaptureOutcome::MetadataOnly);
+            assert!(record.frame_bytes().is_none());
+        }
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("3947TEST00000000"));
+        assert!(!debug.contains("3955TEST00000000"));
+    }
 }

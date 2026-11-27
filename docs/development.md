@@ -58,6 +58,21 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The Liberty 4 NC pilot reports both earbud and case batteries, both firmware
+versions, the extended sound mode and gaming mode from the reference state in
+[`core/data`](../core/data/README.md#a3947-and-a3955-state-reference). Add
+`--cycle-mode` to switch gaming mode and restore its original value. The P40i
+pilot reports both earbud and case batteries, both firmware versions and the
+extended sound mode from its own reference state. Add `--cycle-mode` to switch
+the ambient mode and restore it. No identity response is recorded for either
+model, so both are discovered from the state response. Each result requires a
+fresh state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3947
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3955
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

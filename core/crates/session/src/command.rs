@@ -1,6 +1,7 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    Capabilities, EqualizerSetting, IMMERSIVE_EXPERIENCE_COMMAND, ImmersiveExperience, ModelError,
+    SOUND_MODE_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,12 +74,15 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Set a write-only action that the state does not report back.
+    SetImmersiveExperience(ImmersiveExperience),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
 
 impl SessionCommand {
-    pub(crate) fn validate(self, model: ModelDriver) -> Result<(), ModelError> {
+    pub(crate) fn validate(self, device: DeviceState) -> Result<(), ModelError> {
+        let model = device.model;
         let capabilities = model.capabilities();
         match self {
             Self::SetSoundMode(_) if !capabilities.positioned_sound_mode_write => {
@@ -98,13 +102,16 @@ impl SessionCommand {
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
             }
+            Self::SetImmersiveExperience(_) if !capabilities.immersive_experience_write => {
+                Err(ModelError::InvalidImmersiveExperienceWrite)
+            }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
             }
             Self::ApplyQuickPreset(preset)
-                if preset
-                    .equalizer
-                    .is_some_and(|setting| !model.equalizer_is_writable(setting)) =>
+                if preset.equalizer.is_some_and(|setting| {
+                    !device.equalizer_write_available() || !model.equalizer_is_writable(setting)
+                }) =>
             {
                 Err(ModelError::InvalidEqualizerWrite)
             }
@@ -138,6 +145,8 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A write-only immersive-experience change.
+    ImmersiveExperience(ImmersiveExperience),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -147,10 +156,19 @@ impl WriteTarget {
     pub(crate) fn command(self, model: ModelDriver) -> [u8; 2] {
         match self {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
-            Self::GamingMode(_) => GAMING_MODE_COMMAND,
+            Self::GamingMode(_) => model.gaming_mode_command(),
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::ImmersiveExperience(_) => IMMERSIVE_EXPERIENCE_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
         }
+    }
+
+    /// Whether the device confirms this write with an acknowledgement only.
+    ///
+    /// The measured P40i state does not report the immersive experience, so a
+    /// matching acknowledgement is the confirmation the legacy driver accepts.
+    pub(crate) fn is_ack_only(self) -> bool {
+        matches!(self, Self::ImmersiveExperience(_))
     }
 
     /// Builds the write body from a fresh state response and its raw bytes.
@@ -173,12 +191,20 @@ impl WriteTarget {
             {
                 state.family_sound_mode_write(mode)?.to_vec()
             }
+            Self::AmbientMode(mode)
+                if matches!(state.model, ModelDriver::A3947 | ModelDriver::A3955) =>
+            {
+                state.extended_sound_mode_write(mode)?.to_vec()
+            }
             Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
             Self::AutoPowerOff(setting) => {
                 let write = state.auto_power_off_write(setting)?;
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
+            }
+            Self::ImmersiveExperience(experience) => {
+                state.immersive_experience_write(experience)?.to_vec()
             }
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
@@ -197,6 +223,8 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            // An acknowledgement-only write never reaches read-back confirmation.
+            Self::ImmersiveExperience(_) => false,
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -207,6 +235,11 @@ impl WriteTarget {
 pub enum CommandOutcome {
     /// A read-back confirmed the requested value.
     Applied(DeviceState),
+    /// The device acknowledged a write whose value its state does not report.
+    ///
+    /// The snapshot is the last confirmed state at acceptance; no fresh
+    /// read-back exists for this action.
+    Accepted(DeviceState),
 }
 
 /// Failure to accept a command.
@@ -227,6 +260,9 @@ pub enum DispatchError {
     /// The connected model does not support equalizer writes.
     #[error("the connected model does not support equalizer writes")]
     UnsupportedEqualizer,
+    /// The equalizer is unavailable in the reported TWS state.
+    #[error("the equalizer is unavailable while the earbuds are not both connected")]
+    UnavailableEqualizer,
     /// A gain in the live-equalizer curve is outside the writable range.
     #[error("equalizer gain is outside the writable range")]
     InvalidEqualizer,
