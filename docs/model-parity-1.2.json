@@ -1621,22 +1621,51 @@
             "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/auto_stop_timer.rs",
             "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_auto_stop_timer",
             "command": "1585",
-            "evidence": "legacy",
+            "evidence": "legacyFixture",
+            "reference": "core/data/d1301-sleep-reference.json",
             "result": "parityPending",
-            "missing": "Add exact 15 03 replies before and after setting the timer, including duration and the preserved final byte."
+            "missing": "The published 15 03 reply and the timer body are verified by the model codec, including the preserved final byte. The session has no separate timer read, so a timer write cannot be read back and is not exposed as a model capability."
         },
         {
             "models": [
                 "D1301"
             ],
             "operation": "d1301_auto_switch_once_asleep",
+            "availability": "The action is reported and retained while the auto-switch flag is off, so the state-based setting is a three-way choice.",
+            "availabilitySource": "core/data/d1301-sleep-reference.json",
             "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_post_sleep_audio",
             "command": "1585",
-            "evidence": "legacyFixture",
-            "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
-            "result": "parityPending",
-            "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+            "evidence": "captureReplay",
+            "reference": "core/crates/session/tests/d1301_sleep.rs",
+            "result": "confirmedReadBack",
+            "missing": "The action body and the separate enable flag write are confirmed by fresh 01 01 read-backs. The official app enables the feature before setting the action; the session exposes the two writes as separate commands."
+        },
+        {
+            "models": [
+                "D1301"
+            ],
+            "operation": "d1301_listening_mode",
+            "availability": "The listening mode and its power-on default are reported at body offsets 65 and 66 of the captured 150-byte state.",
+            "availabilitySource": "core/data/d1301-sleep-reference.json",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/d1301/modules/listening_mode/state_modifier.rs",
+            "command": "01A9",
+            "evidence": "captureReplay",
+            "reference": "core/crates/session/tests/d1301_sleep.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "D1301"
+            ],
+            "operation": "d1301_noise_canceling",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_noise_canceling",
+            "command": "0687",
+            "evidence": "captureReplay",
+            "reference": "core/crates/session/tests/d1301_sleep.rs",
+            "result": "confirmedReadBack"
         }
     ],
     "models": [
@@ -4299,9 +4328,82 @@
                 ]
             },
             "variants": [
-                "dynamicAlarms"
+                "dynamicAlarms",
+                "d1301-sleep-reference",
+                "stateOnlyIdentification"
             ],
-            "stateParserSource": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs::D1301StateUpdatePacket"
+            "reference": "core/data/d1301-sleep-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs::D1301StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "legacyFixture",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "01.91",
+                    "inbound": "core/data/d1301-sleep-reference.json",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/d1301_reference.rs::decodes_the_three_captured_post_sleep_states"
+                },
+                {
+                    "operation": "readAutoStopTimer",
+                    "core": "legacyFixture",
+                    "inbound": "core/data/d1301-auto-stop-timer.bin",
+                    "test": "core/crates/models/tests/d1301_reference.rs::decodes_the_captured_auto_stop_timer_report",
+                    "missing": "The session has no separate 15 03 read, so the timer reply is decoded by the model only."
+                },
+                {
+                    "operation": "readAlarms",
+                    "core": "legacyFixture",
+                    "inbound": "core/data/d1301-sleep-reference.json",
+                    "test": "core/crates/models/tests/d1301_reference.rs::decodes_the_empty_filled_and_changed_alarm_lists",
+                    "missing": "The session snapshot is a single state; a list-valued alarm setting needs its own contract."
+                },
+                {
+                    "operation": "writePostSleepAudio",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/d1301-sleep-reference.json",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1301_sleep.rs::confirms_each_sleep_setting_from_a_fresh_state_response"
+                },
+                {
+                    "operation": "writeAutoSwitchOnceAsleep",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/d1301-sleep-reference.json",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1301_sleep.rs::confirms_each_sleep_setting_from_a_fresh_state_response"
+                },
+                {
+                    "operation": "writeListeningMode",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/d1301-sleep-reference.json",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1301_sleep.rs::confirms_each_sleep_setting_from_a_fresh_state_response"
+                },
+                {
+                    "operation": "writeDefaultListeningMode",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/d1301-sleep-reference.json",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1301_sleep.rs::confirms_each_sleep_setting_from_a_fresh_state_response"
+                },
+                {
+                    "operation": "writeNoiseCanceling",
+                    "core": "protocolFixture",
+                    "outbound": "core/data/d1301-sleep-reference.json",
+                    "inbound": "core/data/d1301-post-sleep-pause.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/d1301_sleep.rs::confirms_each_sleep_setting_from_a_fresh_state_response"
+                }
+            ]
         }
     ]
 }

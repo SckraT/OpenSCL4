@@ -7,7 +7,7 @@ use openscl4_models::{
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
     A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
     GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    SoundModeWrite, d1301,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -21,6 +21,8 @@ const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-on.bin"),
 ];
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
+/// A captured D1301 sleep state: post-sleep audio enabled and set to pause.
+const D1301_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/d1301-post-sleep-pause.bin");
 const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
@@ -120,6 +122,28 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual Sleep A30 that answers state reads from a captured sleep state.
+pub struct VirtualD1301;
+
+#[async_trait]
+impl TransportProvider for VirtualD1301 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let model = ModelDriver::D1301;
+        Ok(open_link(Some(Responder::with_state(
+            model,
+            ResponderOptions {
+                acknowledge_writes: true,
+                apply_equalizer: false,
+            },
+            initial_state(model),
+        )))
+        .0)
+    }
+}
 
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
@@ -372,6 +396,12 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::D1301
+                && self.d1301_setting_applied(frame.command, &frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, frame.command, &[])
+            {
+                replies.extend_from_slice(&ack);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
@@ -409,7 +439,7 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
-            ModelDriver::A3949 => false,
+            ModelDriver::D1301 | ModelDriver::A3949 => false,
         }
     }
 
@@ -439,7 +469,7 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3949 | ModelDriver::A3954 => false,
+            ModelDriver::D1301 | ModelDriver::A3949 | ModelDriver::A3954 => false,
         }
     }
 
@@ -453,6 +483,36 @@ impl DeviceResponder {
             return false;
         };
         value.copy_from_slice(body);
+        true
+    }
+
+    /// Applies one of the confirmed D1301 sleep settings to the virtual state.
+    ///
+    /// The captured state carries the sleep action, its enable flag, both
+    /// listening modes and the noise canceling flag. The other `15 85` body
+    /// (the auto-stop timer) is not modelled and is left unacknowledged.
+    fn d1301_setting_applied(&self, command: [u8; 2], body: &[u8]) -> bool {
+        let (offset, value) = match (command, body) {
+            (d1301::SLEEP_CONTROL_COMMAND, [0xFF, 0xFF, 0xFF, action @ 0..=1]) => {
+                (d1301::POST_SLEEP_AUDIO, *action)
+            }
+            (d1301::AUTO_SWITCH_ONCE_ASLEEP_COMMAND, [enabled @ 0..=1]) => {
+                (d1301::AUTO_SWITCH_ONCE_ASLEEP, *enabled)
+            }
+            (d1301::LISTENING_MODE_COMMAND, [mode @ 0..=1]) => (d1301::LISTENING_MODE, *mode),
+            (d1301::DEFAULT_LISTENING_MODE_COMMAND, [mode @ 0..=1]) => {
+                (d1301::DEFAULT_LISTENING_MODE, *mode)
+            }
+            (d1301::NOISE_CANCELING_COMMAND, [enabled @ 0..=1]) => {
+                (d1301::NOISE_CANCELING, *enabled)
+            }
+            _ => return false,
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        let Some(byte) = state.get_mut(offset) else {
+            return false;
+        };
+        *byte = value;
         true
     }
 }
@@ -541,6 +601,7 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::D1301 => fixture_body(model, D1301_STATE_REPLY),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
     };

@@ -7,6 +7,7 @@ use std::fmt;
 mod a3028;
 mod a3062;
 mod a3949;
+pub mod d1301;
 pub mod registry;
 
 pub use a3028::{
@@ -15,6 +16,7 @@ pub use a3028::{
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
+pub use d1301::{ListeningMode, PostSleepAudio, SleepAudio};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -47,6 +49,8 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Sleep A30.
+    D1301,
     /// Soundcore P20i, P25i and R50i.
     A3949,
     /// Soundcore Liberty 4 Pro.
@@ -67,6 +71,11 @@ impl ModelDriver {
             equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
             gaming_mode_write: matches!(self, Self::A3949),
             auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            listening_mode_write: matches!(self, Self::D1301),
+            default_listening_mode_write: matches!(self, Self::D1301),
+            noise_canceling_write: matches!(self, Self::D1301),
+            post_sleep_audio_write: matches!(self, Self::D1301),
+            auto_switch_once_asleep_write: matches!(self, Self::D1301),
         }
     }
 
@@ -76,6 +85,7 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::D1301 => "D1301",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
         }
@@ -90,7 +100,7 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            Self::A3062 | Self::D1301 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
 
@@ -98,7 +108,7 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3062 | Self::D1301 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
         }
     }
 
@@ -116,6 +126,7 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::D1301 => d1301::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
@@ -131,6 +142,7 @@ impl ModelDriver {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::D1301 => d1301::has_confirmed_layout(body),
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
@@ -139,7 +151,7 @@ impl ModelDriver {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
-            Self::A3062 | Self::A3949 => true,
+            Self::A3062 | Self::D1301 | Self::A3949 => true,
         };
         (layout_matches && serial_matches)
             .then(|| self.decode_state(body).ok())
@@ -166,10 +178,14 @@ impl ModelDriver {
                 airplane_mode: body[A3954_SOUND_MODE + 2],
                 wind_noise_suppression: body[A3954_SOUND_MODE + 3] & 1 != 0,
             })),
-            firmware_device: None,
             equalizer: None,
             gaming_mode: None,
             auto_power_off: None,
+            listening_mode: None,
+            default_listening_mode: None,
+            noise_canceling: None,
+            sleep_audio: None,
+            firmware_device: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -188,7 +204,7 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
-            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::D1301 | Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
 }
@@ -206,6 +222,16 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the current listening mode.
+    pub listening_mode_write: bool,
+    /// The session can confirm writes of the default listening mode.
+    pub default_listening_mode_write: bool,
+    /// The session can confirm writes of the noise canceling flag.
+    pub noise_canceling_write: bool,
+    /// The session can confirm writes of the post-sleep audio action.
+    pub post_sleep_audio_write: bool,
+    /// The session can confirm writes of the auto-switch-once-asleep flag.
+    pub auto_switch_once_asleep_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -238,6 +264,14 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// The current listening mode, when the model reports one.
+    pub listening_mode: Option<ListeningMode>,
+    /// The listening mode selected on power-on, when the model reports one.
+    pub default_listening_mode: Option<ListeningMode>,
+    /// The reported noise canceling flag, when the model reports one.
+    pub noise_canceling: Option<bool>,
+    /// The reported post-sleep audio behavior, when the model reports one.
+    pub sleep_audio: Option<SleepAudio>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -622,6 +656,15 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The selected D1301 sleep setting does not match the measured write format.
+    #[error("unsupported device sleep setting write")]
+    InvalidSleepSettingWrite,
+    /// An auto-stop timer reply or requested value is outside the measured format.
+    #[error("invalid device auto stop timer")]
+    InvalidAutoStopTimer,
+    /// An alarm list does not consist of whole measured records.
+    #[error("invalid device alarm list")]
+    InvalidAlarmList,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

@@ -91,6 +91,34 @@ mod tests {
     }
 
     #[test]
+    fn clears_the_sleep_a30_serial_and_unidentified_identifier_block() {
+        let mut tap = WireTap::new(NonZeroUsize::new(2).unwrap());
+        tap.set_enabled(true);
+        let fixture = decode(include_bytes!("../../../data/d1301-post-sleep-pause.bin"));
+        assert_eq!(fixture.body.len(), 150);
+
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::D1301), &fixture);
+        let record = tap.records().last().unwrap();
+        assert_eq!(record.metadata.outcome, CaptureOutcome::Sanitized);
+        assert_eq!(record.metadata.length, 160);
+        let sanitized = decode(record.frame_bytes().unwrap());
+        let mut expected = fixture.body.to_vec();
+        expected[14..36].fill(0);
+        assert_eq!(sanitized.body.as_ref(), expected);
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("1301TEST00000000"));
+
+        // A confirmed model with another state length keeps metadata only.
+        let mut unexpected = fixture.body.to_vec();
+        unexpected.push(0);
+        let unexpected = make_frame(Direction::Inbound, [0x01, 0x01], &unexpected);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::D1301), &unexpected);
+        let record = tap.records().last().unwrap();
+        assert_eq!(record.metadata.outcome, CaptureOutcome::MetadataOnly);
+        assert!(record.frame_bytes().is_none());
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

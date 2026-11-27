@@ -58,6 +58,17 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The Sleep A30 pilot reads a captured D1301 sleep state: both earbud batteries,
+both firmware versions, the listening mode, the noise canceling flag and the
+post-sleep audio action in
+[`core/data`](../core/data/README.md#d1301-sleep-states). Add `--cycle-mode` to
+switch the post-sleep audio action and restore it; each result comes from a fresh
+state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model D1301
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

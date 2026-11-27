@@ -7,7 +7,7 @@ mod virtual_device;
 use virtual_device::Responder;
 pub use virtual_device::{
     SharedVirtualSoundcoreDevice, VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949,
-    VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualD1301, VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 
 use async_trait::async_trait;

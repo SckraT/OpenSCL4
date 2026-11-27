@@ -227,7 +227,7 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
                         .conflicts_with("bluetooth")
                         .conflicts_with("mock-model"),
                 )
-                .arg(arg!(--"cycle-mode" "Switch and restore the model's sound or gaming mode with read-back confirmation")),
+                .arg(arg!(--"cycle-mode" "Switch and restore the model's mode or sleep setting with read-back confirmation")),
         )
         .subcommand(
             Command::new("completions")

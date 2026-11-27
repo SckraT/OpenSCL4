@@ -1,11 +1,11 @@
 use openscl4_session::{
-    CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
-    SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
+    CommandOutcome, ConnectionState, DeviceState, ModelDriver, PostSleepAudio, SessionCommand,
+    SessionError, SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
     UnidentifiedState,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualD1301, VirtualIncompatibleA3954,
     VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
@@ -28,6 +28,7 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::D1301 => SessionRunner::start(VirtualD1301, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
             },
@@ -103,6 +104,28 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
 }
 
 fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, SessionCommand)> {
+    if initial.model == ModelDriver::D1301 {
+        let sleep_audio = initial
+            .sleep_audio
+            .ok_or_else(|| anyhow::anyhow!("device model is read-only in the pilot"))?;
+        // The action is retained while the switch is off, so a disabled device
+        // cycles the switch instead of a value the pilot could not observe.
+        return if sleep_audio.enabled {
+            let changed = match sleep_audio.action {
+                PostSleepAudio::Pause => PostSleepAudio::PlayLocal,
+                PostSleepAudio::PlayLocal => PostSleepAudio::Pause,
+            };
+            Ok((
+                SessionCommand::SetPostSleepAudio(changed),
+                SessionCommand::SetPostSleepAudio(sleep_audio.action),
+            ))
+        } else {
+            Ok((
+                SessionCommand::SetAutoSwitchOnceAsleep(true),
+                SessionCommand::SetAutoSwitchOnceAsleep(false),
+            ))
+        };
+    }
     if let Some(original) = initial.gaming_mode
         && initial.model.capabilities().gaming_mode_write
     {
@@ -145,6 +168,15 @@ fn applied_json(state: DeviceState) -> Value {
     if let Some(enabled) = state.gaming_mode {
         return json!({"result": "Applied", "gamingMode": enabled});
     }
+    if let Some(sleep_audio) = state.sleep_audio {
+        return json!({
+            "result": "Applied",
+            "sleepAudio": {
+                "enabled": sleep_audio.enabled,
+                "action": sleep_audio.action.code(),
+            },
+        });
+    }
     let mut applied = json!({
         "result": "Applied",
         "soundMode": state.sound_mode.map(SoundMode::code),
@@ -171,6 +203,16 @@ fn snapshot_json(device: DeviceState) -> Value {
         ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 => (
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
+        ),
+        ModelDriver::D1301 => (
+            json!({
+                "left": device.firmware_left.map(|version| version.to_string()),
+                "right": device.firmware_right.map(|version| version.to_string()),
+            }),
+            json!({
+                "leftPercent": device.battery.left,
+                "rightPercent": device.battery.right,
+            }),
         ),
         ModelDriver::A3949 | ModelDriver::A3954 => {
             let mut battery = json!({
@@ -199,6 +241,21 @@ fn snapshot_json(device: DeviceState) -> Value {
     }
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
+    }
+    if let Some(mode) = device.listening_mode {
+        snapshot["listeningMode"] = json!(mode.code());
+    }
+    if let Some(mode) = device.default_listening_mode {
+        snapshot["defaultListeningMode"] = json!(mode.code());
+    }
+    if let Some(enabled) = device.noise_canceling {
+        snapshot["noiseCanceling"] = json!(enabled);
+    }
+    if let Some(sleep_audio) = device.sleep_audio {
+        snapshot["sleepAudio"] = json!({
+            "enabled": sleep_audio.enabled,
+            "action": sleep_audio.action.code(),
+        });
     }
     snapshot
 }
