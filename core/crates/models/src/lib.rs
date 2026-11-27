@@ -6,8 +6,13 @@ use std::fmt;
 
 mod a3028;
 mod a3062;
+mod a3909;
+mod a3926;
+mod a3930;
 mod a3949;
+mod a3951;
 pub mod registry;
+mod separate_identity;
 
 pub use a3028::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
@@ -15,6 +20,12 @@ pub use a3028::{
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
+pub use separate_identity::{
+    AGE_RANGE, BATTERY, CUSTOM_HEAR_ID, EQUALIZER_BAND_COUNT,
+    EQUALIZER_BANDS as SEPARATE_IDENTITY_EQUALIZER_BANDS, EQUALIZER_PRESET, GENDER, HEAR_ID_CUSTOM,
+    HEAR_ID_GENRE, HEAR_ID_TIME, HEAR_ID_TYPE, HEAR_ID_VOLUME, IDENTITY_LENGTH, SOUND_MODES,
+    TWS_STATUS, decode_identity_firmware, decode_ldac_state,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -22,11 +33,17 @@ pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
 /// Read the state of a device using the common state command.
 pub const STATE_COMMAND: [u8; 2] = [0x01, 0x01];
 
+/// Read the separately reported LDAC state.
+pub const LDAC_STATE_COMMAND: [u8; 2] = [0x01, 0x7f];
+
 /// Write the selected driver's sound-mode controls.
 pub const SOUND_MODE_COMMAND: [u8; 2] = [0x06, 0x81];
 
 /// Write the equalizer curve together with the hear-id controls that gate it.
 pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
+
+/// Write the equalizer curve of a device without a hear-id block.
+pub const EQUALIZER_WITHOUT_HEAR_ID_COMMAND: [u8; 2] = [0x03, 0x86];
 
 /// Write the A3949 gaming-mode flag.
 pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
@@ -47,8 +64,16 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Liberty 2 Pro.
+    A3909,
+    /// Soundcore Life Dot 2S.
+    A3926,
+    /// Soundcore Liberty 2 Pro+.
+    A3930,
     /// Soundcore P20i, P25i and R50i.
     A3949,
+    /// Soundcore Liberty Air 2 Pro.
+    A3951,
     /// Soundcore Liberty 4 Pro.
     A3954,
 }
@@ -63,8 +88,14 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3930 | Self::A3951
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3926 | Self::A3930 | Self::A3951
+            ),
             gaming_mode_write: matches!(self, Self::A3949),
             auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
         }
@@ -76,8 +107,33 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3909 => "A3909",
+            Self::A3926 => "A3926",
+            Self::A3930 => "A3930",
             Self::A3949 => "A3949",
+            Self::A3951 => "A3951",
             Self::A3954 => "A3954",
+        }
+    }
+
+    /// Whether the model reads its firmware and serial through a separate
+    /// `01 05` identity response instead of its state body.
+    pub const fn has_separate_identity(self) -> bool {
+        matches!(self, Self::A3909 | Self::A3926 | Self::A3930 | Self::A3951)
+    }
+
+    /// Whether the model reports its LDAC flag with a separate `01 7F` request.
+    pub const fn reads_ldac_state(self) -> bool {
+        matches!(self, Self::A3930 | Self::A3951)
+    }
+
+    /// Whether the model can select the given ambient sound mode.
+    pub const fn supports_ambient_mode(self, mode: SoundMode) -> bool {
+        match self {
+            Self::A3028 | Self::A3029 | Self::A3062 => !matches!(mode, SoundMode::AirplaneMode),
+            Self::A3930 => a3930::supports_ambient_mode(mode),
+            Self::A3951 => a3951::supports_ambient_mode(mode),
+            Self::A3909 | Self::A3926 | Self::A3949 | Self::A3954 => false,
         }
     }
 
@@ -90,15 +146,24 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3909 | Self::A3926 | Self::A3930 | Self::A3951 => {
+                separate_identity::EQUALIZER_BAND_COUNT
+            }
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
 
     /// The wire command for the model's equalizer write.
+    ///
+    /// The separate-identity family picks between the hear-id and no-hear-id
+    /// commands from the state's age range; its resolved write carries the
+    /// command it selected.
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
-            Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3028 | Self::A3029 | Self::A3909 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3926 | Self::A3930 | Self::A3951 | Self::A3949 | Self::A3954 => {
+                EQUALIZER_COMMAND
+            }
         }
     }
 
@@ -116,7 +181,11 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::A3909 => a3909::decode_state(body),
+            Self::A3926 => a3926::decode_state(body),
+            Self::A3930 => a3930::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
+            Self::A3951 => a3951::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
     }
@@ -126,12 +195,19 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family needs the serial that selects its public code. The
+    /// separate-identity family has no serial in its state: its model comes from
+    /// the `01 05` identity response, and the confirmed layout only has to match
+    /// that model's measured body lengths.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3909 => a3909::has_confirmed_layout(body),
+            Self::A3926 => a3926::has_confirmed_layout(body),
+            Self::A3930 => a3930::has_confirmed_layout(body),
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
+            Self::A3951 => a3951::has_confirmed_layout(body),
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
         let serial_matches = match self {
@@ -139,7 +215,9 @@ impl ModelDriver {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
-            Self::A3062 | Self::A3949 => true,
+            Self::A3062 | Self::A3909 | Self::A3926 | Self::A3930 | Self::A3949 | Self::A3951 => {
+                true
+            }
         };
         (layout_matches && serial_matches)
             .then(|| self.decode_state(body).ok())
@@ -170,24 +248,29 @@ impl ModelDriver {
             equalizer: None,
             gaming_mode: None,
             auto_power_off: None,
+            ldac: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
     }
 
-    /// Builds the driver's measured equalizer write body from a fresh state response.
+    /// Builds the driver's measured equalizer write from a fresh state response.
     ///
     /// The write echoes the state's hear-id fields with hear-id disabled, so the
     /// requested curve is the one in effect. The A3028 family writes only its
     /// eight bands and has no hear-id block.
-    pub fn equalizer_write_body(
+    pub fn equalizer_write(
         self,
         setting: EqualizerSetting,
         state: &[u8],
-    ) -> Result<Vec<u8>, ModelError> {
+    ) -> Result<EqualizerWrite, ModelError> {
         match self {
-            Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
-            Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::A3028 | Self::A3029 => a3028::equalizer_write(setting, state),
+            Self::A3062 => a3062::equalizer_write(setting, state),
+            Self::A3909 => a3909::equalizer_write(),
+            Self::A3926 => a3926::equalizer_write(setting, state),
+            Self::A3930 => a3930::equalizer_write(setting, state),
+            Self::A3951 => a3951::equalizer_write(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
@@ -212,7 +295,45 @@ pub struct Capabilities {
 enum SoundModeControls {
     A3028([u8; 3]),
     A3062([u8; 5]),
+    SeparateIdentity([u8; 4]),
     A3954(A3954SoundModeControls),
+}
+
+/// A validated equalizer write for one model.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EqualizerWrite {
+    command: [u8; 2],
+    body: Vec<u8>,
+}
+
+impl EqualizerWrite {
+    pub(crate) fn new(command: [u8; 2], body: Vec<u8>) -> Self {
+        Self { command, body }
+    }
+
+    /// The wire command selected for this write.
+    pub const fn command(&self) -> [u8; 2] {
+        self.command
+    }
+
+    /// The wire body of the write.
+    pub fn body(&self) -> &[u8] {
+        &self.body
+    }
+
+    /// Consumes the write into its command and body.
+    pub fn into_parts(self) -> ([u8; 2], Vec<u8>) {
+        (self.command, self.body)
+    }
+}
+
+/// Firmware versions read from a separate `01 05` identity response.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct IdentityFirmware {
+    /// Left earbud firmware, when the response reports it.
+    pub left: Option<FirmwareVersion>,
+    /// Right earbud firmware, when the response reports it.
+    pub right: Option<FirmwareVersion>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -238,6 +359,8 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// The separately reported LDAC flag, when the model reads it.
+    pub ldac: Option<bool>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -247,6 +370,19 @@ pub struct DeviceState {
 }
 
 impl DeviceState {
+    /// Returns the state with the firmware read from a separate identity body.
+    pub fn with_identity_firmware(mut self, firmware: IdentityFirmware) -> Self {
+        self.firmware_left = firmware.left;
+        self.firmware_right = firmware.right;
+        self
+    }
+
+    /// Returns the state with the separately reported LDAC flag.
+    pub fn with_ldac(mut self, ldac: bool) -> Self {
+        self.ldac = Some(ldac);
+        self
+    }
+
     /// Returns the reported setting for a model with a measured position scale.
     pub fn sound_mode_setting(self) -> Option<SoundModeSetting> {
         let Some(SoundModeControls::A3954(controls)) = self.sound_mode_controls else {
@@ -270,12 +406,20 @@ impl DeviceState {
         )
     }
 
-    /// Builds an ambient-mode write from the latest measured A3062 controls.
-    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
-        let Some(SoundModeControls::A3062(controls)) = self.sound_mode_controls else {
-            return Err(ModelError::InvalidSoundModeWrite);
-        };
-        a3062::ambient_sound_mode_write(mode, controls)
+    /// Builds an ambient-mode write from the latest measured controls.
+    ///
+    /// The A3062 write carries its sound-mode strength and wind controls; the
+    /// separate-identity family writes the four state sound-mode fields.
+    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<Vec<u8>, ModelError> {
+        match self.sound_mode_controls {
+            Some(SoundModeControls::A3062(controls)) => {
+                a3062::ambient_sound_mode_write(mode, controls).map(|body| body.to_vec())
+            }
+            Some(SoundModeControls::SeparateIdentity(controls)) => {
+                separate_identity::ambient_sound_mode_write(self.model, mode, controls)
+            }
+            _ => Err(ModelError::InvalidSoundModeWrite),
+        }
     }
 
     /// Builds an ambient-mode write from the latest A3028/A3029 controls.
@@ -566,7 +710,7 @@ pub struct FirmwareVersion {
 }
 
 impl FirmwareVersion {
-    fn parse(bytes: &[u8]) -> Result<Option<Self>, ModelError> {
+    pub(crate) fn parse(bytes: &[u8]) -> Result<Option<Self>, ModelError> {
         if matches!(bytes, [0, 0, 0, 0, 0] | [255, 255, 255, 255, 255]) {
             return Ok(None);
         }
@@ -622,6 +766,9 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The separately reported LDAC response does not carry a flag.
+    #[error("invalid device LDAC state response")]
+    InvalidLdacState,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

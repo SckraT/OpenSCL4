@@ -52,6 +52,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         equalizer: equalizer_setting(body),
         gaming_mode: None,
         auto_power_off: None,
+        ldac: None,
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,
@@ -90,10 +91,10 @@ pub fn ambient_sound_mode_write(mode: SoundMode, controls: [u8; 5]) -> Result<[u
 /// The write repeats the requested curve, carries the hear-id fields of the
 /// current state with hear-id disabled so the curve takes effect, and ends
 /// with the active curve again.
-pub fn equalizer_write_body(
+pub fn equalizer_write(
     setting: EqualizerSetting,
     state: &[u8],
-) -> Result<Vec<u8>, ModelError> {
+) -> Result<crate::EqualizerWrite, ModelError> {
     if !setting.is_writable() {
         return Err(ModelError::InvalidEqualizerWrite);
     }
@@ -117,7 +118,7 @@ pub fn equalizer_write_body(
     body.extend_from_slice(&bands);
     body.push(0);
     debug_assert_eq!(body.len(), EQUALIZER_WRITE_LENGTH);
-    Ok(body)
+    Ok(crate::EqualizerWrite::new(crate::EQUALIZER_COMMAND, body))
 }
 
 #[cfg(test)]
@@ -164,7 +165,10 @@ mod tests {
             preset_id: 0xfefe,
             volume_adjustments: [-60, 5, -60, 28, -7, -25, 24, -9, 0, 0],
         };
-        let body = equalizer_write_body(setting, &state).expect("measured write");
+        let body = equalizer_write(setting, &state)
+            .expect("measured write")
+            .body()
+            .to_vec();
         assert_eq!(
             body,
             vec![
@@ -191,7 +195,7 @@ mod tests {
         };
         let short = &state_body(STATE)[..HEAR_ID_GENRE.end - 1];
         assert_eq!(
-            equalizer_write_body(setting, short),
+            equalizer_write(setting, short),
             Err(ModelError::IncompleteState)
         );
     }
@@ -203,12 +207,15 @@ mod tests {
             volume_adjustments: [-120, 134, 0, 0, 0, 0, 0, 0, 0, 0],
         };
         let state = state_body(STATE);
-        let body = equalizer_write_body(setting, state).expect("both bounds are representable");
+        let body = equalizer_write(setting, state)
+            .expect("both bounds are representable")
+            .body()
+            .to_vec();
         assert_eq!(body[4..6], [0, 254]);
         for invalid in [i16::MIN, -121, 135, i16::MAX] {
             setting.volume_adjustments[9] = invalid;
             assert_eq!(
-                equalizer_write_body(setting, state),
+                equalizer_write(setting, state),
                 Err(ModelError::InvalidEqualizerWrite)
             );
         }
@@ -221,7 +228,7 @@ mod tests {
             volume_adjustments: [0; 10],
         };
         assert_eq!(
-            ModelDriver::A3954.equalizer_write_body(setting, state_body(STATE)),
+            ModelDriver::A3954.equalizer_write(setting, state_body(STATE)),
             Err(ModelError::InvalidEqualizerWrite)
         );
     }

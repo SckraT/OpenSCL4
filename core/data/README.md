@@ -157,6 +157,88 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## Separate-identity TWS reference
+
+The A3909, A3926, A3930 and A3951 drivers are the `separateIdentity` family: they
+read the state with `01 01` and read the two firmware versions and the serial with
+a separate `01 05` response. The state body carries no serial, so the new session
+selects the model from the identity response only and keeps the firmware versions
+from that same response.
+
+The **A3909** identity and state frames come from the legacy driver test
+`with_packet_from_issue_264` in
+[`lib/src/devices/soundcore/a3909.rs`](../../lib/src/devices/soundcore/a3909.rs),
+added with the driver in commit `f47d0a77` and referring to the upstream issue 264
+capture. The test registers the driver with a different `DeviceModel` label, but
+the captured `01 05` serial carries the 3909 model prefix, so the frames are used
+as A3909. The test's `01 05` body is `01.2801.28` followed by a real serial
+number; [a3909-identity.bin](a3909-identity.bin) replaces the serial with the
+synthetic `3909TEST00000000` value and recomputes the checksum.
+[a3909-state.bin](a3909-state.bin) keeps the captured 36-byte body and recomputes
+the checksum. The legacy parser consumes 35 bytes and leaves the last byte unread;
+the fixture keeps it and the session accepts both lengths. The body contains no
+serial, MAC or peer data that would need masking.
+
+**No physical A3926, A3930 or A3951 capture exists.** Their identity and state
+frames are derived from the documented layout of the legacy parsers and
+serializers at the same revision. The state body is TwsStatus (2), DualBattery
+(4), `CommonEqualizerConfiguration<2, 8>` (18), Gender (1), AgeRange (1), then the
+model block: the basic hear-id block (21) for the A3926 or the custom hear-id
+block (39) for the A3930 and A3951, `ButtonStatusCollection<6>` (12), and for the
+A3930 and A3951 SoundModes (4) and the side tone (1), plus wearing detection (1)
+and touch tone (1) for the A3951. The derived bodies were checked by parsing them with the
+legacy parsers and every value except the layout is a synthetic example. The firmware strings
+are synthetic (`01.60`, `01.70`, `01.80`), and the serials are
+`3926TEST00000000`, `3930TEST00000000` and `3951TEST00000000`. Checksums are the
+documented additive checksums.
+
+| Fixture                                  | Length | SHA-256                                                            |
+| ---------------------------------------- | ------ | ------------------------------------------------------------------ |
+| [a3909-identity.bin](a3909-identity.bin) | 36     | `97d4e26800e17451da1ad6ce8f41df6b747ca483f0da96fa75862cde852f177a` |
+| [a3909-state.bin](a3909-state.bin)       | 46     | `66997d55b6d3d5f6259ec888cd979b93b1121148fcc2eb174f5c40e271f7086a` |
+| [a3926-identity.bin](a3926-identity.bin) | 36     | `d8b1f149f556ca29d92a70050a93d24070a3cdf32500a9957e434d05dbe1328e` |
+| [a3926-state.bin](a3926-state.bin)       | 69     | `87b353c356a96054b6b2a8d4e23bb9073a341f702c7406dcbdcf0137c1b16088` |
+| [a3930-identity.bin](a3930-identity.bin) | 36     | `35dee0de0cc3d6e0d734bd43906064d0799b4039d1952f3f3883bb4dbba2cfd4` |
+| [a3930-state.bin](a3930-state.bin)       | 92     | `4c942577b64192db70c2e8ae518fa332e9bddc3a904586225329ead6ab1a43ab` |
+| [a3930-ldac.bin](a3930-ldac.bin)         | 11     | `9ba4f5f99489540db90fd1ef482bdf1e34e2956a0ef89596cb0b6c2c0f071d15` |
+| [a3951-identity.bin](a3951-identity.bin) | 36     | `36e4a32bebc2377d71303dababf2a2e76f854283d7d0759016dd7f3cd89b683e` |
+| [a3951-state.bin](a3951-state.bin)       | 94     | `8c5f1a0874cbc571263e85c3793c3f82c7d6e731bb7a5c27d692d3a7eedb61dd` |
+| [a3951-ldac.bin](a3951-ldac.bin)         | 11     | `d660ad97957993b54ac99d654d17977abfcdc27d3f170c5ed57dd24a35d68d0d` |
+
+The LDAC fixtures are the `01 7F` replies the A3930 and A3951 drivers request
+after the state: the A3930 fixture reports the flag off and the A3951 fixture
+reports it on. The A3909 and A3926 drivers do not read LDAC.
+
+The equalizer writes are derived from the legacy builders, not from a capture:
+
+- The A3926 basic hear-id variant writes the preset, the two eight-band channels,
+  the gender, the age range and the basic hear-id volume and time. The legacy
+  `EqualizerWithBasicHearIdStateModifier` adapts the basic block into the shared
+  `SetEqualizerAndCustomHearId` builder, which is the source of the field order.
+- The A3930 and A3951 custom hear-id variant writes the preset, the favorite music
+  genre, the two channels, the gender, the age range, the custom hear-id volume,
+  time, type and custom channel, and ends with the active compressed curve.
+- Both variants select `03 86` instead of `03 87` and replace the hear-id blocks
+  with absent markers when the state reports the age range `0xFF`.
+- The trailing active curve is the legacy dynamic-range-compression output, so the
+  models crate carries that algorithm. The legacy test
+  `set_equalizer_and_custom_hear_id.rs::it_matches_a_generated_packet_with_hear_id_set`
+  fixes a full `03 87` frame, and the models test
+  `reproduces_the_legacy_golden_equalizer_body` rebuilds that body from a state
+  with the same hear-id fields. The state carries the genre as one byte, so the
+  published two-byte genre `FE FE` becomes `FE 00` in a write built from a state.
+- The `06 81` sound-mode write repeats the state's noise-canceling, transparency
+  and custom fields and changes only the ambient byte. The A3930 driver offers the
+  normal and transparency ambient modes, the A3951 also offers noise canceling.
+- The A3930 driver explicitly selects the trailing checksum. The modular core
+  frames every model with that trailing checksum, so the fixture and identity
+  frames keep it without a separate mode.
+
+The session replay compares each outgoing write with the published body and
+confirms the result from a fresh `01 01` reply. The A3909 equalizer is not ported:
+its state carries only the preset id and the legacy driver infers the curve from a
+fixed preset table, so a curve write cannot be confirmed by read-back.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

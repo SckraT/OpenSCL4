@@ -1,8 +1,9 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
-    STATE_COMMAND, registry,
+    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, IdentityFirmware,
+    LDAC_STATE_COMMAND, ModelDriver, ModelError, STATE_COMMAND, decode_identity_firmware,
+    decode_ldac_state, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -42,6 +43,8 @@ pub enum ConnectionState {
     ProbingIdentity,
     /// A read-only state probe after the identity query failed.
     ProbingState(SessionError),
+    /// The model is known and its separate LDAC read is in progress.
+    SyncingLdac(ModelDriver),
     /// The model is known and the initial state read is in progress.
     SyncingState(ModelDriver),
     /// A validated state response has been parsed for the current link.
@@ -201,6 +204,8 @@ struct ActiveWrite {
     id: Option<CommandId>,
     /// The setting this write changes.
     target: WriteTarget,
+    /// The command resolved for this write, or the target's default.
+    command: [u8; 2],
     /// The preset fields still to apply after this one, or none outside a
     /// preset. The preset's last field carries the marker with every field
     /// consumed.
@@ -241,6 +246,10 @@ pub struct SessionMachine {
     pending_eq: Option<PendingEq>,
     last_eq_preset: CommandId,
     queue: VecDeque<QueuedCommand>,
+    /// Firmware read from the current connection's separate identity response.
+    identity_firmware: Option<IdentityFirmware>,
+    /// LDAC flag read from the current connection's separate LDAC response.
+    ldac: Option<bool>,
 }
 
 impl SessionMachine {
@@ -260,6 +269,8 @@ impl SessionMachine {
             pending_eq: None,
             last_eq_preset: CommandId(0),
             queue: VecDeque::new(),
+            identity_firmware: None,
+            ldac: None,
         }
     }
 
@@ -278,6 +289,9 @@ impl SessionMachine {
 
     pub fn open(&mut self, now: Duration) -> Effect {
         self.view.generation += 1;
+        // Firmware and LDAC evidence belong to one connection.
+        self.identity_firmware = None;
+        self.ldac = None;
         self.transition(ConnectionState::Connecting);
         self.limit_to_recovery(Effect::Open {
             deadline: now + CONNECT_TIMEOUT,
@@ -431,6 +445,7 @@ impl SessionMachine {
             self.active = Some(ActiveWrite {
                 id: Some(command.id),
                 target,
+                command: device.model.state_command(),
                 preset,
                 confirmed_preset: None,
                 model: device.model,
@@ -465,6 +480,7 @@ impl SessionMachine {
                 self.active = Some(ActiveWrite {
                     id: None,
                     target: WriteTarget::Equalizer(pending.setting),
+                    command: device.model.state_command(),
                     preset: None,
                     confirmed_preset: None,
                     model: device.model,
@@ -519,10 +535,7 @@ impl SessionMachine {
                 WriteStage::ReadCurrent if frame.command == write.model.state_command() => {
                     self.send_write(now, write, &frame.body)
                 }
-                WriteStage::Ack
-                    if frame.command == write.target.command(write.model)
-                        && frame.body.is_empty() =>
-                {
+                WriteStage::Ack if frame.command == write.command && frame.body.is_empty() => {
                     self.read_back(now, write, None, None)
                 }
                 WriteStage::ReadBack {
@@ -540,10 +553,7 @@ impl SessionMachine {
                 if frame.command == IDENTITY_COMMAND && first_read > self.receive_cutoff =>
             {
                 match ModelDriver::identify(&frame.body) {
-                    Ok(model) => {
-                        self.transition(ConnectionState::SyncingState(model));
-                        Effect::read(now, model.state_command())
-                    }
+                    Ok(model) => self.begin_sync(now, model, &frame.body),
                     // A received identity naming no registered model is final:
                     // the state layout must not select a driver for it.
                     Err(ModelError::UnknownModel) => self.unidentified(
@@ -555,6 +565,15 @@ impl SessionMachine {
                     ),
                     Err(error) => self.probe_state(now, error.into()),
                 }
+            }
+            ConnectionState::SyncingLdac(model)
+                if frame.command == LDAC_STATE_COMMAND && first_read > self.receive_cutoff =>
+            {
+                // A malformed LDAC response leaves the flag unconfirmed instead
+                // of discarding the model; the state read still follows.
+                self.ldac = decode_ldac_state(&frame.body).ok();
+                self.transition(ConnectionState::SyncingState(model));
+                Effect::read(now, model.state_command())
             }
             ConnectionState::ProbingState(_)
                 if frame.command == STATE_COMMAND && first_read > self.receive_cutoff =>
@@ -580,6 +599,26 @@ impl SessionMachine {
         }
     }
 
+    /// Starts the model's startup reads after its identity was recognized.
+    ///
+    /// The separate-identity family reads its firmware from the identity body
+    /// and the models that report LDAC read that flag before the state. The
+    /// state is the only source of the confirmed snapshot.
+    fn begin_sync(&mut self, now: Duration, model: ModelDriver, identity: &[u8]) -> Effect {
+        self.identity_firmware = if model.has_separate_identity() {
+            decode_identity_firmware(identity).ok()
+        } else {
+            None
+        };
+        if model.reads_ldac_state() {
+            self.transition(ConnectionState::SyncingLdac(model));
+            Effect::read(now, LDAC_STATE_COMMAND)
+        } else {
+            self.transition(ConnectionState::SyncingState(model));
+            Effect::read(now, model.state_command())
+        }
+    }
+
     fn probe_state(&mut self, now: Duration, reason: SessionError) -> Effect {
         self.transition(ConnectionState::ProbingState(reason));
         Effect::read(now, STATE_COMMAND)
@@ -588,6 +627,7 @@ impl SessionMachine {
     fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
         match model.decode_confirmed_state(body) {
             Some(state) => {
+                let state = self.apply_evidence(state);
                 self.recovery = None;
                 self.transition(ConnectionState::Ready(state));
                 self.next_effect(now)
@@ -599,6 +639,18 @@ impl SessionMachine {
                     reason: UnidentifiedReason::IncompatibleState,
                 },
             ),
+        }
+    }
+
+    /// Adds the separately read firmware and LDAC flag to a decoded state.
+    fn apply_evidence(&self, state: DeviceState) -> DeviceState {
+        let state = match self.identity_firmware {
+            Some(firmware) => state.with_identity_firmware(firmware),
+            None => state,
+        };
+        match self.ldac {
+            Some(ldac) => state.with_ldac(ldac),
+            None => state,
         }
     }
 
@@ -616,6 +668,7 @@ impl SessionMachine {
             // state and the original deadline; the command waits for a valid reply.
             return self.next_effect(now);
         };
+        let state = self.apply_evidence(state);
         if self.view.connection == ConnectionState::Ready(state) {
             self.reply_deadline = None;
         } else {
@@ -624,12 +677,16 @@ impl SessionMachine {
 
         match write.target.write_body(state, body) {
             Ok(resolved) => {
+                let command = resolved
+                    .command
+                    .unwrap_or_else(|| write.target.command(write.model));
                 self.active = Some(ActiveWrite {
+                    command,
                     stage: WriteStage::Ack,
                     expected_auto_power_off: resolved.expected_auto_power_off,
                     ..write
                 });
-                Effect::request(now, write.target.command(write.model), resolved.body)
+                Effect::request(now, command, resolved.body)
             }
             Err(error) => self.reject_write(now, write, error),
         }
@@ -680,6 +737,7 @@ impl SessionMachine {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
+        let state = self.apply_evidence(state);
         if write.target.matches(state, write.expected_auto_power_off) {
             return self.finish_write(now, write, state);
         }
@@ -1125,6 +1183,7 @@ mod tests {
         machine.active = Some(ActiveWrite {
             id: Some(id),
             target: WriteTarget::SoundMode(requested),
+            command: SOUND_MODE_COMMAND,
             preset: None,
             confirmed_preset: None,
             model,
@@ -1422,6 +1481,7 @@ mod tests {
             machine.active = Some(ActiveWrite {
                 id: Some(attempted),
                 target: WriteTarget::SoundMode(SoundModeSetting::NORMAL),
+                command: SOUND_MODE_COMMAND,
                 preset: None,
                 confirmed_preset: None,
                 model: ModelDriver::A3954,

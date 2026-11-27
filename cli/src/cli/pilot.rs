@@ -5,8 +5,9 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3909, VirtualA3926, VirtualA3930,
+    VirtualA3949, VirtualA3951, VirtualIncompatibleA3954, VirtualSoundcoreDevice,
+    VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -28,7 +29,11 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3909 => SessionRunner::start(VirtualA3909, target),
+                ModelDriver::A3926 => SessionRunner::start(VirtualA3926, target),
+                ModelDriver::A3930 => SessionRunner::start(VirtualA3930, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
+                ModelDriver::A3951 => SessionRunner::start(VirtualA3951, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
             },
         },
@@ -114,23 +119,44 @@ fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, 
     let Some(original_mode) = initial.sound_mode else {
         anyhow::bail!("device model is read-only in the pilot");
     };
-    let target = match original_mode {
-        SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
-        SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
-        _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
-    };
     if let Some(original) = initial.sound_mode_setting() {
+        let target = match original_mode {
+            SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
+            SoundMode::Normal => SoundModeSetting::NOISE_CANCELING,
+            _ => anyhow::bail!("the pilot cycles normal and noise canceling modes"),
+        };
         initial.sound_mode_write(original)?;
-        Ok((
+        return Ok((
             SessionCommand::SetSoundMode(target),
             SessionCommand::SetSoundMode(original),
-        ))
-    } else {
-        Ok((
-            SessionCommand::SetAmbientSoundMode(target.mode),
-            SessionCommand::SetAmbientSoundMode(original_mode),
-        ))
+        ));
     }
+    // A model without a scale may not offer noise canceling: the A3930 has only
+    // the normal and transparency ambient modes.
+    if !initial.model.supports_ambient_mode(original_mode) {
+        anyhow::bail!(
+            "the pilot cannot restore the reported ambient mode of {}",
+            initial.model.code()
+        );
+    }
+    let target = match original_mode {
+        SoundMode::Normal => {
+            if initial
+                .model
+                .supports_ambient_mode(SoundMode::NoiseCanceling)
+            {
+                SoundMode::NoiseCanceling
+            } else {
+                SoundMode::Transparency
+            }
+        }
+        SoundMode::NoiseCanceling | SoundMode::Transparency => SoundMode::Normal,
+        _ => anyhow::bail!("the pilot cycles the supported ambient modes"),
+    };
+    Ok((
+        SessionCommand::SetAmbientSoundMode(target),
+        SessionCommand::SetAmbientSoundMode(original_mode),
+    ))
 }
 
 async fn apply_mode(
@@ -172,21 +198,24 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
-            let mut battery = json!({
+        ModelDriver::A3954 => {
+            let battery = json!({
+                "leftPercent": device.battery.left,
+                "rightPercent": device.battery.right,
+                "casePercent": device.battery.case,
+            });
+            (dual_firmware_json(device), battery)
+        }
+        ModelDriver::A3909
+        | ModelDriver::A3926
+        | ModelDriver::A3930
+        | ModelDriver::A3949
+        | ModelDriver::A3951 => {
+            let battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
-                battery["casePercent"] = json!(device.battery.case);
-            }
-            (
-                json!({
-                    "left": device.firmware_left.map(|version| version.to_string()),
-                    "right": device.firmware_right.map(|version| version.to_string()),
-                }),
-                battery,
-            )
+            (dual_firmware_json(device), battery)
         }
     };
     let mut snapshot = json!({
@@ -200,5 +229,15 @@ fn snapshot_json(device: DeviceState) -> Value {
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
     }
+    if let Some(ldac) = device.ldac {
+        snapshot["ldac"] = json!(ldac);
+    }
     snapshot
+}
+
+fn dual_firmware_json(device: DeviceState) -> Value {
+    json!({
+        "left": device.firmware_left.map(|version| version.to_string()),
+        "right": device.firmware_right.map(|version| version.to_string()),
+    })
 }

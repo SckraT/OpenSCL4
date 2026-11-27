@@ -58,6 +58,30 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The separate-identity TWS family (A3909, A3926, A3930, A3951) reads its state
+with `01 01` and its two firmware versions and serial with a separate `01 05`
+identity response. The state body has no serial, so the session selects the model
+from the identity response and keeps the firmware versions from it. The A3930 and
+A3951 also read the LDAC flag with `01 7F` before the state read; the confirmed
+snapshot reports the flag and the pilot prints it. The fixtures and their masking
+are recorded in
+[`core/data`](../core/data/README.md#separate-identity-tws-reference).
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3909
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3926
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3930
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3951
+```
+
+Add `--cycle-mode` for the A3930 (normal ↔ transparency) and the A3951 (normal ↔
+noise canceling); each result comes from a fresh state response. The A3909 and
+A3926 drivers do not register sound modes, so their pilots are read-only. The family
+equalizer writes use the basic hear-id variant for the A3926 and the custom
+hear-id variant for the A3930 and A3951. The A3909 equalizer is not ported because
+its state exposes only the preset id, so a curve write cannot be confirmed by
+read-back.
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

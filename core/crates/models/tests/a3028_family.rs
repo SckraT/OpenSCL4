@@ -128,7 +128,8 @@ mod tests {
         assert_eq!(
             state
                 .model
-                .equalizer_write_body(reference_curve(), A3028_BODY),
+                .equalizer_write(reference_curve(), A3028_BODY)
+                .map(|write| write.body().to_vec()),
             Ok(vec![
                 0xfe, 0xfe, 0x3c, 0xb4, 0x8f, 0xa0, 0x8e, 0xb4, 0x74, 0x88,
             ])
@@ -141,15 +142,17 @@ mod tests {
         assert_eq!(
             state
                 .model
-                .equalizer_write_body(signature, A3028_BODY)
-                .expect("eight-band signature write"),
+                .equalizer_write(signature, A3028_BODY)
+                .expect("eight-band signature write")
+                .body()
+                .to_vec(),
             vec![0x00, 0x00, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78]
         );
 
         let mut out_of_range = signature;
         out_of_range.volume_adjustments[9] = 1;
         assert_eq!(
-            state.model.equalizer_write_body(out_of_range, A3028_BODY),
+            state.model.equalizer_write(out_of_range, A3028_BODY),
             Err(ModelError::InvalidEqualizerWrite)
         );
     }

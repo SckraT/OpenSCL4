@@ -82,6 +82,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         equalizer: equalizer_setting(body),
         auto_power_off: auto_power_off(body),
         gaming_mode: None,
+        ldac: None,
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,
@@ -143,10 +144,10 @@ pub fn sound_mode_write(mode: SoundMode, controls: [u8; 3]) -> Result<[u8; 4], M
 }
 
 /// Builds the eight-band equalizer write; the shared fixed bands must stay zero.
-pub fn equalizer_write_body(
+pub fn equalizer_write(
     setting: EqualizerSetting,
     _state: &[u8],
-) -> Result<Vec<u8>, ModelError> {
+) -> Result<crate::EqualizerWrite, ModelError> {
     if !setting.is_writable()
         || setting.volume_adjustments[EQUALIZER_BAND_COUNT..]
             .iter()
@@ -161,5 +162,5 @@ pub fn equalizer_write_body(
             .iter()
             .map(|gain| EqualizerSetting::band_byte(*gain)),
     );
-    Ok(body)
+    Ok(crate::EqualizerWrite::new(A3028_EQUALIZER_COMMAND, body))
 }
