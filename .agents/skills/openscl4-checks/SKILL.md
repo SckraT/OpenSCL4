@@ -40,6 +40,12 @@ For changes to session writes, cover the affected cases at the public `SessionHa
 
 Done when the relevant package and scenario tests pass. The session suites `live_eq_presets` and `a3062_equalizer_capture` run in the command above.
 
+For changes to model discovery or session write admission, use the same package command and exercise the affected paths.
+
+- Through `SessionHandle` and the virtual transport, assert the typed rejection and record the outbound commands. Each read-only scenario sends only the verified reads used to identify or synchronize the device. Keep the measured known-model path working.
+- In `SessionMachine` with virtual time, deliver a state frame received before the request and assert that it cannot complete synchronization. During a write, assert that an unrelated frame preserves confirmed state and the existing deadline. Deliver the matching reply and assert completion for the original command ID. Include events from a prior connection generation when changing generation handling.
+- For diagnostic capture changes, check each unrecognized inbound record in `frames.jsonl` for `metadata_only` and the absence of `frame_hex`. Check the archive and the exposed state or events for raw MAC addresses and serial numbers, including their hexadecimal representations.
+
 ## 2. Full core and pilot gate
 
 For changes to the core, transports, their fixtures or CLI pilots, run `cargo test --locked` with the `openscl4-*` package flags from each platform's Rust test step. Include `openscl4-transport-windows` on Windows and `openscl4-transport-bluez` on Linux. On Linux also run the core and CLI Clippy commands from the lint workflow with `--all-targets` or the explicit CLI targets shown there and `-D warnings`. [Windows tests](../../../.github/workflows/test-windows.yml) · [Linux tests](../../../.github/workflows/test.yml) · [Lint](../../../.github/workflows/lint.yml)

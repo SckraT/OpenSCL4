@@ -104,18 +104,22 @@ impl SessionHandle {
         self.capture.export(destination.into()).await
     }
 
-    /// Waits for the first confirmed device snapshot.
+    /// Waits for the first confirmed device snapshot or read-only identity.
     pub async fn confirmed_view(&self) -> Result<Arc<SessionView>, SessionError> {
         let mut view = self.subscribe();
         let snapshot = view
             .wait_for(|view| {
-                matches!(view.connection, ConnectionState::Ready(_))
-                    || view.connection.is_terminal()
+                matches!(
+                    view.connection,
+                    ConnectionState::Ready(_) | ConnectionState::Unidentified(_)
+                ) || view.connection.is_terminal()
             })
             .await
             .map_err(|_| SessionError::Closed)?;
         match snapshot.connection {
-            ConnectionState::Ready(_) => Ok(Arc::clone(&snapshot)),
+            ConnectionState::Ready(_) | ConnectionState::Unidentified(_) => {
+                Ok(Arc::clone(&snapshot))
+            }
             ConnectionState::Failed(error) => Err(error),
             _ => Err(SessionError::Closed),
         }
@@ -129,6 +133,7 @@ impl SessionHandle {
         let view = self.view.borrow();
         match view.connection {
             ConnectionState::Ready(device) => Ok((view.generation, device)),
+            ConnectionState::Unidentified(_) => Err(DispatchError::ReadOnly),
             state if state.is_terminal() => Err(DispatchError::Closed),
             _ => Err(DispatchError::NotReady),
         }

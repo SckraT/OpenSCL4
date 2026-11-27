@@ -221,6 +221,12 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
                         .conflicts_with("bluetooth"),
                 )
                 .arg(arg!(--"bluetooth" <DEVICE_NAME> "Use a connected Bluetooth device by name (Windows or Linux)"))
+                .arg(
+                    arg!(--"mock-scenario" <SCENARIO> "Select a read-only virtual scenario")
+                        .value_parser(["unknown-identity", "incompatible-state"])
+                        .conflicts_with("bluetooth")
+                        .conflicts_with("mock-model"),
+                )
                 .arg(arg!(--"cycle-mode" "Switch and restore the model's sound or gaming mode with read-back confirmation")),
         )
         .subcommand(
@@ -246,7 +252,10 @@ pub async fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
                 .get_one::<String>("mock-model")
                 .and_then(|code| registry::by_code(code))
                 .unwrap_or(ModelDriver::A3954);
-            pilot::handle(options.get_flag("cycle-mode"), device, mock_model).await?;
+            let scenario = options
+                .get_one::<String>("mock-scenario")
+                .map(String::as_str);
+            pilot::handle(options.get_flag("cycle-mode"), device, mock_model, scenario).await?;
         }
         _ => (),
     }

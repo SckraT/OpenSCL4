@@ -12,6 +12,7 @@ mod tests {
         ConnectTarget, LinkRx, LinkTx, RedactedMac, TransportError, TransportLink,
         TransportProvider,
     };
+    use openscl4_transport_mock::{VirtualIncompatibleA3954, VirtualUnknownIdentity};
     use tokio::sync::mpsc;
 
     const SERIAL: &[u8; 16] = b"3954PRIVATE00000";
@@ -63,6 +64,140 @@ mod tests {
             assert!(!text.contains(&hex));
             assert!(!log.contains(raw));
         }
+    }
+
+    #[tokio::test]
+    async fn unknown_identity_keeps_safe_metadata_only_in_the_archive_and_view() {
+        let directory = tempfile::tempdir().expect("local export directory");
+        let path = directory.path().join("unknown.zip");
+        let handle = SessionRunner::start(
+            VirtualUnknownIdentity,
+            ConnectTarget {
+                mac: RedactedMac::from_octets(*MAC),
+            },
+        );
+        let mut events = handle.events();
+        handle.set_frame_capture_enabled(true);
+        let view = handle.confirmed_view().await.expect("read-only view");
+        handle.set_frame_capture_enabled(false);
+        handle.close().await.expect("close the read-only link");
+        handle
+            .export_diagnostics(&path)
+            .await
+            .expect("export unknown-identity capture");
+
+        let archive = fs::read(&path).expect("read generated archive");
+        let text = String::from_utf8_lossy(&archive);
+        let records = capture_records(&archive);
+
+        let identity = inbound_record(&records, [0x01, 0x05]);
+        assert!(identity.contains("\"outcome\":\"metadata_only\""));
+        assert!(
+            !identity.contains("\"frame_hex\""),
+            "unknown identity payload was serialized"
+        );
+        assert!(
+            !records
+                .iter()
+                .any(|record| record.contains("\"direction\":\"inbound\"")
+                    && record.contains("\"command\":[1,1]")),
+            "an explicit unknown identity must not read state"
+        );
+        assert_marker_absent(&text, b"9999UNKNOWN00000");
+        assert_marker_absent(&text, MAC);
+
+        let mut log = format!("{view:?}");
+        while let Ok(event) = events.try_recv() {
+            use std::fmt::Write;
+            writeln!(log, "{event:?}").expect("format structured event");
+        }
+        let log = log.to_ascii_lowercase();
+        assert!(!log.contains("unknown00000"));
+        assert!(!log.contains("9999"));
+    }
+
+    #[tokio::test]
+    async fn a_rejected_untrusted_state_layout_is_metadata_only_without_its_payload() {
+        let directory = tempfile::tempdir().expect("local export directory");
+        let path = directory.path().join("untrusted-layout.zip");
+        let handle = SessionRunner::start(
+            VirtualIncompatibleA3954,
+            ConnectTarget {
+                mac: RedactedMac::from_octets(*MAC),
+            },
+        );
+        let mut events = handle.events();
+        handle.set_frame_capture_enabled(true);
+        let view = handle.confirmed_view().await.expect("read-only view");
+        handle.set_frame_capture_enabled(false);
+        handle.close().await.expect("close the read-only link");
+        handle
+            .export_diagnostics(&path)
+            .await
+            .expect("export untrusted-layout capture");
+
+        let archive = fs::read(&path).expect("read generated archive");
+        let text = String::from_utf8_lossy(&archive);
+        let records = capture_records(&archive);
+
+        let identity = inbound_record(&records, [0x01, 0x05]);
+        assert!(identity.contains("\"outcome\":\"sanitized\""));
+        let state = inbound_record(&records, [0x01, 0x01]);
+        assert!(state.contains("\"outcome\":\"metadata_only\""));
+        assert!(
+            !state.contains("\"frame_hex\""),
+            "a rejected startup state was serialized"
+        );
+        assert_marker_absent(&text, b"UNTRUSTED-STATE");
+        assert_marker_absent(&text, b"A3954DEMO0000000");
+        assert_marker_absent(&text, MAC);
+
+        let mut log = format!("{view:?}");
+        while let Ok(event) = events.try_recv() {
+            use std::fmt::Write;
+            writeln!(log, "{event:?}").expect("format structured event");
+        }
+        assert!(!log.to_ascii_lowercase().contains("untrusted-state"));
+    }
+
+    /// Extracts compact JSONL records from the stored ZIP entry.
+    fn capture_records(archive: &[u8]) -> Vec<String> {
+        let text = String::from_utf8_lossy(archive);
+        let mut records = Vec::new();
+        let mut rest = text.as_ref();
+        while let Some(start) = rest.find("{\"elapsed_millis\":") {
+            let after = &rest[start..];
+            let Some(end) = after.find('}') else {
+                break;
+            };
+            records.push(after[..=end].to_owned());
+            rest = &after[end + 1..];
+        }
+        records
+    }
+
+    fn inbound_record(records: &[String], command: [u8; 2]) -> &str {
+        let command = format!("\"command\":[{},{}]", command[0], command[1]);
+        records
+            .iter()
+            .find(|record| {
+                record.contains("\"direction\":\"inbound\"") && record.contains(&command)
+            })
+            .map(String::as_str)
+            .expect("captured inbound record")
+    }
+
+    fn assert_marker_absent(text: &str, marker: &[u8]) {
+        let text = text.to_ascii_lowercase();
+        let raw = std::str::from_utf8(marker)
+            .expect("ASCII marker")
+            .to_ascii_lowercase();
+        let hex = marker
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        assert!(!text.contains(&raw), "raw marker leaked: {raw}");
+        assert!(!text.contains(&hex), "hex marker leaked: {hex}");
     }
 
     fn start() -> SessionHandle {

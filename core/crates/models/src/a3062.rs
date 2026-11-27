@@ -5,6 +5,8 @@ use crate::{
 
 const SOUND_MODE: usize = 69;
 const SOUND_MODE_CONTROLS: std::ops::Range<usize> = 70..75;
+/// Body length of the measured A3062 pilot state.
+pub const STATE_LENGTH: usize = 95;
 /// Body offsets of the mode and its controls in the measured A3062 state layout.
 pub const A3062_SOUND_MODE_FIELDS: std::ops::Range<usize> = SOUND_MODE..SOUND_MODE_CONTROLS.end;
 /// Body offsets of the preset id in the measured A3062 state layout.

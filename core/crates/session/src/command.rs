@@ -179,6 +179,9 @@ pub enum DispatchError {
     /// The session is closing or has ended.
     #[error("session closed")]
     Closed,
+    /// The device identity or state is not recognized; only safe reads are available.
+    #[error("device is read-only: its identity or state is not recognized")]
+    ReadOnly,
     /// The connected model does not support equalizer writes.
     #[error("the connected model does not support equalizer writes")]
     UnsupportedEqualizer,

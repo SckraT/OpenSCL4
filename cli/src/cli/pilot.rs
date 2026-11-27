@@ -1,28 +1,35 @@
 use openscl4_session::{
     CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
-    SessionHandle, SessionRunner, SoundMode, SoundModeSetting,
+    SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
+    UnidentifiedState,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
-use openscl4_transport_mock::{VirtualA3062, VirtualA3949, VirtualSoundcoreDevice};
+use openscl4_transport_mock::{
+    VirtualA3062, VirtualA3949, VirtualIncompatibleA3954, VirtualSoundcoreDevice,
+    VirtualUnknownIdentity,
+};
 use serde_json::{Value, json};
 
 pub async fn handle(
     cycle_mode: bool,
     device: Option<&str>,
     mock_model: ModelDriver,
+    scenario: Option<&str>,
 ) -> anyhow::Result<()> {
+    let target = ConnectTarget {
+        mac: RedactedMac::from_octets([0; 6]),
+    };
     let handle = match device {
         Some(name) => start_bluetooth(name).await?,
-        None => {
-            let target = ConnectTarget {
-                mac: RedactedMac::from_octets([0; 6]),
-            };
-            match mock_model {
+        None => match scenario {
+            Some("unknown-identity") => SessionRunner::start(VirtualUnknownIdentity, target),
+            Some("incompatible-state") => SessionRunner::start(VirtualIncompatibleA3954, target),
+            _ => match mock_model {
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
-            }
-        }
+            },
+        },
     };
     let output = read_pilot(&handle, cycle_mode).await;
     let closed = handle.close().await;
@@ -68,7 +75,13 @@ async fn start_bluetooth(_name: &str) -> anyhow::Result<SessionHandle> {
 async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<Value> {
     let snapshot = handle.confirmed_view().await?;
     let ConnectionState::Ready(initial) = snapshot.connection else {
-        return Err(SessionError::Closed.into());
+        return match snapshot.connection {
+            ConnectionState::Unidentified(_) if cycle_mode => {
+                anyhow::bail!("device is read-only: the pilot cannot change settings")
+            }
+            ConnectionState::Unidentified(state) => Ok(unidentified_json(state)),
+            _ => Err(SessionError::Closed.into()),
+        };
     };
 
     if !cycle_mode {
@@ -139,6 +152,17 @@ fn applied_json(state: DeviceState) -> Value {
         applied["position"] = json!(setting.position);
     }
     applied
+}
+
+fn unidentified_json(state: UnidentifiedState) -> Value {
+    json!({
+        "model": state.model.map(ModelDriver::code),
+        "readOnly": true,
+        "reason": match state.reason {
+            UnidentifiedReason::UnknownIdentity => "unknownIdentity",
+            UnidentifiedReason::IncompatibleState => "incompatibleState",
+        },
+    })
 }
 
 fn snapshot_json(device: DeviceState) -> Value {
