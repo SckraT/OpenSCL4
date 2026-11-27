@@ -193,3 +193,71 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## A3949 equalizer, buttons and touch tone
+
+The measured A3949 body carries more than the gaming flag. The field positions
+below come from the legacy state parser and match the 88-byte P20i capture; the
+last 15 bytes of the capture are not described by that parser and stay
+unassigned.
+
+| Field                    | Body offsets | Description                                                          |
+| ------------------------ | ------------ | -------------------------------------------------------------------- |
+| TWS status               | 0–1          | Host device (`00` left, `01` right) and both-earbuds-connected flag. |
+| Batteries                | 2–5          | Left and right step, then left and right charging flags.             |
+| Firmware                 | 6–15         | Two five-byte version strings, left then right.                      |
+| Serial number            | 16–31        | Masked to the synthetic `3949TEST00000000` value.                    |
+| Equalizer preset         | 32–33        | Preset identifier, little-endian.                                    |
+| Equalizer bands          | 34–43        | Ten raw band values; a band value is the gain plus 120.              |
+| Button entries           | 55–66        | Six pairs: enabled flag and action byte.                             |
+| Gaming mode              | 71           | `00` off, `01` on. The measured cycle is described above.            |
+| Touch tone               | 72           | `00` off, `01` on.                                                   |
+
+A button entry packs two actions into one byte: the low nibble is used while
+both earbuds are connected and the high nibble while they are not. The partner
+transaction writes the connected or disconnected nibble according to the TWS
+status in the fresh state. The six entries are ordered left and right single
+press, double press, then long press; the wire button ids are `02`, `00` and
+`01` for those press kinds and the side byte is `00` for left and `01` for
+right. Action `0F` disables a button.
+
+The write formats come from the legacy driver. The A3949 does not use the
+shared four-byte sound-mode command and does not support the set-all-buttons
+packet.
+
+| Operation       | Command | Body                                                                   |
+| --------------- | ------- | ---------------------------------------------------------------------- |
+| Equalizer (DRC) | `02 83` | Equalizer preset (two bytes), ten raw band bytes, ten DRC bytes.        |
+| Button action   | `04 81` | Side, button id, action id (or `0F` to disable).                       |
+| Touch tone      | `01 83` | One enable byte.                                                       |
+| Reset buttons   | `04 82` | Empty.                                                                 |
+| Gaming mode     | `01 87` | One enable byte.                                                       |
+
+The equalizer body is the legacy `set_equalizer_with_drc` layout. The ten DRC
+bytes are the documented transform of the raw curve
+(`lib/src/devices/soundcore/common/structures/volume_adjustments.rs`); only the
+first eight bands are transformed and the last two stay at `00 00`. The legacy
+R50i test's Piano request body is the reference for the whole body:
+
+```text
+0E 00 78 96 96 8C A0 AA 96 A0 78 00 77 7B 7A 78 7B 7C 78 7D 78 00
+```
+
+The session tests replay the measured `01 01` state with the documented field
+patched for the read-back, and compare the outgoing frames with the legacy
+formats. The equalizer write is rejected without a frame while the earbuds are
+not connected, matching the legacy TWS gate. The reset action has no measured
+post-reset state, so its result is confirmed by the device acknowledgement and a
+fresh snapshot instead of a value comparison. There is no hardware capture of
+the equalizer, touch-tone, button or reset writes yet; their evidence is the
+legacy protocol format plus the captured state layout.
+[Equalizer and DRC transform](../lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs) ·
+[Button writes](../lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs) ·
+[Session tests](../core/crates/session/tests/a3949_parity.rs) ·
+[Model variant tests](../core/crates/models/tests/a3949_variants.rs)
+
+The legacy driver keeps example states for the public variants. P20i firmware
+14.43 reports one earbud (right host, not connected) with no left firmware and
+touch tone on. P25i 08.30 reports both earbuds, the Piano curve and touch tone
+on. R50i 19.43 reports both earbuds and touch tone off. Gaming mode is off in
+all four examples, and P20i/R50i/P25i share the same 88-byte layout.

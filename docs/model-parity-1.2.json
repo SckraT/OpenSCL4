@@ -1637,6 +1637,85 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "equalizer_with_drc_tws",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs::set_equalizer_with_drc",
+            "command": "0283",
+            "evidence": "legacy",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3949_parity.rs",
+            "missing": "No hardware capture of the A3949 equalizer write exists: the 22-byte body and the DRC transform come from the legacy driver, and the read-back replays the measured 01 01 state with the documented curve. Its TWS gate rejects the write while both earbuds are not connected."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "equalizer_with_drc_tws",
+            "availabilitySource": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs::with_tws",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs::set_equalizer_with_drc",
+            "command": "0283",
+            "evidence": "legacy",
+            "result": "confirmedUnavailable",
+            "reference": "core/crates/session/tests/a3949_parity.rs",
+            "missing": "The unavailable branch is confirmed on a replayed split-pair state: the session rejects the write with a typed error before transmitting."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "touch_tone",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::FlagConfiguration",
+            "command": "0183",
+            "evidence": "legacy",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3949_parity.rs",
+            "missing": "No hardware capture of the A3949 touch-tone write exists: the one-byte flag body follows the shared flag writer, and the read-back replays the measured flag at body offset 72."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs::SetButtonConfiguration",
+            "command": "0481",
+            "evidence": "legacy",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3949_parity.rs",
+            "missing": "The six button entries and the per-press button ids come from the legacy driver. The read-back replays the measured state with the documented action nibble for the connected or disconnected side."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "reset_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs::ResetButtonConfigurationsToDefault",
+            "command": "0482",
+            "evidence": "legacy",
+            "result": "acceptedAck",
+            "reference": "core/crates/session/tests/a3949_parity.rs",
+            "missing": "The post-reset button set is not measured, so the result is confirmed by the empty device acknowledgement and a fresh snapshot read instead of a value comparison."
+        },
+        {
+            "models": [
+                "A3949"
+            ],
+            "operation": "gaming_mode",
+            "inbound": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::FlagConfiguration",
+            "command": "0187",
+            "evidence": "captureReplay",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3949_gaming_mode_capture.rs",
+            "missing": "Changing gaming mode is measured on P20i firmware 14.43 only; P25i and R50i states are recorded by the legacy tests and decoded by the model tests."
         }
     ],
     "models": [
@@ -3317,9 +3396,103 @@
                     "inbound": "core/data/README.md#a3949-gaming-mode-read-back",
                     "hardware": "https://github.com/SckraT/OpenSCL4/issues/174",
                     "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "readStateExtensions",
+                    "core": "captureReplay",
+                    "firmware": "14.43",
+                    "inbound": "core/data/a3949-pilot-state.bin",
+                    "note": "TWS status, equalizer curve, six button entries and touch tone are decoded from the same measured body; the serial stays redacted."
+                },
+                {
+                    "operation": "writeEqualizerWithDrc",
+                    "core": "protocolFixture",
+                    "outbound": "core/crates/session/tests/a3949_parity.rs",
+                    "inbound": "core/crates/session/tests/a3949_parity.rs",
+                    "result": "confirmedReadBack",
+                    "note": "Body and DRC transform from the legacy driver; read-back replayed from the measured state."
+                },
+                {
+                    "operation": "writeTouchTone",
+                    "core": "protocolFixture",
+                    "outbound": "core/crates/session/tests/a3949_parity.rs",
+                    "inbound": "core/crates/session/tests/a3949_parity.rs",
+                    "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "writeButtonAction",
+                    "core": "protocolFixture",
+                    "outbound": "core/crates/session/tests/a3949_parity.rs",
+                    "inbound": "core/crates/session/tests/a3949_parity.rs",
+                    "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "resetButtons",
+                    "core": "acknowledgement",
+                    "outbound": "core/crates/session/tests/a3949_parity.rs",
+                    "result": "acceptedAck"
                 }
             ],
-            "stateParserSource": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket",
+            "stateVariants": [
+                {
+                    "name": "p20iP25iR50i",
+                    "source": "core/crates/models/tests/a3949_variants.rs",
+                    "note": "The public variant names share one 88-byte layout and the A3949 model code."
+                },
+                {
+                    "variant": "P20i",
+                    "firmware": {
+                        "right": "14.43"
+                    },
+                    "tws": {
+                        "hostDevice": "Right",
+                        "connected": false
+                    },
+                    "touchTone": true,
+                    "gamingMode": false,
+                    "source": "core/crates/models/tests/a3949_variants.rs",
+                    "note": "Legacy example state with one earbud connected and no left firmware; equalizer writes stay unavailable in this state."
+                },
+                {
+                    "variant": "P25i",
+                    "firmware": {
+                        "left": "08.30",
+                        "right": "08.30"
+                    },
+                    "tws": {
+                        "hostDevice": "Left",
+                        "connected": true
+                    },
+                    "equalizerPreset": "Piano",
+                    "touchTone": true,
+                    "gamingMode": false,
+                    "source": "core/crates/models/tests/a3949_variants.rs"
+                },
+                {
+                    "variant": "R50i",
+                    "firmware": {
+                        "left": "19.43",
+                        "right": "19.43"
+                    },
+                    "tws": {
+                        "hostDevice": "Left",
+                        "connected": true
+                    },
+                    "touchTone": false,
+                    "gamingMode": false,
+                    "source": "core/crates/models/tests/a3949_variants.rs"
+                },
+                {
+                    "variant": "P20i 14.43 measured gaming capture",
+                    "firmware": {
+                        "left": "14.43",
+                        "right": "14.43"
+                    },
+                    "source": "core/data/README.md#a3949-equalizer-buttons-and-touch-tone",
+                    "note": "Measured pending read-backs: gaming mode appears 1022 ms after the enable write and 1247 ms after the disable write."
+                }
+            ]
         },
         {
             "code": "A3951",

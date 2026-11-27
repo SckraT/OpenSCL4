@@ -14,7 +14,15 @@ pub use a3028::{
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
-pub use a3949::A3949_GAMING_MODE;
+pub use a3949::{
+    A3949_EQUALIZER_BANDS, A3949_EQUALIZER_PRESET, A3949_EQUALIZER_WRITE_BANDS,
+    A3949_EQUALIZER_WRITE_DRC, A3949_EQUALIZER_WRITE_PRESET, A3949_GAMING_MODE, A3949_TOUCH_TONE,
+    BUTTON_COMMAND as A3949_BUTTON_COMMAND, BUTTON_COUNT as A3949_BUTTON_COUNT,
+    BUTTONS as A3949_BUTTONS, Button as A3949Button, DISABLED_ACTION as A3949_DISABLED_ACTION,
+    EQUALIZER_COMMAND as A3949_EQUALIZER_COMMAND,
+    RESET_BUTTONS_COMMAND as A3949_RESET_BUTTONS_COMMAND,
+    TOUCH_TONE_COMMAND as A3949_TOUCH_TONE_COMMAND,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -64,9 +72,12 @@ impl ModelDriver {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949),
             gaming_mode_write: matches!(self, Self::A3949),
             auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            touch_tone_write: matches!(self, Self::A3949),
+            button_configuration_write: matches!(self, Self::A3949),
+            button_reset: matches!(self, Self::A3949),
         }
     }
 
@@ -98,7 +109,22 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3949 => a3949::EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3954 => EQUALIZER_COMMAND,
+        }
+    }
+
+    /// Whether the current state makes the equalizer write available.
+    ///
+    /// The A3949 ignores equalizer changes while its earbuds are disconnected,
+    /// matching the legacy driver's TWS-gated equalizer handler.
+    pub fn equalizer_write_available(self, state: &DeviceState) -> bool {
+        if !self.capabilities().equalizer_write {
+            return false;
+        }
+        match self {
+            Self::A3949 => state.tws.is_some_and(|tws| tws.connected),
+            _ => true,
         }
     }
 
@@ -172,6 +198,9 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            tws: None,
+            buttons: None,
+            touch_tone: None,
         })
     }
 
@@ -188,7 +217,8 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
-            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3949 => a3949::equalizer_write_body(setting, state),
+            Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
 }
@@ -206,6 +236,12 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the touch-tone flag.
+    pub touch_tone_write: bool,
+    /// The session can confirm single-button action writes.
+    pub button_configuration_write: bool,
+    /// The session can send the reset-buttons action.
+    pub button_reset: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,6 +280,91 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// TWS status of a device that reports it in its measured state layout.
+    pub tws: Option<TwsStatus>,
+    /// Button actions of a device that reports them in its measured layout.
+    pub buttons: Option<ButtonConfiguration>,
+    /// Whether touch tones are enabled, when the device reports the flag.
+    pub touch_tone: Option<bool>,
+}
+
+/// Which earbud reports itself as the host device.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HostDevice {
+    /// The left earbud is the host.
+    Left,
+    /// The right earbud is the host.
+    Right,
+}
+
+impl HostDevice {
+    fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
+            0 => Some(Self::Left),
+            1 => Some(Self::Right),
+            _ => None,
+        }
+    }
+
+    /// The stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Left => "Left",
+            Self::Right => "Right",
+        }
+    }
+}
+
+/// The reported TWS connection status.
+///
+/// The state carries the host device and whether both earbuds are connected;
+/// the same status selects which of a button's two actions is in effect.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TwsStatus {
+    /// The earbud that reports itself as the host.
+    pub host_device: HostDevice,
+    /// Whether both earbuds are connected.
+    pub connected: bool,
+}
+
+/// The six measured A3949 button entries in state order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ButtonConfiguration {
+    buttons: [ButtonStatus; a3949::BUTTON_COUNT],
+}
+
+impl ButtonConfiguration {
+    /// Wraps the entries read from a measured state body.
+    pub const fn new(buttons: [ButtonStatus; a3949::BUTTON_COUNT]) -> Self {
+        Self { buttons }
+    }
+
+    /// The reported status of one button.
+    pub const fn status(self, button: A3949Button) -> ButtonStatus {
+        self.buttons[button.index()]
+    }
+}
+
+/// One button's reported enabled flag and two action bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ButtonStatus {
+    /// The device's enabled flag. The A3949 ignores it when reading actions.
+    pub enabled: bool,
+    /// The action id used while both earbuds are connected.
+    pub connected_action: u8,
+    /// The action id used while the earbuds are not connected together.
+    pub disconnected_action: u8,
+}
+
+impl ButtonStatus {
+    /// The action id currently in effect for the reported TWS status.
+    pub const fn action(self, tws: TwsStatus) -> u8 {
+        if tws.connected {
+            self.connected_action
+        } else {
+            self.disconnected_action
+        }
+    }
 }
 
 impl DeviceState {
@@ -292,6 +413,52 @@ impl DeviceState {
             return Err(ModelError::InvalidGamingModeWrite);
         }
         Ok([u8::from(enabled)])
+    }
+
+    /// Builds a touch-tone write for a device that reports the measured flag.
+    pub fn touch_tone_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().touch_tone_write || self.touch_tone.is_none() {
+            return Err(ModelError::InvalidTouchToneWrite);
+        }
+        Ok([u8::from(enabled)])
+    }
+
+    /// Builds a single-button action write for the reported TWS status.
+    ///
+    /// The action id is the one the device applies to the earbuds currently in
+    /// use; `None` disables the button with the measured disabled action byte.
+    pub fn button_write(
+        self,
+        button: A3949Button,
+        action: Option<u8>,
+    ) -> Result<[u8; 3], ModelError> {
+        if !self.model.capabilities().button_configuration_write || self.tws.is_none() {
+            return Err(ModelError::InvalidButtonWrite);
+        }
+        if action.is_some_and(|action| action >= a3949::DISABLED_ACTION) {
+            return Err(ModelError::InvalidButtonWrite);
+        }
+        Ok([
+            button.side(),
+            button.button_id(),
+            action.unwrap_or(a3949::DISABLED_ACTION),
+        ])
+    }
+
+    /// Whether a fresh state reports the requested button action.
+    pub fn button_write_matches(self, button: A3949Button, action: Option<u8>) -> Option<bool> {
+        let tws = self.tws?;
+        let status = self.buttons?.status(button);
+        let expected = action.unwrap_or(a3949::DISABLED_ACTION);
+        Some(status.action(tws) == expected)
+    }
+
+    /// Checks that a reset-buttons action is supported by the model.
+    pub fn button_reset(self) -> Result<(), ModelError> {
+        if !self.model.capabilities().button_reset || self.buttons.is_none() {
+            return Err(ModelError::InvalidButtonReset);
+        }
+        Ok(())
     }
 
     /// Builds an auto power off write, available only when the state carries
@@ -622,6 +789,18 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable touch-tone flag.
+    #[error("unsupported device touch tone write")]
+    InvalidTouchToneWrite,
+    /// The device does not report a writable button action.
+    #[error("unsupported device button write")]
+    InvalidButtonWrite,
+    /// The device does not support resetting its buttons.
+    #[error("unsupported device button reset")]
+    InvalidButtonReset,
+    /// A measured state field carries a value outside its wire layout.
+    #[error("invalid device state field")]
+    InvalidStateField,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

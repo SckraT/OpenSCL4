@@ -32,6 +32,22 @@ mod tests {
         );
     }
 
+    #[test]
+    fn pilot_confirms_and_restores_the_a3949_settings_cycle() {
+        let snapshot = pilot(&["--cycle-settings"]);
+        assert_eq!(snapshot["gamingMode"], false);
+        let cycle = &snapshot["settingsCycle"];
+        assert_eq!(cycle["equalizer"]["changed"]["result"], "Applied");
+        assert_eq!(cycle["equalizer"]["changed"]["presetId"], 14);
+        assert_eq!(cycle["equalizer"]["restored"]["result"], "Applied");
+        assert_eq!(cycle["equalizer"]["restored"]["presetId"], 0);
+        assert_eq!(cycle["touchTone"]["changed"]["touchTone"], true);
+        assert_eq!(cycle["touchTone"]["restored"]["touchTone"], false);
+        assert_eq!(cycle["buttonAction"]["changed"]["action"], 2);
+        assert_eq!(cycle["buttonAction"]["restored"]["action"], Value::Null);
+        assert_eq!(cycle["resetButtons"]["result"], "Accepted");
+    }
+
     fn pilot(args: &[&str]) -> Value {
         let directory = tempfile::tempdir().expect("isolated configuration");
         let database = directory.path().join("pilot.sqlite");

@@ -88,7 +88,10 @@ mod tests {
             .expect("accept the preset")
             .wait()
             .await
-            .expect("confirm the preset");
+            .expect("confirm the preset")
+        else {
+            panic!("expected an applied outcome")
+        };
         state.equalizer.expect("curve in the captured response")
     }
 

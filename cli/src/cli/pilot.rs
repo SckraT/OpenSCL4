@@ -1,7 +1,7 @@
 use openscl4_session::{
-    CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
-    SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
-    UnidentifiedState,
+    A3949_DISABLED_ACTION, A3949Button, CommandOutcome, ConnectionState, DeviceState,
+    EqualizerSetting, ModelDriver, QuickPresetValues, SessionCommand, SessionError, SessionHandle,
+    SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason, UnidentifiedState,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
@@ -12,6 +12,7 @@ use serde_json::{Value, json};
 
 pub async fn handle(
     cycle_mode: bool,
+    cycle_settings: bool,
     device: Option<&str>,
     mock_model: ModelDriver,
     scenario: Option<&str>,
@@ -33,7 +34,7 @@ pub async fn handle(
             },
         },
     };
-    let output = read_pilot(&handle, cycle_mode).await;
+    let output = read_pilot(&handle, cycle_mode, cycle_settings).await;
     let closed = handle.close().await;
     let output = output?;
     closed?;
@@ -74,11 +75,15 @@ async fn start_bluetooth(_name: &str) -> anyhow::Result<SessionHandle> {
     anyhow::bail!("the Bluetooth pilot is available on Windows and Linux")
 }
 
-async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<Value> {
+async fn read_pilot(
+    handle: &SessionHandle,
+    cycle_mode: bool,
+    cycle_settings: bool,
+) -> anyhow::Result<Value> {
     let snapshot = handle.confirmed_view().await?;
     let ConnectionState::Ready(initial) = snapshot.connection else {
         return match snapshot.connection {
-            ConnectionState::Unidentified(_) if cycle_mode => {
+            ConnectionState::Unidentified(_) if cycle_mode || cycle_settings => {
                 anyhow::bail!("device is read-only: the pilot cannot change settings")
             }
             ConnectionState::Unidentified(state) => Ok(unidentified_json(state)),
@@ -86,20 +91,172 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
         };
     };
 
-    if !cycle_mode {
-        return Ok(snapshot_json(initial));
+    let mut output = snapshot_json(initial);
+    if cycle_mode {
+        let (change, restore) = mode_cycle_commands(initial)?;
+        let changed = apply_mode(handle, change).await?;
+        let restored = apply_mode(handle, restore).await?;
+        output = snapshot_json(restored);
+        output["modeCycle"] = json!({
+            "changed": applied_json(changed),
+            "restored": applied_json(restored),
+        });
+    }
+    if cycle_settings {
+        output["settingsCycle"] = settings_cycle(handle).await?;
+    }
+    Ok(output)
+}
+
+/// The measured SoundcoreSignature preset the pilot capture reports.
+const SIGNATURE_PRESET: EqualizerSetting = EqualizerSetting {
+    preset_id: 0,
+    volume_adjustments: [0, 0, 0, 0, 0, 0, 0, 0, 0, -120],
+};
+
+/// The legacy Piano preset body from `r50i_set_eq_matches_soundcore_app`.
+const PIANO_PRESET: EqualizerSetting = EqualizerSetting {
+    preset_id: 0x000e,
+    volume_adjustments: [0, 30, 30, 20, 40, 50, 30, 40, 0, -120],
+};
+
+/// Switches and restores every A3949 setting the session can confirm.
+async fn settings_cycle(handle: &SessionHandle) -> anyhow::Result<Value> {
+    let snapshot = handle.confirmed_view().await?;
+    let ConnectionState::Ready(state) = snapshot.connection else {
+        anyhow::bail!("device is not ready for the settings cycle");
+    };
+    let mut cycle = serde_json::Map::new();
+
+    if state.model.equalizer_write_available(&state) {
+        let original = state
+            .equalizer
+            .ok_or_else(|| anyhow::anyhow!("device reports no equalizer curve"))?;
+        let target = if original == PIANO_PRESET {
+            SIGNATURE_PRESET
+        } else {
+            PIANO_PRESET
+        };
+        let changed = apply_setting(
+            handle,
+            SessionCommand::ApplyQuickPreset(QuickPresetValues {
+                equalizer: Some(target),
+                ..QuickPresetValues::default()
+            }),
+        )
+        .await?;
+        let restored = apply_setting(
+            handle,
+            SessionCommand::ApplyQuickPreset(QuickPresetValues {
+                equalizer: Some(original),
+                ..QuickPresetValues::default()
+            }),
+        )
+        .await?;
+        cycle.insert(
+            "equalizer".into(),
+            json!({
+                "changed": equalizer_json(changed, target),
+                "restored": equalizer_json(restored, original),
+            }),
+        );
     }
 
-    let (change, restore) = mode_cycle_commands(initial)?;
-    let changed = apply_mode(handle, change).await?;
-    let restored = apply_mode(handle, restore).await?;
+    if let Some(original) = state.touch_tone {
+        let changed = apply_setting(handle, SessionCommand::SetTouchTone(!original)).await?;
+        let restored = apply_setting(handle, SessionCommand::SetTouchTone(original)).await?;
+        cycle.insert(
+            "touchTone".into(),
+            json!({
+                "changed": touch_tone_json(changed, !original),
+                "restored": touch_tone_json(restored, original),
+            }),
+        );
+    }
 
-    let mut output = snapshot_json(restored);
-    output["modeCycle"] = json!({
-        "changed": applied_json(changed),
-        "restored": applied_json(restored),
-    });
-    Ok(output)
+    if let Some(tws) = state.tws
+        && let Some(buttons) = state.buttons
+        && state.model.capabilities().button_configuration_write
+    {
+        let button = A3949Button::LeftSinglePress;
+        let original = buttons.status(button).action(tws);
+        let original = (original != A3949_DISABLED_ACTION).then_some(original);
+        let target = if original == Some(2) { None } else { Some(2) };
+        let changed = apply_setting(
+            handle,
+            SessionCommand::SetButtonAction {
+                button,
+                action: target,
+            },
+        )
+        .await?;
+        let restored = apply_setting(
+            handle,
+            SessionCommand::SetButtonAction {
+                button,
+                action: original,
+            },
+        )
+        .await?;
+        cycle.insert(
+            "buttonAction".into(),
+            json!({
+                "changed": button_json(changed, button, target),
+                "restored": button_json(restored, button, original),
+            }),
+        );
+    }
+
+    if state.model.capabilities().button_reset {
+        match handle
+            .dispatch(SessionCommand::ResetButtons)?
+            .wait()
+            .await?
+        {
+            CommandOutcome::Applied(_) | CommandOutcome::Accepted(_) => {
+                cycle.insert("resetButtons".into(), json!({"result": "Accepted"}));
+            }
+        }
+    }
+
+    Ok(Value::Object(cycle))
+}
+
+async fn apply_setting(
+    handle: &SessionHandle,
+    command: SessionCommand,
+) -> anyhow::Result<DeviceState> {
+    Ok(match handle.dispatch(command)?.wait().await? {
+        CommandOutcome::Applied(state) | CommandOutcome::Accepted(state) => state,
+    })
+}
+
+fn equalizer_json(state: DeviceState, requested: EqualizerSetting) -> Value {
+    json!({
+        "result": if state.equalizer == Some(requested) { "Applied" } else { "Unconfirmed" },
+        "presetId": state.equalizer.map(|equalizer| equalizer.preset_id),
+        "bands": state.equalizer.map(|equalizer| equalizer.volume_adjustments.to_vec()),
+    })
+}
+
+fn touch_tone_json(state: DeviceState, requested: bool) -> Value {
+    json!({
+        "result": if state.touch_tone == Some(requested) { "Applied" } else { "Unconfirmed" },
+        "touchTone": state.touch_tone,
+    })
+}
+
+fn button_json(state: DeviceState, button: A3949Button, requested: Option<u8>) -> Value {
+    let observed = state
+        .buttons
+        .zip(state.tws)
+        .map(|(buttons, tws)| buttons.status(button).action(tws))
+        .and_then(|action| (action != A3949_DISABLED_ACTION).then_some(action));
+    json!({
+        "result": if observed == requested { "Applied" } else { "Unconfirmed" },
+        "button": button.code(),
+        "action": observed,
+    })
 }
 
 fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, SessionCommand)> {
@@ -137,8 +294,9 @@ async fn apply_mode(
     handle: &SessionHandle,
     command: SessionCommand,
 ) -> anyhow::Result<DeviceState> {
-    let CommandOutcome::Applied(state) = handle.dispatch(command)?.wait().await?;
-    Ok(state)
+    match handle.dispatch(command)?.wait().await? {
+        CommandOutcome::Applied(state) | CommandOutcome::Accepted(state) => Ok(state),
+    }
 }
 
 fn applied_json(state: DeviceState) -> Value {

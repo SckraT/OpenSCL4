@@ -1,6 +1,8 @@
 use openscl4_models::{
-    AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    A3949_BUTTON_COMMAND, A3949_DISABLED_ACTION, A3949_RESET_BUTTONS_COMMAND,
+    A3949_TOUCH_TONE_COMMAND, A3949Button, AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT,
+    AutoPowerOff, AutoPowerOffSetting, Capabilities, EqualizerSetting, GAMING_MODE_COMMAND,
+    ModelError, SOUND_MODE_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -71,6 +73,19 @@ pub enum SessionCommand {
     SetAmbientSoundMode(SoundMode),
     /// Enable or disable gaming mode on a supported device.
     SetGamingMode(bool),
+    /// Enable or disable the touch tone on a supported device.
+    SetTouchTone(bool),
+    /// Change one button's action for the earbuds currently in use.
+    ///
+    /// `None` disables the button, matching the measured disabled action.
+    SetButtonAction {
+        /// The button whose action changes.
+        button: A3949Button,
+        /// The action id to apply, or none to disable the button.
+        action: Option<u8>,
+    },
+    /// Reset all button actions to the device defaults.
+    ResetButtons,
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
     /// Apply the enabled fields of one quick preset, one write at a time.
@@ -90,6 +105,16 @@ impl SessionCommand {
             Self::SetGamingMode(_) if !capabilities.gaming_mode_write => {
                 Err(ModelError::InvalidGamingModeWrite)
             }
+            Self::SetTouchTone(_) if !capabilities.touch_tone_write => {
+                Err(ModelError::InvalidTouchToneWrite)
+            }
+            Self::SetButtonAction { action, .. }
+                if !capabilities.button_configuration_write
+                    || action.is_some_and(|action| action >= A3949_DISABLED_ACTION) =>
+            {
+                Err(ModelError::InvalidButtonWrite)
+            }
+            Self::ResetButtons if !capabilities.button_reset => Err(ModelError::InvalidButtonReset),
             Self::SetAutoPowerOff(AutoPowerOffSetting::Enabled(index))
                 if !capabilities.auto_power_off_write || index >= AUTO_POWER_OFF_DURATION_COUNT =>
             {
@@ -109,6 +134,20 @@ impl SessionCommand {
                 Err(ModelError::InvalidEqualizerWrite)
             }
             _ => Ok(()),
+        }
+    }
+
+    /// Whether the current device state makes this command unavailable.
+    ///
+    /// A rejected command is completed with [`CommandError::Unavailable`]
+    /// before any frame is sent, so the device state is preserved.
+    pub(crate) fn unavailable(self, state: DeviceState) -> bool {
+        match self {
+            Self::ApplyQuickPreset(preset) => {
+                preset.equalizer.is_some() && !state.model.equalizer_write_available(&state)
+            }
+            Self::SetButtonAction { .. } => state.tws.is_none(),
+            _ => false,
         }
     }
 
@@ -140,6 +179,17 @@ pub enum WriteTarget {
     AutoPowerOff(AutoPowerOffSetting),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
+    /// A touch-tone flag change.
+    TouchTone(bool),
+    /// One button's action change.
+    ButtonAction {
+        /// The button whose action changes.
+        button: A3949Button,
+        /// The requested action id, or none to disable the button.
+        action: Option<u8>,
+    },
+    /// The reset-buttons action.
+    ResetButtons,
 }
 
 impl WriteTarget {
@@ -150,6 +200,9 @@ impl WriteTarget {
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
+            Self::TouchTone(_) => A3949_TOUCH_TONE_COMMAND,
+            Self::ButtonAction { .. } => A3949_BUTTON_COMMAND,
+            Self::ResetButtons => A3949_RESET_BUTTONS_COMMAND,
         }
     }
 
@@ -181,6 +234,12 @@ impl WriteTarget {
                 write.body().to_vec()
             }
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
+            Self::TouchTone(enabled) => state.touch_tone_write(enabled)?.to_vec(),
+            Self::ButtonAction { button, action } => state.button_write(button, action)?.to_vec(),
+            Self::ResetButtons => {
+                state.button_reset()?;
+                Vec::new()
+            }
         };
         Ok(resolved)
     }
@@ -198,7 +257,20 @@ impl WriteTarget {
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
+            Self::TouchTone(enabled) => state.touch_tone == Some(enabled),
+            Self::ButtonAction { button, action } => {
+                state.button_write_matches(button, action) == Some(true)
+            }
+            // The reset action has no measured post-reset state; its outcome is
+            // confirmed by the device acknowledgement instead.
+            Self::ResetButtons => true,
         }
+    }
+
+    /// Whether an empty acknowledgement completes this target without a value
+    /// read-back. Only actions that have no measured post-action state use it.
+    pub(crate) fn confirms_with_ack(self) -> bool {
+        matches!(self, Self::ResetButtons)
     }
 }
 
@@ -207,6 +279,10 @@ impl WriteTarget {
 pub enum CommandOutcome {
     /// A read-back confirmed the requested value.
     Applied(DeviceState),
+    /// The device acknowledged an action that has no readable setting.
+    ///
+    /// The snapshot is the fresh state read after the acknowledgement.
+    Accepted(DeviceState),
 }
 
 /// Failure to accept a command.
@@ -310,6 +386,29 @@ pub enum CommandError {
         /// The mode reported by the device.
         observed: SoundMode,
     },
+    /// The read-back did not match the requested touch-tone flag.
+    #[error(
+        "touch tone did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    TouchToneMismatch {
+        /// The requested flag.
+        requested: bool,
+        /// The flag reported by the device, if any.
+        observed: Option<bool>,
+    },
+    /// The read-back did not match the requested button action.
+    #[error(
+        "button action did not match the device read-back (button {}, requested {requested:?}, observed {observed:?})",
+        button.code()
+    )]
+    ButtonMismatch {
+        /// The button that was written.
+        button: A3949Button,
+        /// The action requested for the button, or none for disabled.
+        requested: Option<u8>,
+        /// The action reported by the device, or none for disabled.
+        observed: Option<u8>,
+    },
     /// A quick-preset field did not confirm; fields confirmed before it stay
     /// applied in the confirmed snapshot.
     #[error("quick preset stopped at a field that did not match the read-back: {field}")]
@@ -339,6 +438,9 @@ pub enum CommandError {
     /// An error ended the session before the write was attempted.
     #[error(transparent)]
     Session(#[from] SessionError),
+    /// The current device state makes the requested setting unavailable.
+    #[error("the setting is not available in the current device state")]
+    Unavailable,
 }
 
 /// Confirmed result for an accepted command.

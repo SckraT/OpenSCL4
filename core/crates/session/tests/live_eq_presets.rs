@@ -71,7 +71,10 @@ mod tests {
                 equalizer: Some(preset_curve),
             }))
             .expect("queue preset");
-        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed");
+        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed")
+        else {
+            panic!("expected an applied outcome")
+        };
         assert_eq!(applied.sound_mode, Some(SoundMode::Transparency));
         assert_eq!(applied.equalizer, Some(preset_curve));
 
@@ -98,7 +101,10 @@ mod tests {
                 equalizer: None,
             }))
             .expect("queue preset");
-        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed");
+        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed")
+        else {
+            panic!("expected an applied outcome")
+        };
         assert_eq!(applied.sound_mode, Some(SoundMode::Transparency));
 
         // The deferred position still applies after the preset completes.
@@ -166,7 +172,10 @@ mod tests {
             .set_eq_live(live_curve)
             .expect("publish the next live position");
 
-        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed");
+        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed")
+        else {
+            panic!("expected an applied outcome")
+        };
         assert_eq!(applied.sound_mode, Some(SoundMode::Transparency));
         assert_eq!(applied.equalizer, Some(preset_curve));
         tokio::time::sleep(Duration::from_millis(300)).await;
@@ -215,7 +224,10 @@ mod tests {
                 ..QuickPresetValues::default()
             }))
             .expect("queue ambient preset");
-        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed");
+        let CommandOutcome::Applied(applied) = preset.wait().await.expect("preset confirmed")
+        else {
+            panic!("expected an applied outcome")
+        };
         assert_eq!(applied.sound_mode, Some(SoundMode::Transparency));
         assert_eq!(applied.equalizer, Some(live_curve));
     }
@@ -264,14 +276,25 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn live_eq_reports_unsupported_models_on_submission() {
-        for handle in [start(VirtualA3949), start(VirtualSoundcoreDevice)] {
-            handle.confirmed_view().await.expect("initial state");
-            assert_eq!(
-                handle.set_eq_live(curve(0xfefe, 60)),
-                Err(DispatchError::UnsupportedEqualizer)
-            );
-            handle.close().await.expect("release the link");
-        }
+        let handle = start(VirtualSoundcoreDevice);
+        handle.confirmed_view().await.expect("initial state");
+        assert_eq!(
+            handle.set_eq_live(curve(0xfefe, 60)),
+            Err(DispatchError::UnsupportedEqualizer)
+        );
+        handle.close().await.expect("release the link");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_connected_a3949_accepts_a_live_curve() {
+        let handle = start(VirtualA3949);
+        handle.confirmed_view().await.expect("initial state");
+        let pending = curve(0xfefe, 60);
+        handle
+            .set_eq_live(pending)
+            .expect("the measured equalizer write is available while connected");
+        wait_for_curve(&handle, pending).await;
+        handle.close().await.expect("release the link");
     }
 
     #[tokio::test(start_paused = true)]
