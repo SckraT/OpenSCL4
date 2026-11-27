@@ -173,6 +173,14 @@ impl WriteTarget {
             {
                 state.family_sound_mode_write(mode)?.to_vec()
             }
+            Self::AmbientMode(mode)
+                if matches!(
+                    state.model,
+                    ModelDriver::A3936 | ModelDriver::A3952 | ModelDriver::A3968
+                ) =>
+            {
+                state.dual_sound_mode_write(mode)?
+            }
             Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
             Self::AutoPowerOff(setting) => {

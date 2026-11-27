@@ -85,6 +85,8 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,
+        tws_status: None,
+        ambient_sound_mode_cycle: None,
     })
 }
 

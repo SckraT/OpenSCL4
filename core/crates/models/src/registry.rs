@@ -1,14 +1,25 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, dual};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 8] = [
     ModelDriver::A3028,
     ModelDriver::A3029,
     ModelDriver::A3062,
+    ModelDriver::A3936,
     ModelDriver::A3949,
+    ModelDriver::A3952,
     ModelDriver::A3954,
+    ModelDriver::A3968,
+];
+
+/// Models whose state carries the serial at body offset 16, in registry order.
+const DUAL_BATTERY_DRIVERS: [ModelDriver; 4] = [
+    ModelDriver::A3936,
+    ModelDriver::A3952,
+    ModelDriver::A3949,
+    ModelDriver::A3968,
 ];
 
 /// Finds a registered driver by its stable model code.
@@ -35,16 +46,16 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
             _ => Err(ModelError::UnknownModel),
         };
     }
-    match a3062::state_serial(body).and_then(|serial| from_serial(&serial)) {
-        Ok(ModelDriver::A3062) => Ok(ModelDriver::A3062),
-        _ if a3949::state_serial(body)
-            .is_ok_and(|serial| serial.identifies(ModelDriver::A3949)) =>
-        {
-            Ok(ModelDriver::A3949)
-        }
-        Ok(_) => Err(ModelError::UnknownModel),
-        Err(error) => Err(error),
+    // The A3062 state keeps its serial at offset 7; the dual-battery models keep
+    // it at offset 16 with their own model prefix.
+    if a3062::state_serial(body).and_then(|serial| from_serial(&serial)) == Ok(ModelDriver::A3062) {
+        return Ok(ModelDriver::A3062);
     }
+    let serial = dual::state_serial(body)?;
+    DUAL_BATTERY_DRIVERS
+        .into_iter()
+        .find(|driver| serial.identifies(*driver))
+        .ok_or(ModelError::UnknownModel)
 }
 
 fn from_serial(serial: &RedactedSerial<'_>) -> Result<ModelDriver, ModelError> {

@@ -5,9 +5,10 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3936_AUTO_POWER_OFF, A3936_GAMING_MODE, A3936_SOUND_MODE_FIELDS,
+    A3949_GAMING_MODE, A3952_AUTO_POWER_OFF, A3952_SOUND_MODE_FIELDS, A3968_AUTO_POWER_OFF,
+    A3968_SOUND_MODE_FIELDS, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND, GAMING_MODE_COMMAND,
+    IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -16,6 +17,9 @@ use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
+const A3936_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3936-pilot-state.bin");
+const A3952_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3952-pilot-state.bin");
+const A3968_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3968-pilot-state.bin");
 const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-off.bin"),
     include_bytes!("../../../core/data/a3949-gaming-on.bin"),
@@ -209,6 +213,60 @@ impl TransportProvider for VirtualA3949 {
     }
 }
 
+/// A virtual Space A40 that answers state reads from its recorded layout.
+pub struct VirtualA3936;
+
+/// A virtual Liberty 4 that answers state reads from its recorded layout.
+pub struct VirtualA3952;
+
+/// A virtual Sport X20 that answers state reads from its recorded layout.
+pub struct VirtualA3968;
+
+#[async_trait]
+impl TransportProvider for VirtualA3936 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(dual_link(ModelDriver::A3936))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3952 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(dual_link(ModelDriver::A3952))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3968 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(dual_link(ModelDriver::A3968))
+    }
+}
+
+/// A virtual dual-battery device that answers state reads from its fixture and
+/// applies the sound-mode, auto power off and gaming-mode writes the session can
+/// confirm.
+fn dual_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: false,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
 /// A virtual device whose state is shared by successive connections.
 pub struct SharedVirtualSoundcoreDevice {
     state: Arc<Mutex<Vec<u8>>>,
@@ -358,15 +416,21 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if self.model == ModelDriver::A3949
+            } else if matches!(self.model, ModelDriver::A3936 | ModelDriver::A3949)
                 && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3028
+                    | ModelDriver::A3029
+                    | ModelDriver::A3936
+                    | ModelDriver::A3952
+                    | ModelDriver::A3968
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
@@ -381,10 +445,20 @@ impl DeviceResponder {
         let [enabled @ 0..=1] = body else {
             return false;
         };
-        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
         let mut state = self.state.lock().expect("virtual state lock");
-        state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
-        true
+        match self.model {
+            ModelDriver::A3949 => {
+                let captured =
+                    fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
+                state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+                true
+            }
+            ModelDriver::A3936 => {
+                state[A3936_GAMING_MODE] = *enabled;
+                true
+            }
+            _ => false,
+        }
     }
 
     fn apply_sound_mode(&self, body: &[u8]) -> bool {
@@ -407,6 +481,18 @@ impl DeviceResponder {
                     return false;
                 };
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
+            model @ (ModelDriver::A3936 | ModelDriver::A3952 | ModelDriver::A3968) => {
+                let [_mode @ 0..=2, _, _, _, _, _] = body else {
+                    return false;
+                };
+                let range = match model {
+                    ModelDriver::A3936 => A3936_SOUND_MODE_FIELDS,
+                    ModelDriver::A3952 => A3952_SOUND_MODE_FIELDS,
+                    _ => A3968_SOUND_MODE_FIELDS,
+                };
+                state[range].copy_from_slice(body);
                 true
             }
             ModelDriver::A3949 => false,
@@ -439,17 +525,28 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3949 | ModelDriver::A3954 => false,
+            ModelDriver::A3936
+            | ModelDriver::A3949
+            | ModelDriver::A3952
+            | ModelDriver::A3954
+            | ModelDriver::A3968 => false,
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write only when the state carries the pair.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let range = match self.model {
+            ModelDriver::A3028 | ModelDriver::A3029 => A3028_AUTO_POWER_OFF,
+            ModelDriver::A3936 => A3936_AUTO_POWER_OFF,
+            ModelDriver::A3952 => A3952_AUTO_POWER_OFF,
+            ModelDriver::A3968 => A3968_AUTO_POWER_OFF,
+            ModelDriver::A3062 | ModelDriver::A3949 | ModelDriver::A3954 => return false,
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let Some(value) = state.get_mut(range) else {
             return false;
         };
         value.copy_from_slice(body);
@@ -541,8 +638,11 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3936 => fixture_body(model, A3936_STATE_REPLY),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
+        ModelDriver::A3952 => fixture_body(model, A3952_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
+        ModelDriver::A3968 => fixture_body(model, A3968_STATE_REPLY),
     };
     Arc::new(Mutex::new(bytes))
 }

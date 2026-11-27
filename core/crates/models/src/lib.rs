@@ -6,7 +6,11 @@ use std::fmt;
 
 mod a3028;
 mod a3062;
+mod a3936;
 mod a3949;
+mod a3952;
+mod a3968;
+mod dual;
 pub mod registry;
 
 pub use a3028::{
@@ -14,7 +18,19 @@ pub use a3028::{
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3936::{
+    A3936_AMBIENT_SOUND_MODE_CYCLE, A3936_AUTO_POWER_OFF, A3936_CASE_BATTERY, A3936_GAMING_MODE,
+    A3936_SOUND_MODE_FIELDS,
+};
 pub use a3949::A3949_GAMING_MODE;
+pub use a3952::{
+    A3952_AMBIENT_SOUND_MODE_CYCLE, A3952_AUTO_POWER_OFF, A3952_CASE_BATTERY,
+    A3952_SOUND_MODE_FIELDS,
+};
+pub use a3968::{
+    A3968_AMBIENT_SOUND_MODE_CYCLE, A3968_AUTO_POWER_OFF, A3968_CASE_BATTERY,
+    A3968_SOUND_MODE_FIELDS,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -47,10 +63,16 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Space A40.
+    A3936,
     /// Soundcore P20i, P25i and R50i.
     A3949,
+    /// Soundcore Liberty 4.
+    A3952,
     /// Soundcore Liberty 4 Pro.
     A3954,
+    /// Soundcore Sport X20.
+    A3968,
 }
 
 impl ModelDriver {
@@ -63,10 +85,16 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3936 | Self::A3952 | Self::A3968
+            ),
             equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            gaming_mode_write: matches!(self, Self::A3936 | Self::A3949),
+            auto_power_off_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3936 | Self::A3952 | Self::A3968
+            ),
         }
     }
 
@@ -76,8 +104,11 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3936 => "A3936",
             Self::A3949 => "A3949",
+            Self::A3952 => "A3952",
             Self::A3954 => "A3954",
+            Self::A3968 => "A3968",
         }
     }
 
@@ -90,7 +121,9 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            Self::A3062 | Self::A3936 | Self::A3949 | Self::A3952 | Self::A3954 | Self::A3968 => {
+                EQUALIZER_BANDS
+            }
         }
     }
 
@@ -98,7 +131,9 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3936 | Self::A3949 | Self::A3952 | Self::A3954 | Self::A3968 => {
+                EQUALIZER_COMMAND
+            }
         }
     }
 
@@ -116,8 +151,11 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::A3936 => a3936::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
+            Self::A3952 => a3952::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
+            Self::A3968 => a3968::decode_state(body),
         }
     }
 
@@ -126,24 +164,33 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family and dual-battery models need the serial that
+    /// selects their public code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
-        let layout_matches = match self {
-            Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
-            Self::A3062 => body.len() == a3062::STATE_LENGTH,
-            Self::A3949 => body.len() == a3949::STATE_LENGTH,
-            Self::A3954 => body.len() == A3954_STATE_LENGTH,
-        };
-        let serial_matches = match self {
+        let confirmed = match self {
             Self::A3028 | Self::A3029 => {
-                a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+                a3028::has_confirmed_layout(body)
+                    && a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
-            Self::A3954 => a3954_state_serial_is_recognized(body),
-            Self::A3062 | Self::A3949 => true,
+            Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3936 => {
+                a3936::has_confirmed_layout(body)
+                    && a3936::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+            }
+            Self::A3949 => body.len() == a3949::STATE_LENGTH,
+            Self::A3952 => {
+                a3952::has_confirmed_layout(body)
+                    && a3952::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+            }
+            Self::A3954 => {
+                body.len() == A3954_STATE_LENGTH && a3954_state_serial_is_recognized(body)
+            }
+            Self::A3968 => {
+                a3968::has_confirmed_layout(body)
+                    && a3968::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+            }
         };
-        (layout_matches && serial_matches)
-            .then(|| self.decode_state(body).ok())
-            .flatten()
+        confirmed.then(|| self.decode_state(body).ok()).flatten()
     }
 
     fn decode_a3954_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
@@ -172,6 +219,8 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            tws_status: None,
+            ambient_sound_mode_cycle: None,
         })
     }
 
@@ -188,7 +237,9 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
-            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3936 | Self::A3949 | Self::A3952 | Self::A3954 | Self::A3968 => {
+                Err(ModelError::InvalidEqualizerWrite)
+            }
         }
     }
 }
@@ -212,6 +263,8 @@ pub struct Capabilities {
 enum SoundModeControls {
     A3028([u8; 3]),
     A3062([u8; 5]),
+    /// The six-byte sound-mode block of a dual-battery model, as reported.
+    Dual([u8; 6]),
     A3954(A3954SoundModeControls),
 }
 
@@ -220,6 +273,51 @@ struct A3954SoundModeControls {
     position: u8,
     airplane_mode: u8,
     wind_noise_suppression: bool,
+}
+
+/// TWS status a dual-battery model reports in its state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TwsStatus {
+    /// Whether the left earbud is the host when both are connected.
+    pub host_is_left: bool,
+    /// Whether both earbuds are connected to each other.
+    pub connected: bool,
+}
+
+/// One ambient sound mode cycle: which modes a button press cycles through.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SoundModeCycle {
+    /// Noise canceling participates in the cycle.
+    pub noise_canceling: bool,
+    /// Transparency participates in the cycle.
+    pub transparency: bool,
+    /// Normal sound participates in the cycle.
+    pub normal: bool,
+}
+
+impl SoundModeCycle {
+    /// Decodes the legacy cycle byte, whose low three bits name the modes.
+    pub(crate) fn from_bits(bits: u8) -> Self {
+        Self {
+            noise_canceling: bits & 0b001 != 0,
+            transparency: bits & 0b010 != 0,
+            normal: bits & 0b100 != 0,
+        }
+    }
+}
+
+/// How a model stores its ambient sound mode cycle.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AmbientSoundModeCycle {
+    /// One cycle shared by both TWS states.
+    Shared(SoundModeCycle),
+    /// Separate cycles for connected and disconnected earbuds.
+    Tws {
+        /// The cycle used while both earbuds are connected.
+        enabled: SoundModeCycle,
+        /// The cycle used while the earbuds are disconnected from each other.
+        disconnected: SoundModeCycle,
+    },
 }
 
 /// State reported by the device through its state response.
@@ -244,6 +342,10 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// TWS status of a dual-battery device, if reported.
+    pub tws_status: Option<TwsStatus>,
+    /// The ambient sound mode cycle, if the state carries one.
+    pub ambient_sound_mode_cycle: Option<AmbientSoundModeCycle>,
 }
 
 impl DeviceState {
@@ -284,6 +386,23 @@ impl DeviceState {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3028::sound_mode_write(mode, controls)
+    }
+
+    /// Builds the six-byte ambient-mode write of a dual-battery model.
+    ///
+    /// The device receives the whole sound-mode block; only the ambient mode
+    /// changes and every other byte keeps the value the device reported.
+    pub fn dual_sound_mode_write(self, mode: SoundMode) -> Result<Vec<u8>, ModelError> {
+        let Some(SoundModeControls::Dual(block)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        let body = match self.model {
+            ModelDriver::A3936 => a3936::sound_mode_write(mode, block)?,
+            ModelDriver::A3952 => a3952::sound_mode_write(mode, block)?,
+            ModelDriver::A3968 => a3968::sound_mode_write(mode, block)?,
+            _ => return Err(ModelError::InvalidSoundModeWrite),
+        };
+        Ok(body.to_vec())
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.

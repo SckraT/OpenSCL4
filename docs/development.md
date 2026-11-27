@@ -58,6 +58,21 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The A3936, A3952 and A3968 pilots read the recorded legacy layouts from
+[`core/data`](../core/data/README.md#a3936-a3952-and-a3968-state-references):
+both earbud batteries, the charging case, both firmware versions, the ambient
+sound mode, TWS status, the ambient sound mode cycle, the equalizer curve, the
+auto power off value and, for A3936, gaming mode. It is discovered from the
+state response because no identity response is recorded for the family. Add
+`--cycle-mode` to change and restore a mode confirmed by a fresh state response:
+A3936 toggles gaming mode, A3952 and A3968 cycle the ambient sound mode.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3936
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3952
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3968
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.
