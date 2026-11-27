@@ -361,24 +361,28 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn a3062_keeps_auto_power_off_unsupported() {
+    async fn a3062_confirms_auto_power_off_from_the_shared_write() {
         let (handle, frames) = start(VirtualA3062);
         ready(&handle).await;
-        let result = wait(
+        let CommandOutcome::Applied(state) = wait(
             handle
                 .dispatch(SessionCommand::SetAutoPowerOff(
-                    AutoPowerOffSetting::Enabled(0),
+                    AutoPowerOffSetting::Enabled(2),
                 ))
-                .expect("queue the typed rejection"),
+                .expect("queue auto power off"),
         )
-        .await;
+        .await
+        .expect("confirm auto power off");
         assert_eq!(
-            result,
-            Err(CommandError::Model(ModelError::InvalidAutoPowerOffWrite))
+            state.auto_power_off,
+            Some(AutoPowerOff {
+                enabled: true,
+                duration: 2,
+            })
         );
         assert_eq!(
-            count(&frames, &request(AUTO_POWER_OFF_COMMAND, &[0x01, 0x00])),
-            0
+            count(&frames, &request(AUTO_POWER_OFF_COMMAND, &[0x01, 0x02])),
+            1
         );
         handle.close().await.expect("close virtual link");
     }

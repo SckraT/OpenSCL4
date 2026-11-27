@@ -4,10 +4,15 @@ use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
-    A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3028_SOUND_MODE_FIELDS, A3062_AUTO_POWER_OFF, A3062_BUTTON_CONFIGURATION, A3062_DOLBY_AUDIO,
+    A3062_DUAL_CONNECTIONS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_LDAC,
+    A3062_LIMIT_HIGH_VOLUME, A3062_LOW_BATTERY_PROMPT, A3062_SIDE_TONE, A3062_SOUND_MODE_CYCLE,
+    A3062_SOUND_MODE_FIELDS, A3062_VOICE_PROMPT, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND,
+    BUTTON_CONFIGURATION_COMMAND, DOLBY_AUDIO_COMMAND, DUAL_CONNECTIONS_COMMAND, EQUALIZER_COMMAND,
+    GAMING_MODE_COMMAND, IDENTITY_COMMAND, LDAC_COMMAND, LDAC_STATE_COMMAND,
+    LIMIT_HIGH_VOLUME_COMMAND, LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND, LOW_BATTERY_PROMPT_COMMAND,
+    ModelDriver, PEERS_COMMAND, SIDE_TONE_COMMAND, SOUND_MODE_COMMAND, SOUND_MODE_CYCLE_COMMAND,
+    STATE_COMMAND, SoundModeWrite, VOICE_PROMPT_COMMAND,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -26,6 +31,8 @@ const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
     include_bytes!("../../../core/data/a3062-mode-normal.bin"),
 ];
+/// The masked `0B 01` capture from `core/data/a3062-dual-connections.bin`.
+const A3062_PEERS_REPLY: &[u8] = include_bytes!("../../../core/data/a3062-dual-connections.bin");
 /// A3028 and A3029 state bodies from `core/data/a3028-a3029-mode-reference.json`.
 /// The reference starts from one legacy example with an A3029 serial prefix and
 /// replaces the full serial at body offsets 44–59 with the synthetic
@@ -48,7 +55,6 @@ const A3029_STATE_BODY: &[u8] = &[
 /// ambient and battery alert prompt tones. The matrix lists this block as
 /// derived from the known layout, not a separate capture.
 const AUTO_POWER_OFF_EXTRA_FIELDS: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01];
-const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
 /// A virtual Soundcore Liberty 4 Pro with per-connection sound-mode state.
@@ -332,12 +338,20 @@ impl DeviceResponder {
                     replies.extend_from_slice(&state);
                 }
             } else if self.model == ModelDriver::A3954
-                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && frame.command == PEERS_COMMAND
                 && frame.body.is_empty()
             {
-                // The fixture has no stored peers. Reply with one empty list segment.
+                // The A3954 fixture has no stored peers. Reply with one empty list segment.
                 if let Ok(peers) = encode_frame(Direction::Inbound, frame.command, &[1, 1]) {
                     replies.extend_from_slice(&peers);
+                }
+            } else if self.model == ModelDriver::A3062 && frame.command == PEERS_COMMAND {
+                // The masked capture lists two remembered peers. A state with
+                // multipoint disabled has no readable list.
+                if self.dual_connections_enabled() {
+                    replies.extend_from_slice(A3062_PEERS_REPLY);
+                } else if let Ok(empty) = encode_frame(Direction::Inbound, frame.command, &[1, 1]) {
+                    replies.extend_from_slice(&empty);
                 }
             } else if frame.command == SOUND_MODE_COMMAND
                 && self.apply_sound_mode(&frame.body)
@@ -349,6 +363,12 @@ impl DeviceResponder {
                 && self.options.acknowledge_writes
                 && self.equalizer_applied(&frame.body)
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3062
+                && self.options.acknowledge_writes
+                && self.a3062_acknowledged_write(&frame.command, &frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, frame.command, &[])
             {
                 replies.extend_from_slice(&ack);
             } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
@@ -365,16 +385,94 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3062
+                && frame.command == LDAC_STATE_COMMAND
+                && frame.body.is_empty()
+            {
+                let value = self
+                    .state
+                    .lock()
+                    .expect("virtual state lock")
+                    .get(A3062_LDAC)
+                    .copied()
+                    .unwrap_or(0);
+                if let Ok(reply) = encode_frame(Direction::Inbound, LDAC_STATE_COMMAND, &[value]) {
+                    replies.extend_from_slice(&reply);
+                }
+            } else if self.model == ModelDriver::A3062
+                && self.a3062_flag_applied(&frame.command, &frame.body)
+            {
+                // The legacy driver writes these flags without waiting for a reply.
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
+    }
+
+    /// Applies the writes the legacy A3062 driver sends with an acknowledgement.
+    fn a3062_acknowledged_write(&self, command: &[u8; 2], body: &[u8]) -> bool {
+        if self.model != ModelDriver::A3062 {
+            return false;
+        }
+        let mut state = self.state.lock().expect("virtual state lock");
+        match (*command, body) {
+            (BUTTON_CONFIGURATION_COMMAND, [0, 0, action]) => {
+                state[A3062_BUTTON_CONFIGURATION] = *action;
+                true
+            }
+            (SOUND_MODE_CYCLE_COMMAND, [cycle]) => {
+                state[A3062_SOUND_MODE_CYCLE] = *cycle;
+                true
+            }
+            (LIMIT_HIGH_VOLUME_COMMAND, [enabled @ 0..=1, db_limit]) => {
+                state[A3062_LIMIT_HIGH_VOLUME.start] = *enabled;
+                state[A3062_LIMIT_HIGH_VOLUME.start + 1] = *db_limit;
+                true
+            }
+            (LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND, [rate @ 0..=2]) => {
+                state[A3062_LIMIT_HIGH_VOLUME.start + 2] = *rate;
+                true
+            }
+            (DUAL_CONNECTIONS_COMMAND, [enabled @ 0..=1]) => {
+                state[A3062_DUAL_CONNECTIONS] = *enabled;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Applies the A3062 flag writes the legacy driver sends without a reply.
+    fn a3062_flag_applied(&self, command: &[u8; 2], body: &[u8]) -> bool {
+        if self.model != ModelDriver::A3062 {
+            return false;
+        }
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let offset = match *command {
+            LDAC_COMMAND => A3062_LDAC,
+            LOW_BATTERY_PROMPT_COMMAND => A3062_LOW_BATTERY_PROMPT,
+            DOLBY_AUDIO_COMMAND => A3062_DOLBY_AUDIO,
+            SIDE_TONE_COMMAND => A3062_SIDE_TONE,
+            VOICE_PROMPT_COMMAND => A3062_VOICE_PROMPT,
+            _ => return false,
+        };
+        self.state.lock().expect("virtual state lock")[offset] = *enabled;
+        true
+    }
+
+    /// Whether the virtual state reports multipoint as enabled.
+    fn dual_connections_enabled(&self) -> bool {
+        self.state
+            .lock()
+            .expect("virtual state lock")
+            .get(A3062_DUAL_CONNECTIONS)
+            == Some(&1)
     }
 
     fn apply_gaming_mode(&self, body: &[u8]) -> bool {
@@ -443,13 +541,18 @@ impl DeviceResponder {
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write only when the state carries the field.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
+        let range = match self.model {
+            ModelDriver::A3028 | ModelDriver::A3029 => A3028_AUTO_POWER_OFF,
+            ModelDriver::A3062 => A3062_AUTO_POWER_OFF,
+            ModelDriver::A3949 | ModelDriver::A3954 => return false,
+        };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let Some(value) = state.get_mut(range) else {
             return false;
         };
         value.copy_from_slice(body);

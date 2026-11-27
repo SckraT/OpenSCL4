@@ -13,7 +13,13 @@ pub use a3028::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
-pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3062::{
+    A3062_AUTO_POWER_OFF, A3062_BUTTON_CONFIGURATION, A3062_DOLBY_AUDIO, A3062_DUAL_CONNECTIONS,
+    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_LDAC, A3062_LIMIT_HIGH_VOLUME,
+    A3062_LOW_BATTERY_PROMPT, A3062_SIDE_TONE, A3062_SOUND_MODE_CYCLE, A3062_SOUND_MODE_FIELDS,
+    A3062_VOICE_PROMPT, PARSED_LENGTH, button_configuration_write, decode_peers_page,
+    limit_high_volume_refresh_rate_write, limit_high_volume_write, sound_mode_cycle_write,
+};
 pub use a3949::A3949_GAMING_MODE;
 
 /// Probe for the firmware versions and the device identifier.
@@ -33,6 +39,42 @@ pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 
 /// Write the auto power off value of a model that reports its extra fields.
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
+
+/// Write the double-press button action.
+pub const BUTTON_CONFIGURATION_COMMAND: [u8; 2] = [0x04, 0x81];
+
+/// Write the ambient sound mode cycle flags.
+pub const SOUND_MODE_CYCLE_COMMAND: [u8; 2] = [0x06, 0x82];
+
+/// Write the high-volume limiter enable flag and limit.
+pub const LIMIT_HIGH_VOLUME_COMMAND: [u8; 2] = [0x20, 0x82];
+
+/// Write the high-volume limiter's level reading refresh rate.
+pub const LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND: [u8; 2] = [0x20, 0x81];
+
+/// Write the dual-connections enabled flag.
+pub const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x84];
+
+/// Read the remembered multipoint peers.
+pub const PEERS_COMMAND: [u8; 2] = [0x0b, 0x01];
+
+/// Write the LDAC flag.
+pub const LDAC_COMMAND: [u8; 2] = [0x01, 0xff];
+
+/// Read the LDAC flag back with a dedicated request.
+pub const LDAC_STATE_COMMAND: [u8; 2] = [0x01, 0x7f];
+
+/// Write the low battery prompt flag.
+pub const LOW_BATTERY_PROMPT_COMMAND: [u8; 2] = [0x10, 0x82];
+
+/// Write the Dolby Audio flag.
+pub const DOLBY_AUDIO_COMMAND: [u8; 2] = [0x02, 0x86];
+
+/// Write the side tone flag.
+pub const SIDE_TONE_COMMAND: [u8; 2] = [0x01, 0x84];
+
+/// Write the ambient sound mode voice prompt flag.
+pub const VOICE_PROMPT_COMMAND: [u8; 2] = [0x01, 0xae];
 
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
@@ -66,7 +108,17 @@ impl ModelDriver {
             ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
             equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            button_configuration_write: matches!(self, Self::A3062),
+            ambient_sound_mode_cycle_write: matches!(self, Self::A3062),
+            limit_high_volume_write: matches!(self, Self::A3062),
+            dual_connections_write: matches!(self, Self::A3062),
+            ldac_write: matches!(self, Self::A3062),
+            low_battery_prompt_write: matches!(self, Self::A3062),
+            dolby_audio_write: matches!(self, Self::A3062),
+            side_tone_write: matches!(self, Self::A3062),
+            voice_prompt_write: matches!(self, Self::A3062),
+            peer_reads: matches!(self, Self::A3062),
         }
     }
 
@@ -172,6 +224,7 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            settings: SettingsSnapshot::default(),
         })
     }
 
@@ -206,6 +259,26 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the double-press button action.
+    pub button_configuration_write: bool,
+    /// The session can confirm writes of the ambient sound mode cycle flags.
+    pub ambient_sound_mode_cycle_write: bool,
+    /// The session can confirm writes of the high-volume limiter.
+    pub limit_high_volume_write: bool,
+    /// The session can confirm writes of the dual-connections flag.
+    pub dual_connections_write: bool,
+    /// The session can confirm writes of the LDAC flag.
+    pub ldac_write: bool,
+    /// The session can confirm writes of the low battery prompt flag.
+    pub low_battery_prompt_write: bool,
+    /// The session can confirm writes of the Dolby Audio flag.
+    pub dolby_audio_write: bool,
+    /// The session can confirm writes of the side tone flag.
+    pub side_tone_write: bool,
+    /// The session can confirm writes of the ambient sound mode voice prompt.
+    pub voice_prompt_write: bool,
+    /// The session reads the remembered multipoint peers.
+    pub peer_reads: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,6 +317,8 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Additional settings the model's state reports.
+    pub settings: SettingsSnapshot,
 }
 
 impl DeviceState {
@@ -521,6 +596,161 @@ impl EqualizerSetting {
     }
 }
 
+/// The double-press action a model exposes in its button configuration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ButtonAction {
+    /// BassUp, the only action the legacy parser recognizes.
+    BassUp,
+}
+
+impl ButtonAction {
+    /// The action's wire value.
+    pub const fn wire(self) -> u8 {
+        match self {
+            Self::BassUp => 7,
+        }
+    }
+
+    /// Reads an action from its wire value; unrecognized values mean disabled,
+    /// as the legacy parser does.
+    pub fn decode(byte: u8) -> Option<Self> {
+        match byte {
+            7 => Some(Self::BassUp),
+            _ => None,
+        }
+    }
+}
+
+/// Which modes the device's ambient-mode cycle includes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AmbientSoundModeCycle {
+    /// Whether the cycle includes noise canceling.
+    pub noise_canceling: bool,
+    /// Whether the cycle includes transparency.
+    pub transparency: bool,
+    /// Whether the cycle includes normal sound.
+    pub normal: bool,
+}
+
+impl AmbientSoundModeCycle {
+    /// Reads the model's flag byte.
+    pub const fn decode(byte: u8) -> Self {
+        Self {
+            noise_canceling: byte & 1 != 0,
+            transparency: byte & 2 != 0,
+            normal: byte & 4 != 0,
+        }
+    }
+
+    /// Encodes the model's flag byte.
+    pub const fn encode(self) -> u8 {
+        (self.noise_canceling as u8) | ((self.transparency as u8) << 1) | ((self.normal as u8) << 2)
+    }
+}
+
+/// How often the high-volume limiter refreshes its level reading.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VolumeLimitRefreshRate {
+    /// Every reading.
+    RealTime,
+    /// Every ten seconds.
+    TenSeconds,
+    /// Every minute.
+    OneMinute,
+}
+
+impl VolumeLimitRefreshRate {
+    /// Reads the model's wire value; unknown values mean the legacy default.
+    pub const fn decode(byte: u8) -> Self {
+        match byte {
+            1 => Self::TenSeconds,
+            2 => Self::OneMinute,
+            _ => Self::RealTime,
+        }
+    }
+
+    /// Encodes the model's wire value.
+    pub const fn encode(self) -> u8 {
+        match self {
+            Self::RealTime => 0,
+            Self::TenSeconds => 1,
+            Self::OneMinute => 2,
+        }
+    }
+}
+
+/// The high-volume limiter setting reported by the state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LimitHighVolume {
+    /// Whether the limiter is enabled.
+    pub enabled: bool,
+    /// The limit in decibels, on the model's five-decibel grid.
+    pub db_limit: u8,
+    /// How often the level reading refreshes.
+    pub refresh_rate: VolumeLimitRefreshRate,
+}
+
+/// Additional settings decoded from a model's measured state.
+///
+/// A field is `None` when the model's state does not report that setting, so a
+/// write is admitted only for values the device can confirm.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SettingsSnapshot {
+    /// The double-press button action, when the state reports one.
+    pub button_double_press: Option<ButtonAction>,
+    /// The ambient sound mode cycle flags, when the state reports them.
+    pub ambient_sound_mode_cycle: Option<AmbientSoundModeCycle>,
+    /// The high-volume limiter, when the state reports it.
+    pub limit_high_volume: Option<LimitHighVolume>,
+    /// Whether two simultaneous connections are enabled.
+    pub dual_connections: Option<bool>,
+    /// Whether LDAC is enabled.
+    pub ldac: Option<bool>,
+    /// Whether the low battery prompt is enabled.
+    pub low_battery_prompt: Option<bool>,
+    /// Whether Dolby Audio is enabled.
+    pub dolby_audio: Option<bool>,
+    /// Whether side tone is enabled.
+    pub side_tone: Option<bool>,
+    /// Whether the ambient sound mode voice prompt is enabled.
+    pub voice_prompt: Option<bool>,
+}
+
+/// One remembered multipoint peer from a `0B 01` response.
+///
+/// The Bluetooth address and name are device data. The `Debug` form hides the
+/// address so a peer list in a log or test message does not expose it.
+#[derive(Clone, PartialEq, Eq)]
+pub struct PeerDevice {
+    /// Whether the peer is currently connected.
+    pub connected: bool,
+    /// The peer's Bluetooth address, as captured.
+    pub mac: [u8; 6],
+    /// The peer's advertised name, without the trailing padding.
+    pub name: String,
+}
+
+impl fmt::Debug for PeerDevice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PeerDevice")
+            .field("connected", &self.connected)
+            .field("mac", &"<redacted-mac>")
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+/// One page of a multiple-packet `0B 01` peer list response.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeersPage {
+    /// Total number of pages in this response.
+    pub total_packets: u8,
+    /// One-based index of this page.
+    pub current_packet_index: u8,
+    /// Peers carried by this page, in response order.
+    pub devices: Vec<PeerDevice>,
+}
+
 /// Auto power off value reported by the optional extra fields of the A3028 family.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AutoPowerOff {
@@ -622,6 +852,36 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable button configuration.
+    #[error("unsupported device button configuration write")]
+    InvalidButtonConfigurationWrite,
+    /// The device does not report a writable ambient sound mode cycle.
+    #[error("unsupported device ambient sound mode cycle write")]
+    InvalidAmbientSoundModeCycleWrite,
+    /// The device does not report a writable high-volume limiter.
+    #[error("unsupported device high-volume limiter write")]
+    InvalidLimitHighVolumeWrite,
+    /// The device does not report a writable dual-connections flag.
+    #[error("unsupported device dual connections write")]
+    InvalidDualConnectionsWrite,
+    /// The device does not report a writable LDAC flag.
+    #[error("unsupported device LDAC write")]
+    InvalidLdacWrite,
+    /// The device does not report a writable low battery prompt flag.
+    #[error("unsupported device low battery prompt write")]
+    InvalidLowBatteryPromptWrite,
+    /// The device does not report a writable Dolby Audio flag.
+    #[error("unsupported device Dolby Audio write")]
+    InvalidDolbyAudioWrite,
+    /// The device does not report a writable side tone flag.
+    #[error("unsupported device side tone write")]
+    InvalidSideToneWrite,
+    /// The device does not report a writable ambient sound mode voice prompt.
+    #[error("unsupported device voice prompt write")]
+    InvalidVoicePromptWrite,
+    /// A peer list response does not follow the documented `0B 01` layout.
+    #[error("invalid peer list response")]
+    InvalidPeers,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

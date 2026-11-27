@@ -211,11 +211,12 @@
                 "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_ambient_sound_mode_voice_prompt",
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "reference": "core/crates/session/tests/a3062_parity.rs"
         },
         "a3062_button_configuration": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_button_configuration",
@@ -227,8 +228,9 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/a3062/modules/button_configuration/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3062_parity.rs"
         },
         "a3062_dolby_audio": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_dolby_audio",
@@ -241,11 +243,12 @@
                 "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_dolby_audio",
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "reference": "core/crates/session/tests/a3062_parity.rs"
         },
         "a3062_equalizer": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_equalizer",
@@ -257,8 +260,9 @@
             "outboundWrite": [
                 "lib/src/devices/soundcore/a3062/modules/equalizer/state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending"
+            "evidence": "captureReplay",
+            "result": "confirmedReadBack",
+            "reference": "core/data/README.md"
         },
         "a3062_side_tone": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_side_tone",
@@ -271,11 +275,12 @@
                 "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_side_tone",
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "reference": "core/crates/session/tests/a3062_parity.rs"
         },
         "a3062_sound_modes": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_sound_modes",
@@ -288,11 +293,12 @@
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
             ],
-            "evidence": "legacy",
-            "result": "parityPending",
+            "evidence": "captureReplay",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
-            ]
+            ],
+            "reference": "core/data/README.md"
         },
         "a3116_auto_power_off": {
             "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_auto_power_off",
@@ -1637,6 +1643,165 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "command": "0681",
+            "evidence": "captureReplay",
+            "reference": "core/data/README.md",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3062/packets/outbound.rs::set_equalizer",
+            "command": "0387",
+            "evidence": "captureReplay",
+            "reference": "core/data/README.md",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3062/packets/outbound.rs::set_button_double_press_action",
+            "command": "0481",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "ambient_sound_mode_cycle",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+            "command": "0682",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "limit_high_volume",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs::set_limit_high_volume",
+            "command": "2082",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "limit_high_volume",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs::set_limit_high_volume_refresh_rate",
+            "command": "2081",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "auto_power_off",
+            "availability": "The state carries the flag and duration index; the model table is 30, 60, 90 and 120 minutes.",
+            "availabilitySource": "lib/src/devices/soundcore/a3062.rs",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "dual_connections",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::set_dual_connections_enabled",
+            "command": "0B84",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "01FF",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack",
+            "missing": "The write has no acknowledgement; the dedicated 01 7F request confirms the flag."
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "low_battery_prompt",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "1082",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_dolby_audio",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_dolby_audio",
+            "command": "0286",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_side_tone",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_side_tone",
+            "command": "0184",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3062"
+            ],
+            "operation": "a3062_ambient_sound_mode_voice_prompt",
+            "inbound": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_ambient_sound_mode_voice_prompt",
+            "command": "01AE",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3062_parity.rs",
+            "result": "confirmedReadBack"
         }
     ],
     "models": [
@@ -2257,7 +2422,8 @@
                     "firmware": "04.39",
                     "outbound": "core/data/conformance.json",
                     "inbound": "core/data/README.md#a3062-sound-mode-read-back",
-                    "result": "confirmedReadBack"
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/mode_write.rs::confirms_a3062_transparency_from_the_captured_state"
                 },
                 {
                     "operation": "writeEqualizer",
@@ -2265,7 +2431,127 @@
                     "firmware": "04.39",
                     "outbound": "core/data/a3062-eq-write.bin",
                     "inbound": "core/data/README.md#a3062-equalizer-write-and-read-back",
-                    "result": "confirmedReadBack"
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_equalizer_capture.rs::confirms_custom_and_restored_eq_from_captured_replies"
+                },
+                {
+                    "operation": "readPeers",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::request_dual_connections_devices",
+                    "inbound": "core/data/a3062-dual-connections.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::reads_the_masked_multipoint_peer_capture"
+                },
+                {
+                    "operation": "writeButtonConfiguration",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/a3062/packets/outbound.rs::set_button_double_press_action",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0481",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeAmbientSoundModeCycle",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0682",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeLimitHighVolume",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs::set_limit_high_volume",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "2082",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeLimitHighVolumeRefreshRate",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs::set_limit_high_volume_refresh_rate",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "2081",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0186",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeDualConnections",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::set_dual_connections_enabled",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0B84",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeLdac",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "01FF",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeLowBatteryPrompt",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "1082",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeDolbyAudio",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_dolby_audio",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0286",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeSideTone",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_side_tone",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "0184",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
+                },
+                {
+                    "operation": "writeVoicePrompt",
+                    "core": "protocolFixture",
+                    "firmware": "04.39",
+                    "outbound": "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_ambient_sound_mode_voice_prompt",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "command": "01AE",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3062_parity.rs::confirms_every_legacy_a3062_setting_from_capture_derived_read_back"
                 }
             ],
             "stateParserSource": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket"
