@@ -7,7 +7,7 @@ use openscl4_transport::{
 };
 use tokio::sync::mpsc;
 
-pub type Exchange = (Bytes, Option<&'static [u8]>);
+pub type Exchange = (Bytes, Option<Bytes>);
 
 pub struct Replay(pub VecDeque<Exchange>);
 struct ReplayLink(ReplayTx, ReplayRx);
@@ -47,7 +47,7 @@ impl LinkTx for ReplayTx {
         assert_eq!(request, expected);
         if let Some(reply) = reply {
             self.replies
-                .send(Bytes::from_static(reply))
+                .send(reply)
                 .map_err(|_| TransportError::Closed)?;
         }
         Ok(())

@@ -188,7 +188,7 @@ impl SessionHandle {
         if !device.model.capabilities().equalizer_write {
             return Err(DispatchError::UnsupportedEqualizer);
         }
-        if !setting.is_writable() {
+        if !device.model.equalizer_is_writable(setting) {
             return Err(DispatchError::InvalidEqualizer);
         }
         self.live_eq.send_replace(Some(LiveEq {

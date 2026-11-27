@@ -40,13 +40,25 @@ mod tests {
         let identity_request = encode_frame(Direction::Outbound, IDENTITY_COMMAND, &[]).unwrap();
         let replay = Replay(VecDeque::from([
             (identity_request, None),
-            (state_request.clone(), Some(SIGNATURE_STATE)),
-            (state_request.clone(), Some(SIGNATURE_STATE)),
+            (
+                state_request.clone(),
+                Some(Bytes::from_static(SIGNATURE_STATE)),
+            ),
+            (
+                state_request.clone(),
+                Some(Bytes::from_static(SIGNATURE_STATE)),
+            ),
             (Bytes::from_static(CUSTOM_WRITE), None),
-            (state_request.clone(), Some(CUSTOM_STATE)),
-            (state_request.clone(), Some(CUSTOM_STATE)),
+            (
+                state_request.clone(),
+                Some(Bytes::from_static(CUSTOM_STATE)),
+            ),
+            (
+                state_request.clone(),
+                Some(Bytes::from_static(CUSTOM_STATE)),
+            ),
             (signature_write(), None),
-            (state_request, Some(SIGNATURE_STATE)),
+            (state_request, Some(Bytes::from_static(SIGNATURE_STATE))),
         ]));
         let handle = SessionRunner::start(
             replay,

@@ -4,10 +4,15 @@
 
 use std::fmt;
 
+mod a3028;
 mod a3062;
 mod a3949;
 pub mod registry;
 
+pub use a3028::{
+    A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
+    A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
+};
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
 
@@ -26,6 +31,9 @@ pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
 /// Write the A3949 gaming-mode flag.
 pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 
+/// Write the auto power off value of a model that reports its extra fields.
+pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
+
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
 const A3954_SOUND_MODE: usize = 125;
@@ -33,6 +41,10 @@ const A3954_SOUND_MODE: usize = 125;
 /// A driver selected from a checked identity response.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelDriver {
+    /// Soundcore Q30 / Life Q30 (A3028).
+    A3028,
+    /// Soundcore Life Tune (A3029).
+    A3029,
     /// Soundcore Space One Pro.
     A3062,
     /// Soundcore P20i, P25i and R50i.
@@ -51,15 +63,18 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3062),
-            equalizer_write: matches!(self, Self::A3062),
+            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
             gaming_mode_write: matches!(self, Self::A3949),
+            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
         }
     }
 
     /// Returns the stable model code.
     pub const fn code(self) -> &'static str {
         match self {
+            Self::A3028 => "A3028",
+            Self::A3029 => "A3029",
             Self::A3062 => "A3062",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
@@ -71,9 +86,35 @@ impl ModelDriver {
         STATE_COMMAND
     }
 
+    /// Number of equalizer bands carried in the model's curve.
+    pub const fn equalizer_bands(self) -> usize {
+        match self {
+            Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+        }
+    }
+
+    /// The wire command for the model's equalizer write.
+    pub const fn equalizer_command(self) -> [u8; 2] {
+        match self {
+            Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+        }
+    }
+
+    /// Whether the shared curve fits this model's wire and write format.
+    pub fn equalizer_is_writable(self, setting: EqualizerSetting) -> bool {
+        self.capabilities().equalizer_write
+            && setting.is_writable()
+            && setting.volume_adjustments[self.equalizer_bands()..]
+                .iter()
+                .all(|gain| *gain == 0)
+    }
+
     /// Decodes the state response for the selected model.
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         match self {
+            Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
@@ -84,22 +125,25 @@ impl ModelDriver {
     ///
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
-    /// A3954 state also needs the measured serial evidence used for redaction.
+    /// A3954 state also needs the measured serial evidence used for redaction,
+    /// and the A3028 family needs the serial that selects its public code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
-        let expected = match self {
-            Self::A3062 => a3062::STATE_LENGTH,
-            Self::A3949 => a3949::STATE_LENGTH,
-            Self::A3954 => A3954_STATE_LENGTH,
+        let layout_matches = match self {
+            Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
+            Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3949 => body.len() == a3949::STATE_LENGTH,
+            Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
-        let serial_is_recognized = match self {
+        let serial_matches = match self {
+            Self::A3028 | Self::A3029 => {
+                a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
+            }
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
         };
-        if body.len() == expected && serial_is_recognized {
-            self.decode_state(body).ok()
-        } else {
-            None
-        }
+        (layout_matches && serial_matches)
+            .then(|| self.decode_state(body).ok())
+            .flatten()
     }
 
     fn decode_a3954_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
@@ -125,6 +169,7 @@ impl ModelDriver {
             firmware_device: None,
             equalizer: None,
             gaming_mode: None,
+            auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -133,16 +178,18 @@ impl ModelDriver {
     /// Builds the driver's measured equalizer write body from a fresh state response.
     ///
     /// The write echoes the state's hear-id fields with hear-id disabled, so the
-    /// requested curve is the one in effect.
+    /// requested curve is the one in effect. The A3028 family writes only its
+    /// eight bands and has no hear-id block.
     pub fn equalizer_write_body(
         self,
         setting: EqualizerSetting,
         state: &[u8],
     ) -> Result<Vec<u8>, ModelError> {
-        if !self.capabilities().equalizer_write {
-            return Err(ModelError::InvalidEqualizerWrite);
+        match self {
+            Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
+            Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
-        a3062::equalizer_write_body(setting, state)
     }
 }
 
@@ -157,10 +204,13 @@ pub struct Capabilities {
     pub equalizer_write: bool,
     /// The session can confirm writes of the gaming-mode flag.
     pub gaming_mode_write: bool,
+    /// The session can confirm writes of the auto power off value.
+    pub auto_power_off_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SoundModeControls {
+    A3028([u8; 3]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
 }
@@ -186,6 +236,8 @@ pub struct DeviceState {
     pub equalizer: Option<EqualizerSetting>,
     /// Whether gaming mode is on, when the device reports a recognized flag.
     pub gaming_mode: Option<bool>,
+    /// The reported auto power off value, when the state carries extra fields.
+    pub auto_power_off: Option<AutoPowerOff>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -226,12 +278,58 @@ impl DeviceState {
         a3062::ambient_sound_mode_write(mode, controls)
     }
 
+    /// Builds an ambient-mode write from the latest A3028/A3029 controls.
+    pub fn family_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 4], ModelError> {
+        let Some(SoundModeControls::A3028(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        a3028::sound_mode_write(mode, controls)
+    }
+
     /// Builds a gaming-mode write for a device that reports the measured flag.
     pub fn gaming_mode_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
         if !self.model.capabilities().gaming_mode_write || self.gaming_mode.is_none() {
             return Err(ModelError::InvalidGamingModeWrite);
         }
         Ok([u8::from(enabled)])
+    }
+
+    /// Builds an auto power off write, available only when the state carries
+    /// the documented extra fields of a supporting model.
+    ///
+    /// Disabling keeps the device's previous duration index, matching the
+    /// legacy setting handler. The returned expected value is what a fresh
+    /// read-back must report.
+    pub fn auto_power_off_write(
+        self,
+        setting: AutoPowerOffSetting,
+    ) -> Result<AutoPowerOffWrite, ModelError> {
+        if !self.model.capabilities().auto_power_off_write {
+            return Err(ModelError::InvalidAutoPowerOffWrite);
+        }
+        let current = self
+            .auto_power_off
+            .ok_or(ModelError::InvalidAutoPowerOffWrite)?;
+        let (body, expected) = match setting {
+            AutoPowerOffSetting::Enabled(index) if index < a3028::AUTO_POWER_OFF_DURATION_COUNT => {
+                (
+                    [1, index],
+                    AutoPowerOff {
+                        enabled: true,
+                        duration: index,
+                    },
+                )
+            }
+            AutoPowerOffSetting::Enabled(_) => return Err(ModelError::InvalidAutoPowerOffWrite),
+            AutoPowerOffSetting::Disabled => (
+                [0, current.duration],
+                AutoPowerOff {
+                    enabled: false,
+                    duration: current.duration,
+                },
+            ),
+        };
+        Ok(AutoPowerOffWrite { body, expected })
     }
 }
 
@@ -423,6 +521,43 @@ impl EqualizerSetting {
     }
 }
 
+/// Auto power off value reported by the optional extra fields of the A3028 family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AutoPowerOff {
+    /// Whether the device powers off after the selected idle duration.
+    pub enabled: bool,
+    /// Index into the family's half-hour duration table.
+    pub duration: u8,
+}
+
+/// A requested auto power off change.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AutoPowerOffSetting {
+    /// Enable auto power off with an index into the half-hour duration table.
+    Enabled(u8),
+    /// Disable auto power off and keep the device's previous duration index.
+    Disabled,
+}
+
+/// The wire body and the value that confirms an auto power off write.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AutoPowerOffWrite {
+    body: [u8; 2],
+    expected: AutoPowerOff,
+}
+
+impl AutoPowerOffWrite {
+    /// The `01 86` body.
+    pub const fn body(self) -> [u8; 2] {
+        self.body
+    }
+
+    /// The value a fresh state response must report for this write.
+    pub const fn expected(self) -> AutoPowerOff {
+        self.expected
+    }
+}
+
 /// A validated firmware version in the device's two-part decimal format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FirmwareVersion {
@@ -484,6 +619,9 @@ pub enum ModelError {
     /// The device does not report a writable gaming-mode flag.
     #[error("unsupported device gaming mode write")]
     InvalidGamingModeWrite,
+    /// The device does not report a writable auto power off value.
+    #[error("unsupported device auto power off write")]
+    InvalidAutoPowerOffWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

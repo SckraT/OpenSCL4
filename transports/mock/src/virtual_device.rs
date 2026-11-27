@@ -3,9 +3,11 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE,
-    EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND,
-    STATE_COMMAND, SoundModeWrite,
+    A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
+    A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
+    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
+    SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -24,6 +26,28 @@ const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
     include_bytes!("../../../core/data/a3062-mode-normal.bin"),
 ];
+/// A3028 and A3029 state bodies from `core/data/a3028-a3029-mode-reference.json`.
+/// The reference starts from one legacy example with an A3029 serial prefix and
+/// replaces the full serial at body offsets 44–59 with the synthetic
+/// model-specific value `3028TEST00000000` or `3029TEST00000000`, then
+/// recomputes the checksum. Neither body carries the optional extra fields.
+const A3028_STATE_BODY: &[u8] = &[
+    0x05, 0x00, 0xfe, 0xfe, 0x3c, 0xb4, 0x8f, 0xa0, 0x8e, 0xb4, 0x74, 0x88, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x30, 0x32, 0x2e, 0x33, 0x30, 0x33, 0x30, 0x32, 0x38,
+    0x54, 0x45, 0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+];
+const A3029_STATE_BODY: &[u8] = &[
+    0x05, 0x00, 0xfe, 0xfe, 0x3c, 0xb4, 0x8f, 0xa0, 0x8e, 0xb4, 0x74, 0x88, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x30, 0x32, 0x2e, 0x33, 0x30, 0x33, 0x30, 0x32, 0x39,
+    0x54, 0x45, 0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+];
+/// The documented extra fields appended to the same state body: unknown1, touch
+/// control, dual connections, auto power off (enabled, duration index 1) and the
+/// ambient and battery alert prompt tones. The matrix lists this block as
+/// derived from the known layout, not a separate capture.
+const AUTO_POWER_OFF_EXTRA_FIELDS: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01];
 const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
@@ -96,6 +120,75 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual A3028 that answers state reads from the family reference.
+pub struct VirtualA3028;
+
+impl VirtualA3028 {
+    /// Serves the same state with the documented auto power off extra fields.
+    pub fn with_auto_power_off() -> impl TransportProvider {
+        FamilyWithAutoPowerOff(ModelDriver::A3028)
+    }
+}
+
+/// A virtual A3029 that answers state reads from the family reference.
+pub struct VirtualA3029;
+
+fn family_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    family_link_with_state(model, initial_state(model))
+}
+
+fn family_link_with_state(
+    model: ModelDriver,
+    state: Arc<Mutex<Vec<u8>>>,
+) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        state,
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3028 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(family_link(ModelDriver::A3028))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3029 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(family_link(ModelDriver::A3029))
+    }
+}
+
+struct FamilyWithAutoPowerOff(ModelDriver);
+
+#[async_trait]
+impl TransportProvider for FamilyWithAutoPowerOff {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let mut body = initial_state(self.0)
+            .lock()
+            .expect("virtual state lock")
+            .clone();
+        body.extend_from_slice(&AUTO_POWER_OFF_EXTRA_FIELDS);
+        Ok(family_link_with_state(self.0, Arc::new(Mutex::new(body))))
+    }
+}
 
 #[async_trait]
 impl TransportProvider for VirtualA3949 {
@@ -258,11 +351,25 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
+                && frame.command == A3028_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
             } else if self.model == ModelDriver::A3949
                 && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
+                && frame.command == AUTO_POWER_OFF_COMMAND
+                && self.auto_power_off_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
             }
@@ -295,23 +402,57 @@ impl DeviceResponder {
                 state[A3062_SOUND_MODE_FIELDS].copy_from_slice(&captured[A3062_SOUND_MODE_FIELDS]);
                 true
             }
+            ModelDriver::A3028 | ModelDriver::A3029 => {
+                let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
+                    return false;
+                };
+                state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
             ModelDriver::A3949 => false,
         }
     }
 
-    /// Applies an A3062 equalizer write; a withheld application answers nothing.
+    /// Applies an equalizer write; a withheld application answers nothing.
     fn equalizer_applied(&self, body: &[u8]) -> bool {
         if !self.options.apply_equalizer {
             return false;
         }
-        // The write body starts with the preset, the hear-id genre, and the bands.
-        let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..14)) else {
+        let mut state = self.state.lock().expect("virtual state lock");
+        match self.model {
+            ModelDriver::A3062 => {
+                // The write body starts with the preset, the hear-id genre, and the bands.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..14)) else {
+                    return false;
+                };
+                // The state carries the curve at the offsets the models crate measured.
+                state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3028 | ModelDriver::A3029 => {
+                // The family write is the preset followed directly by eight bands.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(2..10)) else {
+                    return false;
+                };
+                state[A3028_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3949 | ModelDriver::A3954 => false,
+        }
+    }
+
+    /// Applies an auto power off write only when the state carries extra fields.
+    fn auto_power_off_applied(&self, body: &[u8]) -> bool {
+        let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
         let mut state = self.state.lock().expect("virtual state lock");
-        // The state carries the curve at the offsets the models crate measured.
-        state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
-        state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
+        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+            return false;
+        };
+        value.copy_from_slice(body);
         true
     }
 }
@@ -397,11 +538,13 @@ impl ReadOnlyResponder {
 
 fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
-        ModelDriver::A3062 => A3062_MODE_REPLIES[2],
-        ModelDriver::A3949 => A3949_STATE_REPLY,
-        ModelDriver::A3954 => A3954_STATE_REPLY,
+        ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
+        ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
+        ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
+        ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
     };
-    Arc::new(Mutex::new(fixture_body(model, bytes)))
+    Arc::new(Mutex::new(bytes))
 }
 
 fn fixture_body(model: ModelDriver, bytes: &[u8]) -> Vec<u8> {

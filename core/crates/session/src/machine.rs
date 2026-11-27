@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError, STATE_COMMAND,
-    registry,
+    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
+    STATE_COMMAND, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -209,6 +209,8 @@ struct ActiveWrite {
     model: ModelDriver,
     stage: WriteStage,
     may_have_written: bool,
+    /// The value a read-back must report, resolved from the fresh state.
+    expected_auto_power_off: Option<AutoPowerOff>,
 }
 
 impl ActiveWrite {
@@ -355,8 +357,7 @@ impl SessionMachine {
             } => {
                 if after_command >= self.last_eq_preset
                     && let ConnectionState::Ready(device) = self.view.connection
-                    && device.model.capabilities().equalizer_write
-                    && setting.is_writable()
+                    && device.model.equalizer_is_writable(setting)
                 {
                     // Rapid values coalesce: the latest curve keeps the interval
                     // anchored at the first value.
@@ -416,6 +417,9 @@ impl SessionMachine {
                 SessionCommand::SetSoundMode(setting) => (WriteTarget::SoundMode(setting), None),
                 SessionCommand::SetAmbientSoundMode(mode) => (WriteTarget::AmbientMode(mode), None),
                 SessionCommand::SetGamingMode(enabled) => (WriteTarget::GamingMode(enabled), None),
+                SessionCommand::SetAutoPowerOff(setting) => {
+                    (WriteTarget::AutoPowerOff(setting), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -432,6 +436,7 @@ impl SessionMachine {
                 model: device.model,
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
+                expected_auto_power_off: None,
             });
             return Effect::read(now, device.model.state_command());
         }
@@ -465,6 +470,7 @@ impl SessionMachine {
                     model: device.model,
                     stage: WriteStage::ReadCurrent,
                     may_have_written: false,
+                    expected_auto_power_off: None,
                 });
                 return Effect::read(now, device.model.state_command());
             }
@@ -514,7 +520,8 @@ impl SessionMachine {
                     self.send_write(now, write, &frame.body)
                 }
                 WriteStage::Ack
-                    if frame.command == write.target.command() && frame.body.is_empty() =>
+                    if frame.command == write.target.command(write.model)
+                        && frame.body.is_empty() =>
                 {
                     self.read_back(now, write, None, None)
                 }
@@ -616,12 +623,13 @@ impl SessionMachine {
         }
 
         match write.target.write_body(state, body) {
-            Ok(body) => {
+            Ok(resolved) => {
                 self.active = Some(ActiveWrite {
                     stage: WriteStage::Ack,
+                    expected_auto_power_off: resolved.expected_auto_power_off,
                     ..write
                 });
-                Effect::request(now, write.target.command(), body)
+                Effect::request(now, write.target.command(write.model), resolved.body)
             }
             Err(error) => self.reject_write(now, write, error),
         }
@@ -672,7 +680,7 @@ impl SessionMachine {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
-        if write.target.matches(state) {
+        if write.target.matches(state, write.expected_auto_power_off) {
             return self.finish_write(now, write, state);
         }
 
@@ -691,7 +699,7 @@ impl SessionMachine {
     fn finish_write(&mut self, now: Duration, write: ActiveWrite, state: DeviceState) -> Effect {
         self.transition(ConnectionState::Ready(state));
 
-        if !write.target.matches(state) {
+        if !write.target.matches(state, write.expected_auto_power_off) {
             self.active = None;
             return match write.id {
                 Some(id) => Effect::Complete(id, Err(write_failure(write, state))),
@@ -912,6 +920,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.gaming_mode,
         },
+        WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
+            requested,
+            observed: state.auto_power_off,
+        },
     }
 }
 
@@ -930,6 +942,13 @@ mod tests {
     const A3062_TRANSPARENCY_WRITE: &[u8] =
         b"\x08\xee\0\0\0\x06\x81\x10\0\x01\x51\x01\x01\0\x05\xe6";
     const A3949_STATE: &[u8] = include_bytes!("../../../data/a3949-pilot-state.bin");
+    /// The published A3028 body from `core/data/a3028-a3029-mode-reference.json`.
+    const A3028_STATE: &[u8] = &[
+        0x05, 0x00, 0xfe, 0xfe, 0x3c, 0xb4, 0x8f, 0xa0, 0x8e, 0xb4, 0x74, 0x88, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x30, 0x32, 0x2e, 0x33, 0x30, 0x33,
+        0x30, 0x32, 0x38, 0x54, 0x45, 0x53, 0x54, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+    ];
 
     #[test]
     fn frame_and_timer_from_the_prior_generation_are_ignored_during_sync() {
@@ -1114,6 +1133,7 @@ mod tests {
                 observed: None,
             },
             may_have_written: true,
+            expected_auto_power_off: None,
         });
         machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
         let retry = machine.input(Duration::ZERO, inbound(model.state_command(), &original));
@@ -1308,6 +1328,92 @@ mod tests {
     }
 
     #[test]
+    fn a3028_malformed_sound_mode_read_back_keeps_the_confirmed_state_and_deadline() {
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, &[]));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, A3028_STATE));
+        let confirmed = machine.view().connection;
+        assert!(matches!(confirmed, ConnectionState::Ready(_)));
+
+        let id = CommandId(1);
+        machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::SetAmbientSoundMode(SoundMode::NoiseCanceling),
+                submitted_at: now,
+            }),
+        );
+        machine.input(now, sent());
+        let read_current_deadline = now + REPLY_TIMEOUT;
+
+        let mut malformed_anc = A3028_STATE.to_vec();
+        malformed_anc[36] = 0xff;
+        let unusable_current = machine.input(
+            now + Duration::from_millis(500),
+            inbound(STATE_COMMAND, &malformed_anc),
+        );
+        assert!(
+            matches!(unusable_current, Effect::Receive(Some(at)) if at == read_current_deadline)
+        );
+        assert_eq!(machine.view().connection, confirmed);
+
+        let write = machine.input(
+            now + Duration::from_millis(600),
+            inbound(STATE_COMMAND, A3028_STATE),
+        );
+        assert!(matches!(
+            write,
+            Effect::Request { command: SOUND_MODE_COMMAND, ref body, .. }
+                if body.as_slice() == [0x00, 0x00, 0x01, 0x00]
+        ));
+        machine.input(now + Duration::from_millis(600), sent());
+
+        let ack = machine.input(
+            now + Duration::from_millis(700),
+            inbound(SOUND_MODE_COMMAND, &[]),
+        );
+        assert!(matches!(
+            ack,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now + Duration::from_millis(700), sent());
+        let read_back_deadline = now + Duration::from_millis(700) + REPLY_TIMEOUT;
+
+        let mut malformed_transparency = A3028_STATE.to_vec();
+        malformed_transparency[37] = 0x02;
+        let unusable_read_back = machine.input(
+            now + Duration::from_millis(800),
+            inbound(STATE_COMMAND, &malformed_transparency),
+        );
+        assert!(matches!(
+            unusable_read_back,
+            Effect::Receive(Some(at)) if at == read_back_deadline
+        ));
+        assert_eq!(machine.view().connection, confirmed);
+
+        let mut anc = A3028_STATE.to_vec();
+        anc[35] = 0x00;
+        let completed = machine.input(
+            now + Duration::from_millis(900),
+            inbound(STATE_COMMAND, &anc),
+        );
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed, Ok(CommandOutcome::Applied(state)))
+                if completed == id && state.sound_mode == Some(SoundMode::NoiseCanceling)
+        ));
+    }
+
+    #[test]
     fn a_cancelled_send_marks_only_the_attempted_write_as_unconfirmed() {
         let attempted = CommandId(1);
         let queued = CommandId(2);
@@ -1321,6 +1427,7 @@ mod tests {
                 model: ModelDriver::A3954,
                 stage: WriteStage::Ack,
                 may_have_written: false,
+                expected_auto_power_off: None,
             });
             let effect = machine.input(
                 Duration::ZERO,

@@ -127,6 +127,36 @@ bytes. The outbound `03 87` frame contains EQ and HearID settings.
 The session replay compares the custom write to the captured outbound frame
 and confirms both curves from the captured state replies.
 
+## A3028 and A3029 state reference
+
+[a3028-a3029-mode-reference.json](a3028-a3029-mode-reference.json) records one legacy
+A3028 driver test whose state carries an A3029 serial prefix. Its `01 01` state
+body is 60 bytes: a single battery at 0, the eight-band equalizer at 4–11, the
+sound modes at 35–38, firmware `02.30` at 39–43 and a 16-byte serial at 44–59.
+The reference replaces the full serial with the synthetic model-specific
+`3028TEST00000000` or `3029TEST00000000` value and recomputes the checksum, so
+the two published variants exercise the same layout.
+
+The `06 81` cycle preserves the other sound-mode bytes: Normal uses
+`02 00 01 00` and ANC Transport uses `00 00 01 00`. The optional 7-byte extra
+fields block at body 60–66 (unknown1, touch control, dual connections, auto power
+off, and the two prompt tones) is documented by
+[the legacy parser](../../lib/src/devices/soundcore/a3028/packets/state_update_packet.rs)
+but **no capture of it is recorded**. The 67-byte state used by the session tests
+is reconstructed from that legacy layout, not measured over RFCOMM: the tests
+append `0x00 0x00 0x00 0x01 0x01 0x01 0x01` to the same body and use it as a
+`protocolFixture`. A body without the block reports auto power off as
+unavailable. An unrecognized flag or a duration index above 3 is reported as
+unavailable, not as a confirmed disabled value.
+
+The eight-band write bodies are the fixed examples from the legacy
+`set_equalizer` tests: the custom curve is
+`08 EE 00 00 00 02 81 14 00 FE FE 3C B4 8F A0 8E B4 74 88 E6` and the
+signature curve is
+`08 EE 00 00 00 02 81 14 00 00 00 78 78 78 78 78 78 78 78 4D`.
+**No physical A3028 or A3029 capture exists** for these sessions; the virtual
+transport replays the reference bodies with their checksums recomputed.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

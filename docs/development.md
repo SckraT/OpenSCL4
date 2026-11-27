@@ -46,6 +46,18 @@ it from the state response if the separate identity probe is unavailable. Add
 `--cycle-mode` to change the mode and restore the original. Each result comes
 from a fresh state response. The JSON reports the mode without a scale position.
 
+The A3028 and A3029 pilots use the same driver and are discovered from their
+state response because no identity response is recorded for the family. Both
+report firmware 02.30, one device battery and normal mode from the reference
+state in [`core/data`](../core/data/README.md#a3028-and-a3029-state-reference).
+Add `--cycle-mode` to write the reference Normal → ANC Transport → Normal
+sequence, each confirmed by a new state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.
