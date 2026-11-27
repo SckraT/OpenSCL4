@@ -10,8 +10,8 @@
     <string name="sound_notification_controls">Notification controls</string>
     <string name="sound_notification_controls_description">Control your device outside the app</string>
     <string name="sound_widget">Home screen widget</string>
-    <string name="sound_widget_description">Presets and frequently used settings</string>
-    <string name="sound_widget_help">Touch and hold an empty area of your home screen, choose Widgets, then add the OpenSCQ30 widget. Connect to your headphones to configure its controls.</string>
+    <string name="sound_widget_description">Frequently used device settings on your home screen</string>
+    <string name="sound_widget_help">Touch and hold an empty area of your home screen, choose Widgets, then add the OpenSCL4 widget. Connect to your headphones to configure its controls. The widget follows the device state, so a setting that cannot be changed now is shown disabled with the reason.</string>
     <string name="sound_auto_connect_description">Reconnect when your headphones are available</string>
     <string name="sound_diagnostics">Diagnostics</string>
     <string name="sound_logs_description">Copy recent app logs to help troubleshoot issues</string>

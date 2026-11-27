@@ -82,7 +82,6 @@
     <string name="dynamic_color">Cor dinâmica</string>
     <string name="in_effect">Ativado</string>
     <string name="copy_logs_to_clipboard_unfiltered">Copiar Logs para Área de Transferência (sem filtro)</string>
-    <string name="visible_settings">Configurações visíveis</string>
     <string name="appearance">Aparência</string>
     <string name="compact_layout">Layout compacto</string>
 </resources>
