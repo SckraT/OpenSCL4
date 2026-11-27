@@ -15,7 +15,9 @@ pub use command::{
     QuickPresetValues, SessionCommand,
 };
 pub use diagnostics::DiagnosticExportError;
-pub use machine::{ConnectionState, ReconnectPolicy, SessionView};
+pub use machine::{
+    ConnectionState, ReconnectPolicy, SessionView, UnidentifiedReason, UnidentifiedState,
+};
 pub use openscl4_models::{
     DeviceState, EqualizerSetting, ModelDriver, SoundMode, SoundModeSetting, registry,
 };

@@ -3,7 +3,8 @@ use crate::{
     battery_percent,
 };
 
-const STATE_LENGTH: usize = 88;
+/// Body length of the measured A3949 pilot state.
+pub const STATE_LENGTH: usize = 88;
 const BATTERY_SCALE: u8 = 5;
 
 /// Body offset of the measured A3949 gaming-mode flag.

@@ -5,7 +5,7 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE,
     EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND,
-    SoundModeWrite,
+    STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -145,14 +145,54 @@ struct ResponderOptions {
 }
 
 pub struct Responder {
+    inner: ResponderKind,
+}
+
+enum ResponderKind {
+    Device(DeviceResponder),
+    ReadOnly(ReadOnlyResponder),
+}
+
+impl Responder {
+    pub fn new(acknowledge_writes: bool) -> Self {
+        Self {
+            inner: ResponderKind::Device(DeviceResponder::new(acknowledge_writes)),
+        }
+    }
+
+    fn with_state(
+        model: ModelDriver,
+        options: ResponderOptions,
+        state: Arc<Mutex<Vec<u8>>>,
+    ) -> Self {
+        Self {
+            inner: ResponderKind::Device(DeviceResponder::with_state(model, options, state)),
+        }
+    }
+
+    fn read_only(identity: Bytes, state: Vec<u8>) -> Self {
+        Self {
+            inner: ResponderKind::ReadOnly(ReadOnlyResponder::new(identity, state)),
+        }
+    }
+
+    pub fn reply(&mut self, chunk: &[u8]) -> Option<Bytes> {
+        match &mut self.inner {
+            ResponderKind::Device(responder) => responder.reply(chunk),
+            ResponderKind::ReadOnly(responder) => responder.reply(chunk),
+        }
+    }
+}
+
+struct DeviceResponder {
     model: ModelDriver,
     decoder: FrameDecoder,
     state: Arc<Mutex<Vec<u8>>>,
     options: ResponderOptions,
 }
 
-impl Responder {
-    pub fn new(acknowledge_writes: bool) -> Self {
+impl DeviceResponder {
+    fn new(acknowledge_writes: bool) -> Self {
         let model = ModelDriver::A3954;
         Self::with_state(
             model,
@@ -177,7 +217,7 @@ impl Responder {
         }
     }
 
-    pub fn reply(&mut self, chunk: &[u8]) -> Option<Bytes> {
+    fn reply(&mut self, chunk: &[u8]) -> Option<Bytes> {
         self.decoder.push(chunk);
         let mut replies = BytesMut::new();
         loop {
@@ -273,6 +313,85 @@ impl Responder {
         state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
         state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
         true
+    }
+}
+
+/// A virtual device whose identity is outside the measured registry.
+pub struct VirtualUnknownIdentity;
+
+#[async_trait]
+impl TransportProvider for VirtualUnknownIdentity {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let identity = encode_frame(
+            Direction::Inbound,
+            IDENTITY_COMMAND,
+            b"04.3004.309999UNKNOWN00000",
+        )
+        .expect("valid unknown identity frame");
+        let state = fixture_body(ModelDriver::A3954, A3954_STATE_REPLY);
+        Ok(open_link(Some(Responder::read_only(identity, state))).0)
+    }
+}
+
+/// A virtual A3954 that answers its state request with an unconfirmed layout.
+pub struct VirtualIncompatibleA3954;
+
+#[async_trait]
+impl TransportProvider for VirtualIncompatibleA3954 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        let mut state = fixture_body(ModelDriver::A3954, A3954_STATE_REPLY);
+        state.extend_from_slice(b"UNTRUSTED-STATE");
+        Ok(open_link(Some(Responder::read_only(
+            Bytes::from_static(IDENTITY_REPLY),
+            state,
+        )))
+        .0)
+    }
+}
+
+struct ReadOnlyResponder {
+    identity: Bytes,
+    state: Vec<u8>,
+    decoder: FrameDecoder,
+}
+
+impl ReadOnlyResponder {
+    fn new(identity: Bytes, state: Vec<u8>) -> Self {
+        Self {
+            identity,
+            state,
+            decoder: FrameDecoder::default(),
+        }
+    }
+
+    fn reply(&mut self, chunk: &[u8]) -> Option<Bytes> {
+        self.decoder.push(chunk);
+        let mut replies = BytesMut::new();
+        loop {
+            let frame = match self.decoder.next_frame() {
+                Ok(Some(frame)) => frame,
+                Ok(None) => break,
+                Err(_) => continue,
+            };
+            if frame.direction != Direction::Outbound {
+                continue;
+            }
+            if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
+                replies.extend_from_slice(&self.identity);
+            } else if frame.command == STATE_COMMAND
+                && frame.body.is_empty()
+                && let Ok(state) = encode_frame(Direction::Inbound, STATE_COMMAND, &self.state)
+            {
+                replies.extend_from_slice(&state);
+            }
+        }
+        (!replies.is_empty()).then(|| replies.freeze())
     }
 }
 

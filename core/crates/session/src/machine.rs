@@ -46,6 +46,8 @@ pub enum ConnectionState {
     SyncingState(ModelDriver),
     /// A validated state response has been parsed for the current link.
     Ready(DeviceState),
+    /// The identity or state format is not recognized, so only safe reads are available.
+    Unidentified(UnidentifiedState),
     /// Recovery is in progress and the most recent confirmed snapshot is still available.
     Reconnecting {
         /// Snapshot from the last ready connection.
@@ -63,6 +65,25 @@ impl ConnectionState {
     pub fn is_terminal(self) -> bool {
         matches!(self, Self::Closed | Self::Failed(_))
     }
+}
+
+/// Safe metadata for a device the session can read but not drive.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UnidentifiedState {
+    /// The registered model, when identity was recognized but its state was not.
+    pub model: Option<ModelDriver>,
+    /// Why the session cannot confirm a device state.
+    pub reason: UnidentifiedReason,
+}
+
+/// The safe cause of a read-only session.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UnidentifiedReason {
+    /// An explicit identity names no registered model, or the probed state
+    /// selects none after an unavailable identity response.
+    UnknownIdentity,
+    /// The registered model's state did not match its measured format.
+    IncompatibleState,
 }
 
 /// An immutable session snapshot.
@@ -508,24 +529,44 @@ impl SessionMachine {
         }
 
         match self.view.connection {
-            ConnectionState::ProbingIdentity if frame.command == IDENTITY_COMMAND => {
+            ConnectionState::ProbingIdentity
+                if frame.command == IDENTITY_COMMAND && first_read > self.receive_cutoff =>
+            {
                 match ModelDriver::identify(&frame.body) {
                     Ok(model) => {
                         self.transition(ConnectionState::SyncingState(model));
                         Effect::read(now, model.state_command())
                     }
+                    // A received identity naming no registered model is final:
+                    // the state layout must not select a driver for it.
+                    Err(ModelError::UnknownModel) => self.unidentified(
+                        now,
+                        UnidentifiedState {
+                            model: None,
+                            reason: UnidentifiedReason::UnknownIdentity,
+                        },
+                    ),
                     Err(error) => self.probe_state(now, error.into()),
                 }
             }
-            ConnectionState::ProbingState(identity_error)
+            ConnectionState::ProbingState(_)
                 if frame.command == STATE_COMMAND && first_read > self.receive_cutoff =>
             {
                 match registry::identify_state(&frame.body) {
                     Ok(model) => self.confirm_state(now, model, &frame.body),
-                    Err(_) => self.fail(now, identity_error),
+                    // The requested safe read was answered but selects no pilot.
+                    Err(_) => self.unidentified(
+                        now,
+                        UnidentifiedState {
+                            model: None,
+                            reason: UnidentifiedReason::UnknownIdentity,
+                        },
+                    ),
                 }
             }
-            ConnectionState::SyncingState(model) if frame.command == model.state_command() => {
+            ConnectionState::SyncingState(model)
+                if frame.command == model.state_command() && first_read > self.receive_cutoff =>
+            {
                 self.confirm_state(now, model, &frame.body)
             }
             _ => self.next_effect(now),
@@ -538,20 +579,35 @@ impl SessionMachine {
     }
 
     fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
-        match model.decode_state(body) {
-            Ok(state) => {
+        match model.decode_confirmed_state(body) {
+            Some(state) => {
                 self.recovery = None;
                 self.transition(ConnectionState::Ready(state));
                 self.next_effect(now)
             }
-            Err(error) => self.fail(now, error.into()),
+            None => self.unidentified(
+                now,
+                UnidentifiedState {
+                    model: Some(model),
+                    reason: UnidentifiedReason::IncompatibleState,
+                },
+            ),
         }
     }
 
+    /// Publishes a read-only view and keeps only safe reads available.
+    fn unidentified(&mut self, now: Duration, state: UnidentifiedState) -> Effect {
+        // A read-only connection cannot recover a confirmed snapshot by retrying.
+        self.recovery = None;
+        self.transition(ConnectionState::Unidentified(state));
+        self.next_effect(now)
+    }
+
     fn send_write(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
-        let state = match write.model.decode_state(body) {
-            Ok(state) => state,
-            Err(error) => return self.fail(now, error.into()),
+        let Some(state) = write.model.decode_confirmed_state(body) else {
+            // A matching command with an unusable payload keeps the confirmed
+            // state and the original deadline; the command waits for a valid reply.
+            return self.next_effect(now);
         };
         if self.view.connection == ConnectionState::Ready(state) {
             self.reply_deadline = None;
@@ -612,9 +668,9 @@ impl SessionMachine {
         write: ActiveWrite,
         body: &[u8],
     ) -> Effect {
-        let state = match write.model.decode_state(body) {
-            Ok(state) => state,
-            Err(error) => return self.fail(now, error.into()),
+        let Some(state) = write.model.decode_confirmed_state(body) else {
+            // Keep the confirmed state and the original deadline for a valid reply.
+            return self.next_effect(now);
         };
         if write.target.matches(state) {
             return self.finish_write(now, write, state);
@@ -1621,14 +1677,360 @@ mod tests {
         }
     }
 
+    #[test]
+    fn unknown_identity_and_state_publish_a_read_only_view() {
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+        let probe = machine.input(
+            now,
+            inbound(IDENTITY_COMMAND, b"04.3004.309999UNKNOWN00000"),
+        );
+        assert!(
+            matches!(probe, Effect::Receive(None)),
+            "an explicit unknown identity must not probe the state"
+        );
+
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::Unidentified(UnidentifiedState {
+                model: None,
+                reason: UnidentifiedReason::UnknownIdentity,
+            })
+        );
+
+        // A valid A3062 state pushed without a request cannot select a driver.
+        let view = machine.view();
+        machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        assert_eq!(machine.view(), view);
+
+        let view = machine.view();
+        assert!(
+            machine
+                .input_from(view.generation.wrapping_sub(1), now, Input::TimerElapsed)
+                .is_none()
+        );
+        assert_eq!(machine.view(), view);
+    }
+
+    #[test]
+    fn an_identity_timeout_then_a_fresh_unrecognized_state_publishes_read_only() {
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+
+        let probe = machine.input(REPLY_TIMEOUT, Input::TimerElapsed);
+        assert!(matches!(
+            probe,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::ProbingState(SessionError::Timeout(IoStage::Receive))
+        );
+        machine.input(REPLY_TIMEOUT, Input::RequestSent { receive_cutoff: 1 });
+
+        machine.input(
+            REPLY_TIMEOUT,
+            inbound_at(STATE_COMMAND, &state_body(STATE), 2),
+        );
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::Unidentified(UnidentifiedState {
+                model: None,
+                reason: UnidentifiedReason::UnknownIdentity,
+            })
+        );
+    }
+
+    #[test]
+    fn an_identity_and_state_timeout_still_fails() {
+        let now = Duration::ZERO;
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 0 });
+
+        let probe = machine.input(REPLY_TIMEOUT, Input::TimerElapsed);
+        assert!(matches!(
+            probe,
+            Effect::Request {
+                command: STATE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(REPLY_TIMEOUT, Input::RequestSent { receive_cutoff: 1 });
+
+        let stopped = machine.input(REPLY_TIMEOUT + REPLY_TIMEOUT, Input::TimerElapsed);
+        assert!(matches!(stopped, Effect::Stop));
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::Failed(SessionError::Timeout(IoStage::Receive))
+        );
+    }
+
+    #[test]
+    fn a3954_state_with_a_contradictory_serial_is_read_only() {
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let mut body = state_body(STATE).to_vec();
+        body[16..32].copy_from_slice(b"3949TEST00000000");
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(
+            now,
+            inbound(IDENTITY_COMMAND, b"04.2904.29A3954DEMO0000000"),
+        );
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &body));
+
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::Unidentified(UnidentifiedState {
+                model: Some(ModelDriver::A3954),
+                reason: UnidentifiedReason::IncompatibleState,
+            })
+        );
+    }
+
+    #[test]
+    fn a_prefix_valid_unconfirmed_state_layout_is_read_only_for_every_driver() {
+        for (model, fixture, identity) in [
+            (ModelDriver::A3062, A3062_STATE, b"".as_slice()),
+            (ModelDriver::A3949, A3949_STATE, b"".as_slice()),
+            (
+                ModelDriver::A3954,
+                STATE,
+                b"04.2904.29A3954DEMO0000000".as_slice(),
+            ),
+        ] {
+            let now = Duration::ZERO;
+            let sent = || Input::RequestSent { receive_cutoff: 0 };
+            let mut body = state_body(fixture).to_vec();
+            body.push(0);
+            let mut machine = SessionMachine::new(ReconnectPolicy::External);
+            machine.input(now, Input::Opened);
+            machine.input(now, sent());
+            machine.input(now, inbound(IDENTITY_COMMAND, identity));
+            machine.input(now, sent());
+            machine.input(now, inbound(model.state_command(), &body));
+
+            assert_eq!(
+                machine.view().connection,
+                ConnectionState::Unidentified(UnidentifiedState {
+                    model: Some(model),
+                    reason: UnidentifiedReason::IncompatibleState,
+                }),
+                "unconfirmed layout accepted for {}",
+                model.code()
+            );
+        }
+    }
+
+    #[test]
+    fn a_state_buffered_before_its_request_cannot_confirm_the_initial_sync() {
+        let now = Duration::ZERO;
+        let identity = b"04.2904.29A3954DEMO0000000";
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, Input::RequestSent { receive_cutoff: 1 });
+
+        let stale_identity = machine.input(now, inbound_at(IDENTITY_COMMAND, identity, 1));
+        assert!(matches!(stale_identity, Effect::Receive(Some(_))));
+        assert_eq!(machine.view().connection, ConnectionState::ProbingIdentity);
+
+        machine.input(now, inbound_at(IDENTITY_COMMAND, identity, 2));
+        machine.input(now, Input::RequestSent { receive_cutoff: 3 });
+
+        let stale_state = machine.input(now, inbound_at(STATE_COMMAND, &state_body(STATE), 3));
+        assert!(matches!(stale_state, Effect::Receive(Some(_))));
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::SyncingState(ModelDriver::A3954)
+        );
+
+        machine.input(now, inbound_at(STATE_COMMAND, &state_body(STATE)[..50], 4));
+        assert_eq!(
+            machine.view().connection,
+            ConnectionState::Unidentified(UnidentifiedState {
+                model: Some(ModelDriver::A3954),
+                reason: UnidentifiedReason::IncompatibleState,
+            })
+        );
+    }
+
+    #[test]
+    fn a_reconnect_with_an_incompatible_state_becomes_read_only_and_keeps_the_snapshot() {
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let identity = b"04.2904.29A3954DEMO0000000";
+        let mut machine = SessionMachine::new(ReconnectPolicy::Internal);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(now, inbound(IDENTITY_COMMAND, identity));
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state_body(STATE)));
+        let ConnectionState::Ready(confirmed) = machine.view().connection else {
+            panic!("expected a confirmed state");
+        };
+
+        let reason = SessionError::Transport {
+            stage: IoStage::Receive,
+            error: TransportError::Disconnected,
+        };
+        assert!(matches!(
+            machine.input(now, Input::Failed(reason)),
+            Effect::Release { .. }
+        ));
+        machine.input(now, Input::Released);
+        machine.input(RETRY_INTERVAL, Input::RetryElapsed);
+        machine.input(RETRY_INTERVAL, Input::Opened);
+        machine.input(RETRY_INTERVAL, sent());
+        machine.input(RETRY_INTERVAL, inbound(IDENTITY_COMMAND, identity));
+        machine.input(RETRY_INTERVAL, sent());
+        machine.input(
+            RETRY_INTERVAL,
+            inbound(STATE_COMMAND, &state_body(STATE)[..50]),
+        );
+
+        let view = machine.view();
+        assert_eq!(
+            view.connection,
+            ConnectionState::Unidentified(UnidentifiedState {
+                model: Some(ModelDriver::A3954),
+                reason: UnidentifiedReason::IncompatibleState,
+            })
+        );
+        assert_eq!(view.last_confirmed, Some(confirmed));
+    }
+
+    #[test]
+    fn an_active_write_ignores_foreign_and_matching_unusable_state_frames() {
+        let now = Duration::ZERO;
+        let sent = || Input::RequestSent { receive_cutoff: 0 };
+        let state = state_body(STATE);
+        let mut machine = SessionMachine::new(ReconnectPolicy::External);
+        machine.input(now, Input::Opened);
+        machine.input(now, sent());
+        machine.input(
+            now,
+            inbound(IDENTITY_COMMAND, b"04.2904.29A3954DEMO0000000"),
+        );
+        machine.input(now, sent());
+        machine.input(now, inbound(STATE_COMMAND, &state));
+        let confirmed = machine.view().connection;
+
+        let id = CommandId(1);
+        machine.input(
+            now,
+            Input::Command(QueuedCommand {
+                id,
+                command: SessionCommand::SetSoundMode(SoundModeSetting::NORMAL),
+                submitted_at: now,
+            }),
+        );
+        machine.input(now, sent());
+        let deadline = now + REPLY_TIMEOUT;
+
+        let mut unconfirmed = state.to_vec();
+        unconfirmed.push(0);
+        // A matching state response with a prefix-valid but unconfirmed layout
+        // does not change the confirmed state or the original deadline.
+        let unusable = machine.input(
+            now + Duration::from_millis(500),
+            inbound(STATE_COMMAND, &unconfirmed),
+        );
+        assert!(matches!(unusable, Effect::Receive(Some(at)) if at == deadline));
+        assert_eq!(machine.view().connection, confirmed);
+
+        // A valid response starts the write.
+        let write = machine.input(
+            now + Duration::from_millis(600),
+            inbound(STATE_COMMAND, &state),
+        );
+        assert!(matches!(
+            write,
+            Effect::Request {
+                command: SOUND_MODE_COMMAND,
+                ..
+            }
+        ));
+        machine.input(now + Duration::from_millis(600), sent());
+        let write_deadline = now + Duration::from_millis(600) + REPLY_TIMEOUT;
+
+        // A correct frame with an unknown opcode is ignored and the deadline stays.
+        let foreign = machine.input(
+            now + Duration::from_millis(700),
+            inbound([0x7f, 0x74], b"unknown-payload"),
+        );
+        assert!(matches!(foreign, Effect::Receive(Some(at)) if at == write_deadline));
+        assert_eq!(machine.view().connection, confirmed);
+
+        // A valid ACK starts the read-back for the same command.
+        let read_back = machine.input(
+            now + Duration::from_millis(700),
+            inbound(SOUND_MODE_COMMAND, &[]),
+        );
+        assert!(
+            matches!(read_back, Effect::Request { command, body, .. } if command == STATE_COMMAND && body.is_empty())
+        );
+        machine.input(now + Duration::from_millis(700), sent());
+        let read_back_deadline = now + Duration::from_millis(700) + REPLY_TIMEOUT;
+
+        // Foreign frames and a prefix-valid unconfirmed layout keep the confirmed
+        // state and the original read-back deadline.
+        let foreign = machine.input(
+            now + Duration::from_millis(800),
+            inbound([0x7f, 0x74], b"unknown-payload"),
+        );
+        assert!(matches!(foreign, Effect::Receive(Some(at)) if at == read_back_deadline));
+        assert_eq!(machine.view().connection, confirmed);
+
+        let ignored = machine.input(
+            now + Duration::from_millis(900),
+            inbound(STATE_COMMAND, &unconfirmed),
+        );
+        assert!(matches!(ignored, Effect::Receive(Some(at)) if at == read_back_deadline));
+        assert_eq!(machine.view().connection, confirmed);
+
+        // A fresh confirmed read-back completes exactly this command.
+        let mut applied = state.to_vec();
+        openscl4_models::SoundModeWrite::decode(&[2, 6, 0, 1])
+            .expect("measured normal write")
+            .apply_to_state(&mut applied)
+            .expect("apply the write to the state");
+        let completed = machine.input(
+            now + Duration::from_millis(1000),
+            inbound(STATE_COMMAND, &applied),
+        );
+        assert!(matches!(
+            completed,
+            Effect::Complete(completed_id, Ok(CommandOutcome::Applied(state)))
+                if completed_id == id && state.sound_mode_setting() == Some(SoundModeSetting::NORMAL)
+        ));
+        assert!(matches!(
+            machine.view().connection,
+            ConnectionState::Ready(state) if state.sound_mode_setting() == Some(SoundModeSetting::NORMAL)
+        ));
+    }
+
     fn inbound(command: [u8; 2], body: &[u8]) -> Input {
+        inbound_at(command, body, 1)
+    }
+
+    fn inbound_at(command: [u8; 2], body: &[u8], first_read: u64) -> Input {
         Input::Frame {
             frame: Frame {
                 direction: Direction::Inbound,
                 command,
                 body: bytes::Bytes::copy_from_slice(body),
             },
-            first_read: 1,
+            first_read,
         }
     }
 }

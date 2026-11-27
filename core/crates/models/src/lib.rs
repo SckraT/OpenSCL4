@@ -80,6 +80,28 @@ impl ModelDriver {
         }
     }
 
+    /// Decodes a state response only when it has this pilot's measured layout.
+    ///
+    /// The general decoder accepts trailing data for diagnostics and future
+    /// layouts; a write is admitted only from the confirmed state formats. An
+    /// A3954 state also needs the measured serial evidence used for redaction.
+    pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
+        let expected = match self {
+            Self::A3062 => a3062::STATE_LENGTH,
+            Self::A3949 => a3949::STATE_LENGTH,
+            Self::A3954 => A3954_STATE_LENGTH,
+        };
+        let serial_is_recognized = match self {
+            Self::A3954 => a3954_state_serial_is_recognized(body),
+            Self::A3062 | Self::A3949 => true,
+        };
+        if body.len() == expected && serial_is_recognized {
+            self.decode_state(body).ok()
+        } else {
+            None
+        }
+    }
+
     fn decode_a3954_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
         if body.len() < A3954_STATE_LENGTH {
             return Err(ModelError::IncompleteState);
@@ -467,6 +489,15 @@ pub enum ModelError {
     InvalidFirmware,
 }
 
+fn a3954_state_serial_is_recognized(body: &[u8]) -> bool {
+    let Some(serial) = body.get(16..32) else {
+        return false;
+    };
+    // The published capture keeps the serial as ASCII zeroes.
+    serial.iter().all(|byte| *byte == b'0')
+        || RedactedSerial::parse(serial).is_ok_and(|serial| serial.identifies(ModelDriver::A3954))
+}
+
 struct RedactedSerial<'a>(&'a [u8; 16]);
 
 impl<'a> RedactedSerial<'a> {
@@ -542,5 +573,71 @@ mod tests {
         assert!(driver.capabilities().ambient_sound_mode_write);
         assert!(driver.capabilities().equalizer_write);
         assert_eq!(registry::by_code("A3062"), Some(driver));
+    }
+
+    #[test]
+    fn confirmed_layout_requires_the_measured_body_length() {
+        for (driver, fixture) in [
+            (
+                ModelDriver::A3062,
+                include_bytes!("../../../data/a3062-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3949,
+                include_bytes!("../../../data/a3949-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3954,
+                include_bytes!("../../../data/a3954-pilot-state.bin").as_slice(),
+            ),
+        ] {
+            let body = &fixture[9..fixture.len() - 1];
+            assert!(
+                driver.decode_confirmed_state(body).is_some(),
+                "measured {} state",
+                driver.code()
+            );
+            let mut extra = body.to_vec();
+            extra.push(0);
+            assert!(
+                driver.decode_confirmed_state(&extra).is_none(),
+                "trailing byte for {}",
+                driver.code()
+            );
+        }
+    }
+
+    #[test]
+    fn confirmed_a3954_state_requires_recognized_serial_evidence() {
+        let fixture = include_bytes!("../../../data/a3954-pilot-state.bin");
+        let body = &fixture[9..fixture.len() - 1];
+        assert!(ModelDriver::A3954.decode_confirmed_state(body).is_some());
+
+        let mut contradictory = body.to_vec();
+        contradictory[16..32].copy_from_slice(b"3949TEST00000000");
+        assert!(
+            ModelDriver::A3954
+                .decode_confirmed_state(&contradictory)
+                .is_none(),
+            "a contradictory serial must not admit writes"
+        );
+        assert!(
+            ModelDriver::A3954.decode_state(&contradictory).is_ok(),
+            "the tolerant decoder still reads the layout"
+        );
+
+        contradictory[16..32].copy_from_slice(b"3954TEST00000000");
+        assert!(
+            ModelDriver::A3954
+                .decode_confirmed_state(&contradictory)
+                .is_some()
+        );
+
+        contradictory[16..32].copy_from_slice(&[b'0'; 16]);
+        assert!(
+            ModelDriver::A3954
+                .decode_confirmed_state(&contradictory)
+                .is_some()
+        );
     }
 }

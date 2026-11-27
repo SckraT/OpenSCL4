@@ -54,6 +54,18 @@ and restore its original value. Each result requires a fresh state response.
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3949
 ```
 
+An unrecognized identity or a registered model with an incompatible state
+switch the pilot to a read-only result. An identity naming no registered model
+sends only the verified identity read; a registered model with an incompatible
+state uses the verified identity and state reads. Settings writes and
+`--cycle-mode` are rejected before reaching the transport, and the JSON reports
+safe metadata without raw identifiers.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-scenario unknown-identity
+cargo run --locked -p openscq30-cli -- pilot --mock-scenario incompatible-state
+```
+
 On Windows and Linux, select a connected Liberty 4 Pro by its name in Bluetooth settings to run the same pilot over RFCOMM. Linux uses BlueZ on the system D-Bus.
 
 ```sh

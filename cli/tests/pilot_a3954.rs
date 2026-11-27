@@ -69,6 +69,70 @@ mod tests {
         );
     }
 
+    #[test]
+    fn pilot_reports_an_unknown_identity_as_read_only_without_payloads() {
+        let output = run(&["pilot", "--mock-scenario", "unknown-identity"]);
+        assert!(
+            output.status.success(),
+            "read-only pilot failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot snapshot JSON");
+        assert_eq!(
+            snapshot,
+            json!({"model": null, "readOnly": true, "reason": "unknownIdentity"})
+        );
+        let stdout = String::from_utf8_lossy(&output.stdout).to_ascii_lowercase();
+        assert!(!stdout.contains("unknown00000"));
+        assert!(!stdout.contains("9999"));
+    }
+
+    #[test]
+    fn pilot_reports_incompatible_firmware_as_read_only() {
+        let output = run(&["pilot", "--mock-scenario", "incompatible-state"]);
+        assert!(
+            output.status.success(),
+            "read-only pilot failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let snapshot: Value = serde_json::from_slice(&output.stdout).expect("pilot snapshot JSON");
+        assert_eq!(
+            snapshot,
+            json!({
+                "model": "A3954",
+                "readOnly": true,
+                "reason": "incompatibleState",
+            })
+        );
+    }
+
+    #[test]
+    fn pilot_cycle_mode_is_rejected_before_writing_for_a_read_only_device() {
+        let output = run(&[
+            "pilot",
+            "--mock-scenario",
+            "unknown-identity",
+            "--cycle-mode",
+        ]);
+        assert!(!output.status.success());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("read-only"),
+            "expected a read-only rejection, got: {stderr}"
+        );
+        assert!(output.stdout.is_empty(), "a rejected cycle printed output");
+    }
+
+    fn run(args: &[&str]) -> std::process::Output {
+        let directory = tempfile::tempdir().expect("isolated configuration");
+        let database = directory.path().join("pilot.sqlite");
+        Command::new(env!("CARGO_BIN_EXE_openscq30"))
+            .args(args)
+            .env("OPENSCQ30_DATABASE_PATH", &database)
+            .output()
+            .expect("run the CLI pilot")
+    }
+
     #[tokio::test]
     async fn pilot_closes_the_session_and_notifies_other_handles() {
         let target = ConnectTarget {

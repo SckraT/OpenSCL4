@@ -11,7 +11,7 @@ mod tests {
         ConnectTarget, LinkRx, LinkTx, RedactedMac, TransportError, TransportLink,
         TransportProvider,
     };
-    use tokio::time::sleep;
+    use tokio::{sync::mpsc, time::sleep};
 
     const IDENTITY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
     const STATE: &[u8] = include_bytes!("../../../data/a3954-pilot-state.bin");
@@ -26,7 +26,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn rejects_ready_reply_at_deadline() {
-        let handle = start(Ok((Duration::from_millis(1500), IDENTITY)), false);
+        let handle = start_without_state(Ok((Duration::from_millis(1500), IDENTITY)), false);
         assert_eq!(
             handle.confirmed_view().await,
             Err(SessionError::Timeout(IoStage::Receive))
@@ -64,9 +64,22 @@ mod tests {
     }
 
     fn start(identity: Reading, stall_close: bool) -> SessionHandle {
+        start_with_state(identity, true, stall_close)
+    }
+
+    fn start_without_state(identity: Reading, stall_close: bool) -> SessionHandle {
+        start_with_state(identity, false, stall_close)
+    }
+
+    fn start_with_state(
+        identity: Reading,
+        respond_state: bool,
+        stall_close: bool,
+    ) -> SessionHandle {
         SessionRunner::start(
             ScriptedProvider {
                 identity,
+                respond_state,
                 stall_close,
             },
             ConnectTarget {
@@ -77,6 +90,7 @@ mod tests {
 
     struct ScriptedProvider {
         identity: Reading,
+        respond_state: bool,
         stall_close: bool,
     }
 
@@ -86,11 +100,15 @@ mod tests {
             &self,
             _target: &ConnectTarget,
         ) -> Result<Box<dyn TransportLink>, TransportError> {
+            let (replies, received) = mpsc::unbounded_channel();
             Ok(Box::new(ScriptedLink {
                 tx: ScriptedTx {
+                    replies,
+                    identity: Some(self.identity),
+                    respond_state: self.respond_state,
                     stall_close: self.stall_close,
                 },
-                rx: ScriptedRx([self.identity, Ok((Duration::ZERO, STATE))].into_iter()),
+                rx: ScriptedRx(received),
             }))
         }
     }
@@ -107,12 +125,33 @@ mod tests {
     }
 
     struct ScriptedTx {
+        replies: mpsc::UnboundedSender<Result<Bytes, TransportError>>,
+        identity: Option<Reading>,
+        respond_state: bool,
         stall_close: bool,
     }
 
     #[async_trait]
     impl LinkTx for ScriptedTx {
-        async fn send(&mut self, _data: Bytes) -> Result<(), TransportError> {
+        async fn send(&mut self, request: Bytes) -> Result<(), TransportError> {
+            let reply = match &request[5..7] {
+                [0x01, 0x05] => self.identity.take(),
+                [0x01, 0x01] => self.respond_state.then_some(Ok((Duration::ZERO, STATE))),
+                _ => panic!("unexpected lifecycle request"),
+            };
+            if let Some(reply) = reply {
+                let replies = self.replies.clone();
+                tokio::spawn(async move {
+                    let reply = match reply {
+                        Ok((delay, frame)) => {
+                            sleep(delay).await;
+                            Ok(Bytes::from_static(frame))
+                        }
+                        Err(error) => Err(error),
+                    };
+                    let _ = replies.send(reply);
+                });
+            }
             Ok(())
         }
 
@@ -123,17 +162,12 @@ mod tests {
         }
     }
 
-    struct ScriptedRx(std::array::IntoIter<Reading, 2>);
+    struct ScriptedRx(mpsc::UnboundedReceiver<Result<Bytes, TransportError>>);
 
     #[async_trait]
     impl LinkRx for ScriptedRx {
         async fn recv(&mut self) -> Result<Bytes, TransportError> {
-            let Some(reading) = self.0.next() else {
-                return pending().await;
-            };
-            let (delay, frame) = reading?;
-            sleep(delay).await;
-            Ok(Bytes::from_static(frame))
+            self.0.recv().await.unwrap_or(Err(TransportError::Closed))
         }
     }
 }
