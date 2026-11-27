@@ -1,0 +1,4226 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "source": "lib/src/devices/device_model.rs",
+    "startupOperations": {
+        "readState": {
+            "command": "0101",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+            "inbound": "model.stateParserSource",
+            "evidence": "legacy"
+        },
+        "readIdentity": {
+            "command": "0105",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_serial_number_and_firmware_version.rs",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+            "evidence": "legacy"
+        },
+        "readPeers": {
+            "command": "0B01",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/dual_connections_device.rs::DualConnectionsDevicePacket",
+            "evidence": "legacy"
+        },
+        "readTargetedVoicePrompt": {
+            "command": "0110",
+            "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/a3116/packets/inbound.rs::VoicePromptUpdatePacket",
+            "evidence": "legacy"
+        },
+        "readAutoStopTimer": {
+            "command": "1503",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/auto_stop_timer.rs",
+            "evidence": "legacy"
+        },
+        "readAlarms": {
+            "command": "1401",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/alarms.rs",
+            "evidence": "legacy"
+        },
+        "readLdacState": {
+            "command": "017F",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/request_ldac_state.rs",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/ldac_state.rs",
+            "evidence": "legacy"
+        }
+    },
+    "moduleOperations": {
+        "a3035_ambient_sound_mode_voice_prompt": {
+            "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_ambient_sound_mode_voice_prompt",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3035/modules/flag.rs::add_a3035_ambient_sound_mode_voice_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3035_battery_alert": {
+            "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_battery_alert",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3035/modules/flag.rs::add_a3035_battery_alert",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3035_button_configuration": {
+            "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_button_configuration",
+            "availability": "lib/src/devices/soundcore/a3035/modules/button_configuration/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3035/modules/button_configuration/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3035_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3035/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3035_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3035/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3040_button_configuration": {
+            "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_button_configuration",
+            "availability": "lib/src/devices/soundcore/a3040/modules/button_configuration/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3040/modules/button_configuration/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3040_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3040/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3040_low_battery_prompt": {
+            "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_low_battery_prompt",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3040/modules/flag.rs::add_a3040_low_battery_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3040_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3040/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3040_voice_prompt": {
+            "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_voice_prompt",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3040/modules/flag.rs::add_a3040_voice_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3062_ambient_sound_mode_voice_prompt": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_ambient_sound_mode_voice_prompt",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_ambient_sound_mode_voice_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3062_button_configuration": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_button_configuration",
+            "availability": "lib/src/devices/soundcore/a3062/modules/button_configuration/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3062/modules/button_configuration/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3062_dolby_audio": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_dolby_audio",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_dolby_audio",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3062_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3062/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3062_side_tone": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_side_tone",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3062/modules/flag.rs::add_a3062_side_tone",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3062_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3062/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3116_auto_power_off": {
+            "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_auto_power_off",
+            "availability": "lib/src/devices/soundcore/a3116/modules/auto_power_off/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3116/modules/auto_power_off/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3116_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3116/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3116_power_off": {
+            "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_power_off",
+            "availability": "lib/src/devices/soundcore/a3116/modules/power_off/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3116/modules/power_off/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3116_volume": {
+            "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_volume",
+            "availability": "lib/src/devices/soundcore/a3116/modules/volume/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3116/modules/volume/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3388_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3388/modules.rs::a3388_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3388/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3876_colorful_lights": {
+            "registration": "lib/src/devices/soundcore/a3876/modules.rs::a3876_colorful_lights",
+            "availability": "lib/src/devices/soundcore/a3876/modules/colorful_lights/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3876/modules/colorful_lights/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3876_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3876/modules.rs::a3876_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3876/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3876_volume_balance": {
+            "registration": "lib/src/devices/soundcore/a3876/modules.rs::a3876_volume_balance",
+            "availability": "lib/src/devices/soundcore/a3876/modules/volume_balance/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3876/modules/volume_balance/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3909_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3909/modules.rs::a3909_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3936_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3936/modules.rs::a3936_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3936/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3947_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3947/modules.rs::a3947_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3947/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3947_gaming_mode": {
+            "registration": "lib/src/devices/soundcore/a3947/modules.rs::a3947_gaming_mode",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3947/modules/flag.rs::add_a3947_gaming_mode",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3947_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3947/modules.rs::a3947_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3947/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3952_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3952/modules.rs::a3952_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3952/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3953_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3953/modules.rs::a3953_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3953/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3953_misc_toggles": {
+            "registration": "lib/src/devices/soundcore/a3953/modules.rs::a3953_misc_toggles",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3953/modules/misc_toggles.rs::add_a3953_misc_toggles",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3953_press_sensitivity": {
+            "registration": "lib/src/devices/soundcore/a3953/modules.rs::a3953_press_sensitivity",
+            "availability": "lib/src/devices/soundcore/a3953/modules/press_sensitivity/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3953/modules/press_sensitivity/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3953_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3953/modules.rs::a3953_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3953/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3953_spatial_audio": {
+            "registration": "lib/src/devices/soundcore/a3953/modules.rs::a3953_spatial_audio",
+            "availability": "lib/src/devices/soundcore/a3953/modules/spatial_audio/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3953/modules/spatial_audio/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_air_pressure": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_air_pressure",
+            "availability": "lib/src/devices/soundcore/a3954/modules/air_pressure/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_case_features": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_case_features",
+            "availability": "lib/src/devices/soundcore/a3954/modules/case_features/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3954/modules/case_features/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_case_language": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_case_language",
+            "availability": "lib/src/devices/soundcore/a3954/modules/case_language/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3954/modules/case_language/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_case_serial_number_and_firmware_version": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_case_serial_number_and_firmware_version",
+            "availability": "lib/src/devices/soundcore/a3954/modules/case_serial_number_and_firmware_version/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_easy_chat": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_easy_chat",
+            "availability": "lib/src/devices/soundcore/a3954/modules/easy_chat/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3954/modules/easy_chat/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3954/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3954_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3954/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3954_spatial_audio": {
+            "registration": "lib/src/devices/soundcore/a3954/modules.rs::a3954_spatial_audio",
+            "availability": "lib/src/devices/soundcore/a3954/modules/spatial_audio/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3954/modules/spatial_audio.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3955_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3955/modules.rs::a3955_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3955/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3955_immersive_experience": {
+            "registration": "lib/src/devices/soundcore/a3955/modules.rs::a3955_immersive_experience",
+            "availability": "lib/src/devices/soundcore/a3955/modules/immersive_experience/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3955/modules/immersive_experience/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3955_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3955/modules.rs::a3955_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3955/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3957_equalizer": {
+            "registration": "lib/src/devices/soundcore/a3957/modules.rs::a3957_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3957/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "a3957_gaming_mode": {
+            "registration": "lib/src/devices/soundcore/a3957/modules.rs::a3957_gaming_mode",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/a3957/modules/flag.rs::add_a3957_gaming_mode",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "a3957_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3957/modules.rs::a3957_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3957/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3959_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3959/modules.rs::a3959_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3959/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "a3968_sound_modes": {
+            "registration": "lib/src/devices/soundcore/a3968/modules.rs::a3968_sound_modes",
+            "availability": "lib/src/devices/soundcore/a3968/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "ambient_sound_mode_cycle": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::ambient_sound_mode_cycle",
+            "availability": "lib/src/devices/soundcore/common/modules/ambient_sound_mode_cycle/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/ambient_sound_mode_cycle/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "ambient_sound_mode_cycle_tws": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::ambient_sound_mode_cycle_tws",
+            "availability": "lib/src/devices/soundcore/common/modules/ambient_sound_mode_cycle_tws/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/ambient_sound_mode_cycle/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "auto_play_pause": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(AutoPlayPause)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "auto_power_off": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::auto_power_off",
+            "availability": "lib/src/devices/soundcore/common/modules/auto_power_off/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/auto_power_off/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "button_configuration": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::button_configuration",
+            "availability": "lib/src/devices/soundcore/common/modules/button_configuration/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/button_configuration/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_button_configuration.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "case_battery_level": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::case_battery_level",
+            "availability": "lib/src/devices/soundcore/common/modules/case_battery_level/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "case_battery_level_custom": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::case_battery_level_custom",
+            "availability": "lib/src/devices/soundcore/common/modules/case_battery_level/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1202_equalizer": {
+            "registration": "lib/src/devices/soundcore/d1202/modules.rs::d1202_equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1202/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1202_sound_modes": {
+            "registration": "lib/src/devices/soundcore/d1202/modules.rs::d1202_sound_modes",
+            "availability": "lib/src/devices/soundcore/d1202/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
+            ]
+        },
+        "d1202_spatial_audio": {
+            "registration": "lib/src/devices/soundcore/d1202/modules.rs::d1202_spatial_audio",
+            "availability": "lib/src/devices/soundcore/d1202/modules/spatial_audio/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1202/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1301_alarms": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::d1301_alarms",
+            "availability": "lib/src/devices/soundcore/d1301/modules/alarms/setting_handler.rs",
+            "inboundState": "lib/src/devices/soundcore/d1301/packets/inbound/alarms.rs",
+            "outboundRead": [
+                "readAlarms"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/alarms/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1301_auto_power_off_prompt": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(auto_power_off_prompt)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_auto_power_off_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_auto_power_off_prompt",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "d1301_auto_stop_timer": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::d1301_auto_stop_timer",
+            "availability": "lib/src/devices/soundcore/d1301/modules/auto_stop_timer/setting_handler.rs",
+            "inboundState": "lib/src/devices/soundcore/d1301/packets/inbound/auto_stop_timer.rs",
+            "outboundRead": [
+                "readAutoStopTimer"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/auto_stop_timer/state_modifier.rs",
+                "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_auto_stop_timer"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/d1301/modules/auto_stop_timer/packet_handler.rs"
+            ]
+        },
+        "d1301_auto_switch_once_asleep": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::d1301_auto_switch_once_asleep",
+            "availability": "lib/src/devices/soundcore/d1301/modules/auto_switch_once_asleep/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/auto_switch_once_asleep/state_modifier.rs",
+                "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_post_sleep_audio"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1301_incoming_calls_during_bluetooth_mode": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(incoming_calls_during_bluetooth_mode)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_incoming_calls_during_bluetooth_mode",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_incoming_calls_during_bluetooth_mode",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "d1301_listening_mode": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::d1301_listening_mode",
+            "availability": "lib/src/devices/soundcore/d1301/modules/listening_mode/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/listening_mode/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "d1301_listening_mode_prompt": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(listening_mode_prompt)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_listening_mode_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_listening_mode_prompt",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "d1301_noise_canceling": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(noise_canceling)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_noise_canceling",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_noise_canceling",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "d1301_noise_canceling_prompt": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(noise_canceling_prompt)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_noise_canceling_prompt",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_noise_canceling_prompt",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "d1301_tap_controls_disabled": {
+            "registration": "lib/src/devices/soundcore/d1301/modules.rs::flag!(tap_controls_disabled)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_tap_controls_disabled",
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/d1301/modules/flags.rs::add_d1301_tap_controls_disabled",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "disable_all_buttons": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(DisableAllButtons)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "dual_battery": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::dual_battery",
+            "availability": "lib/src/devices/soundcore/common/modules/dual_battery/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/dual_battery/packet_handler.rs"
+            ]
+        },
+        "dual_battery_custom": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::dual_battery_custom",
+            "availability": "lib/src/devices/soundcore/common/modules/dual_battery/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/dual_battery/packet_handler.rs"
+            ]
+        },
+        "dual_battery_level_custom": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::dual_battery_level_custom",
+            "availability": "lib/src/devices/soundcore/common/modules/dual_battery_level/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "moduleRegistration": "lib/src/devices/soundcore/common/modules/dual_battery_level.rs",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/dual_battery_level/packet_handler.rs"
+            ]
+        },
+        "dual_connections": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::dual_connections",
+            "availability": "lib/src/devices/soundcore/common/modules/dual_connections/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState",
+                "readPeers"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/dual_connections/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/dual_connections/packet_handler.rs"
+            ]
+        },
+        "equalizer": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_tws": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_tws",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_tws",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_with_basic_hear_id_tws": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_with_basic_hear_id_tws",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_with_basic_hear_id_tws",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                "lib/src/devices/soundcore/common/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_with_custom_hear_id_tws": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_with_custom_hear_id_tws",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_with_custom_hear_id_tws",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+                "lib/src/devices/soundcore/common/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_with_custom_hear_id_tws_force_supports_hear_id": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_with_custom_hear_id_tws_force_supports_hear_id",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_with_custom_hear_id_tws_force_supports_hear_id",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_and_custom_hear_id.rs",
+                "lib/src/devices/soundcore/common/modules/equalizer/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_with_drc": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_with_drc",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_with_drc",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "equalizer_with_drc_tws": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::equalizer_with_drc_tws",
+            "availability": "lib/src/devices/soundcore/common/modules/equalizer/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/equalizer.rs::add_equalizer_with_drc_tws",
+                "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "gaming_mode": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(GamingMode)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "ldac": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(Ldac)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState",
+                "readLdacState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "limit_high_volume": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::limit_high_volume",
+            "availability": "lib/src/devices/soundcore/common/modules/limit_high_volume/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/limit_high_volume/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "low_battery_prompt": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(LowBatteryPrompt)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "reset_button_configuration": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::reset_button_configuration",
+            "availability": "lib/src/devices/soundcore/common/modules/reset_button_configuration/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/reset_button_configuration/state_modifier.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "serial_number_and_dual_firmware_version": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::serial_number_and_dual_firmware_version",
+            "availability": "lib/src/devices/soundcore/common/modules/serial_number_and_dual_firmware_version/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState",
+                "readIdentity"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/serial_number_and_dual_firmware_version/packet_handler.rs"
+            ]
+        },
+        "serial_number_and_firmware_version": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::serial_number_and_firmware_version",
+            "availability": "lib/src/devices/soundcore/common/modules/serial_number_and_firmware_version/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending"
+        },
+        "single_battery": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::single_battery",
+            "availability": "lib/src/devices/soundcore/common/modules/single_battery/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/single_battery/packet_handler.rs"
+            ]
+        },
+        "single_battery_custom": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::single_battery_custom",
+            "availability": "lib/src/devices/soundcore/common/modules/single_battery/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/single_battery/packet_handler.rs"
+            ]
+        },
+        "single_battery_level": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::single_battery_level",
+            "availability": "lib/src/devices/soundcore/common/modules/single_battery_level/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/single_battery_level/packet_handler.rs"
+            ]
+        },
+        "sound_leak_compensation": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(SoundLeakCompensation)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "sound_modes": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::sound_modes",
+            "availability": "lib/src/devices/soundcore/common/modules/sound_modes/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/sound_modes/state_modifier.rs",
+                "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/sound_modes/packet_handler.rs"
+            ]
+        },
+        "surround_sound": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(SurroundSound)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "touch_lock": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(TouchLock)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "touch_tone": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(TouchTone)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "tws_status": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::tws_status",
+            "availability": "lib/src/devices/soundcore/common/modules/tws_status/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/tws_status/packet_handler.rs"
+            ]
+        },
+        "voice_prompt": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(VoicePrompt)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "voice_prompt_targeted": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::voice_prompt_targeted",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "lib/src/devices/soundcore/a3116/packets/inbound.rs::VoicePromptUpdatePacket",
+            "outboundRead": [
+                "readTargetedVoicePrompt"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "wearing_detection": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(WearingDetection)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        },
+        "wearing_tone": {
+            "registration": "lib/src/devices/soundcore/common/device.rs::flag!(WearingTone)",
+            "availability": "lib/src/devices/soundcore/common/modules/flag/setting_handler.rs",
+            "inboundState": "model.stateParserSource",
+            "outboundRead": [
+                "readState"
+            ],
+            "outboundWrite": [
+                "lib/src/devices/soundcore/common/modules/flag.rs"
+            ],
+            "evidence": "legacy",
+            "result": "parityPending",
+            "inboundUpdates": [
+                "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
+            ]
+        }
+    },
+    "operationVariants": [
+        {
+            "models": [
+                "A3028",
+                "A3029"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3028-a3029-mode-reference.json",
+            "result": "parityPending",
+            "missing": "Replay the reference cycle in the new session. Add a separate outgoing sequence and read-back when changing ANC submode from Normal or Transparency."
+        },
+        {
+            "models": [
+                "A3028",
+                "A3029"
+            ],
+            "operation": "equalizer",
+            "inbound": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "evidence": "legacyFixture",
+            "reference": "core/data/a3028-a3029-mode-reference.json",
+            "result": "parityPending",
+            "missing": "The legacy example supports reading the eight-band curve. Build the write and the before/after replies independently from the legacy builder and layout."
+        },
+        {
+            "models": [
+                "A3028",
+                "A3029"
+            ],
+            "operation": "auto_power_off",
+            "availability": "Available when A3028StateUpdatePacket.extra_fields yields an AutoPowerOff value.",
+            "availabilitySource": "lib/src/devices/soundcore/a3028/state.rs",
+            "inbound": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::ExtraFields",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+            "command": "0186",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "Derive replies with and without ExtraFields from its known layout and add before/after replies for a supported duration."
+        },
+        {
+            "models": [
+                "D1301"
+            ],
+            "operation": "d1301_auto_stop_timer",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/auto_stop_timer.rs",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_auto_stop_timer",
+            "command": "1585",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "Add exact 15 03 replies before and after setting the timer, including duration and the preserved final byte."
+        },
+        {
+            "models": [
+                "D1301"
+            ],
+            "operation": "d1301_auto_switch_once_asleep",
+            "inbound": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/d1301/packets/outbound.rs::set_post_sleep_audio",
+            "command": "1585",
+            "evidence": "legacyFixture",
+            "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
+            "result": "parityPending",
+            "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        }
+    ],
+    "models": [
+        {
+            "code": "A3004",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3004.rs",
+            "stateParser": "A3004StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3004/packets/state_update_packet.rs::A3004StateUpdatePacket"
+        },
+        {
+            "code": "A3005",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3005.rs",
+            "stateParser": "A3005StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer_with_drc",
+                "dual_connections",
+                "auto_power_off",
+                "single_battery_custom",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket"
+        },
+        {
+            "code": "A3027",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3027.rs",
+            "stateParser": "A3027StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "single_battery",
+                "wearing_detection",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket"
+        },
+        {
+            "code": "A3028",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3028.rs",
+            "stateParser": "A3028StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "auto_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "variants": [
+                "a3028-a3029-mode-reference",
+                "optionalStateTail",
+                "legacyMultiWriteSoundModes"
+            ],
+            "reference": "core/data/a3028-a3029-mode-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket"
+        },
+        {
+            "code": "A3029",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3028.rs",
+            "stateParser": "A3028StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "auto_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "variants": [
+                "a3028-a3029-mode-reference",
+                "optionalStateTail",
+                "legacyMultiWriteSoundModes"
+            ],
+            "reference": "core/data/a3028-a3029-mode-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket"
+        },
+        {
+            "code": "A3030",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3027.rs",
+            "stateParser": "A3027StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer",
+                "single_battery",
+                "wearing_detection",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3027/packets/state_update_packet.rs::A3027StateUpdatePacket"
+        },
+        {
+            "code": "A3031",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3031.rs",
+            "stateParser": "A3031StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3031/packets/state_update_packet.rs::A3031StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3033",
+            "family": "singleState",
+            "legacyDriver": "lib/src/devices/soundcore/a3033.rs",
+            "stateParser": "A3033StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer",
+                "wearing_detection",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "wearingDetection"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::A3033StateUpdatePacket"
+        },
+        {
+            "code": "A3035",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3035.rs",
+            "stateParser": "A3035StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3035_sound_modes",
+                "a3035_equalizer",
+                "a3035_button_configuration",
+                "ambient_sound_mode_cycle",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "auto_play_pause",
+                "a3035_battery_alert",
+                "a3035_ambient_sound_mode_voice_prompt",
+                "single_battery_level",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "manualTransparency",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "autoPlayPause",
+                    "powerOnBatteryNotice",
+                    "voicePrompt"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs::A3035StateUpdatePacket"
+        },
+        {
+            "code": "A3040",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3040.rs",
+            "stateParser": "A3040StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3040_sound_modes",
+                "a3040_equalizer",
+                "a3040_button_configuration",
+                "ambient_sound_mode_cycle",
+                "dual_connections",
+                "ldac",
+                "a3040_voice_prompt",
+                "a3040_low_battery_prompt",
+                "auto_power_off",
+                "limit_high_volume",
+                "single_battery_level",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "manualTransparency",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "voicePrompt",
+                    "lowBatteryPrompt",
+                    "autoPowerOff",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3040/packets/state_update.rs::A3040StateUpdatePacket"
+        },
+        {
+            "code": "A3062",
+            "family": "singleWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3062.rs",
+            "stateParser": "A3062StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3062_sound_modes",
+                "a3062_equalizer",
+                "a3062_button_configuration",
+                "ambient_sound_mode_cycle",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "a3062_dolby_audio",
+                "low_battery_prompt",
+                "a3062_side_tone",
+                "a3062_ambient_sound_mode_voice_prompt",
+                "single_battery_custom",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "singlePress",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "manualTransparency",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "doublePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "dolbyAudio",
+                    "lowBatteryPrompt",
+                    "sideTone",
+                    "voicePrompt"
+                ],
+                "actions": []
+            },
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3062-pilot-state.bin",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "inbound": "core/data/a3062-pilot-state.bin"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "outbound": "core/data/conformance.json",
+                    "inbound": "core/data/README.md#a3062-sound-mode-read-back",
+                    "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "captureReplay",
+                    "firmware": "04.39",
+                    "outbound": "core/data/a3062-eq-write.bin",
+                    "inbound": "core/data/README.md#a3062-equalizer-write-and-read-back",
+                    "result": "confirmedReadBack"
+                }
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3062/packets/inbound/state_update.rs::A3062StateUpdatePacket"
+        },
+        {
+            "code": "A3116",
+            "family": "specialized",
+            "legacyDriver": "lib/src/devices/soundcore/a3116.rs",
+            "stateParser": "A3116StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readTargetedVoicePrompt": "firmwareAtLeast38.39"
+            },
+            "modules": [
+                "a3116_equalizer",
+                "a3116_volume",
+                "voice_prompt_targeted",
+                "a3116_auto_power_off",
+                "a3116_power_off",
+                "single_battery",
+                "serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isCharging",
+                    "batteryLevel",
+                    "serialNumber",
+                    "firmwareVersion"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "volume",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "powerOff"
+                ]
+            },
+            "variants": [
+                "noChecksum",
+                "voicePromptSince38.39"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket"
+        },
+        {
+            "code": "A3330",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3330.rs",
+            "stateParser": "A3330StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer_with_drc",
+                "disable_all_buttons",
+                "button_configuration",
+                "reset_button_configuration",
+                "dual_connections",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftDoublePressDuringCall",
+                    "rightDoublePressDuringCall",
+                    "leftLongPressDuringCall",
+                    "rightLongPressDuringCall",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket"
+        },
+        {
+            "code": "A3388",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3388.rs",
+            "stateParser": "A3388StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3388_equalizer",
+                "disable_all_buttons",
+                "button_configuration",
+                "reset_button_configuration",
+                "dual_connections",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket"
+        },
+        {
+            "code": "A3876",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3876.rs",
+            "stateParser": "A3876StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3876_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "a3876_colorful_lights",
+                "dual_connections",
+                "a3876_volume_balance",
+                "auto_power_off",
+                "voice_prompt",
+                "gaming_mode",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "lightsEnabled",
+                    "lightsBrightness",
+                    "autoLightsOffMinutes",
+                    "lightsColor",
+                    "lightsMode",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "volumeBalance",
+                    "autoPowerOff",
+                    "voicePrompt",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket"
+        },
+        {
+            "code": "A3909",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3909.rs",
+            "stateParser": "A3909StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "a3909_equalizer",
+                "button_configuration",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3909/packets/inbound/state_update.rs::A3909StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3926",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3926.rs",
+            "stateParser": "A3926StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_basic_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3926/packets/state_update_packet.rs::A3926StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3930",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3930.rs",
+            "stateParser": "A3930StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity",
+                "readLdacState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "explicitSuffixChecksum"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3930/packets/state_update_packet.rs::A3930StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3931",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3931.rs",
+            "stateParser": "A3931StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3931/packets/state_update_packet.rs::A3931StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3933",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3933.rs",
+            "stateParser": "A3933StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket"
+        },
+        {
+            "code": "A3935",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3931.rs",
+            "stateParser": "A3931StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "autoPowerOff",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3931/packets/state_update_packet.rs::A3931StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3936",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3936.rs",
+            "stateParser": "A3936StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3936_sound_modes",
+                "equalizer_with_custom_hear_id_tws_force_supports_hear_id",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "dual_connections",
+                "auto_power_off",
+                "ldac",
+                "touch_tone",
+                "gaming_mode",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff",
+                    "ldac",
+                    "touchTone",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3936/packets/state_update_packet.rs::A3936StateUpdatePacket"
+        },
+        {
+            "code": "A3939",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3933.rs",
+            "stateParser": "A3933StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3933/packets/inbound/state_update_packet.rs::A3933StateUpdatePacket"
+        },
+        {
+            "code": "A3944",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3944.rs",
+            "stateParser": "A3944StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc",
+                "button_configuration",
+                "touch_tone",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "touchTone"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3944/packets/inbound/state_update.rs::A3944StateUpdatePacket"
+        },
+        {
+            "code": "A3945",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3945.rs",
+            "stateParser": "A3945StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "touch_tone",
+                "gaming_mode",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "touchTone",
+                    "gamingMode",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3945/packets/state_update_packet.rs::A3945StateUpdatePacket"
+        },
+        {
+            "code": "A3947",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3947.rs",
+            "stateParser": "A3947StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "a3947_sound_modes",
+                "a3947_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "touch_tone",
+                "a3947_gaming_mode",
+                "sound_leak_compensation",
+                "surround_sound",
+                "auto_play_pause",
+                "wearing_tone",
+                "touch_lock",
+                "low_battery_prompt",
+                "auto_power_off",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "transportationMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "environmentDetection",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "touchTone",
+                    "gamingMode",
+                    "soundLeakCompensation",
+                    "surroundSound",
+                    "autoPlayPause",
+                    "wearingTone",
+                    "touchLock",
+                    "lowBatteryPrompt",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3947/packets/state_update.rs::A3947StateUpdatePacket"
+        },
+        {
+            "code": "A3948",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3948.rs",
+            "stateParser": "A3948StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "touch_tone",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3948/packets/inbound/state_update.rs::A3948StateUpdatePacket"
+        },
+        {
+            "code": "A3949",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3949.rs",
+            "stateParser": "A3949StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "gaming_mode",
+                "touch_tone",
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "gamingMode",
+                    "touchTone"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "p20iP25iR50i",
+                "gamingCapture14.43"
+            ],
+            "coreCoverage": [
+                {
+                    "operation": "identifyFromState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3949-pilot-state.bin",
+                    "implementation": "core/crates/models/src/registry.rs"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "14.43",
+                    "inbound": "core/data/a3949-pilot-state.bin"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "captureReplay",
+                    "firmware": "14.43",
+                    "outbound": "core/data/README.md#a3949-gaming-mode-read-back",
+                    "inbound": "core/data/README.md#a3949-gaming-mode-read-back",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/174",
+                    "result": "confirmedReadBack"
+                }
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3949/packets/inbound/state_update.rs::A3949StateUpdatePacket"
+        },
+        {
+            "code": "A3951",
+            "family": "separateIdentity",
+            "legacyDriver": "lib/src/devices/soundcore/a3951.rs",
+            "stateParser": "A3951StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readIdentity",
+                "readLdacState"
+            ],
+            "modules": [
+                "sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "reset_button_configuration",
+                "ldac",
+                "touch_tone",
+                "wearing_detection",
+                "tws_status",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "customNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftDoublePress",
+                    "leftLongPress",
+                    "rightDoublePress",
+                    "rightLongPress",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "ldac",
+                    "touchTone",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3951/packets/state_update_packet.rs::A3951StateUpdatePacket",
+            "operationSources": {
+                "serial_number_and_dual_firmware_version": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/serial_number_and_firmware_version.rs::SerialNumberAndFirmwareVersion",
+                    "outboundRead": [
+                        "readIdentity"
+                    ]
+                },
+                "ldac": {
+                    "inboundState": "lib/src/devices/soundcore/common/packet/inbound/ldac_state.rs",
+                    "outboundRead": [
+                        "readLdacState"
+                    ]
+                }
+            }
+        },
+        {
+            "code": "A3952",
+            "family": "dualState",
+            "legacyDriver": "lib/src/devices/soundcore/a3952.rs",
+            "stateParser": "A3952StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "modules": [
+                "a3952_sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "ldac",
+                "touch_tone",
+                "wearing_detection",
+                "wearing_tone",
+                "auto_power_off",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "ldac",
+                    "touchTone",
+                    "wearingDetection",
+                    "wearingTone",
+                    "autoPowerOff"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3952/packets/inbound/state_update.rs::A3952StateUpdatePacket"
+        },
+        {
+            "code": "A3953",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3953.rs",
+            "stateParser": "A3953StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "serial_number_and_dual_firmware_version",
+                "tws_status",
+                "dual_battery",
+                "a3953_sound_modes",
+                "ambient_sound_mode_cycle",
+                "button_configuration",
+                "reset_button_configuration",
+                "wearing_detection",
+                "case_battery_level",
+                "ldac",
+                "auto_power_off",
+                "wearing_tone",
+                "low_battery_prompt",
+                "a3953_misc_toggles",
+                "dual_connections",
+                "a3953_spatial_audio",
+                "a3953_press_sensitivity",
+                "a3953_equalizer"
+            ],
+            "demoSettings": {
+                "information": [
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "exportCustomEqualizerProfilesOutput"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "windNoiseSuppression",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "wearingDetection",
+                    "ldac",
+                    "autoPowerOff",
+                    "wearingTone",
+                    "lowBatteryPrompt",
+                    "ambientSoundPrompt",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "spatialAudioMusicMode",
+                    "pressSensitivity",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3953/packets/state_update.rs::A3953StateUpdatePacket"
+        },
+        {
+            "code": "A3954",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3954.rs",
+            "stateParser": "A3954StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3954_sound_modes",
+                "a3954_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "a3954_case_features",
+                "a3954_case_language",
+                "ldac",
+                "auto_power_off",
+                "low_battery_prompt",
+                "a3954_spatial_audio",
+                "a3954_easy_chat",
+                "wearing_detection",
+                "a3954_air_pressure",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version",
+                "a3954_case_serial_number_and_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "airPressure",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight",
+                    "caseSerialNumber",
+                    "caseFirmwareVersion"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "airplaneMode",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "leftSlideUp",
+                    "rightSlideUp",
+                    "leftSlideDown",
+                    "rightSlideDown",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "atmospheric",
+                    "remoteCamera",
+                    "findDevice",
+                    "caseSpatialAudio",
+                    "caseLanguage",
+                    "ldac",
+                    "autoPowerOff",
+                    "lowBatteryPrompt",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "spatialAudioMusicMode",
+                    "easyChat",
+                    "easyChatWaitTime",
+                    "soundLeakCompensation",
+                    "wearingDetection"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "fourBytePositionedSoundModes",
+                "31ByteIdentity"
+            ],
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "04.29",
+                    "outbound": "core/crates/models/src/lib.rs",
+                    "inbound": "core/data/README.md#a3954-pilot-state",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "inbound": "core/data/a3954-pilot-state.bin",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/155"
+                },
+                {
+                    "operation": "writePositionedSoundMode",
+                    "core": "protocolFixture",
+                    "firmware": "04.29",
+                    "outbound": "core/data/README.md#a3954-pilot-state",
+                    "inbound": "core/crates/session/tests/mode_write.rs",
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154",
+                    "result": "confirmedReadBack"
+                }
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket"
+        },
+        {
+            "code": "A3955",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3955.rs",
+            "stateParser": "A3955StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3955_sound_modes",
+                "a3955_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "a3955_immersive_experience",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "ancPersonalizedToEarCanal",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "immersiveExperience",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3955/packets/inbound/state_update.rs::A3955StateUpdatePacket"
+        },
+        {
+            "code": "A3957",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3957.rs",
+            "stateParser": "A3957StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3957_sound_modes",
+                "a3957_equalizer",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "wearing_tone",
+                "wearing_detection",
+                "sound_leak_compensation",
+                "a3957_gaming_mode",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "transportationMode",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt",
+                    "wearingTone",
+                    "wearingDetection",
+                    "soundLeakCompensation",
+                    "gamingMode"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3957/packets/inbound/state_update.rs::A3957StateUpdatePacket"
+        },
+        {
+            "code": "A3959",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3959.rs",
+            "stateParser": "A3959StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3959_sound_modes",
+                "equalizer_with_drc_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle",
+                "reset_button_configuration",
+                "dual_connections",
+                "surround_sound",
+                "auto_power_off",
+                "touch_tone",
+                "tws_status",
+                "low_battery_prompt",
+                "gaming_mode",
+                "dual_battery",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "adaptiveNoiseCancelingSensitivityLevel",
+                    "multiSceneNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "surroundSound",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "gamingModeSince01.60"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/a3959/packets/inbound/state_update.rs::A3959StateUpdatePacket"
+        },
+        {
+            "code": "A3968",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/a3968.rs",
+            "stateParser": "A3968StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "a3968_sound_modes",
+                "equalizer_with_custom_hear_id_tws",
+                "button_configuration",
+                "ambient_sound_mode_cycle_tws",
+                "dual_connections",
+                "auto_power_off",
+                "surround_sound",
+                "touch_tone",
+                "tws_status",
+                "dual_battery",
+                "case_battery_level",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "windNoiseSuppression",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "normalModeInCycle",
+                    "transparencyModeInCycle",
+                    "noiseCancelingModeInCycle",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "autoPowerOff",
+                    "surroundSound",
+                    "touchTone"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/a3968/packets/inbound/state_update.rs::A3968StateUpdatePacket"
+        },
+        {
+            "code": "D1101",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1101.rs",
+            "stateParser": "D1101StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "equalizer",
+                "disable_all_buttons",
+                "button_configuration",
+                "dual_connections",
+                "low_battery_prompt",
+                "ldac",
+                "auto_power_off",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "buttonsEnabled",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "lowBatteryPrompt",
+                    "ldac",
+                    "autoPowerOff"
+                ],
+                "actions": []
+            },
+            "stateParserSource": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket"
+        },
+        {
+            "code": "D1202",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1202.rs",
+            "stateParser": "D1202StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "d1202_sound_modes",
+                "d1202_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "d1202_spatial_audio",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "realTimeAdaptiveNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "d1202cSharesDriver"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket"
+        },
+        {
+            "code": "D1202C",
+            "family": "dualWithPeers",
+            "legacyDriver": "lib/src/devices/soundcore/d1202.rs",
+            "stateParser": "D1202StateUpdatePacket",
+            "startup": [
+                "readState"
+            ],
+            "conditionalStartup": {
+                "readPeers": "dualConnectionsEnabled"
+            },
+            "modules": [
+                "d1202_sound_modes",
+                "d1202_equalizer",
+                "button_configuration",
+                "reset_button_configuration",
+                "limit_high_volume",
+                "dual_connections",
+                "d1202_spatial_audio",
+                "ldac",
+                "auto_power_off",
+                "touch_tone",
+                "low_battery_prompt",
+                "tws_status",
+                "dual_battery_custom",
+                "case_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "adaptiveNoiseCanceling",
+                    "windNoiseDetected",
+                    "exportCustomEqualizerProfilesOutput",
+                    "twsStatus",
+                    "hostDevice",
+                    "isChargingLeft",
+                    "isChargingRight",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "caseBatteryLevel",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "ambientSoundMode",
+                    "transparencyMode",
+                    "noiseCancelingMode",
+                    "manualNoiseCanceling",
+                    "multiSceneNoiseCanceling",
+                    "windNoiseSuppression",
+                    "realTimeAdaptiveNoiseCanceling",
+                    "presetEqualizerProfile",
+                    "customEqualizerProfile",
+                    "volumeAdjustments",
+                    "importCustomEqualizerProfiles",
+                    "exportCustomEqualizerProfiles",
+                    "leftSinglePress",
+                    "rightSinglePress",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "leftLongPress",
+                    "rightLongPress",
+                    "limitHighVolume",
+                    "limitHighVolumeDbLimit",
+                    "limitHighVolumeRefreshRate",
+                    "dualConnections",
+                    "dualConnectionsDevices",
+                    "spatialAudio",
+                    "spatialAudioMode",
+                    "ldac",
+                    "autoPowerOff",
+                    "touchTone",
+                    "lowBatteryPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault"
+                ]
+            },
+            "variants": [
+                "wireModelDiscriminatorUnresolved"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/d1202/packets/inbound/state_update.rs::D1202StateUpdatePacket"
+        },
+        {
+            "code": "D1301",
+            "family": "specialized",
+            "legacyDriver": "lib/src/devices/soundcore/d1301.rs",
+            "stateParser": "D1301StateUpdatePacket",
+            "startup": [
+                "readState",
+                "readAutoStopTimer",
+                "readAlarms"
+            ],
+            "modules": [
+                "d1301_tap_controls_disabled",
+                "button_configuration",
+                "reset_button_configuration",
+                "d1301_alarms",
+                "d1301_auto_stop_timer",
+                "d1301_auto_switch_once_asleep",
+                "d1301_listening_mode",
+                "d1301_noise_canceling",
+                "d1301_incoming_calls_during_bluetooth_mode",
+                "low_battery_prompt",
+                "d1301_auto_power_off_prompt",
+                "d1301_listening_mode_prompt",
+                "d1301_noise_canceling_prompt",
+                "tws_status",
+                "dual_battery_level_custom",
+                "serial_number_and_dual_firmware_version"
+            ],
+            "demoSettings": {
+                "information": [
+                    "twsStatus",
+                    "hostDevice",
+                    "batteryLevelLeft",
+                    "batteryLevelRight",
+                    "serialNumber",
+                    "firmwareVersionLeft",
+                    "firmwareVersionRight"
+                ],
+                "controls": [
+                    "buttonsEnabled",
+                    "leftDoublePress",
+                    "rightDoublePress",
+                    "leftTriplePress",
+                    "rightTriplePress",
+                    "autoStopTimer",
+                    "autoStopTimerDuration",
+                    "autoSwitchOnceAsleep",
+                    "listeningMode",
+                    "defaultListeningMode",
+                    "noiseCanceling",
+                    "incomingCallsDuringBluetoothMode",
+                    "lowBatteryPrompt",
+                    "autoPowerOffPrompt",
+                    "listeningModePrompt",
+                    "noiseCancelingPrompt"
+                ],
+                "actions": [
+                    "resetButtonsToDefault",
+                    "createAlarm"
+                ]
+            },
+            "variants": [
+                "dynamicAlarms"
+            ],
+            "stateParserSource": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs::D1301StateUpdatePacket"
+        }
+    ]
+}
