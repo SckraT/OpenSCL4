@@ -82,9 +82,15 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         equalizer: equalizer_setting(body),
         auto_power_off: auto_power_off(body),
         gaming_mode: None,
+        tws_connected: None,
+        case_features: None,
+        spatial_audio: None,
+        sound_leak_compensation: None,
+        case_language: None,
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,
+        firmware_case: None,
     })
 }
 

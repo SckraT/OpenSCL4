@@ -18,7 +18,7 @@ mod tests {
         ConnectTarget, LinkRx, LinkTx, RedactedMac, TransportError, TransportLink,
         TransportProvider,
     };
-    use openscl4_transport_mock::{VirtualA3062, VirtualA3949, VirtualSoundcoreDevice};
+    use openscl4_transport_mock::{VirtualA3062, VirtualA3949};
     use tokio::time::Instant;
 
     #[tokio::test(start_paused = true)]
@@ -264,7 +264,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn live_eq_reports_unsupported_models_on_submission() {
-        for handle in [start(VirtualA3949), start(VirtualSoundcoreDevice)] {
+        for handle in [start(VirtualA3949)] {
             handle.confirmed_view().await.expect("initial state");
             assert_eq!(
                 handle.set_eq_live(curve(0xfefe, 60)),

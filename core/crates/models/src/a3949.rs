@@ -38,8 +38,14 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
             _ => None,
         },
         auto_power_off: None,
+        tws_connected: None,
+        case_features: None,
+        spatial_audio: None,
+        sound_leak_compensation: None,
+        case_language: None,
         firmware_device: None,
         firmware_left: FirmwareVersion::parse(&body[6..11])?,
         firmware_right: FirmwareVersion::parse(&body[11..16])?,
+        firmware_case: None,
     })
 }

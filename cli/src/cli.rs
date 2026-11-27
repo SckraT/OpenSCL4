@@ -227,7 +227,8 @@ Equalizers: All bands must be specified, and numbers should be separated with ',
                         .conflicts_with("bluetooth")
                         .conflicts_with("mock-model"),
                 )
-                .arg(arg!(--"cycle-mode" "Switch and restore the model's sound or gaming mode with read-back confirmation")),
+                .arg(arg!(--"cycle-mode" "Switch and restore the model's sound or gaming mode with read-back confirmation"))
+                .arg(arg!(--"cycle-settings" "Switch and restore the A3954 settings with read-back confirmation")),
         )
         .subcommand(
             Command::new("completions")
@@ -255,7 +256,14 @@ pub async fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
             let scenario = options
                 .get_one::<String>("mock-scenario")
                 .map(String::as_str);
-            pilot::handle(options.get_flag("cycle-mode"), device, mock_model, scenario).await?;
+            pilot::handle(
+                options.get_flag("cycle-mode"),
+                options.get_flag("cycle-settings"),
+                device,
+                mock_model,
+                scenario,
+            )
+            .await?;
         }
         _ => (),
     }

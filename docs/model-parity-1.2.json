@@ -1637,6 +1637,62 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3954"
+            ],
+            "operation": "dual_connections",
+            "inbound": "lib/src/devices/soundcore/common/packet/inbound/dual_connections_device.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+            "command": "0b01",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The peers read is a multi-page 0B 01 response carrying masked MAC addresses and UTF-8 names, and the enable write is 0B 84. No A3954 peers capture is recorded, so the transfer needs a masked measured reply and a read-back case."
+        },
+        {
+            "models": [
+                "A3954"
+            ],
+            "operation": "button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/button_configuration/state_modifier.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The twelve per-button bytes at state offsets 116-123 and 161-164 use the TwsLowBits encoding, but no outbound button frame or acknowledgement is recorded for the A3954. The transfer needs a reference frame and a read-back case together with the ambient cycle, reset and high-volume limit commands."
+        },
+        {
+            "models": [
+                "A3954"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "LDAC also needs its separate 01 7F state read; no saved A3954 capture records that reply."
+        },
+        {
+            "models": [
+                "A3954"
+            ],
+            "operation": "low_battery_prompt",
+            "inbound": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The flag body is defined by the shared module, but no saved A3954 outbound frame or acknowledgement is recorded. The transfer needs a reference frame and a read-back case."
+        },
+        {
+            "models": [
+                "A3954"
+            ],
+            "operation": "wearing_detection",
+            "inbound": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "evidence": "legacy",
+            "result": "parityPending",
+            "missing": "The flag body is defined by the shared module, but no saved A3954 outbound frame or acknowledgement is recorded. The transfer needs a reference frame and a read-back case."
         }
     ],
     "models": [
@@ -3660,13 +3716,15 @@
                     "firmware": "04.29",
                     "outbound": "core/crates/models/src/lib.rs",
                     "inbound": "core/data/README.md#a3954-pilot-state",
-                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154"
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/154",
+                    "result": "confirmedState"
                 },
                 {
                     "operation": "readState",
                     "core": "captureReplay",
                     "inbound": "core/data/a3954-pilot-state.bin",
-                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/155"
+                    "hardware": "https://github.com/SckraT/OpenSCL4/issues/155",
+                    "result": "confirmedState"
                 },
                 {
                     "operation": "writePositionedSoundMode",
@@ -3676,6 +3734,60 @@
                     "inbound": "core/crates/session/tests/mode_write.rs",
                     "hardware": "https://github.com/SckraT/OpenSCL4/issues/154",
                     "result": "confirmedReadBack"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_the_legacy_equalizer_write_from_a_fresh_state_reply"
+                },
+                {
+                    "operation": "writeCaseFeatures",
+                    "core": "legacyFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_case_feature_writes_from_reference_replies"
+                },
+                {
+                    "operation": "writeSpatialAudio",
+                    "core": "legacyFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_spatial_audio_writes_from_reference_replies"
+                },
+                {
+                    "operation": "writeSoundLeakCompensation",
+                    "core": "legacyFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_sound_leak_compensation_writes_from_reference_replies"
+                },
+                {
+                    "operation": "writeCaseLanguage",
+                    "core": "protocolFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_case_language_writes_from_reference_replies"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "firmware": "03.29",
+                    "outbound": "core/data/README.md#a3954-legacy-reference-state",
+                    "inbound": "core/crates/session/tests/a3954_parity.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3954_parity.rs::confirms_auto_power_off_writes_from_reference_replies"
                 }
             ],
             "stateParserSource": "lib/src/devices/soundcore/a3954/packets/inbound/state_update.rs::A3954StateUpdatePacket"

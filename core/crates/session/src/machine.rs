@@ -420,6 +420,18 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetCaseFeatures(features) => {
+                    (WriteTarget::CaseFeatures(features), None)
+                }
+                SessionCommand::SetSpatialAudio(spatial_audio) => {
+                    (WriteTarget::SpatialAudio(spatial_audio), None)
+                }
+                SessionCommand::SetSoundLeakCompensation(enabled) => {
+                    (WriteTarget::SoundLeakCompensation(enabled), None)
+                }
+                SessionCommand::SetCaseLanguage(language) => {
+                    (WriteTarget::CaseLanguage(language), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -923,6 +935,24 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
             observed: state.auto_power_off,
+        },
+        WriteTarget::CaseFeatures(requested) => CommandError::CaseFeaturesMismatch {
+            requested,
+            observed: state.case_features,
+        },
+        WriteTarget::SpatialAudio(requested) => CommandError::SpatialAudioMismatch {
+            requested,
+            observed: state.spatial_audio,
+        },
+        WriteTarget::SoundLeakCompensation(requested) => {
+            CommandError::SoundLeakCompensationMismatch {
+                requested,
+                observed: state.sound_leak_compensation,
+            }
+        }
+        WriteTarget::CaseLanguage(requested) => CommandError::CaseLanguageMismatch {
+            requested,
+            observed: state.case_language,
         },
     }
 }

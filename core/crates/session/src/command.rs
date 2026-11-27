@@ -1,6 +1,8 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    CASE_FEATURES_COMMAND, CASE_LANGUAGE_COMMAND, Capabilities, CaseFeatures, CaseLanguage,
+    EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_LEAK_COMPENSATION_COMMAND,
+    SOUND_MODE_COMMAND, SPATIAL_AUDIO_COMMAND, SpatialAudio,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +75,14 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Set the case-feature toggles on a model that reports them.
+    SetCaseFeatures(CaseFeatures),
+    /// Set the earbud spatial-audio controls on a model that reports them.
+    SetSpatialAudio(SpatialAudio),
+    /// Enable or disable sound leak compensation on a model that reports the flag.
+    SetSoundLeakCompensation(bool),
+    /// Set the charging-case language on a model that reports it.
+    SetCaseLanguage(CaseLanguage),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -97,6 +107,18 @@ impl SessionCommand {
             }
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
+            }
+            Self::SetCaseFeatures(_) if !capabilities.case_features_write => {
+                Err(ModelError::InvalidCaseFeaturesWrite)
+            }
+            Self::SetSpatialAudio(_) if !capabilities.spatial_audio_write => {
+                Err(ModelError::InvalidSpatialAudioWrite)
+            }
+            Self::SetSoundLeakCompensation(_) if !capabilities.sound_leak_compensation_write => {
+                Err(ModelError::InvalidSoundLeakCompensationWrite)
+            }
+            Self::SetCaseLanguage(_) if !capabilities.case_language_write => {
+                Err(ModelError::InvalidCaseLanguageWrite)
             }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
@@ -138,6 +160,14 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A case-feature toggle change.
+    CaseFeatures(CaseFeatures),
+    /// An earbud spatial-audio control change.
+    SpatialAudio(SpatialAudio),
+    /// A sound leak compensation flag change.
+    SoundLeakCompensation(bool),
+    /// A charging-case language change.
+    CaseLanguage(CaseLanguage),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,6 +179,10 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::CaseFeatures(_) => CASE_FEATURES_COMMAND,
+            Self::SpatialAudio(_) => SPATIAL_AUDIO_COMMAND,
+            Self::SoundLeakCompensation(_) => SOUND_LEAK_COMPENSATION_COMMAND,
+            Self::CaseLanguage(_) => CASE_LANGUAGE_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
         }
     }
@@ -180,6 +214,12 @@ impl WriteTarget {
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
+            Self::CaseFeatures(setting) => state.case_features_write(setting)?.to_vec(),
+            Self::SpatialAudio(setting) => state.spatial_audio_write(setting)?.to_vec(),
+            Self::SoundLeakCompensation(enabled) => {
+                state.sound_leak_compensation_write(enabled)?.to_vec()
+            }
+            Self::CaseLanguage(language) => state.case_language_write(language)?.to_vec(),
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
         Ok(resolved)
@@ -197,6 +237,10 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::CaseFeatures(setting) => state.case_features == Some(setting),
+            Self::SpatialAudio(setting) => state.spatial_audio == Some(setting),
+            Self::SoundLeakCompensation(enabled) => state.sound_leak_compensation == Some(enabled),
+            Self::CaseLanguage(language) => state.case_language == Some(language),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -289,6 +333,46 @@ pub enum CommandError {
         requested: AutoPowerOffSetting,
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
+    },
+    /// The read-back did not match the requested case-feature toggles.
+    #[error(
+        "case features did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    CaseFeaturesMismatch {
+        /// The toggles requested by the command.
+        requested: CaseFeatures,
+        /// The toggles reported by the device, if it reported recognized ones.
+        observed: Option<CaseFeatures>,
+    },
+    /// The read-back did not match the requested spatial-audio controls.
+    #[error(
+        "spatial audio did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    SpatialAudioMismatch {
+        /// The controls requested by the command.
+        requested: SpatialAudio,
+        /// The controls reported by the device, if it reported recognized ones.
+        observed: Option<SpatialAudio>,
+    },
+    /// The read-back did not match the requested sound leak compensation flag.
+    #[error(
+        "sound leak compensation did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    SoundLeakCompensationMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported a recognized one.
+        observed: Option<bool>,
+    },
+    /// The read-back did not match the requested case language.
+    #[error(
+        "case language did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    CaseLanguageMismatch {
+        /// The language requested by the command.
+        requested: CaseLanguage,
+        /// The language reported by the device, if it reported a recognized one.
+        observed: Option<CaseLanguage>,
     },
     /// The read-back did not match the requested mode or position.
     #[error(

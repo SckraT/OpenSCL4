@@ -1,7 +1,7 @@
 use openscl4_session::{
-    CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
-    SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
-    UnidentifiedState,
+    AutoPowerOff, AutoPowerOffSetting, CaseFeatures, CaseLanguage, CommandOutcome, ConnectionState,
+    DeviceState, ModelDriver, SessionCommand, SessionError, SessionHandle, SessionRunner,
+    SoundMode, SoundModeSetting, SpatialAudio, UnidentifiedReason, UnidentifiedState,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
@@ -12,6 +12,7 @@ use serde_json::{Value, json};
 
 pub async fn handle(
     cycle_mode: bool,
+    cycle_settings: bool,
     device: Option<&str>,
     mock_model: ModelDriver,
     scenario: Option<&str>,
@@ -33,7 +34,7 @@ pub async fn handle(
             },
         },
     };
-    let output = read_pilot(&handle, cycle_mode).await;
+    let output = read_pilot(&handle, cycle_mode, cycle_settings).await;
     let closed = handle.close().await;
     let output = output?;
     closed?;
@@ -70,15 +71,19 @@ async fn start_bluetooth(name: &str) -> anyhow::Result<SessionHandle> {
 }
 
 #[cfg(not(any(windows, target_os = "linux")))]
-async fn start_bluetooth(_name: &str) -> anyhow::Result<SessionHandle> {
+async fn start_bluetooth(_name: &str) -> anyhow::Result<()> {
     anyhow::bail!("the Bluetooth pilot is available on Windows and Linux")
 }
 
-async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<Value> {
+async fn read_pilot(
+    handle: &SessionHandle,
+    cycle_mode: bool,
+    cycle_settings: bool,
+) -> anyhow::Result<Value> {
     let snapshot = handle.confirmed_view().await?;
     let ConnectionState::Ready(initial) = snapshot.connection else {
         return match snapshot.connection {
-            ConnectionState::Unidentified(_) if cycle_mode => {
+            ConnectionState::Unidentified(_) if cycle_mode || cycle_settings => {
                 anyhow::bail!("device is read-only: the pilot cannot change settings")
             }
             ConnectionState::Unidentified(state) => Ok(unidentified_json(state)),
@@ -86,19 +91,37 @@ async fn read_pilot(handle: &SessionHandle, cycle_mode: bool) -> anyhow::Result<
         };
     };
 
-    if !cycle_mode {
-        return Ok(snapshot_json(initial));
+    let mut output = snapshot_json(initial);
+
+    if cycle_mode {
+        let (change, restore) = mode_cycle_commands(initial)?;
+        let changed = apply(handle, change).await?;
+        let restored = apply(handle, restore).await?;
+        output = snapshot_json(restored);
+        output["modeCycle"] = json!({
+            "changed": applied_json(changed),
+            "restored": applied_json(restored),
+        });
     }
 
-    let (change, restore) = mode_cycle_commands(initial)?;
-    let changed = apply_mode(handle, change).await?;
-    let restored = apply_mode(handle, restore).await?;
+    if cycle_settings {
+        let mut entries = Vec::new();
+        let mut restored_state = initial;
+        for (setting, change, restore) in settings_cycle_commands(initial)? {
+            apply(handle, change).await?;
+            let restored = apply(handle, restore).await?;
+            // Each result is `Applied` only after a fresh read-back matched.
+            entries.push(json!({
+                "setting": setting,
+                "changed": "Applied",
+                "restored": "Applied",
+            }));
+            restored_state = restored;
+        }
+        output = snapshot_json(restored_state);
+        output["settingsCycle"] = json!(entries);
+    }
 
-    let mut output = snapshot_json(restored);
-    output["modeCycle"] = json!({
-        "changed": applied_json(changed),
-        "restored": applied_json(restored),
-    });
     Ok(output)
 }
 
@@ -133,10 +156,91 @@ fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, 
     }
 }
 
-async fn apply_mode(
-    handle: &SessionHandle,
-    command: SessionCommand,
-) -> anyhow::Result<DeviceState> {
+/// The settings cycle writes each supported A3954 setting to a different value
+/// and restores the confirmed original, one read-back at a time.
+fn settings_cycle_commands(
+    initial: DeviceState,
+) -> anyhow::Result<Vec<(&'static str, SessionCommand, SessionCommand)>> {
+    if initial.model != ModelDriver::A3954 {
+        anyhow::bail!("the settings cycle is available for the A3954 pilot only");
+    }
+    let mut commands = Vec::new();
+
+    let features = initial
+        .case_features
+        .ok_or_else(|| anyhow::anyhow!("the device did not report its case features"))?;
+    let toggled = CaseFeatures {
+        atmospheric: !features.atmospheric,
+        ..features
+    };
+    commands.push((
+        "caseFeatures",
+        SessionCommand::SetCaseFeatures(toggled),
+        SessionCommand::SetCaseFeatures(features),
+    ));
+
+    let spatial_audio = initial
+        .spatial_audio
+        .ok_or_else(|| anyhow::anyhow!("the device did not report its spatial audio"))?;
+    let toggled_spatial_audio = SpatialAudio {
+        enabled: !spatial_audio.enabled,
+        ..spatial_audio
+    };
+    commands.push((
+        "spatialAudio",
+        SessionCommand::SetSpatialAudio(toggled_spatial_audio),
+        SessionCommand::SetSpatialAudio(spatial_audio),
+    ));
+
+    let sound_leak_compensation = initial
+        .sound_leak_compensation
+        .ok_or_else(|| anyhow::anyhow!("the device did not report sound leak compensation"))?;
+    commands.push((
+        "soundLeakCompensation",
+        SessionCommand::SetSoundLeakCompensation(!sound_leak_compensation),
+        SessionCommand::SetSoundLeakCompensation(sound_leak_compensation),
+    ));
+
+    let auto_power_off = initial
+        .auto_power_off
+        .ok_or_else(|| anyhow::anyhow!("the device did not report auto power off"))?;
+    commands.push((
+        "autoPowerOff",
+        SessionCommand::SetAutoPowerOff(AutoPowerOffSetting::Enabled(
+            (auto_power_off.duration + 1) % 4,
+        )),
+        SessionCommand::SetAutoPowerOff(restore_auto_power_off(auto_power_off)),
+    ));
+
+    let case_language = initial
+        .case_language
+        .ok_or_else(|| anyhow::anyhow!("the device did not report its case language"))?;
+    commands.push((
+        "caseLanguage",
+        SessionCommand::SetCaseLanguage(next_case_language(case_language)),
+        SessionCommand::SetCaseLanguage(case_language),
+    ));
+
+    Ok(commands)
+}
+
+fn restore_auto_power_off(value: AutoPowerOff) -> AutoPowerOffSetting {
+    if value.enabled {
+        AutoPowerOffSetting::Enabled(value.duration)
+    } else {
+        AutoPowerOffSetting::Disabled
+    }
+}
+
+fn next_case_language(language: CaseLanguage) -> CaseLanguage {
+    match language {
+        CaseLanguage::Japanese => CaseLanguage::English,
+        CaseLanguage::English => CaseLanguage::Chinese,
+        CaseLanguage::Chinese => CaseLanguage::Japanese,
+    }
+}
+
+async fn apply(handle: &SessionHandle, command: SessionCommand) -> anyhow::Result<DeviceState> {
     let CommandOutcome::Applied(state) = handle.dispatch(command)?.wait().await?;
     Ok(state)
 }
@@ -177,16 +281,15 @@ fn snapshot_json(device: DeviceState) -> Value {
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
+            let mut firmware = json!({
+                "left": device.firmware_left.map(|version| version.to_string()),
+                "right": device.firmware_right.map(|version| version.to_string()),
+            });
             if device.model == ModelDriver::A3954 {
                 battery["casePercent"] = json!(device.battery.case);
+                firmware["case"] = json!(device.firmware_case.map(|version| version.to_string()));
             }
-            (
-                json!({
-                    "left": device.firmware_left.map(|version| version.to_string()),
-                    "right": device.firmware_right.map(|version| version.to_string()),
-                }),
-                battery,
-            )
+            (firmware, battery)
         }
     };
     let mut snapshot = json!({
@@ -200,5 +303,46 @@ fn snapshot_json(device: DeviceState) -> Value {
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
     }
+    if device.model == ModelDriver::A3954 {
+        a3954_settings_json(&mut snapshot, device);
+    }
     snapshot
+}
+
+/// Reports the A3954 settings that the session reads from the measured state.
+fn a3954_settings_json(snapshot: &mut Value, device: DeviceState) {
+    snapshot["twsConnected"] = json!(device.tws_connected);
+    if let Some(equalizer) = device.equalizer {
+        snapshot["equalizer"] = json!({
+            "presetId": equalizer.preset_id,
+            "volumeAdjustments": equalizer.volume_adjustments,
+        });
+    }
+    if let Some(auto_power_off) = device.auto_power_off {
+        snapshot["autoPowerOff"] = json!({
+            "enabled": auto_power_off.enabled,
+            "duration": auto_power_off.duration,
+        });
+    }
+    if let Some(features) = device.case_features {
+        snapshot["caseFeatures"] = json!({
+            "atmospheric": features.atmospheric,
+            "remoteCamera": features.remote_camera,
+            "findDevice": features.find_device,
+            "caseSpatialAudio": features.case_spatial_audio,
+        });
+    }
+    if let Some(spatial_audio) = device.spatial_audio {
+        snapshot["spatialAudio"] = json!({
+            "enabled": spatial_audio.enabled,
+            "mode": spatial_audio.mode.code(),
+            "musicMode": spatial_audio.music_mode.code(),
+        });
+    }
+    if let Some(enabled) = device.sound_leak_compensation {
+        snapshot["soundLeakCompensation"] = json!(enabled);
+    }
+    if let Some(language) = device.case_language {
+        snapshot["caseLanguage"] = json!(language.code());
+    }
 }
