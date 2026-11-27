@@ -1,0 +1,216 @@
+{
+    "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
+    "evidence": "legacyFixture",
+    "derivation": "Each published body comes from a legacy driver test example, documented by the driver state parser. The 16-byte serial at body offsets 16-31 is replaced with a synthetic model-prefixed value and the frame checksum is recomputed. No physical capture of these four models is recorded; the virtual transport replays the derived frames. The A3959 gaming boundary uses the same body with firmware 01.59 and 01.64.",
+    "sources": {
+        "A3944": "lib/src/devices/soundcore/a3944.rs::it_parses_settings_correctly",
+        "A3945": "lib/src/devices/soundcore/a3945.rs::it_resets_band_9_and_10_values",
+        "A3948": "lib/src/devices/soundcore/a3948.rs::button_configuration_enabled_flags_are_ignored",
+        "A3959": "lib/src/devices/soundcore/a3959.rs::with_packet_from_github_issue_149",
+        "A3959gamingUnavailable": "lib/src/devices/soundcore/a3959.rs::has_no_gaming_mode_on_old_firmware",
+        "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
+        "outboundEqualizer": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+        "outboundEqualizerTws": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+        "outboundGamingMode": "lib/src/devices/soundcore/common/modules/flag.rs",
+        "outboundAmbientMode": "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs",
+        "outboundAutoPowerOff": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs"
+    },
+    "masking": {
+        "serialOffset": 16,
+        "serialLength": 16,
+        "syntheticSerials": {
+            "A3944": "3944TEST00000000",
+            "A3945": "3945TEST00000000",
+            "A3948": "3948TEST00000000",
+            "A3959": "3959TEST00000000"
+        },
+        "checksum": "additive, last frame byte"
+    },
+    "stateBodyOffsets": {
+        "A3944": {
+            "batteryLeft": 2,
+            "batteryRight": 3,
+            "batteryScale": 5,
+            "firmwareLeft": 6,
+            "firmwareRight": 11,
+            "serial": 16,
+            "equalizerPreset": 32,
+            "equalizerBands": 34,
+            "documentedBodyLength": 73,
+            "exampleBodyLength": 88
+        },
+        "A3945": {
+            "batteryLeft": 2,
+            "batteryRight": 3,
+            "batteryScale": 5,
+            "caseBattery": 69,
+            "caseScale": 5,
+            "firmwareLeft": 6,
+            "firmwareRight": 11,
+            "serial": 16,
+            "equalizerPreset": 32,
+            "equalizerLeftBands": 34,
+            "equalizerRightBands": 44,
+            "gamingMode": 68,
+            "documentedBodyLength": 72
+        },
+        "A3948": {
+            "batteryLeft": 2,
+            "batteryRight": 3,
+            "batteryScale": 5,
+            "firmwareLeft": 6,
+            "firmwareRight": 11,
+            "serial": 16,
+            "equalizerPreset": 32,
+            "equalizerBands": 34,
+            "documentedBodyLength": 88
+        },
+        "A3959": {
+            "batteryLeft": 2,
+            "batteryRight": 3,
+            "batteryScale": 10,
+            "firmwareLeft": 6,
+            "firmwareRight": 11,
+            "serial": 16,
+            "equalizerPreset": 32,
+            "equalizerBands": 34,
+            "soundModes": 64,
+            "soundModeControlLength": 7,
+            "touchTone": 72,
+            "dualConnections": 73,
+            "surroundSound": 74,
+            "autoPowerOff": 75,
+            "lowBatteryPrompt": 77,
+            "gamingMode": 78,
+            "documentedBodyLength": 91
+        }
+    },
+    "outbound": {
+        "readState": "01 01",
+        "A3944": {
+            "writeEqualizer": "02 83 01 00 A0 82 8C 8C A0 A0 A0 8C 78 00 7D 76 7B 78 7C 7A 7C 79 78 00"
+        },
+        "A3945": {
+            "writeEqualizer": "02 81 15 00 78 78 78 64 5A 50 50 3C 78 00 78 78 78 64 5A 50 50 3C 78 00",
+            "writeGamingModeOn": "01 87 01",
+            "writeGamingModeOff": "01 87 00"
+        },
+        "A3948": {
+            "writeEqualizer": "02 83 02 00 A0 96 82 78 78 78 78 78 78 00 7B 7A 78 78 78 78 78 78 78 00"
+        },
+        "A3959": {
+            "writeEqualizer": "02 83 FE FE 65 78 A1 AB AB 98 85 55 78 78 76 77 7C 7B 7C 79 7B 72 78 00",
+            "writeAmbientNormal": "06 81 02 55 02 00 01 FF 01",
+            "writeAmbientNoiseCanceling": "06 81 00 55 00 00 01 FF 01",
+            "writeGamingModeOn": "01 87 01",
+            "writeGamingModeOff": "01 87 00",
+            "writeAutoPowerOffDisabled": "01 86 00 00",
+            "writeAutoPowerOffEnabled3": "01 86 01 03"
+        }
+    },
+    "equalizerWrites": {
+        "A3944": {
+            "presetId": 1,
+            "gainsTenthsDb": [
+                40,
+                10,
+                20,
+                20,
+                40,
+                40,
+                40,
+                20,
+                0,
+                -120
+            ],
+            "source": "lib/src/devices/soundcore/a3944.rs::set_eq_packet_matches"
+        },
+        "A3945": {
+            "presetId": 21,
+            "gainsTenthsDb": [
+                0,
+                0,
+                0,
+                -20,
+                -30,
+                -40,
+                -40,
+                -60,
+                0,
+                -120
+            ],
+            "source": "lib/src/devices/soundcore/a3945.rs::it_resets_band_9_and_10_values"
+        },
+        "A3948": {
+            "presetId": 2,
+            "gainsTenthsDb": [
+                40,
+                30,
+                10,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -120
+            ],
+            "source": "derived from lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs"
+        },
+        "A3959": {
+            "presetId": 65278,
+            "gainsTenthsDb": [
+                -19,
+                0,
+                41,
+                51,
+                51,
+                32,
+                13,
+                -35,
+                0,
+                0
+            ],
+            "source": "lib/src/devices/soundcore/a3959.rs::set_equalizer_configuration"
+        }
+    },
+    "fixtures": {
+        "a3944-pilot-state.bin": {
+            "sha256": "f4229f6f9449cecd8f483e985e6d41fc9b31e1697d05df1f606c96c1a383f64c",
+            "frameLength": 98,
+            "bodyLength": 88
+        },
+        "a3945-pilot-state.bin": {
+            "sha256": "cb3956e551d585e79072980d9e8e67cd64be75ee225b67b76fb56161ca1ce91d",
+            "frameLength": 82,
+            "bodyLength": 72
+        },
+        "a3948-pilot-state.bin": {
+            "sha256": "002c1f6bf007aefd1abcbb85bd1915a11bc3754c506afe247e3e9f52db38aa0e",
+            "frameLength": 98,
+            "bodyLength": 88
+        },
+        "a3959-pilot-state.bin": {
+            "sha256": "7bb620e70a87b5ee10b56522e05ef6effd86109e5ff5d71437cd782db05cea64",
+            "frameLength": 101,
+            "bodyLength": 91
+        },
+        "a3959-gaming-unavailable-state.bin": {
+            "sha256": "078a978829b855c2b13356f725ff75925a2f9ba06e606b27326970c04e6ca63d",
+            "frameLength": 101,
+            "bodyLength": 91
+        }
+    },
+    "inbound": {
+        "a3944-pilot-state": "09 FF 00 00 01 01 01 62 00 00 01 05 05 00 00 30 32 2E 32 37 30 32 2E 32 37 33 39 34 34 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 78 00 00 00 00 00 00 00 00 00 00 00 0E 01 00 01 00 01 66 01 66 01 32 01 33 FF FF FF 36 00 01 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF A0",
+        "a3945-pilot-state": "09 FF 00 00 01 01 01 52 00 00 01 00 00 00 00 30 30 2E 30 30 30 30 2E 30 30 33 39 34 35 54 45 53 54 30 30 30 30 30 30 30 30 00 00 78 78 78 78 78 78 78 78 79 7A 78 78 78 78 78 78 78 78 7B 7C 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 39",
+        "a3948-pilot-state": "09 FF 00 00 01 01 01 62 00 00 01 05 05 00 00 32 34 2E 35 36 32 34 2E 35 36 33 39 34 38 54 45 53 54 30 30 30 30 30 30 30 30 02 00 A0 96 82 78 78 78 78 78 78 00 00 00 00 00 00 00 00 00 00 00 0E 01 F6 00 F0 01 6F 01 6F 01 31 00 3F FF FF FF 61 00 01 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 2E",
+        "a3959-pilot-state": "09 FF 00 00 01 01 01 65 00 01 01 05 06 FF FF 30 31 2E 36 34 30 31 2E 36 34 33 39 35 39 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 65 78 A1 AB AB 98 90 B3 78 78 00 00 00 00 00 00 00 00 00 00 0A F1 F0 66 66 F2 F3 44 44 33 00 55 00 00 01 FF 01 31 01 01 00 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 84",
+        "a3959-gaming-unavailable-state": "09 FF 00 00 01 01 01 65 00 01 01 05 06 FF FF 30 31 2E 35 39 30 31 2E 35 39 33 39 35 39 54 45 53 54 30 30 30 30 30 30 30 30 FE FE 65 78 A1 AB AB 98 90 B3 78 78 00 00 00 00 00 00 00 00 00 00 0A F1 F0 66 66 F2 F3 44 44 33 00 55 00 00 01 FF 01 31 01 01 00 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 8C"
+    },
+    "gamingFirmwareBoundary": {
+        "minimum": "01.60",
+        "available": "a3959-pilot-state.bin",
+        "unavailable": "a3959-gaming-unavailable-state.bin"
+    }
+}

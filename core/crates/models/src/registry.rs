@@ -1,14 +1,20 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{
+    ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3944, a3945, a3948, a3949, a3959,
+};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 9] = [
     ModelDriver::A3028,
     ModelDriver::A3029,
     ModelDriver::A3062,
+    ModelDriver::A3944,
+    ModelDriver::A3945,
+    ModelDriver::A3948,
     ModelDriver::A3949,
     ModelDriver::A3954,
+    ModelDriver::A3959,
 ];
 
 /// Finds a registered driver by its stable model code.
@@ -35,15 +41,30 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
             _ => Err(ModelError::UnknownModel),
         };
     }
-    match a3062::state_serial(body).and_then(|serial| from_serial(&serial)) {
-        Ok(ModelDriver::A3062) => Ok(ModelDriver::A3062),
-        _ if a3949::state_serial(body)
-            .is_ok_and(|serial| serial.identifies(ModelDriver::A3949)) =>
-        {
-            Ok(ModelDriver::A3949)
-        }
-        Ok(_) => Err(ModelError::UnknownModel),
-        Err(error) => Err(error),
+    if a3062::state_serial(body).and_then(|serial| from_serial(&serial)) == Ok(ModelDriver::A3062) {
+        return Ok(ModelDriver::A3062);
+    }
+    // The dual-state models carry the serial and the model prefix at the same
+    // offsets, so the prefix selects the driver and the layout has to match.
+    if let Some(serial) = body.get(16..32)
+        && let Ok(serial) = RedactedSerial::parse(serial)
+        && let Ok(model) = from_serial(&serial)
+        && has_confirmed_layout(model, body)
+    {
+        return Ok(model);
+    }
+    Err(ModelError::UnknownModel)
+}
+
+/// Whether the body carries the layout documented for a dual-state model.
+fn has_confirmed_layout(model: ModelDriver, body: &[u8]) -> bool {
+    match model {
+        ModelDriver::A3944 => a3944::has_confirmed_layout(body),
+        ModelDriver::A3945 => a3945::has_confirmed_layout(body),
+        ModelDriver::A3948 => a3948::has_confirmed_layout(body),
+        ModelDriver::A3949 => body.len() >= a3949::STATE_LENGTH,
+        ModelDriver::A3959 => a3959::has_confirmed_layout(body),
+        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 | ModelDriver::A3954 => false,
     }
 }
 
