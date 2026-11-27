@@ -68,7 +68,10 @@ mod tests {
                 .expect("accept the gaming-mode command")
                 .wait()
                 .await
-                .expect("confirm the gaming mode");
+                .expect("confirm the gaming mode")
+            else {
+                panic!("expected an applied outcome");
+            };
             assert!(start.elapsed() >= Duration::from_millis(delay_ms));
             assert_eq!(state.gaming_mode, Some(requested));
         }

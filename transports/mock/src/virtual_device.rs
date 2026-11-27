@@ -5,9 +5,10 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3947_EQUALIZER_BANDS, A3947_EQUALIZER_PRESET, A3947_GAMING_MODE,
+    A3947_SOUND_MODE_FIELDS, A3949_GAMING_MODE, A3955_EQUALIZER_BANDS, A3955_EQUALIZER_PRESET,
+    A3955_SOUND_MODE_FIELDS, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND, IDENTITY_COMMAND,
+    IMMERSIVE_EXPERIENCE_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -21,6 +22,8 @@ const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-on.bin"),
 ];
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
+const A3947_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3947-pilot-state.bin");
+const A3955_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3955-pilot-state.bin");
 const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
@@ -120,6 +123,44 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual Liberty 4 NC that answers state reads from the reference capture.
+pub struct VirtualA3947;
+
+/// A virtual P40i that answers state reads from the reference capture.
+pub struct VirtualA3955;
+
+fn extended_link(model: ModelDriver, apply_equalizer: bool) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3947 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(extended_link(ModelDriver::A3947, true))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3955 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(extended_link(ModelDriver::A3955, true))
+    }
+}
 
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
@@ -358,11 +399,26 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if self.model == ModelDriver::A3949
-                && frame.command == GAMING_MODE_COMMAND
+            } else if matches!(self.model, ModelDriver::A3947 | ModelDriver::A3955)
+                && frame.command == EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3947 | ModelDriver::A3949)
+                && frame.command == self.model.gaming_mode_command()
                 && self.apply_gaming_mode(&frame.body)
                 && self.options.acknowledge_writes
-                && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
+                && let Ok(ack) =
+                    encode_frame(Direction::Inbound, self.model.gaming_mode_command(), &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3955
+                && frame.command == IMMERSIVE_EXPERIENCE_COMMAND
+                && self.immersive_experience_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, IMMERSIVE_EXPERIENCE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
             } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
@@ -381,10 +437,22 @@ impl DeviceResponder {
         let [enabled @ 0..=1] = body else {
             return false;
         };
-        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
         let mut state = self.state.lock().expect("virtual state lock");
-        state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+        match self.model {
+            ModelDriver::A3949 => {
+                let captured =
+                    fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
+                state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+            }
+            ModelDriver::A3947 => state[A3947_GAMING_MODE] = *enabled,
+            _ => return false,
+        }
         true
+    }
+
+    /// Accepts a write-only action; its value is not reported in the state.
+    fn immersive_experience_applied(&self, body: &[u8]) -> bool {
+        matches!(body, [_experience @ 0..=2])
     }
 
     fn apply_sound_mode(&self, body: &[u8]) -> bool {
@@ -407,6 +475,21 @@ impl DeviceResponder {
                     return false;
                 };
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
+            ModelDriver::A3947 | ModelDriver::A3955 => {
+                let [_mode @ 0..=2, ..] = body else {
+                    return false;
+                };
+                let fields = if self.model == ModelDriver::A3947 {
+                    A3947_SOUND_MODE_FIELDS
+                } else {
+                    A3955_SOUND_MODE_FIELDS
+                };
+                if body.len() != fields.len() {
+                    return false;
+                }
+                state[fields].copy_from_slice(body);
                 true
             }
             ModelDriver::A3949 => false,
@@ -437,6 +520,21 @@ impl DeviceResponder {
                 };
                 state[A3028_EQUALIZER_PRESET].copy_from_slice(preset);
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3947 | ModelDriver::A3955 => {
+                // The extended write starts with the preset, the music genre and
+                // both channels. The state keeps the same layout.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..24)) else {
+                    return false;
+                };
+                let (preset_range, bands_range) = if self.model == ModelDriver::A3947 {
+                    (A3947_EQUALIZER_PRESET, A3947_EQUALIZER_BANDS)
+                } else {
+                    (A3955_EQUALIZER_PRESET, A3955_EQUALIZER_BANDS)
+                };
+                state[preset_range].copy_from_slice(preset);
+                state[bands_range].copy_from_slice(bands);
                 true
             }
             ModelDriver::A3949 | ModelDriver::A3954 => false,
@@ -541,8 +639,10 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3947 => fixture_body(model, A3947_STATE_REPLY),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
+        ModelDriver::A3955 => fixture_body(model, A3955_STATE_REPLY),
     };
     Arc::new(Mutex::new(bytes))
 }

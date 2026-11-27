@@ -188,6 +188,9 @@ impl SessionHandle {
         if !device.model.capabilities().equalizer_write {
             return Err(DispatchError::UnsupportedEqualizer);
         }
+        if !device.equalizer_write_available() {
+            return Err(DispatchError::UnavailableEqualizer);
+        }
         if !device.model.equalizer_is_writable(setting) {
             return Err(DispatchError::InvalidEqualizer);
         }

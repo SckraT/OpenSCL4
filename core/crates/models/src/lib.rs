@@ -6,7 +6,10 @@ use std::fmt;
 
 mod a3028;
 mod a3062;
+mod a3947;
 mod a3949;
+mod a3955;
+mod equalizer;
 pub mod registry;
 
 pub use a3028::{
@@ -14,7 +17,15 @@ pub use a3028::{
     A3028_SOUND_MODE_FIELDS, AUTO_POWER_OFF_DURATION_COUNT,
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
+pub use a3947::{
+    A3947_AUTO_POWER_OFF, A3947_EQUALIZER_BANDS, A3947_EQUALIZER_PRESET, A3947_GAMING_MODE,
+    A3947_GAMING_MODE_COMMAND, A3947_SOUND_MODE_FIELDS,
+};
 pub use a3949::A3949_GAMING_MODE;
+pub use a3955::{
+    A3955_AUTO_POWER_OFF, A3955_EQUALIZER_BANDS, A3955_EQUALIZER_PRESET, A3955_SOUND_MODE_FIELDS,
+    IMMERSIVE_EXPERIENCE_COMMAND,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -47,10 +58,14 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore Liberty 4 NC.
+    A3947,
     /// Soundcore P20i, P25i and R50i.
     A3949,
     /// Soundcore Liberty 4 Pro.
     A3954,
+    /// Soundcore P40i.
+    A3955,
 }
 
 impl ModelDriver {
@@ -63,10 +78,17 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            gaming_mode_write: matches!(self, Self::A3949),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3947 | Self::A3955
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3947 | Self::A3955
+            ),
+            gaming_mode_write: matches!(self, Self::A3947 | Self::A3949),
             auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            immersive_experience_write: matches!(self, Self::A3955),
         }
     }
 
@@ -76,8 +98,10 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3947 => "A3947",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
+            Self::A3955 => "A3955",
         }
     }
 
@@ -90,7 +114,27 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            Self::A3062 | Self::A3947 | Self::A3949 | Self::A3954 | Self::A3955 => EQUALIZER_BANDS,
+        }
+    }
+
+    /// The wire command for the model's gaming-mode write.
+    pub const fn gaming_mode_command(self) -> [u8; 2] {
+        match self {
+            Self::A3947 => A3947_GAMING_MODE_COMMAND,
+            Self::A3949 => GAMING_MODE_COMMAND,
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3954 | Self::A3955 => {
+                GAMING_MODE_COMMAND
+            }
+        }
+    }
+
+    /// The measured offset of the gaming-mode flag in the model's state.
+    pub const fn gaming_mode_offset(self) -> Option<usize> {
+        match self {
+            Self::A3947 => Some(A3947_GAMING_MODE),
+            Self::A3949 => Some(A3949_GAMING_MODE),
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3954 | Self::A3955 => None,
         }
     }
 
@@ -98,8 +142,15 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3947 | Self::A3949 | Self::A3954 | Self::A3955 => {
+                EQUALIZER_COMMAND
+            }
         }
+    }
+
+    /// Whether the legacy driver gates its equalizer module on the TWS status.
+    pub const fn equalizer_requires_connected_tws(self) -> bool {
+        matches!(self, Self::A3947 | Self::A3955)
     }
 
     /// Whether the shared curve fits this model's wire and write format.
@@ -116,8 +167,10 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
+            Self::A3947 => a3947::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
+            Self::A3955 => a3955::decode_state(body),
         }
     }
 
@@ -126,19 +179,24 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family needs the serial that selects its public code. The
+    /// Liberty 4 NC and P40i decoders already require their model serial.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
+            Self::A3947 => body.len() == a3947::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
+            Self::A3955 => body.len() == a3955::STATE_LENGTH,
         };
         let serial_matches = match self {
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
+            Self::A3947 => a3947::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
+            Self::A3955 => a3955::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3062 | Self::A3949 => true,
         };
         (layout_matches && serial_matches)
@@ -172,6 +230,7 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            tws_connected: None,
         })
     }
 
@@ -179,7 +238,9 @@ impl ModelDriver {
     ///
     /// The write echoes the state's hear-id fields with hear-id disabled, so the
     /// requested curve is the one in effect. The A3028 family writes only its
-    /// eight bands and has no hear-id block.
+    /// eight bands and has no hear-id block. The Liberty 4 NC and P40i write the
+    /// curve twice: as the preset curve and, after the DRC transform, as the
+    /// active curve.
     pub fn equalizer_write_body(
         self,
         setting: EqualizerSetting,
@@ -188,7 +249,9 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::A3947 => a3947::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            Self::A3955 => a3955::equalizer_write_body(setting, state),
         }
     }
 }
@@ -206,6 +269,8 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can accept writes of a value the state does not report.
+    pub immersive_experience_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -213,6 +278,8 @@ enum SoundModeControls {
     A3028([u8; 3]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
+    /// The seven extended sound-mode fields of the Liberty 4 NC and P40i.
+    Extended([u8; 7]),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,9 +311,21 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Whether the two earbuds report a connected TWS link, when the state
+    /// carries the measured status.
+    pub tws_connected: Option<bool>,
 }
 
 impl DeviceState {
+    /// Whether the current state permits an equalizer write.
+    ///
+    /// The measured Liberty 4 NC and P40i equalizer modules are unavailable while
+    /// the earbuds are not both connected. The other models report no TWS status
+    /// for this gate.
+    pub const fn equalizer_write_available(self) -> bool {
+        !self.model.equalizer_requires_connected_tws() || !matches!(self.tws_connected, Some(false))
+    }
+
     /// Returns the reported setting for a model with a measured position scale.
     pub fn sound_mode_setting(self) -> Option<SoundModeSetting> {
         let Some(SoundModeControls::A3954(controls)) = self.sound_mode_controls else {
@@ -284,6 +363,34 @@ impl DeviceState {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3028::sound_mode_write(mode, controls)
+    }
+
+    /// Builds an ambient-mode write from the latest extended sound-mode fields.
+    ///
+    /// The Liberty 4 NC and P40i share the seven-byte `06 81` layout; only the
+    /// ambient-mode byte changes and the other measured controls are echoed.
+    pub fn extended_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 7], ModelError> {
+        if !self.model.capabilities().ambient_sound_mode_write {
+            return Err(ModelError::InvalidSoundModeWrite);
+        }
+        let Some(SoundModeControls::Extended(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        extended_sound_mode_write(mode, controls)
+    }
+
+    /// Builds a write for an action the state does not report.
+    ///
+    /// The P40i immersive experience has no readable field, so the session can
+    /// only confirm the device's acceptance of this one-byte body.
+    pub fn immersive_experience_write(
+        self,
+        experience: ImmersiveExperience,
+    ) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().immersive_experience_write {
+            return Err(ModelError::InvalidImmersiveExperienceWrite);
+        }
+        Ok(a3955::immersive_experience_write(experience))
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.
@@ -357,6 +464,40 @@ pub enum SoundMode {
     Normal,
     /// Airplane mode.
     AirplaneMode,
+}
+
+/// The P40i immersive-experience value.
+///
+/// The legacy driver records the measured write value and notes that the state
+/// update does not report the current experience, so this setting is write-only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ImmersiveExperience {
+    /// Immersive experience disabled.
+    Disabled,
+    /// Gaming mode.
+    GamingMode,
+    /// Movie mode.
+    MovieMode,
+}
+
+impl ImmersiveExperience {
+    /// The one-byte wire value of the immersive experience.
+    pub const fn wire(self) -> u8 {
+        match self {
+            Self::Disabled => 0,
+            Self::GamingMode => 1,
+            Self::MovieMode => 2,
+        }
+    }
+
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Disabled => "Disabled",
+            Self::GamingMode => "GamingMode",
+            Self::MovieMode => "MovieMode",
+        }
+    }
 }
 
 impl SoundMode {
@@ -622,9 +763,52 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not support the write-only immersive experience.
+    #[error("unsupported device immersive experience write")]
+    InvalidImmersiveExperienceWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
+}
+
+/// Decodes the ambient mode of the seven extended sound-mode fields.
+///
+/// The legacy parsers reject values outside the documented sets, making the
+/// whole state unusable. The remaining control bytes are kept verbatim.
+fn decode_extended_sound_mode(model: ModelDriver, body: &[u8]) -> Result<SoundMode, ModelError> {
+    let fields = match model {
+        ModelDriver::A3947 => A3947_SOUND_MODE_FIELDS,
+        ModelDriver::A3955 => A3955_SOUND_MODE_FIELDS,
+        _ => return Err(ModelError::UnknownModel),
+    };
+    let controls: [u8; 7] = body
+        .get(fields)
+        .and_then(|controls| controls.try_into().ok())
+        .ok_or(ModelError::IncompleteState)?;
+    let mode = match controls[0] {
+        0 => SoundMode::NoiseCanceling,
+        1 => SoundMode::Transparency,
+        2 => SoundMode::Normal,
+        _ => return Err(ModelError::UnknownSoundMode),
+    };
+    // The legacy parsers only accept these documented transparency,
+    // noise-canceling and transportation or multi-scene values.
+    if controls[2] > 1 || controls[3] > 2 || controls[6] > 3 {
+        return Err(ModelError::UnknownSoundMode);
+    }
+    Ok(mode)
+}
+
+/// Builds the seven-byte extended sound-mode write body.
+///
+/// Only the ambient-mode byte changes; the other measured controls are echoed.
+fn extended_sound_mode_write(mode: SoundMode, controls: [u8; 7]) -> Result<[u8; 7], ModelError> {
+    if mode == SoundMode::AirplaneMode || controls[2] > 1 || controls[3] > 2 || controls[6] > 3 {
+        return Err(ModelError::InvalidSoundModeWrite);
+    }
+    let mut bytes = controls;
+    bytes[0] = mode.wire();
+    Ok(bytes)
 }
 
 fn a3954_state_serial_is_recognized(body: &[u8]) -> bool {
@@ -725,8 +909,16 @@ mod tests {
                 include_bytes!("../../../data/a3949-pilot-state.bin").as_slice(),
             ),
             (
+                ModelDriver::A3947,
+                include_bytes!("../../../data/a3947-pilot-state.bin").as_slice(),
+            ),
+            (
                 ModelDriver::A3954,
                 include_bytes!("../../../data/a3954-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3955,
+                include_bytes!("../../../data/a3955-pilot-state.bin").as_slice(),
             ),
         ] {
             let body = &fixture[9..fixture.len() - 1];

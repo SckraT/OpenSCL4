@@ -55,6 +55,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,
+        tws_connected: None,
     })
 }
 
