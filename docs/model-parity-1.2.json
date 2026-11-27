@@ -58,10 +58,11 @@
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
         },
         "a3035_battery_alert": {
             "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_battery_alert",
@@ -75,10 +76,11 @@
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
         },
         "a3035_button_configuration": {
             "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_button_configuration",
@@ -91,7 +93,8 @@
                 "lib/src/devices/soundcore/a3035/modules/button_configuration/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
         },
         "a3035_equalizer": {
             "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_equalizer",
@@ -104,7 +107,8 @@
                 "lib/src/devices/soundcore/a3035/modules/equalizer/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_reference_custom_equalizer"
         },
         "a3035_sound_modes": {
             "registration": "lib/src/devices/soundcore/a3035/modules.rs::a3035_sound_modes",
@@ -118,10 +122,11 @@
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_reference_mode_cycle"
         },
         "a3040_button_configuration": {
             "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_button_configuration",
@@ -134,7 +139,8 @@
                 "lib/src/devices/soundcore/a3040/modules/button_configuration/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
         },
         "a3040_equalizer": {
             "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_equalizer",
@@ -147,7 +153,8 @@
                 "lib/src/devices/soundcore/a3040/modules/equalizer/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_reference_custom_equalizer"
         },
         "a3040_low_battery_prompt": {
             "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_low_battery_prompt",
@@ -161,10 +168,11 @@
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
         },
         "a3040_sound_modes": {
             "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_sound_modes",
@@ -178,10 +186,11 @@
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/migration_state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/sound_modes_v2/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_reference_mode_cycle"
         },
         "a3040_voice_prompt": {
             "registration": "lib/src/devices/soundcore/a3040/modules.rs::a3040_voice_prompt",
@@ -195,10 +204,11 @@
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
-            ]
+            ],
+            "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
         },
         "a3062_ambient_sound_mode_voice_prompt": {
             "registration": "lib/src/devices/soundcore/a3062/modules.rs::a3062_ambient_sound_mode_voice_prompt",
@@ -1637,6 +1647,264 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "a3035_sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3035/structures.rs",
+            "command": "0681",
+            "evidence": "legacyFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/data/a3035-state-reference.bin"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "a3035_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3035/packets/outbound.rs",
+            "command": "0387",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "a3035_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3035/packets/outbound.rs",
+            "command": "0481",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "ambient_sound_mode_cycle",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+            "command": "0682",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "limit_high_volume",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs",
+            "command": "2082",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "dual_connections",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+            "command": "0b84",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs",
+            "missing": "Connecting and forgetting specific peer addresses is not transferred; the state read confirms only the enable flag."
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "01ff",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs",
+            "readCommand": "017f",
+            "missing": "The dedicated 01 7F request confirms the flag; no hardware capture of the switch latency exists for this family."
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "auto_power_off",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "auto_play_pause",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound.rs",
+            "command": "0181",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "a3035_battery_alert",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3035/modules/flag.rs",
+            "command": "01af",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3035"
+            ],
+            "operation": "a3035_ambient_sound_mode_voice_prompt",
+            "inbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3035/modules/flag.rs",
+            "command": "01ae",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "a3040_sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3040/structures.rs",
+            "command": "0681",
+            "evidence": "legacyFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/data/a3040-state-reference.bin"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "a3040_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3040/packets/set_equalizer.rs",
+            "command": "0387",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "a3040_button_configuration",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3040/packets/set_button_action.rs",
+            "command": "0481",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "ambient_sound_mode_cycle",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+            "command": "0682",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "limit_high_volume",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs",
+            "command": "2082",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "dual_connections",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+            "command": "0b84",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs",
+            "missing": "Connecting and forgetting specific peer addresses is not transferred; the state read confirms only the enable flag."
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "01ff",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs",
+            "readCommand": "017f",
+            "missing": "The dedicated 01 7F request confirms the flag; no hardware capture of the switch latency exists for this family."
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "auto_power_off",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "a3040_voice_prompt",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3040/modules/flag.rs",
+            "command": "01ae",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
+        },
+        {
+            "models": [
+                "A3040"
+            ],
+            "operation": "a3040_low_battery_prompt",
+            "inbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+            "outbound": "lib/src/devices/soundcore/a3040/modules/flag.rs",
+            "command": "01af",
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3035_a3040.rs"
         }
     ],
     "models": [
@@ -2107,7 +2375,96 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs::A3035StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs::A3035StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "06.87",
+                    "outbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+                    "inbound": "core/data/a3035-state-reference.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/a3035/packets/inbound/state_update.rs",
+                    "inbound": "core/data/a3035-state-reference.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/a3035/structures.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_reference_mode_cycle"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3035/packets/outbound.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_reference_custom_equalizer"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writeButtonConfiguration",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3035/packets/outbound.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writeAmbientSoundModeCycle",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writeLimitHighVolume",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writeDualConnections",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writeLdac",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                },
+                {
+                    "operation": "writePromptFlags",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3035/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3035_additional_settings"
+                }
+            ]
         },
         {
             "code": "A3040",
@@ -2170,7 +2527,96 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3040/packets/state_update.rs::A3040StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3040/packets/state_update.rs::A3040StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "02.34",
+                    "outbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+                    "inbound": "core/data/a3040-state-reference.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/a3040/packets/state_update.rs",
+                    "inbound": "core/data/a3040-state-reference.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "lib/src/devices/soundcore/a3040/structures.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_reference_mode_cycle"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3040/packets/set_equalizer.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_reference_custom_equalizer"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writeButtonConfiguration",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3040/packets/set_button_action.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writeAmbientSoundModeCycle",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_ambient_sound_mode_cycle.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writeLimitHighVolume",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_limit_high_volume.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writeDualConnections",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writeLdac",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                },
+                {
+                    "operation": "writePromptFlags",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3040/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/a3035_a3040.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3035_a3040.rs::confirms_the_a3040_additional_settings"
+                }
+            ]
         },
         {
             "code": "A3062",

@@ -1,6 +1,6 @@
 use crate::{
     BatteryLevels, DeviceState, EqualizerSetting, FirmwareVersion, ModelDriver, ModelError,
-    RedactedSerial, SoundMode, SoundModeControls, battery_percent,
+    RedactedSerial, SettingsSnapshot, SoundMode, SoundModeControls, battery_percent,
 };
 
 const SOUND_MODE: usize = 69;
@@ -55,6 +55,7 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         firmware_device: FirmwareVersion::parse(&body[2..7])?,
         firmware_left: None,
         firmware_right: None,
+        settings: SettingsSnapshot::default(),
     })
 }
 

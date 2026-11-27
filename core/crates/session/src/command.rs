@@ -1,6 +1,11 @@
 use openscl4_models::{
-    AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    AUTO_PLAY_PAUSE_COMMAND, AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT,
+    AmbientSoundModeCycle, AutoPowerOff, AutoPowerOffSetting, BATTERY_PROMPT_COMMAND,
+    BUTTON_CONFIGURATION_COMMAND, ButtonAction, Capabilities, DUAL_CONNECTIONS_COMMAND,
+    EqualizerSetting, GAMING_MODE_COMMAND, LDAC_COMMAND, LDAC_STATE_COMMAND,
+    LIMIT_HIGH_VOLUME_COMMAND, LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND, LOW_BATTERY_PROMPT_COMMAND,
+    LimitHighVolume, ModelError, SOUND_MODE_COMMAND, SOUND_MODE_CYCLE_COMMAND,
+    VOICE_PROMPT_COMMAND, VolumeLimitRefreshRate,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +78,31 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Set the double-press button action.
+    SetButtonDoublePress(Option<ButtonAction>),
+    /// Set which modes the ambient-mode cycle includes.
+    SetAmbientSoundModeCycle(AmbientSoundModeCycle),
+    /// Enable or disable the high-volume limiter and set its limit.
+    SetLimitHighVolume {
+        /// Whether the limiter is enabled.
+        enabled: bool,
+        /// The limit in decibels.
+        db_limit: u8,
+    },
+    /// Set how often the high-volume limiter refreshes its level reading.
+    SetLimitHighVolumeRefreshRate(VolumeLimitRefreshRate),
+    /// Enable or disable simultaneous connections to two devices.
+    SetDualConnections(bool),
+    /// Enable or disable LDAC.
+    SetLdac(bool),
+    /// Enable or disable auto play/pause.
+    SetAutoPlayPause(bool),
+    /// Enable or disable the battery notice prompt.
+    SetBatteryAlert(bool),
+    /// Enable or disable the voice prompt.
+    SetVoicePrompt(bool),
+    /// Enable or disable the low battery prompt.
+    SetLowBatteryPrompt(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -97,6 +127,33 @@ impl SessionCommand {
             }
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
+            }
+            Self::SetButtonDoublePress(_) if !capabilities.button_configuration_write => {
+                Err(ModelError::InvalidButtonConfigurationWrite)
+            }
+            Self::SetAmbientSoundModeCycle(_) if !capabilities.ambient_sound_mode_cycle_write => {
+                Err(ModelError::InvalidAmbientSoundModeCycleWrite)
+            }
+            Self::SetLimitHighVolume { .. } | Self::SetLimitHighVolumeRefreshRate(_)
+                if !capabilities.limit_high_volume_write =>
+            {
+                Err(ModelError::InvalidLimitHighVolumeWrite)
+            }
+            Self::SetDualConnections(_) if !capabilities.dual_connections_write => {
+                Err(ModelError::InvalidDualConnectionsWrite)
+            }
+            Self::SetLdac(_) if !capabilities.ldac_write => Err(ModelError::InvalidLdacWrite),
+            Self::SetAutoPlayPause(_) if !capabilities.auto_play_pause_write => {
+                Err(ModelError::InvalidAutoPlayPauseWrite)
+            }
+            Self::SetBatteryAlert(_) if !capabilities.battery_alert_write => {
+                Err(ModelError::InvalidBatteryAlertWrite)
+            }
+            Self::SetVoicePrompt(_) if !capabilities.voice_prompt_write => {
+                Err(ModelError::InvalidVoicePromptWrite)
+            }
+            Self::SetLowBatteryPrompt(_) if !capabilities.low_battery_prompt_write => {
+                Err(ModelError::InvalidLowBatteryPromptWrite)
             }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
@@ -124,6 +181,20 @@ pub struct ResolvedWrite {
     pub body: Vec<u8>,
     /// The value a read-back must report for an auto power off write.
     pub expected_auto_power_off: Option<AutoPowerOff>,
+    /// The value a read-back must report for a high-volume limiter write.
+    pub expected_limit_high_volume: Option<LimitHighVolume>,
+}
+
+/// The confirmation path of a write.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Confirmation {
+    /// The device acknowledges the write with an empty response, then a state
+    /// response is read back.
+    Acknowledged,
+    /// The write has no acknowledgement; a state response is read back directly.
+    StateRead,
+    /// The write has no acknowledgement; the dedicated request confirms the flag.
+    Targeted([u8; 2]),
 }
 
 /// One in-flight device write: a discrete command, one field of a quick preset,
@@ -138,6 +209,31 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A double-press button action change.
+    ButtonConfiguration(Option<ButtonAction>),
+    /// An ambient sound mode cycle change.
+    AmbientSoundModeCycle(AmbientSoundModeCycle),
+    /// A high-volume limiter enable flag and limit change.
+    LimitHighVolume {
+        /// Whether the limiter is enabled.
+        enabled: bool,
+        /// The limit in decibels.
+        db_limit: u8,
+    },
+    /// A high-volume limiter refresh-rate change.
+    LimitHighVolumeRefreshRate(VolumeLimitRefreshRate),
+    /// A dual-connections flag change.
+    DualConnections(bool),
+    /// An LDAC flag change.
+    Ldac(bool),
+    /// An auto play/pause flag change.
+    AutoPlayPause(bool),
+    /// A battery notice flag change.
+    BatteryAlert(bool),
+    /// A voice prompt flag change.
+    VoicePrompt(bool),
+    /// A low battery prompt flag change.
+    LowBatteryPrompt(bool),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,14 +245,48 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::ButtonConfiguration(_) => BUTTON_CONFIGURATION_COMMAND,
+            Self::AmbientSoundModeCycle(_) => SOUND_MODE_CYCLE_COMMAND,
+            Self::LimitHighVolume { .. } => LIMIT_HIGH_VOLUME_COMMAND,
+            Self::LimitHighVolumeRefreshRate(_) => LIMIT_HIGH_VOLUME_REFRESH_RATE_COMMAND,
+            Self::DualConnections(_) => DUAL_CONNECTIONS_COMMAND,
+            Self::Ldac(_) => LDAC_COMMAND,
+            Self::AutoPlayPause(_) => AUTO_PLAY_PAUSE_COMMAND,
+            Self::BatteryAlert(_) => BATTERY_PROMPT_COMMAND,
+            Self::VoicePrompt(_) => VOICE_PROMPT_COMMAND,
+            Self::LowBatteryPrompt(_) => LOW_BATTERY_PROMPT_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
+        }
+    }
+
+    /// How the device reports the write's result.
+    pub(crate) fn confirmation(self) -> Confirmation {
+        match self {
+            // The legacy driver writes these flags without waiting for a response
+            // and confirms the LDAC flag with the dedicated `01 7F` request.
+            Self::Ldac(_) => Confirmation::Targeted(LDAC_STATE_COMMAND),
+            Self::AutoPlayPause(_)
+            | Self::BatteryAlert(_)
+            | Self::VoicePrompt(_)
+            | Self::LowBatteryPrompt(_) => Confirmation::StateRead,
+            _ => Confirmation::Acknowledged,
+        }
+    }
+
+    /// Whether the write's body is the enabled flag alone, sent without a state
+    /// echo; used for the targeted LDAC confirmation.
+    pub(crate) fn targeted_expected(self) -> Option<bool> {
+        match self {
+            Self::Ldac(enabled) => Some(enabled),
+            _ => None,
         }
     }
 
     /// Builds the write body from a fresh state response and its raw bytes.
     ///
     /// The equalizer write echoes the state's hear-id fields, so it needs the
-    /// raw response next to the decoded one.
+    /// raw response next to the decoded one. The high-volume limiter resolves
+    /// the field it leaves unchanged from the same response.
     pub(crate) fn write_body(
         self,
         state: DeviceState,
@@ -165,6 +295,7 @@ impl WriteTarget {
         let mut resolved = ResolvedWrite {
             body: Vec::new(),
             expected_auto_power_off: None,
+            expected_limit_high_volume: None,
         };
         resolved.body = match self {
             Self::SoundMode(setting) => state.sound_mode_write(setting)?.bytes().to_vec(),
@@ -180,6 +311,81 @@ impl WriteTarget {
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
+            Self::ButtonConfiguration(action) => {
+                if state.settings.button_double_press.is_none() {
+                    return Err(ModelError::InvalidButtonConfigurationWrite);
+                }
+                vec![0, 0, action.map_or(0x0f, ButtonAction::wire)]
+            }
+            Self::AmbientSoundModeCycle(cycle) => {
+                if state.settings.ambient_sound_mode_cycle.is_none() {
+                    return Err(ModelError::InvalidAmbientSoundModeCycleWrite);
+                }
+                vec![cycle.encode()]
+            }
+            Self::LimitHighVolume { enabled, db_limit } => {
+                let current = state
+                    .settings
+                    .limit_high_volume
+                    .ok_or(ModelError::InvalidLimitHighVolumeWrite)?;
+                if !(75..=100).contains(&db_limit) || db_limit % 5 != 0 {
+                    return Err(ModelError::InvalidLimitHighVolumeWrite);
+                }
+                resolved.expected_limit_high_volume = Some(LimitHighVolume {
+                    enabled,
+                    db_limit,
+                    refresh_rate: current.refresh_rate,
+                });
+                vec![u8::from(enabled), db_limit]
+            }
+            Self::LimitHighVolumeRefreshRate(refresh_rate) => {
+                let current = state
+                    .settings
+                    .limit_high_volume
+                    .ok_or(ModelError::InvalidLimitHighVolumeWrite)?;
+                resolved.expected_limit_high_volume = Some(LimitHighVolume {
+                    enabled: current.enabled,
+                    db_limit: current.db_limit,
+                    refresh_rate,
+                });
+                vec![refresh_rate.encode()]
+            }
+            Self::DualConnections(enabled) => {
+                if state.settings.dual_connections.is_none() {
+                    return Err(ModelError::InvalidDualConnectionsWrite);
+                }
+                vec![u8::from(enabled)]
+            }
+            Self::Ldac(enabled) => {
+                if state.settings.ldac.is_none() {
+                    return Err(ModelError::InvalidLdacWrite);
+                }
+                vec![u8::from(enabled)]
+            }
+            Self::AutoPlayPause(enabled) => {
+                if state.settings.auto_play_pause.is_none() {
+                    return Err(ModelError::InvalidAutoPlayPauseWrite);
+                }
+                vec![u8::from(enabled)]
+            }
+            Self::BatteryAlert(enabled) => {
+                if state.settings.battery_alert.is_none() {
+                    return Err(ModelError::InvalidBatteryAlertWrite);
+                }
+                vec![u8::from(enabled)]
+            }
+            Self::VoicePrompt(enabled) => {
+                if state.settings.voice_prompt.is_none() {
+                    return Err(ModelError::InvalidVoicePromptWrite);
+                }
+                vec![u8::from(enabled)]
+            }
+            Self::LowBatteryPrompt(enabled) => {
+                if state.settings.low_battery_prompt.is_none() {
+                    return Err(ModelError::InvalidLowBatteryPromptWrite);
+                }
+                vec![u8::from(enabled)]
+            }
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
         Ok(resolved)
@@ -190,6 +396,7 @@ impl WriteTarget {
         self,
         state: DeviceState,
         expected_auto_power_off: Option<AutoPowerOff>,
+        expected_limit_high_volume: Option<LimitHighVolume>,
     ) -> bool {
         match self {
             Self::SoundMode(setting) => state.sound_mode_setting() == Some(setting),
@@ -198,6 +405,20 @@ impl WriteTarget {
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
+            Self::ButtonConfiguration(action) => state.settings.button_double_press == action,
+            Self::AmbientSoundModeCycle(cycle) => {
+                state.settings.ambient_sound_mode_cycle == Some(cycle)
+            }
+            Self::LimitHighVolume { .. } | Self::LimitHighVolumeRefreshRate(_) => {
+                expected_limit_high_volume
+                    .is_some_and(|expected| state.settings.limit_high_volume == Some(expected))
+            }
+            Self::DualConnections(enabled) => state.settings.dual_connections == Some(enabled),
+            Self::Ldac(enabled) => state.settings.ldac == Some(enabled),
+            Self::AutoPlayPause(enabled) => state.settings.auto_play_pause == Some(enabled),
+            Self::BatteryAlert(enabled) => state.settings.battery_alert == Some(enabled),
+            Self::VoicePrompt(enabled) => state.settings.voice_prompt == Some(enabled),
+            Self::LowBatteryPrompt(enabled) => state.settings.low_battery_prompt == Some(enabled),
         }
     }
 }
@@ -289,6 +510,68 @@ pub enum CommandError {
         requested: AutoPowerOffSetting,
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
+    },
+    /// The read-back did not match the requested high-volume limiter value.
+    #[error(
+        "high-volume limiter did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    LimitHighVolumeMismatch {
+        /// The value requested by the command.
+        requested: Option<LimitHighVolume>,
+        /// The value reported by the device, if it reported one.
+        observed: Option<LimitHighVolume>,
+    },
+    /// The read-back did not match the requested double-press button action.
+    #[error(
+        "button configuration did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    ButtonConfigurationMismatch {
+        /// The action requested by the command.
+        requested: Option<ButtonAction>,
+        /// The action reported by the device, if it reported one.
+        observed: Option<ButtonAction>,
+    },
+    /// The read-back did not match the requested ambient sound mode cycle.
+    #[error(
+        "ambient sound mode cycle did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    AmbientSoundModeCycleMismatch {
+        /// The flags requested by the command.
+        requested: AmbientSoundModeCycle,
+        /// The flags reported by the device, if it reported them.
+        observed: Option<AmbientSoundModeCycle>,
+    },
+    /// The read-back did not match the requested dual-connections flag.
+    #[error(
+        "dual connections did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    DualConnectionsMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported one.
+        observed: Option<bool>,
+    },
+    /// The read-back did not match the requested flag.
+    #[error(
+        "{flag} did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    FlagMismatch {
+        /// The stable flag name.
+        flag: &'static str,
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported one.
+        observed: Option<bool>,
+    },
+    /// The dedicated LDAC request did not report the requested flag.
+    #[error(
+        "LDAC did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    LdacMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The last flag reported by the dedicated request.
+        observed: Option<bool>,
     },
     /// The read-back did not match the requested mode or position.
     #[error(
