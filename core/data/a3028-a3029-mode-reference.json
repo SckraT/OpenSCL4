@@ -1,6 +1,8 @@
 {
     "legacyRevision": "7e90bb787a6f7a4f925f1c10a98f48f4b5006413",
     "evidence": "legacyFixture",
+    "sourceModelPrefix": "A3029",
+    "derivation": "One legacy A3028 driver test supplies a state with an A3029 serial prefix. Both published variants replace the full serial with a synthetic model-specific value and recompute the checksum. They exercise the shared layout in virtual tests.",
     "sources": {
         "state": "lib/src/devices/soundcore/a3028.rs::example_state_update_packet",
         "outboundState": "lib/src/devices/soundcore/common/packet/outbound/request_state.rs",
