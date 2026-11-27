@@ -19,8 +19,9 @@ pub use machine::{
     ConnectionState, ReconnectPolicy, SessionView, UnidentifiedReason, UnidentifiedState,
 };
 pub use openscl4_models::{
-    AutoPowerOff, AutoPowerOffSetting, DeviceState, EqualizerSetting, ModelDriver, SoundMode,
-    SoundModeSetting, registry,
+    A3949_DISABLED_ACTION, A3949Button, AutoPowerOff, AutoPowerOffSetting, ButtonConfiguration,
+    ButtonStatus, DeviceState, EqualizerSetting, HostDevice, ModelDriver, SoundMode,
+    SoundModeSetting, TwsStatus, registry,
 };
 use openscl4_protocol::{DecodeError, EncodeError};
 use openscl4_transport::TransportError;

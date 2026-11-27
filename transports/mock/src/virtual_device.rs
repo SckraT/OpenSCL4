@@ -5,7 +5,10 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
+    A3062_SOUND_MODE_FIELDS, A3949_BUTTON_COMMAND, A3949_BUTTONS, A3949_EQUALIZER_BANDS,
+    A3949_EQUALIZER_COMMAND, A3949_EQUALIZER_PRESET, A3949_EQUALIZER_WRITE_BANDS,
+    A3949_EQUALIZER_WRITE_PRESET, A3949_GAMING_MODE, A3949_RESET_BUTTONS_COMMAND, A3949_TOUCH_TONE,
+    A3949_TOUCH_TONE_COMMAND, A3949Button, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
     GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
     SoundModeWrite,
 };
@@ -201,7 +204,7 @@ impl TransportProvider for VirtualA3949 {
             model,
             ResponderOptions {
                 acknowledge_writes: true,
-                apply_equalizer: false,
+                apply_equalizer: true,
             },
             initial_state(model),
         )))
@@ -365,6 +368,36 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == A3949_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3949_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == A3949_TOUCH_TONE_COMMAND
+                && self.apply_touch_tone(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3949_TOUCH_TONE_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == A3949_BUTTON_COMMAND
+                && self.apply_button_action(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3949_BUTTON_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3949
+                && frame.command == A3949_RESET_BUTTONS_COMMAND
+                && frame.body.is_empty()
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3949_RESET_BUTTONS_COMMAND, &[])
+            {
+                // The reset result has no measured post-action state; the
+                // acknowledgement is the documented confirmation.
+                replies.extend_from_slice(&ack);
             } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
                 && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
@@ -439,8 +472,50 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3949 | ModelDriver::A3954 => false,
+            ModelDriver::A3949 => {
+                // The write is the preset, the ten raw bands, and the DRC bytes.
+                let (Some(preset), Some(bands)) = (
+                    body.get(A3949_EQUALIZER_WRITE_PRESET.clone()),
+                    body.get(A3949_EQUALIZER_WRITE_BANDS.start..A3949_EQUALIZER_WRITE_BANDS.end),
+                ) else {
+                    return false;
+                };
+                state[A3949_EQUALIZER_PRESET.clone()].copy_from_slice(preset);
+                state[A3949_EQUALIZER_BANDS.start..A3949_EQUALIZER_BANDS.start + 10]
+                    .copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3954 => false,
         }
+    }
+
+    /// Applies a touch-tone write to the measured flag.
+    fn apply_touch_tone(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3949_TOUCH_TONE] = *enabled;
+        true
+    }
+
+    /// Applies a single-button action to the nibble in effect for the TWS status.
+    fn apply_button_action(&self, body: &[u8]) -> bool {
+        let [side, button_id, action @ 0..=0x0f] = body else {
+            return false;
+        };
+        let Some(button) = A3949Button::from_wire(*side, *button_id) else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        let action_index = A3949_BUTTONS.start + button.index() * 2 + 1;
+        let connected = state[1] == 1;
+        state[action_index] = if connected {
+            (state[action_index] & 0xf0) | action
+        } else {
+            (state[action_index] & 0x0f) | (action << 4)
+        };
+        true
     }
 
     /// Applies an auto power off write only when the state carries extra fields.

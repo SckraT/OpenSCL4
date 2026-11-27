@@ -358,6 +358,7 @@ impl SessionMachine {
                 if after_command >= self.last_eq_preset
                     && let ConnectionState::Ready(device) = self.view.connection
                     && device.model.equalizer_is_writable(setting)
+                    && device.model.equalizer_write_available(&device)
                 {
                     // Rapid values coalesce: the latest curve keeps the interval
                     // anchored at the first value.
@@ -413,10 +414,18 @@ impl SessionMachine {
             if let Err(error) = command.command.validate(device.model) {
                 return Effect::Complete(command.id, Err(error.into()));
             }
+            if command.command.unavailable(device) {
+                return Effect::Complete(command.id, Err(CommandError::Unavailable));
+            }
             let (target, preset) = match command.command {
                 SessionCommand::SetSoundMode(setting) => (WriteTarget::SoundMode(setting), None),
                 SessionCommand::SetAmbientSoundMode(mode) => (WriteTarget::AmbientMode(mode), None),
                 SessionCommand::SetGamingMode(enabled) => (WriteTarget::GamingMode(enabled), None),
+                SessionCommand::SetTouchTone(enabled) => (WriteTarget::TouchTone(enabled), None),
+                SessionCommand::SetButtonAction { button, action } => {
+                    (WriteTarget::ButtonAction { button, action }, None)
+                }
+                SessionCommand::ResetButtons => (WriteTarget::ResetButtons, None),
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
@@ -680,6 +689,18 @@ impl SessionMachine {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
+        if write.target.confirms_with_ack() {
+            // The action has no measured post-action state: the device
+            // acknowledgement confirmed receipt and this read refreshed the
+            // snapshot without claiming a specific value.
+            self.transition(ConnectionState::Ready(state));
+            self.active = None;
+            return match write.id {
+                Some(id) => Effect::Complete(id, Ok(CommandOutcome::Accepted(state))),
+                None => self.continue_live_eq(now),
+            };
+        }
+
         if write.target.matches(state, write.expected_auto_power_off) {
             return self.finish_write(now, write, state);
         }
@@ -924,6 +945,25 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.auto_power_off,
         },
+        WriteTarget::TouchTone(requested) => CommandError::TouchToneMismatch {
+            requested,
+            observed: state.touch_tone,
+        },
+        WriteTarget::ButtonAction { button, action } => {
+            let observed = state
+                .buttons
+                .zip(state.tws)
+                .map(|(buttons, tws)| buttons.status(button).action(tws))
+                .and_then(|action| {
+                    (action != openscl4_models::A3949_DISABLED_ACTION).then_some(action)
+                });
+            CommandError::ButtonMismatch {
+                button,
+                requested: action,
+                observed,
+            }
+        }
+        WriteTarget::ResetButtons => CommandError::Unavailable,
     }
 }
 

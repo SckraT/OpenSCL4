@@ -61,6 +61,11 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.
+Add `--cycle-settings` to switch and restore the equalizer preset, the left
+single-press action and the touch tone, then send the reset-buttons action. The
+virtual transport applies each write to the captured state; the equalizer,
+touch-tone and button results require a matching read-back, and the reset action
+is reported as accepted after the device acknowledgement.
 
 ```sh
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3949
