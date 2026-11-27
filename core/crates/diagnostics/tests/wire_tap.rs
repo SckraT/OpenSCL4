@@ -91,6 +91,28 @@ mod tests {
     }
 
     #[test]
+    fn omits_the_a3062_peer_capture_with_its_addresses() {
+        // The masked capture carries two peer addresses and names. The peer
+        // list layout is not in the review's sanitized set, so only its
+        // metadata is retained and the payload is never exported.
+        let mut tap = WireTap::new(NonZeroUsize::new(2).unwrap());
+        tap.set_enabled(true);
+        let peers = decode(include_bytes!("../../../data/a3062-dual-connections.bin"));
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3062), &peers);
+
+        let record = tap.records().next().unwrap();
+        assert_eq!(record.metadata.command, Some([0x0b, 0x01]));
+        assert_eq!(record.metadata.outcome, CaptureOutcome::MetadataOnly);
+        assert!(
+            record.frame_bytes().is_none(),
+            "peer addresses are never exported"
+        );
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("Desktop"));
+        assert!(!debug.contains("Phone model"));
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

@@ -11,7 +11,7 @@ mod tests {
     use std::collections::VecDeque;
 
     use bytes::Bytes;
-    use openscl4_models::{IDENTITY_COMMAND, STATE_COMMAND};
+    use openscl4_models::{IDENTITY_COMMAND, PEERS_COMMAND, STATE_COMMAND};
     use openscl4_protocol::{Direction, encode_frame};
     use openscl4_session::{
         CommandOutcome, ConnectionState, EqualizerSetting, QuickPresetValues, SessionCommand,
@@ -25,6 +25,7 @@ mod tests {
     const SIGNATURE_STATE: &[u8] = include_bytes!("../../../data/a3062-eq-before.bin");
     const CUSTOM_STATE: &[u8] = include_bytes!("../../../data/a3062-eq-custom.bin");
     const CUSTOM_WRITE: &[u8] = include_bytes!("../../../data/a3062-eq-write.bin");
+    const PEERS_STATE: &[u8] = include_bytes!("../../../data/a3062-dual-connections.bin");
     const SIGNATURE: EqualizerSetting = EqualizerSetting {
         preset_id: 0,
         volume_adjustments: [0, 0, 0, 0, 0, 0, 0, 0, 0, -120],
@@ -38,12 +39,14 @@ mod tests {
     async fn confirms_custom_and_restored_eq_from_captured_replies() {
         let state_request = encode_frame(Direction::Outbound, STATE_COMMAND, &[]).unwrap();
         let identity_request = encode_frame(Direction::Outbound, IDENTITY_COMMAND, &[]).unwrap();
+        let peers_request = encode_frame(Direction::Outbound, PEERS_COMMAND, &[]).unwrap();
         let replay = Replay(VecDeque::from([
             (identity_request, None),
             (
                 state_request.clone(),
                 Some(Bytes::from_static(SIGNATURE_STATE)),
             ),
+            (peers_request, Some(Bytes::from_static(PEERS_STATE))),
             (
                 state_request.clone(),
                 Some(Bytes::from_static(SIGNATURE_STATE)),

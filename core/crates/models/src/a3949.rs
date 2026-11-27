@@ -1,6 +1,6 @@
 use crate::{
     BatteryLevels, DeviceState, FirmwareVersion, ModelDriver, ModelError, RedactedSerial,
-    battery_percent,
+    SettingsSnapshot, battery_percent,
 };
 
 /// Body length of the measured A3949 pilot state.
@@ -41,5 +41,6 @@ pub fn decode_state(body: &[u8]) -> Result<DeviceState, ModelError> {
         firmware_device: None,
         firmware_left: FirmwareVersion::parse(&body[6..11])?,
         firmware_right: FirmwareVersion::parse(&body[11..16])?,
+        settings: SettingsSnapshot::default(),
     })
 }

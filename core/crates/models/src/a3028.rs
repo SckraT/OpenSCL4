@@ -1,6 +1,6 @@
 use crate::{
     AutoPowerOff, BatteryLevels, DeviceState, EqualizerSetting, FirmwareVersion, ModelDriver,
-    ModelError, RedactedSerial, SoundMode, SoundModeControls, battery_percent,
+    ModelError, RedactedSerial, SettingsSnapshot, SoundMode, SoundModeControls, battery_percent,
 };
 
 /// Body length of the measured A3028/A3029 state without extra fields.
@@ -85,6 +85,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,
+        settings: SettingsSnapshot::default(),
     })
 }
 

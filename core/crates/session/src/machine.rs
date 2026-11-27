@@ -1,15 +1,15 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
-    STATE_COMMAND, registry,
+    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, LimitHighVolume, ModelDriver,
+    ModelError, PEERS_COMMAND, STATE_COMMAND, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
 
 use crate::{
     CommandError, CommandId, CommandOutcome, CommandResult, IoStage, PresetFieldMismatch,
-    QuickPresetValues, SessionCommand, SessionError, WriteTarget,
+    QuickPresetValues, SessionCommand, SessionError, WriteTarget, command::Confirmation,
 };
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -23,6 +23,9 @@ const RETRY_INTERVAL: Duration = Duration::from_millis(250);
 /// The interval a live-equalizer value waits between writes, inside the
 /// 50–80 ms window agreed with the Sans-IO session contract.
 const EQ_WRITE_INTERVAL: Duration = Duration::from_millis(80);
+/// The window in which the dedicated LDAC request confirms a flag write. The
+/// legacy driver waits up to fifteen seconds for the switch to settle.
+const TARGETED_CONFIRMATION_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Chooses which layer manages recovery after losing a confirmed connection.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,7 +90,7 @@ pub enum UnidentifiedReason {
 }
 
 /// An immutable session snapshot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionView {
     /// Increases when a new state is published.
     pub revision: u64,
@@ -97,6 +100,9 @@ pub struct SessionView {
     pub connection: ConnectionState,
     /// The most recent confirmed device snapshot, retained through link loss.
     pub last_confirmed: Option<DeviceState>,
+    /// The remembered multipoint peers read for this connection, when the
+    /// model reports them.
+    pub peers: Option<Vec<openscl4_models::PeerDevice>>,
 }
 
 pub struct QueuedCommand {
@@ -175,6 +181,12 @@ impl Effect {
 enum WriteStage {
     ReadCurrent,
     Ack,
+    /// The dedicated flag request has been sent and its reply is awaited.
+    TargetedRead {
+        deadline: Option<Duration>,
+    },
+    /// The flag is confirmed; a fresh state response supplies the snapshot.
+    TargetedSnapshot,
     ReadBack {
         deadline: Option<Duration>,
         observed: Option<DeviceState>,
@@ -183,6 +195,12 @@ enum WriteStage {
         deadline: Duration,
         observed: DeviceState,
     },
+}
+
+/// A peer list read in progress for the state that is waiting for it.
+struct PendingPeers {
+    state: DeviceState,
+    devices: Vec<openscl4_models::PeerDevice>,
 }
 
 /// A deferred live-equalizer curve waiting for its write interval.
@@ -211,6 +229,10 @@ struct ActiveWrite {
     may_have_written: bool,
     /// The value a read-back must report, resolved from the fresh state.
     expected_auto_power_off: Option<AutoPowerOff>,
+    /// The high-volume limiter value a read-back must report.
+    expected_limit_high_volume: Option<LimitHighVolume>,
+    /// The last flag value a targeted request reported.
+    targeted_observed: Option<bool>,
 }
 
 impl ActiveWrite {
@@ -239,6 +261,7 @@ pub struct SessionMachine {
     receive_cutoff: u64,
     active: Option<ActiveWrite>,
     pending_eq: Option<PendingEq>,
+    pending_peers: Option<PendingPeers>,
     last_eq_preset: CommandId,
     queue: VecDeque<QueuedCommand>,
 }
@@ -251,6 +274,7 @@ impl SessionMachine {
                 generation: 0,
                 connection: ConnectionState::Connecting,
                 last_confirmed: None,
+                peers: None,
             },
             reconnect_policy,
             recovery: None,
@@ -258,26 +282,26 @@ impl SessionMachine {
             receive_cutoff: 0,
             active: None,
             pending_eq: None,
+            pending_peers: None,
             last_eq_preset: CommandId(0),
             queue: VecDeque::new(),
         }
     }
 
     pub fn view(&self) -> SessionView {
-        match self.recovery {
-            Some(recovery) => SessionView {
-                connection: ConnectionState::Reconnecting {
-                    last_confirmed: recovery.last_confirmed,
-                    reason: recovery.reason,
-                },
-                ..self.view
-            },
-            None => self.view,
+        let mut view = self.view.clone();
+        if let Some(recovery) = self.recovery {
+            view.connection = ConnectionState::Reconnecting {
+                last_confirmed: recovery.last_confirmed,
+                reason: recovery.reason,
+            };
         }
+        view
     }
 
     pub fn open(&mut self, now: Duration) -> Effect {
         self.view.generation += 1;
+        self.pending_peers = None;
         self.transition(ConnectionState::Connecting);
         self.limit_to_recovery(Effect::Open {
             deadline: now + CONNECT_TIMEOUT,
@@ -309,6 +333,39 @@ impl SessionMachine {
             Input::RequestSent { receive_cutoff } => {
                 self.mark_write_attempt();
                 self.receive_cutoff = receive_cutoff;
+                if let Some(write) = self.active
+                    && write.stage == WriteStage::Ack
+                {
+                    match write.target.confirmation() {
+                        Confirmation::Acknowledged => {}
+                        Confirmation::StateRead => {
+                            let effect = self.read_back(now, write, None, None);
+                            return self.limit_to_recovery(effect);
+                        }
+                        Confirmation::Targeted(command) => {
+                            self.active = Some(ActiveWrite {
+                                stage: WriteStage::TargetedRead { deadline: None },
+                                ..write
+                            });
+                            let effect = Effect::read(now, command);
+                            return self.limit_to_recovery(effect);
+                        }
+                    }
+                }
+                if let Some(write) = self.active
+                    && let WriteStage::TargetedRead { deadline } = write.stage
+                {
+                    let overall = deadline.unwrap_or(now + TARGETED_CONFIRMATION_TIMEOUT);
+                    self.active = Some(ActiveWrite {
+                        stage: WriteStage::TargetedRead {
+                            deadline: Some(overall),
+                        },
+                        ..write
+                    });
+                    self.reply_deadline = Some((now + REPLY_TIMEOUT).min(overall));
+                    let effect = self.next_effect(now);
+                    return self.limit_to_recovery(effect);
+                }
                 let timeout = now + REPLY_TIMEOUT;
                 let deadline = match &mut self.active {
                     Some(ActiveWrite {
@@ -420,6 +477,30 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetButtonDoublePress(action) => {
+                    (WriteTarget::ButtonConfiguration(action), None)
+                }
+                SessionCommand::SetAmbientSoundModeCycle(cycle) => {
+                    (WriteTarget::AmbientSoundModeCycle(cycle), None)
+                }
+                SessionCommand::SetLimitHighVolume { enabled, db_limit } => {
+                    (WriteTarget::LimitHighVolume { enabled, db_limit }, None)
+                }
+                SessionCommand::SetLimitHighVolumeRefreshRate(refresh_rate) => {
+                    (WriteTarget::LimitHighVolumeRefreshRate(refresh_rate), None)
+                }
+                SessionCommand::SetDualConnections(enabled) => {
+                    (WriteTarget::DualConnections(enabled), None)
+                }
+                SessionCommand::SetLdac(enabled) => (WriteTarget::Ldac(enabled), None),
+                SessionCommand::SetLowBatteryPrompt(enabled) => {
+                    (WriteTarget::LowBatteryPrompt(enabled), None)
+                }
+                SessionCommand::SetDolbyAudio(enabled) => (WriteTarget::DolbyAudio(enabled), None),
+                SessionCommand::SetSideTone(enabled) => (WriteTarget::SideTone(enabled), None),
+                SessionCommand::SetVoicePrompt(enabled) => {
+                    (WriteTarget::VoicePrompt(enabled), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -437,6 +518,8 @@ impl SessionMachine {
                 stage: WriteStage::ReadCurrent,
                 may_have_written: false,
                 expected_auto_power_off: None,
+                expected_limit_high_volume: None,
+                targeted_observed: None,
             });
             return Effect::read(now, device.model.state_command());
         }
@@ -471,6 +554,8 @@ impl SessionMachine {
                     stage: WriteStage::ReadCurrent,
                     may_have_written: false,
                     expected_auto_power_off: None,
+                    expected_limit_high_volume: None,
+                    targeted_observed: None,
                 });
                 return Effect::read(now, device.model.state_command());
             }
@@ -480,6 +565,18 @@ impl SessionMachine {
         if let Some(write) = self.active {
             match write.stage {
                 WriteStage::Ack => return self.read_back(now, write, None, None),
+                WriteStage::TargetedRead {
+                    deadline: Some(deadline),
+                } => {
+                    if now >= deadline {
+                        return self.reject_targeted(write);
+                    }
+                    let Confirmation::Targeted(command) = write.target.confirmation() else {
+                        return self.next_effect(now);
+                    };
+                    self.reply_deadline = None;
+                    return self.limit_to_recovery(Effect::read(now, command));
+                }
                 WriteStage::WaitForReadBack { deadline, observed } if now < deadline => {
                     return self.read_back(now, write, Some(deadline), Some(observed));
                 }
@@ -525,6 +622,14 @@ impl SessionMachine {
                 {
                     self.read_back(now, write, None, None)
                 }
+                WriteStage::TargetedRead { .. }
+                    if write.target.confirmation() == Confirmation::Targeted(frame.command) =>
+                {
+                    self.observe_targeted(now, write, &frame.body)
+                }
+                WriteStage::TargetedSnapshot if frame.command == write.model.state_command() => {
+                    self.finish_targeted(now, write, &frame.body)
+                }
                 WriteStage::ReadBack {
                     deadline: Some(deadline),
                     ..
@@ -533,6 +638,14 @@ impl SessionMachine {
                 }
                 _ => self.next_effect(now),
             };
+        }
+
+        if let Some(pending) = self.pending_peers.take() {
+            if frame.command == PEERS_COMMAND && first_read > self.receive_cutoff {
+                return self.observe_peers(now, pending, &frame.body);
+            }
+            self.pending_peers = Some(pending);
+            return self.next_effect(now);
         }
 
         match self.view.connection {
@@ -588,6 +701,14 @@ impl SessionMachine {
     fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
         match model.decode_confirmed_state(body) {
             Some(state) => {
+                if model.capabilities().peer_reads && state.settings.dual_connections == Some(true)
+                {
+                    self.pending_peers = Some(PendingPeers {
+                        state,
+                        devices: Vec::new(),
+                    });
+                    return Effect::read(now, PEERS_COMMAND);
+                }
                 self.recovery = None;
                 self.transition(ConnectionState::Ready(state));
                 self.next_effect(now)
@@ -602,10 +723,37 @@ impl SessionMachine {
         }
     }
 
+    /// Collects one `0B 01` page and publishes the state once the last page
+    /// arrived. A malformed page is ignored; the read deadline stays armed.
+    fn observe_peers(&mut self, now: Duration, mut pending: PendingPeers, body: &[u8]) -> Effect {
+        let Ok(page) = openscl4_models::decode_peers_page(body) else {
+            self.pending_peers = Some(pending);
+            return self.next_effect(now);
+        };
+        pending.devices.extend(page.devices);
+        let complete = page.total_packets == 0
+            || (page.current_packet_index != 0
+                && page.current_packet_index <= page.total_packets
+                && page.current_packet_index == page.total_packets);
+        if complete {
+            if page.total_packets == 0 {
+                pending.devices.clear();
+            }
+            self.view.peers = Some(pending.devices);
+            self.recovery = None;
+            self.transition(ConnectionState::Ready(pending.state));
+            return self.next_effect(now);
+        }
+        self.reply_deadline = Some(now + REPLY_TIMEOUT);
+        self.pending_peers = Some(pending);
+        self.next_effect(now)
+    }
+
     /// Publishes a read-only view and keeps only safe reads available.
     fn unidentified(&mut self, now: Duration, state: UnidentifiedState) -> Effect {
         // A read-only connection cannot recover a confirmed snapshot by retrying.
         self.recovery = None;
+        self.pending_peers = None;
         self.transition(ConnectionState::Unidentified(state));
         self.next_effect(now)
     }
@@ -627,6 +775,7 @@ impl SessionMachine {
                 self.active = Some(ActiveWrite {
                     stage: WriteStage::Ack,
                     expected_auto_power_off: resolved.expected_auto_power_off,
+                    expected_limit_high_volume: resolved.expected_limit_high_volume,
                     ..write
                 });
                 Effect::request(now, write.target.command(write.model), resolved.body)
@@ -680,7 +829,11 @@ impl SessionMachine {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
-        if write.target.matches(state, write.expected_auto_power_off) {
+        if write.target.matches(
+            state,
+            write.expected_auto_power_off,
+            write.expected_limit_high_volume,
+        ) {
             return self.finish_write(now, write, state);
         }
 
@@ -699,7 +852,11 @@ impl SessionMachine {
     fn finish_write(&mut self, now: Duration, write: ActiveWrite, state: DeviceState) -> Effect {
         self.transition(ConnectionState::Ready(state));
 
-        if !write.target.matches(state, write.expected_auto_power_off) {
+        if !write.target.matches(
+            state,
+            write.expected_auto_power_off,
+            write.expected_limit_high_volume,
+        ) {
             self.active = None;
             return match write.id {
                 Some(id) => Effect::Complete(id, Err(write_failure(write, state))),
@@ -707,6 +864,63 @@ impl SessionMachine {
             };
         }
 
+        self.finish_confirmed(now, write, state)
+    }
+
+    /// Reads the dedicated flag request's reply and either retries or moves on
+    /// to the state snapshot that completes the write.
+    fn observe_targeted(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
+        let Some(observed) = parse_flag_body(body) else {
+            return self.next_effect(now);
+        };
+        if write.target.targeted_expected() == Some(observed) {
+            self.reply_deadline = None;
+            self.active = Some(ActiveWrite {
+                stage: WriteStage::TargetedSnapshot,
+                ..write
+            });
+            return Effect::read(now, write.model.state_command());
+        }
+        self.active = Some(ActiveWrite {
+            targeted_observed: Some(observed),
+            ..write
+        });
+        self.reply_deadline = Some(now + READ_BACK_INTERVAL);
+        self.next_effect(now)
+    }
+
+    /// Completes a flag write once the dedicated request confirmed it and a
+    /// fresh state response supplies the snapshot.
+    fn finish_targeted(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
+        let Some(state) = write.model.decode_confirmed_state(body) else {
+            return self.next_effect(now);
+        };
+        self.transition(ConnectionState::Ready(state));
+        self.finish_confirmed(now, write, state)
+    }
+
+    fn reject_targeted(&mut self, write: ActiveWrite) -> Effect {
+        self.active = None;
+        self.reply_deadline = None;
+        match write.id {
+            Some(id) => Effect::Complete(
+                id,
+                Err(CommandError::LdacMismatch {
+                    requested: write.target.targeted_expected().unwrap_or(false),
+                    observed: write.targeted_observed,
+                }),
+            ),
+            None => self.next_effect(Duration::ZERO),
+        }
+    }
+
+    /// Completes the write that a confirmation already accepted.
+    fn finish_confirmed(
+        &mut self,
+        now: Duration,
+        write: ActiveWrite,
+        state: DeviceState,
+    ) -> Effect {
         if let Some(rest) = write.preset
             && let Some((target, rest)) = rest.first_field()
         {
@@ -801,6 +1015,7 @@ impl SessionMachine {
                 .take()
                 .and_then(|write| Some((write.id?, write.interrupted_preset(error)?)));
             self.pending_eq = None;
+            self.pending_peers = None;
             self.queue.clear();
             self.receive_cutoff = 0;
             self.transition(ConnectionState::Connecting);
@@ -924,6 +1139,58 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
             requested,
             observed: state.auto_power_off,
         },
+        WriteTarget::ButtonConfiguration(requested) => CommandError::ButtonConfigurationMismatch {
+            requested,
+            observed: state.settings.button_double_press,
+        },
+        WriteTarget::AmbientSoundModeCycle(requested) => {
+            CommandError::AmbientSoundModeCycleMismatch {
+                requested,
+                observed: state.settings.ambient_sound_mode_cycle,
+            }
+        }
+        WriteTarget::LimitHighVolume { .. } | WriteTarget::LimitHighVolumeRefreshRate(_) => {
+            CommandError::LimitHighVolumeMismatch {
+                requested: write.expected_limit_high_volume,
+                observed: state.settings.limit_high_volume,
+            }
+        }
+        WriteTarget::DualConnections(requested) => CommandError::DualConnectionsMismatch {
+            requested,
+            observed: state.settings.dual_connections,
+        },
+        WriteTarget::Ldac(requested) => CommandError::LdacMismatch {
+            requested,
+            observed: state.settings.ldac,
+        },
+        WriteTarget::LowBatteryPrompt(requested) => CommandError::FlagMismatch {
+            flag: "low battery prompt",
+            requested,
+            observed: state.settings.low_battery_prompt,
+        },
+        WriteTarget::DolbyAudio(requested) => CommandError::FlagMismatch {
+            flag: "Dolby Audio",
+            requested,
+            observed: state.settings.dolby_audio,
+        },
+        WriteTarget::SideTone(requested) => CommandError::FlagMismatch {
+            flag: "side tone",
+            requested,
+            observed: state.settings.side_tone,
+        },
+        WriteTarget::VoicePrompt(requested) => CommandError::FlagMismatch {
+            flag: "voice prompt",
+            requested,
+            observed: state.settings.voice_prompt,
+        },
+    }
+}
+
+/// Reads the one-byte flag body of the dedicated LDAC request.
+fn parse_flag_body(body: &[u8]) -> Option<bool> {
+    match body {
+        [value] => Some(*value == 1),
+        _ => None,
     }
 }
 
@@ -936,6 +1203,7 @@ mod tests {
 
     const STATE: &[u8] = include_bytes!("../../../data/a3954-pilot-state.bin");
     const A3062_STATE: &[u8] = include_bytes!("../../../data/a3062-pilot-state.bin");
+    const A3062_PEERS: &[u8] = include_bytes!("../../../data/a3062-dual-connections.bin");
     const A3062_NORMAL: &[u8] = include_bytes!("../../../data/a3062-mode-normal.bin");
     const A3062_TRANSPARENCY: &[u8] = include_bytes!("../../../data/a3062-mode-transparency.bin");
     // The a3062-anc/transparency frame from conformance.json.
@@ -1134,6 +1402,8 @@ mod tests {
             },
             may_have_written: true,
             expected_auto_power_off: None,
+            expected_limit_high_volume: None,
+            targeted_observed: None,
         });
         machine.input(Duration::ZERO, Input::RequestSent { receive_cutoff: 0 });
         let retry = machine.input(Duration::ZERO, inbound(model.state_command(), &original));
@@ -1162,13 +1432,17 @@ mod tests {
     }
 
     fn state_body(fixture: &[u8]) -> bytes::Bytes {
+        frame_body(fixture, STATE_COMMAND)
+    }
+
+    fn frame_body(fixture: &[u8], expected: [u8; 2]) -> bytes::Bytes {
         let mut decoder = openscl4_protocol::FrameDecoder::default();
         decoder.push(fixture);
         let frame = decoder
             .next_frame()
-            .expect("valid state frame")
-            .expect("complete state frame");
-        assert_eq!(frame.command, STATE_COMMAND);
+            .expect("valid frame")
+            .expect("complete frame");
+        assert_eq!(frame.command, expected);
         assert_eq!(frame.direction, Direction::Inbound);
         frame.body
     }
@@ -1183,6 +1457,8 @@ mod tests {
         machine.input(now, inbound(IDENTITY_COMMAND, &[]));
         machine.input(now, sent());
         machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        machine.input(now, sent());
+        machine.input(now, inbound(PEERS_COMMAND, &a3062_peers_body()));
 
         let id = CommandId(1);
         let refresh = machine.input(
@@ -1259,6 +1535,18 @@ mod tests {
             Input::Frame {
                 frame,
                 first_read: 2,
+            },
+        );
+        machine.input(now, Input::RequestSent { receive_cutoff: 2 });
+        machine.input(
+            now,
+            Input::Frame {
+                frame: Frame {
+                    direction: Direction::Inbound,
+                    command: PEERS_COMMAND,
+                    body: a3062_peers_body(),
+                },
+                first_read: 3,
             },
         );
 
@@ -1428,6 +1716,8 @@ mod tests {
                 stage: WriteStage::Ack,
                 may_have_written: false,
                 expected_auto_power_off: None,
+                expected_limit_high_volume: None,
+                targeted_observed: None,
             });
             let effect = machine.input(
                 Duration::ZERO,
@@ -1460,7 +1750,18 @@ mod tests {
         machine.input(now, inbound(IDENTITY_COMMAND, &[]));
         machine.input(now, sent());
         machine.input(now, inbound(STATE_COMMAND, &state_body(A3062_STATE)));
+        // The measured state reports multipoint enabled, so the peer list follows.
+        machine.input(now, sent());
+        machine.input(now, inbound(PEERS_COMMAND, &a3062_peers_body()));
+        assert!(matches!(
+            machine.view().connection,
+            ConnectionState::Ready(_)
+        ));
         machine
+    }
+
+    fn a3062_peers_body() -> bytes::Bytes {
+        frame_body(A3062_PEERS, PEERS_COMMAND)
     }
 
     /// One band byte in the measured A3062 wire scale.
@@ -1700,6 +2001,8 @@ mod tests {
             RETRY_INTERVAL,
             inbound(STATE_COMMAND, &state_body(A3062_STATE)),
         );
+        machine.input(RETRY_INTERVAL, sent());
+        machine.input(RETRY_INTERVAL, inbound(PEERS_COMMAND, &a3062_peers_body()));
 
         // The deferred curve was cleared with the connection.
         let idle = machine.input(RETRY_INTERVAL, Input::TimerElapsed);

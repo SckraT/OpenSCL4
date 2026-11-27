@@ -45,6 +45,9 @@ The A3062 pilot reports one device battery and firmware. The session can identif
 it from the state response if the separate identity probe is unavailable. Add
 `--cycle-mode` to change the mode and restore the original. Each result comes
 from a fresh state response. The JSON reports the mode without a scale position.
+A state that reports multipoint enabled is followed by the captured `0B 01` peer
+read before the session becomes writable; the snapshot exposes the masked peers
+that read reports, and diagnostics never export their addresses.
 
 The A3028 and A3029 pilots use the same driver and are discovered from their
 state response because no identity response is recorded for the family. Both

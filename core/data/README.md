@@ -127,6 +127,62 @@ bytes. The outbound `03 87` frame contains EQ and HearID settings.
 The session replay compares the custom write to the captured outbound frame
 and confirms both curves from the captured state replies.
 
+## A3062 multipoint peers
+
+[a3062-dual-connections.bin](a3062-dual-connections.bin) is the 92-byte inbound
+`0B 01` response captured from the same Space One Pro (A3062, firmware 04.39)
+over Windows RFCOMM on 2026-11-21. The source is
+`core/data/a3062-dual-connections.json` at the SoundcoreNext revision above; the
+source JSON SHA-256 is
+`349b349c92ab536af28895d21d154cf6183365454970afcca4ad30b15615a3f9`.
+[Source capture](https://github.com/SckraT/SoundcoreNext/blob/c1bf3e6881d2806972bf1fbe7f52fd5589997462/core/data/a3062-dual-connections.json)
+
+The capture already replaced the two device names with same-length placeholders
+(`Desktop`, `Phone model`) and each six-byte Bluetooth address with neutral
+bytes (`02:00:00:00:00:01` and `02:00:00:00:00:02`) before recalculating the
+checksum. This fixture keeps that masking unchanged, so it carries no real
+device name or address. The frame SHA-256 is
+`2a581ec52347d727af0d0cafacdfda57dea72c56013350414d14a485a7194112`;
+the body SHA-256 is
+`c279a38fb7b7119288603146687ea4f1d70991f38e40a86415cfad0c65441fc2`.
+
+The 82-byte body starts with `01 01` (one page, page one) and then one entry per
+remembered peer: a length byte (`0x28`, including itself), the connected flag,
+the six address bytes and a 32-byte zero-padded name. The session reads this list
+after the `01 01` state when the reported multipoint flag is enabled and
+publishes the peers in its snapshot. Diagnostics keep only the metadata of
+`0B 01` responses, never the address-bearing payload. The virtual transport
+replays this fixture for the first A3062 connection.
+
+## A3062 parity settings
+
+The legacy driver reports the confirmed flags and button configuration of the
+A3062 in the same 95-byte `01 01` state at body offsets 67–86. The setters are
+the legacy builders; each write is confirmed by a fresh `01 01` response, and
+the `01 FF` LDAC write is confirmed by the dedicated `01 7F` request. The
+read-back fixtures in the session tests derive the expected body from
+[a3062-pilot-state.bin](a3062-pilot-state.bin) by changing the documented offset,
+independently of the new codec. No new physical run was made for these writes.
+
+| Setting                         | Body offset | Write command | Wire body              |
+| ------------------------------- | ----------- | ------------- | ---------------------- |
+| Double-press button action      | 67          | `04 81`       | `00 00 07` or `00 00 0F` |
+| Ambient sound mode cycle        | 68          | `06 82`       | cycle flags byte       |
+| Low battery prompt              | 76          | `10 82`       | enabled flag           |
+| Dolby Audio                     | 77          | `02 86`       | enabled flag           |
+| LDAC                            | 78          | `01 FF`       | enabled flag           |
+| Dual connections (multipoint)   | 79          | `0B 84`       | enabled flag           |
+| Auto power off                  | 80–81       | `01 86`       | flag, duration index   |
+| High-volume limiter             | 82–84       | `20 82`, `20 81` | flag and dB limit; refresh rate |
+| Side tone                       | 85          | `01 84`       | enabled flag           |
+| Ambient sound mode voice prompt | 86          | `01 AE`       | enabled flag           |
+
+The auto power off duration index selects 30, 60, 90 or 120 minutes, as in the
+legacy half-hour table. The side tone, Dolby Audio and voice prompt writes are
+flags the legacy driver sends without a response and then verifies through the
+state. The button configuration carries only the BassUp action (`07`) or the
+disabled marker (`0F`).
+
 ## A3028 and A3029 state reference
 
 [a3028-a3029-mode-reference.json](a3028-a3029-mode-reference.json) records one legacy
