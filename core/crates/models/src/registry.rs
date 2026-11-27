@@ -1,14 +1,16 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949, a3953, a3957};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 7] = [
     ModelDriver::A3028,
     ModelDriver::A3029,
     ModelDriver::A3062,
     ModelDriver::A3949,
+    ModelDriver::A3953,
     ModelDriver::A3954,
+    ModelDriver::A3957,
 ];
 
 /// Finds a registered driver by its stable model code.
@@ -32,6 +34,20 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
     if a3028::has_confirmed_layout(body) {
         return match from_serial(&a3028::state_serial(body)?)? {
             model @ (ModelDriver::A3028 | ModelDriver::A3029) => Ok(model),
+            _ => Err(ModelError::UnknownModel),
+        };
+    }
+    // The Liberty states have distinct measured lengths, so they cannot be
+    // confused with each other or with the other pilot layouts.
+    if a3953::has_confirmed_layout(body) {
+        return match from_serial(&a3953::state_serial(body)?)? {
+            model @ ModelDriver::A3953 => Ok(model),
+            _ => Err(ModelError::UnknownModel),
+        };
+    }
+    if a3957::has_confirmed_layout(body) {
+        return match from_serial(&a3957::state_serial(body)?)? {
+            model @ ModelDriver::A3957 => Ok(model),
             _ => Err(ModelError::UnknownModel),
         };
     }

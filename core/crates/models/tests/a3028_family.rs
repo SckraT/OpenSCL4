@@ -4,7 +4,7 @@
 mod tests {
     use openscl4_models::{
         AutoPowerOff, AutoPowerOffSetting, EqualizerSetting, ModelDriver, ModelError, SoundMode,
-        registry,
+        SoundModeSetting, registry,
     };
 
     /// State bodies from `core/data/a3028-a3029-mode-reference.json`. The
@@ -107,15 +107,18 @@ mod tests {
             .decode_confirmed_state(A3028_BODY)
             .expect("confirmed state");
         assert_eq!(
-            state.family_sound_mode_write(SoundMode::NoiseCanceling),
-            Ok([0x00, 0x00, 0x01, 0x00])
-        );
-        assert_eq!(
-            state.family_sound_mode_write(SoundMode::Normal),
-            Ok([0x02, 0x00, 0x01, 0x00])
-        );
-        assert_eq!(
             state.ambient_sound_mode_write(SoundMode::NoiseCanceling),
+            Ok(vec![0x00, 0x00, 0x01, 0x00])
+        );
+        assert_eq!(
+            state.ambient_sound_mode_write(SoundMode::Normal),
+            Ok(vec![0x02, 0x00, 0x01, 0x00])
+        );
+        assert_eq!(
+            ModelDriver::A3028
+                .decode_confirmed_state(A3028_BODY)
+                .expect("confirmed state")
+                .sound_mode_write(SoundModeSetting::NORMAL),
             Err(ModelError::InvalidSoundModeWrite)
         );
     }
@@ -304,8 +307,8 @@ mod tests {
                 .decode_confirmed_state(&body)
                 .expect("custom value is accepted and clamped");
             assert_eq!(
-                state.family_sound_mode_write(SoundMode::Normal),
-                Ok([0x02, 0x00, 0x01, expected])
+                state.ambient_sound_mode_write(SoundMode::Normal),
+                Ok(vec![0x02, 0x00, 0x01, expected])
             );
         }
     }

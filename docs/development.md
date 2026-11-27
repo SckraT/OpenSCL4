@@ -66,6 +66,18 @@ and restore its original value. Each result requires a fresh state response.
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3949
 ```
 
+The Liberty 4 (A3953) pilot reports both earbud batteries, the case battery,
+firmware versions, the ambient mode, spatial audio and press sensitivity from a
+masked capture of the legacy driver test. Add `--cycle-mode` to switch the
+ambient mode and restore it, each confirmed by a fresh state response. The
+Liberty 5 (A3957) pilot reports the ten-level earbud and case batteries, firmware
+versions, sound mode and gaming mode; `--cycle-mode` toggles gaming mode.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3953
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3957
+```
+
 An unrecognized identity or a registered model with an incompatible state
 switch the pilot to a read-only result. An identity naming no registered model
 sends only the verified identity read; a registered model with an incompatible

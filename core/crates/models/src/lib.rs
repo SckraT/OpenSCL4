@@ -7,6 +7,8 @@ use std::fmt;
 mod a3028;
 mod a3062;
 mod a3949;
+mod a3953;
+mod a3957;
 pub mod registry;
 
 pub use a3028::{
@@ -15,6 +17,13 @@ pub use a3028::{
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
+pub use a3953::{
+    A3953_EQUALIZER_BANDS, A3953_EQUALIZER_PRESET, A3953_PRESS_SENSITIVITY,
+    A3953_SOUND_MODE_FIELDS, A3953_SPATIAL_AUDIO,
+};
+pub use a3957::{
+    A3957_EQUALIZER_BANDS, A3957_EQUALIZER_PRESET, A3957_GAMING_MODE, A3957_SOUND_MODE_FIELDS,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -31,8 +40,17 @@ pub const EQUALIZER_COMMAND: [u8; 2] = [0x03, 0x87];
 /// Write the A3949 gaming-mode flag.
 pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 
+/// Write the A3957 gaming-mode flag.
+pub const A3957_GAMING_MODE_COMMAND: [u8; 2] = [0x10, 0x85];
+
 /// Write the auto power off value of a model that reports its extra fields.
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
+
+/// Write the A3953 spatial-audio controls.
+pub const SPATIAL_AUDIO_COMMAND: [u8; 2] = [0x10, 0x81];
+
+/// Write the A3953 press sensitivity value.
+pub const PRESS_SENSITIVITY_COMMAND: [u8; 2] = [0x04, 0x85];
 
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
@@ -49,6 +67,10 @@ pub enum ModelDriver {
     A3062,
     /// Soundcore P20i, P25i and R50i.
     A3949,
+    /// Soundcore Liberty 4.
+    A3953,
+    /// Soundcore Liberty 5.
+    A3957,
     /// Soundcore Liberty 4 Pro.
     A3954,
 }
@@ -63,10 +85,18 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            gaming_mode_write: matches!(self, Self::A3949),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3953
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::A3953 | Self::A3957
+            ),
+            gaming_mode_write: matches!(self, Self::A3949 | Self::A3957),
             auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            spatial_audio_write: matches!(self, Self::A3953),
+            press_sensitivity_write: matches!(self, Self::A3953),
         }
     }
 
@@ -77,6 +107,8 @@ impl ModelDriver {
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
             Self::A3949 => "A3949",
+            Self::A3953 => "A3953",
+            Self::A3957 => "A3957",
             Self::A3954 => "A3954",
         }
     }
@@ -90,6 +122,7 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
+            Self::A3953 | Self::A3957 => a3953::VISIBLE_EQUALIZER_BANDS,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
         }
     }
@@ -98,7 +131,17 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3062 | Self::A3949 | Self::A3953 | Self::A3957 | Self::A3954 => {
+                EQUALIZER_COMMAND
+            }
+        }
+    }
+
+    /// The wire command for the model's gaming-mode write.
+    pub const fn gaming_mode_command(self) -> [u8; 2] {
+        match self {
+            Self::A3957 => A3957_GAMING_MODE_COMMAND,
+            _ => GAMING_MODE_COMMAND,
         }
     }
 
@@ -117,6 +160,8 @@ impl ModelDriver {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
+            Self::A3953 => a3953::decode_state(body),
+            Self::A3957 => a3957::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
         }
     }
@@ -126,18 +171,23 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// the A3028 family needs the serial that selects its public code, and the
+    /// Liberty states must carry their own model prefix.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
+            Self::A3953 => a3953::has_confirmed_layout(body),
+            Self::A3957 => a3957::has_confirmed_layout(body),
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
         };
         let serial_matches = match self {
             Self::A3028 | Self::A3029 => {
                 a3028::state_serial(body).is_ok_and(|serial| serial.identifies(self))
             }
+            Self::A3953 => a3953::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
+            Self::A3957 => a3957::state_serial(body).is_ok_and(|serial| serial.identifies(self)),
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
         };
@@ -170,6 +220,8 @@ impl ModelDriver {
             equalizer: None,
             gaming_mode: None,
             auto_power_off: None,
+            spatial_audio: None,
+            press_sensitivity: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
         })
@@ -188,6 +240,8 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::A3953 => a3953::equalizer_write_body(setting, state),
+            Self::A3957 => a3957::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
         }
     }
@@ -206,12 +260,18 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the spatial-audio controls.
+    pub spatial_audio_write: bool,
+    /// The session can confirm writes of the earbud press sensitivity.
+    pub press_sensitivity_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SoundModeControls {
     A3028([u8; 3]),
     A3062([u8; 5]),
+    A3953([u8; 6]),
+    A3957([u8; 7]),
     A3954(A3954SoundModeControls),
 }
 
@@ -238,6 +298,10 @@ pub struct DeviceState {
     pub gaming_mode: Option<bool>,
     /// The reported auto power off value, when the state carries extra fields.
     pub auto_power_off: Option<AutoPowerOff>,
+    /// The reported spatial-audio controls, when the state carries them.
+    pub spatial_audio: Option<SpatialAudioState>,
+    /// The reported earbud press sensitivity, when the state carries a recognized value.
+    pub press_sensitivity: Option<u8>,
     /// The firmware of a device with a single battery, if reported.
     pub firmware_device: Option<FirmwareVersion>,
     /// Left earbud firmware, if reported.
@@ -271,19 +335,36 @@ impl DeviceState {
     }
 
     /// Builds an ambient-mode write from the latest measured A3062 controls.
-    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 6], ModelError> {
-        let Some(SoundModeControls::A3062(controls)) = self.sound_mode_controls else {
-            return Err(ModelError::InvalidSoundModeWrite);
-        };
-        a3062::ambient_sound_mode_write(mode, controls)
+    pub fn ambient_sound_mode_write(self, mode: SoundMode) -> Result<Vec<u8>, ModelError> {
+        match self.sound_mode_controls {
+            Some(SoundModeControls::A3028(controls)) => {
+                Ok(a3028::sound_mode_write(mode, controls)?.to_vec())
+            }
+            Some(SoundModeControls::A3062(controls)) => {
+                Ok(a3062::ambient_sound_mode_write(mode, controls)?.to_vec())
+            }
+            Some(SoundModeControls::A3953(controls)) => {
+                Ok(a3953::ambient_sound_mode_write(mode, controls)?.to_vec())
+            }
+            Some(SoundModeControls::A3957(_)) => Err(ModelError::InvalidSoundModeWrite),
+            Some(SoundModeControls::A3954(_)) | None => Err(ModelError::InvalidSoundModeWrite),
+        }
     }
 
-    /// Builds an ambient-mode write from the latest A3028/A3029 controls.
-    pub fn family_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 4], ModelError> {
-        let Some(SoundModeControls::A3028(controls)) = self.sound_mode_controls else {
-            return Err(ModelError::InvalidSoundModeWrite);
-        };
-        a3028::sound_mode_write(mode, controls)
+    /// Builds a spatial-audio write from the controls the device reported.
+    pub fn spatial_audio_write(self, setting: SpatialAudioState) -> Result<[u8; 3], ModelError> {
+        if !self.model.capabilities().spatial_audio_write || self.spatial_audio.is_none() {
+            return Err(ModelError::InvalidSpatialAudioWrite);
+        }
+        Ok(a3953::spatial_audio_write(setting))
+    }
+
+    /// Builds a press-sensitivity write for a device that reports the value.
+    pub fn press_sensitivity_write(self, value: u8) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().press_sensitivity_write || self.press_sensitivity.is_none() {
+            return Err(ModelError::InvalidPressSensitivityWrite);
+        }
+        a3953::press_sensitivity_write(value)
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.
@@ -421,6 +502,105 @@ impl SoundModeSetting {
     }
 }
 
+/// Spatial-audio mode reported by an A3953.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpatialAudioMode {
+    /// The stage stays fixed to the head.
+    Fixed,
+    /// The stage follows head movement.
+    HeadTracking,
+}
+
+impl SpatialAudioMode {
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Fixed => "Fixed",
+            Self::HeadTracking => "HeadTracking",
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Fixed => 1,
+            Self::HeadTracking => 2,
+        }
+    }
+
+    const fn decode(byte: u8) -> Result<Self, ModelError> {
+        match byte {
+            1 => Ok(Self::Fixed),
+            2 => Ok(Self::HeadTracking),
+            _ => Err(ModelError::InvalidSpatialAudioWrite),
+        }
+    }
+}
+
+/// Content type the spatial-audio stage is tuned for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpatialAudioContentMode {
+    /// Music.
+    Music,
+    /// Movie.
+    Movie,
+}
+
+impl SpatialAudioContentMode {
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Music => "Music",
+            Self::Movie => "Movie",
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Music => 0,
+            Self::Movie => 1,
+        }
+    }
+
+    const fn decode(byte: u8) -> Result<Self, ModelError> {
+        match byte {
+            0 => Ok(Self::Music),
+            1 => Ok(Self::Movie),
+            _ => Err(ModelError::InvalidSpatialAudioWrite),
+        }
+    }
+}
+
+/// Three spatial-audio controls carried by the A3953 state and write.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SpatialAudioState {
+    /// Whether spatial audio is enabled.
+    pub enabled: bool,
+    /// The stage mode.
+    pub mode: SpatialAudioMode,
+    /// The content type the stage is tuned for.
+    pub content: SpatialAudioContentMode,
+}
+
+impl SpatialAudioState {
+    fn decode(bytes: [u8; 3]) -> Result<Self, ModelError> {
+        let enabled = match bytes[0] {
+            0 => false,
+            1 => true,
+            _ => return Err(ModelError::InvalidSpatialAudioWrite),
+        };
+        Ok(Self {
+            enabled,
+            mode: SpatialAudioMode::decode(bytes[1])?,
+            content: SpatialAudioContentMode::decode(bytes[2])?,
+        })
+    }
+
+    /// Encodes the three controls accepted by the device.
+    pub const fn bytes(self) -> [u8; 3] {
+        [self.enabled as u8, self.mode.wire(), self.content.wire()]
+    }
+}
+
 /// Four-byte A3954 sound-mode write.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SoundModeWrite {
@@ -519,6 +699,142 @@ impl EqualizerSetting {
     pub(crate) fn band_gain(byte: u8) -> i16 {
         i16::from(byte) + EQUALIZER_MIN_GAIN
     }
+}
+
+/// Re-encodes raw band bytes through the measured gain scale.
+///
+/// The legacy structures clamp out-of-range raw values when they parse a curve,
+/// so echoing a state must echo the clamped value.
+pub(crate) fn canonical_band_bytes(bytes: &[u8]) -> [u8; EQUALIZER_BANDS] {
+    let mut canonical = [0; EQUALIZER_BANDS];
+    for (byte, raw) in canonical.iter_mut().zip(bytes) {
+        let gain = EqualizerSetting::band_gain(*raw).clamp(EQUALIZER_MIN_GAIN, EQUALIZER_MAX_GAIN);
+        *byte = EqualizerSetting::band_byte(gain);
+    }
+    canonical
+}
+
+/// Encodes the driver-compensated curve carried by a Liberty equalizer write.
+///
+/// The transform is a transcription of the legacy `VolumeAdjustments::apply_drc`
+/// for the ten-tenths scale (the decompiled application's `HearId2Utils.b`).
+/// The two invisible bands take that function's own defaults, not the requested
+/// curve, matching the driver byte for byte.
+pub(crate) fn drc_band_bytes(volume_adjustments: [i16; EQUALIZER_BANDS]) -> [u8; EQUALIZER_BANDS] {
+    const SMALLER_COEFFICIENT: f64 = 0.85;
+    const LARGER_COEFFICIENT: f64 = 0.95;
+    const BAND_COEFFICIENTS: [[f64; 8]; 8] = [
+        [
+            1.26,
+            -0.71 * SMALLER_COEFFICIENT,
+            0.177,
+            -0.0494,
+            0.0345,
+            -0.0197,
+            0.0075,
+            -0.00217,
+        ],
+        [
+            -0.71 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            0.0,
+            0.204,
+            -0.068,
+            0.045,
+            -0.0235,
+            0.0075,
+        ],
+        [
+            0.177,
+            -0.81 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            -0.81 * SMALLER_COEFFICIENT,
+            0.208,
+            -0.07,
+            0.045,
+            -0.0197,
+        ],
+        [
+            -0.0494,
+            0.204,
+            0.0,
+            1.73 * LARGER_COEFFICIENT,
+            -0.82 * SMALLER_COEFFICIENT,
+            0.208,
+            -0.068,
+            0.0345,
+        ],
+        [
+            0.0345,
+            -0.068,
+            0.208,
+            -0.82 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            0.0,
+            0.204,
+            -0.0494,
+        ],
+        [
+            -0.0197,
+            0.045,
+            -0.07,
+            0.208,
+            -0.81 * SMALLER_COEFFICIENT,
+            1.73 * LARGER_COEFFICIENT,
+            -0.81 * SMALLER_COEFFICIENT,
+            0.177,
+        ],
+        [
+            0.0075,
+            -0.0235,
+            0.045,
+            -0.068,
+            0.204,
+            0.0,
+            1.83 * LARGER_COEFFICIENT,
+            -0.71 * SMALLER_COEFFICIENT,
+        ],
+        [
+            -0.00217,
+            0.0075,
+            -0.0197,
+            0.0345,
+            -0.0494,
+            0.177,
+            -0.71 * SMALLER_COEFFICIENT,
+            1.5,
+        ],
+    ];
+    let adjustments = volume_adjustments.map(|gain| f64::from(gain) / 10.0);
+    let lows_subtraction = adjustments[2] * 0.81 * SMALLER_COEFFICIENT;
+    let highs_subtraction = adjustments[5] * 0.81 * SMALLER_COEFFICIENT;
+    let compensated: [f64; 8] = std::array::from_fn(|band| {
+        BAND_COEFFICIENTS[band]
+            .iter()
+            .take(8)
+            .enumerate()
+            .fold(0.0, |acc, (index, coefficient)| {
+                if (band == 1 || band == 3) && index == 2 {
+                    acc - lows_subtraction
+                } else if (band == 4 || band == 6) && index == 5 {
+                    acc - highs_subtraction
+                } else {
+                    acc + adjustments[index] * coefficient
+                }
+            })
+    });
+    // The transform itself is a ten-band curve with the invisible bands at its
+    // own defaults, so they are written as 0 dB and the minimum gain.
+    const BAND_DEFAULTS: [i16; EQUALIZER_BANDS] = [0, 0, 0, 0, 0, 0, 0, 0, 0, EQUALIZER_MIN_GAIN];
+    let gains: [i16; EQUALIZER_BANDS] = std::array::from_fn(|band| {
+        compensated
+            .get(band)
+            .map_or(BAND_DEFAULTS[band], |adjustment| {
+                (adjustment / 10.0 * 10.0).round() as i16
+            })
+    });
+    gains
+        .map(|gain| EqualizerSetting::band_byte(gain.clamp(EQUALIZER_MIN_GAIN, EQUALIZER_MAX_GAIN)))
 }
 
 /// Auto power off value reported by the optional extra fields of the A3028 family.
@@ -622,6 +938,12 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report writable spatial-audio controls.
+    #[error("unsupported device spatial audio write")]
+    InvalidSpatialAudioWrite,
+    /// The requested press sensitivity is outside the documented scale.
+    #[error("unsupported device press sensitivity write")]
+    InvalidPressSensitivityWrite,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
@@ -703,6 +1025,29 @@ mod tests {
     }
 
     #[test]
+    fn registry_selects_the_liberty_drivers_from_their_states() {
+        for (driver, fixture) in [
+            (
+                ModelDriver::A3953,
+                include_bytes!("../../../data/a3953-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3957,
+                include_bytes!("../../../data/a3957-pilot-state.bin").as_slice(),
+            ),
+        ] {
+            let body = &fixture[9..fixture.len() - 1];
+            assert_eq!(registry::identify_state(body), Ok(driver));
+            assert_eq!(registry::by_code(driver.code()), Some(driver));
+            assert!(!driver.capabilities().positioned_sound_mode_write);
+        }
+        assert!(ModelDriver::A3953.capabilities().spatial_audio_write);
+        assert!(ModelDriver::A3953.capabilities().press_sensitivity_write);
+        assert!(ModelDriver::A3957.capabilities().gaming_mode_write);
+        assert!(!ModelDriver::A3957.capabilities().spatial_audio_write);
+    }
+
+    #[test]
     fn registry_selects_the_a3062_driver_from_a_numeric_prefix() {
         let driver =
             ModelDriver::identify(b"04.3904.393062TEST00000000").expect("registered A3062 prefix");
@@ -725,6 +1070,14 @@ mod tests {
                 include_bytes!("../../../data/a3949-pilot-state.bin").as_slice(),
             ),
             (
+                ModelDriver::A3953,
+                include_bytes!("../../../data/a3953-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3957,
+                include_bytes!("../../../data/a3957-pilot-state.bin").as_slice(),
+            ),
+            (
                 ModelDriver::A3954,
                 include_bytes!("../../../data/a3954-pilot-state.bin").as_slice(),
             ),
@@ -742,6 +1095,59 @@ mod tests {
                 "trailing byte for {}",
                 driver.code()
             );
+        }
+    }
+
+    #[test]
+    fn liberty_confirmation_requires_the_model_serial() {
+        for (driver, fixture, other) in [
+            (
+                ModelDriver::A3953,
+                include_bytes!("../../../data/a3953-pilot-state.bin").as_slice(),
+                b"3957TEST00000000".as_slice(),
+            ),
+            (
+                ModelDriver::A3957,
+                include_bytes!("../../../data/a3957-pilot-state.bin").as_slice(),
+                b"3953TEST00000000".as_slice(),
+            ),
+        ] {
+            let body = &fixture[9..fixture.len() - 1];
+            assert!(driver.decode_confirmed_state(body).is_some());
+            let mut contradictory = body.to_vec();
+            contradictory[16..32].copy_from_slice(other);
+            assert!(
+                driver.decode_confirmed_state(&contradictory).is_none(),
+                "a contradictory serial must not admit writes for {}",
+                driver.code()
+            );
+            assert!(
+                driver.decode_state(&contradictory).is_err(),
+                "the model decoder rejects another model's serial"
+            );
+        }
+    }
+
+    #[test]
+    fn drc_compensation_matches_the_legacy_measurements() {
+        // Explicit results from the legacy `VolumeAdjustments::apply_drc` tests.
+        for (gains, expected) in [
+            (
+                [-60, 60, 23, 120, 22, -120, -4, 16, 0, 0],
+                [-11, 14, -8, 16, 3, -18, 6, 1, 0, -120],
+            ),
+            (
+                [120, 120, 120, 120, 120, 120, 120, 120, 0, 0],
+                [10, 6, 7, 7, 7, 7, 7, 13, 0, -120],
+            ),
+            (
+                [-120, -120, -120, -120, -120, -120, -120, -120, 0, 0],
+                [-10, -6, -7, -7, -7, -7, -7, -13, 0, -120],
+            ),
+        ] {
+            let bytes = drc_band_bytes(gains);
+            let decoded: [i16; EQUALIZER_BANDS] = bytes.map(EqualizerSetting::band_gain);
+            assert_eq!(decoded, expected);
         }
     }
 

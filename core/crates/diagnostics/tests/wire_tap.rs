@@ -91,6 +91,55 @@ mod tests {
     }
 
     #[test]
+    fn clears_state_serials_for_the_liberty_models() {
+        let mut tap = WireTap::new(NonZeroUsize::new(2).unwrap());
+        tap.set_enabled(true);
+        for (model, fixture) in [
+            (
+                ModelDriver::A3953,
+                include_bytes!("../../../data/a3953-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::A3957,
+                include_bytes!("../../../data/a3957-pilot-state.bin").as_slice(),
+            ),
+        ] {
+            let frame = decode(fixture);
+            tap.record_frame(Duration::ZERO, Some(model), &frame);
+            let record = tap.records().last().unwrap();
+            assert_eq!(record.metadata.outcome, CaptureOutcome::Sanitized);
+            let sanitized = decode(record.frame_bytes().unwrap());
+            let mut expected = frame.body.to_vec();
+            expected[16..32].fill(0);
+            assert_eq!(sanitized.body.as_ref(), expected);
+        }
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("3953TEST00000000"));
+        assert!(!debug.contains("3957TEST00000000"));
+    }
+
+    #[test]
+    fn retains_metadata_for_unconfirmed_liberty_states() {
+        let mut tap = WireTap::new(NonZeroUsize::new(3).unwrap());
+        tap.set_enabled(true);
+        // A state body of the other model's measured length.
+        let a3957 = decode(include_bytes!("../../../data/a3957-pilot-state.bin"));
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3953), &a3957);
+        let a3953 = decode(include_bytes!("../../../data/a3953-pilot-state.bin"));
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3957), &a3953);
+        // A confirmed length carrying the other model's serial prefix.
+        let mut contradictory = a3953.body.to_vec();
+        contradictory[16..32].copy_from_slice(b"3957TEST00000000");
+        let frame = make_frame(Direction::Inbound, [0x01, 0x01], &contradictory);
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::A3953), &frame);
+
+        for record in tap.records() {
+            assert_eq!(record.metadata.outcome, CaptureOutcome::MetadataOnly);
+            assert!(record.frame_bytes().is_none());
+        }
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

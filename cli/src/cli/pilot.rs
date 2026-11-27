@@ -5,8 +5,8 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualA3953, VirtualA3957,
+    VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -29,7 +29,9 @@ pub async fn handle(
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
+                ModelDriver::A3953 => SessionRunner::start(VirtualA3953, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
+                ModelDriver::A3957 => SessionRunner::start(VirtualA3957, target),
             },
         },
     };
@@ -172,12 +174,15 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
+        ModelDriver::A3949 | ModelDriver::A3953 | ModelDriver::A3954 | ModelDriver::A3957 => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
+            if matches!(
+                device.model,
+                ModelDriver::A3953 | ModelDriver::A3954 | ModelDriver::A3957
+            ) {
                 battery["casePercent"] = json!(device.battery.case);
             }
             (
@@ -199,6 +204,16 @@ fn snapshot_json(device: DeviceState) -> Value {
     }
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
+    }
+    if let Some(spatial_audio) = device.spatial_audio {
+        snapshot["spatialAudio"] = json!({
+            "enabled": spatial_audio.enabled,
+            "mode": spatial_audio.mode.code(),
+            "contentMode": spatial_audio.content.code(),
+        });
+    }
+    if let Some(press_sensitivity) = device.press_sensitivity {
+        snapshot["pressSensitivity"] = json!(press_sensitivity);
     }
     snapshot
 }

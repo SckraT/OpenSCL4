@@ -5,16 +5,28 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, A3953_EQUALIZER_BANDS, A3953_EQUALIZER_PRESET,
+    A3953_PRESS_SENSITIVITY, A3953_SOUND_MODE_FIELDS, A3953_SPATIAL_AUDIO, A3957_EQUALIZER_BANDS,
+    A3957_EQUALIZER_PRESET, A3957_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
+    IDENTITY_COMMAND, ModelDriver, PRESS_SENSITIVITY_COMMAND, SOUND_MODE_COMMAND,
+    SPATIAL_AUDIO_COMMAND, STATE_COMMAND, SoundModeWrite,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
 
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
-const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
+const A3954_IDENTITY_REPLY: &[u8] =
+    b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
+/// The measured A3953 state body with the synthetic model-prefixed serial.
+const A3953_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3953-pilot-state.bin");
+/// The measured A3957 state body with the synthetic model-prefixed serial.
+const A3957_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3957-pilot-state.bin");
+/// The shared `01 05` identity layout: both firmware versions and the masked serial.
+const A3953_IDENTITY_REPLY: &[u8] =
+    b"\x09\xff\0\0\x01\x01\x05\x24\x0003.2303.233953TEST00000000\xb3";
+const A3957_IDENTITY_REPLY: &[u8] =
+    b"\x09\xff\0\0\x01\x01\x05\x24\x0003.9003.903957TEST00000000\xbf";
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
 const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-off.bin"),
@@ -120,6 +132,44 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual Liberty 4 that answers identity and state from the masked capture.
+pub struct VirtualA3953;
+
+/// A virtual Liberty 5 that answers identity and state from the masked capture.
+pub struct VirtualA3957;
+
+fn liberty_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3953 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(liberty_link(ModelDriver::A3953))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3957 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(liberty_link(ModelDriver::A3957))
+    }
+}
 
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
@@ -323,9 +373,7 @@ impl DeviceResponder {
                 continue;
             }
             if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
-                if self.model == ModelDriver::A3954 {
-                    replies.extend_from_slice(IDENTITY_REPLY);
-                }
+                replies.extend_from_slice(identity_reply(self.model));
             } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
                 if let Ok(state) = encode_frame(Direction::Inbound, frame.command, &state) {
@@ -344,8 +392,10 @@ impl DeviceResponder {
                 && self.options.acknowledge_writes
             {
                 replies.extend_from_slice(SOUND_MODE_ACK);
-            } else if self.model == ModelDriver::A3062
-                && frame.command == EQUALIZER_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3062 | ModelDriver::A3953 | ModelDriver::A3957
+            ) && frame.command == EQUALIZER_COMMAND
                 && self.options.acknowledge_writes
                 && self.equalizer_applied(&frame.body)
                 && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_COMMAND, &[])
@@ -358,11 +408,26 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if self.model == ModelDriver::A3949
-                && frame.command == GAMING_MODE_COMMAND
+            } else if matches!(self.model, ModelDriver::A3949 | ModelDriver::A3957)
+                && frame.command == self.model.gaming_mode_command()
                 && self.apply_gaming_mode(&frame.body)
                 && self.options.acknowledge_writes
-                && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
+                && let Ok(ack) =
+                    encode_frame(Direction::Inbound, self.model.gaming_mode_command(), &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3953
+                && frame.command == SPATIAL_AUDIO_COMMAND
+                && self.spatial_audio_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, SPATIAL_AUDIO_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3953
+                && frame.command == PRESS_SENSITIVITY_COMMAND
+                && self.press_sensitivity_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, PRESS_SENSITIVITY_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
             } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
@@ -381,9 +446,33 @@ impl DeviceResponder {
         let [enabled @ 0..=1] = body else {
             return false;
         };
-        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
         let mut state = self.state.lock().expect("virtual state lock");
+        if self.model == ModelDriver::A3957 {
+            state[A3957_GAMING_MODE] = *enabled;
+            return true;
+        }
+        let captured = fixture_body(self.model, A3949_GAMING_REPLIES[usize::from(*enabled)]);
         state[A3949_GAMING_MODE] = captured[A3949_GAMING_MODE];
+        true
+    }
+
+    /// Applies the documented A3953 `10 81` controls to the captured state.
+    fn spatial_audio_applied(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1, mode @ 1..=2, content @ 0..=1] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3953_SPATIAL_AUDIO].copy_from_slice(&[*enabled, *mode, *content]);
+        true
+    }
+
+    /// Applies the documented A3953 `04 85` value to the captured state.
+    fn press_sensitivity_applied(&self, body: &[u8]) -> bool {
+        let [value @ 0..=4] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3953_PRESS_SENSITIVITY] = *value;
         true
     }
 
@@ -409,7 +498,22 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
-            ModelDriver::A3949 => false,
+            ModelDriver::A3953 => {
+                let [
+                    _mode @ 0..=2,
+                    _manual_auto,
+                    _transparency,
+                    _automation,
+                    _wind,
+                    _sensitivity,
+                ] = body
+                else {
+                    return false;
+                };
+                state[A3953_SOUND_MODE_FIELDS].copy_from_slice(body);
+                true
+            }
+            ModelDriver::A3949 | ModelDriver::A3957 => false,
         }
     }
 
@@ -428,6 +532,22 @@ impl DeviceResponder {
                 // The state carries the curve at the offsets the models crate measured.
                 state[A3062_EQUALIZER_PRESET].copy_from_slice(preset);
                 state[A3062_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3953 => {
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..24)) else {
+                    return false;
+                };
+                state[A3953_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3953_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3957 => {
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(4..24)) else {
+                    return false;
+                };
+                state[A3957_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3957_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
             ModelDriver::A3028 | ModelDriver::A3029 => {
@@ -489,7 +609,7 @@ impl TransportProvider for VirtualIncompatibleA3954 {
         let mut state = fixture_body(ModelDriver::A3954, A3954_STATE_REPLY);
         state.extend_from_slice(b"UNTRUSTED-STATE");
         Ok(open_link(Some(Responder::read_only(
-            Bytes::from_static(IDENTITY_REPLY),
+            Bytes::from_static(A3954_IDENTITY_REPLY),
             state,
         )))
         .0)
@@ -542,9 +662,21 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
+        ModelDriver::A3953 => fixture_body(model, A3953_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
+        ModelDriver::A3957 => fixture_body(model, A3957_STATE_REPLY),
     };
     Arc::new(Mutex::new(bytes))
+}
+
+/// The synthetic identity response of a model whose pilot uses the shared layout.
+fn identity_reply(model: ModelDriver) -> &'static [u8] {
+    match model {
+        ModelDriver::A3953 => A3953_IDENTITY_REPLY,
+        ModelDriver::A3954 => A3954_IDENTITY_REPLY,
+        ModelDriver::A3957 => A3957_IDENTITY_REPLY,
+        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 | ModelDriver::A3949 => &[],
+    }
 }
 
 fn fixture_body(model: ModelDriver, bytes: &[u8]) -> Vec<u8> {

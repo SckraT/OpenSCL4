@@ -420,6 +420,12 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetSpatialAudio(setting) => {
+                    (WriteTarget::SpatialAudio(setting), None)
+                }
+                SessionCommand::SetPressSensitivity(value) => {
+                    (WriteTarget::PressSensitivity(value), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -923,6 +929,14 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
             observed: state.auto_power_off,
+        },
+        WriteTarget::SpatialAudio(requested) => CommandError::SpatialAudioMismatch {
+            requested,
+            observed: state.spatial_audio,
+        },
+        WriteTarget::PressSensitivity(requested) => CommandError::PressSensitivityMismatch {
+            requested,
+            observed: state.press_sensitivity,
         },
     }
 }
