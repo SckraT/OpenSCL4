@@ -1,11 +1,14 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3027, a3028, a3062, a3949};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 8] = [
+    ModelDriver::A3027,
+    ModelDriver::A3030,
     ModelDriver::A3028,
     ModelDriver::A3029,
+    ModelDriver::A3031,
     ModelDriver::A3062,
     ModelDriver::A3949,
     ModelDriver::A3954,
@@ -28,7 +31,16 @@ pub(crate) fn identify_identity(body: &[u8]) -> Result<ModelDriver, ModelError> 
 }
 
 /// Identifies a model from the serial at the offset in its measured state layout.
+///
+/// The A3031 state carries no serial: its public code comes from the separate
+/// `01 05` identity response, so a state-only probe cannot select it.
 pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
+    if a3027::has_confirmed_layout(body) {
+        return match from_serial(&a3027::state_serial(body)?)? {
+            model @ (ModelDriver::A3027 | ModelDriver::A3030) => Ok(model),
+            _ => Err(ModelError::UnknownModel),
+        };
+    }
     if a3028::has_confirmed_layout(body) {
         return match from_serial(&a3028::state_serial(body)?)? {
             model @ (ModelDriver::A3028 | ModelDriver::A3029) => Ok(model),

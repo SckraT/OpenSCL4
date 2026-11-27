@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
-    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
-    STATE_COMMAND, registry,
+    AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, IdentityFirmware, ModelDriver,
+    ModelError, STATE_COMMAND, identity_firmware, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -174,6 +174,9 @@ impl Effect {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WriteStage {
     ReadCurrent,
+    /// The write is in flight; it expects no acknowledgement, so the state read
+    /// follows as soon as the send completes.
+    SendingWrite,
     Ack,
     ReadBack {
         deadline: Option<Duration>,
@@ -240,6 +243,8 @@ pub struct SessionMachine {
     active: Option<ActiveWrite>,
     pending_eq: Option<PendingEq>,
     last_eq_preset: CommandId,
+    /// Firmware read from the separate identity response of the current link.
+    identity_firmware: Option<IdentityFirmware>,
     queue: VecDeque<QueuedCommand>,
 }
 
@@ -259,6 +264,7 @@ impl SessionMachine {
             active: None,
             pending_eq: None,
             last_eq_preset: CommandId(0),
+            identity_firmware: None,
             queue: VecDeque::new(),
         }
     }
@@ -278,6 +284,7 @@ impl SessionMachine {
 
     pub fn open(&mut self, now: Duration) -> Effect {
         self.view.generation += 1;
+        self.identity_firmware = None;
         self.transition(ConnectionState::Connecting);
         self.limit_to_recovery(Effect::Open {
             deadline: now + CONNECT_TIMEOUT,
@@ -318,6 +325,14 @@ impl SessionMachine {
                     _ => timeout,
                 };
                 self.reply_deadline = Some(deadline);
+                if let Some(write) = self
+                    .active
+                    .filter(|write| write.stage == WriteStage::SendingWrite)
+                {
+                    // A write without a captured acknowledgement goes straight
+                    // to the confirmed state read.
+                    return self.read_back(now, write, None, None);
+                }
                 self.next_effect(now)
             }
             Input::RequestFailed {
@@ -419,6 +434,9 @@ impl SessionMachine {
                 SessionCommand::SetGamingMode(enabled) => (WriteTarget::GamingMode(enabled), None),
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
+                }
+                SessionCommand::SetWearingDetection(enabled) => {
+                    (WriteTarget::WearingDetection(enabled), None)
                 }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
@@ -541,6 +559,9 @@ impl SessionMachine {
             {
                 match ModelDriver::identify(&frame.body) {
                     Ok(model) => {
+                        // A model whose state does not report its firmware gets
+                        // the versions from the separate identity response.
+                        self.identity_firmware = identity_firmware(&frame.body).ok();
                         self.transition(ConnectionState::SyncingState(model));
                         Effect::read(now, model.state_command())
                     }
@@ -586,7 +607,7 @@ impl SessionMachine {
     }
 
     fn confirm_state(&mut self, now: Duration, model: ModelDriver, body: &[u8]) -> Effect {
-        match model.decode_confirmed_state(body) {
+        match self.decode_confirmed(model, body) {
             Some(state) => {
                 self.recovery = None;
                 self.transition(ConnectionState::Ready(state));
@@ -602,6 +623,17 @@ impl SessionMachine {
         }
     }
 
+    /// Decodes a confirmed state and completes the firmware the model's state
+    /// does not report from the identity response of the current connection.
+    fn decode_confirmed(&self, model: ModelDriver, body: &[u8]) -> Option<DeviceState> {
+        let mut state = model.decode_confirmed_state(body)?;
+        if let Some(firmware) = self.identity_firmware {
+            state.firmware_left = state.firmware_left.or(firmware.left);
+            state.firmware_right = state.firmware_right.or(firmware.right);
+        }
+        Some(state)
+    }
+
     /// Publishes a read-only view and keeps only safe reads available.
     fn unidentified(&mut self, now: Duration, state: UnidentifiedState) -> Effect {
         // A read-only connection cannot recover a confirmed snapshot by retrying.
@@ -611,7 +643,7 @@ impl SessionMachine {
     }
 
     fn send_write(&mut self, now: Duration, write: ActiveWrite, body: &[u8]) -> Effect {
-        let Some(state) = write.model.decode_confirmed_state(body) else {
+        let Some(state) = self.decode_confirmed(write.model, body) else {
             // A matching command with an unusable payload keeps the confirmed
             // state and the original deadline; the command waits for a valid reply.
             return self.next_effect(now);
@@ -624,8 +656,13 @@ impl SessionMachine {
 
         match write.target.write_body(state, body) {
             Ok(resolved) => {
+                let stage = if write.target.expects_ack() {
+                    WriteStage::Ack
+                } else {
+                    WriteStage::SendingWrite
+                };
                 self.active = Some(ActiveWrite {
-                    stage: WriteStage::Ack,
+                    stage,
                     expected_auto_power_off: resolved.expected_auto_power_off,
                     ..write
                 });
@@ -676,7 +713,7 @@ impl SessionMachine {
         write: ActiveWrite,
         body: &[u8],
     ) -> Effect {
-        let Some(state) = write.model.decode_confirmed_state(body) else {
+        let Some(state) = self.decode_confirmed(write.model, body) else {
             // Keep the confirmed state and the original deadline for a valid reply.
             return self.next_effect(now);
         };
@@ -744,7 +781,7 @@ impl SessionMachine {
 
     fn mark_write_attempt(&mut self) {
         if let Some(write) = &mut self.active
-            && write.stage == WriteStage::Ack
+            && matches!(write.stage, WriteStage::Ack | WriteStage::SendingWrite)
         {
             write.may_have_written = true;
         }
@@ -919,6 +956,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::GamingMode(requested) => CommandError::GamingModeMismatch {
             requested,
             observed: state.gaming_mode,
+        },
+        WriteTarget::WearingDetection(requested) => CommandError::WearingDetectionMismatch {
+            requested,
+            observed: state.wearing_detection,
         },
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
