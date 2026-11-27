@@ -60,8 +60,17 @@ impl BluezRfcommTransport {
             }
         }
         let device = found.ok_or(TransportError::DeviceNotFound)?;
+        let service = device
+            .uuids()
+            .await
+            .map_err(classify_bluez)?
+            .into_iter()
+            .flatten()
+            .find(|uuid| uuid.as_u128() & SOUNDCORE_UUID_MASK == SOUNDCORE_UUID)
+            .map(|uuid| *uuid.as_bytes());
         let target = ConnectTarget {
             mac: RedactedMac::from_octets(device.address().0),
+            service,
         };
         Ok((Self { session, device }, target))
     }

@@ -198,6 +198,9 @@ fn state_identifiers(model: ModelDriver, body: &[u8]) -> Option<&'static [(usize
         ModelDriver::A3954 if body.len() == 165 && a3954_serial_is_recognized(&body[16..32]) => {
             &[(16, 32), (38, 44)]
         }
+        // Both public codes share one measured 152-byte layout; the mask is
+        // selected by the confirmed model, not by the body.
+        ModelDriver::D1202 | ModelDriver::D1202C if body.len() == 152 => &[(16, 32)],
         _ => return None,
     };
     model.decode_state(body).ok()?;

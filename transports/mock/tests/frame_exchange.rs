@@ -15,6 +15,7 @@ mod tests {
         let transport: &dyn TransportProvider = &MockTransport;
         let target = ConnectTarget {
             mac: RedactedMac::from_octets([0; 6]),
+            service: None,
         };
         let link = transport.connect(&target).await.expect("open mock link");
         let (mut tx, mut rx) = link.split();

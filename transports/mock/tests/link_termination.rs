@@ -55,6 +55,7 @@ mod tests {
     async fn explicit_close_releases_pending_read_and_rejects_sends() {
         let target = ConnectTarget {
             mac: RedactedMac::from_octets([0; 6]),
+            service: None,
         };
         let link = MockTransport
             .connect(&target)

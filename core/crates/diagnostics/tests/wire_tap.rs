@@ -91,6 +91,47 @@ mod tests {
     }
 
     #[test]
+    fn clears_the_d1202_family_state_serial_for_both_public_codes() {
+        let mut tap = WireTap::new(NonZeroUsize::new(2).unwrap());
+        tap.set_enabled(true);
+        for (model, fixture) in [
+            (
+                ModelDriver::D1202,
+                include_bytes!("../../../data/d1202-pilot-state.bin").as_slice(),
+            ),
+            (
+                ModelDriver::D1202C,
+                include_bytes!("../../../data/d1202c-pilot-state.bin").as_slice(),
+            ),
+        ] {
+            let frame = decode(fixture);
+            assert_eq!(frame.body.len(), 152);
+            tap.record_frame(Duration::ZERO, Some(model), &frame);
+            let record = tap.records().last().unwrap();
+            let sanitized = decode(record.frame_bytes().unwrap());
+            let mut expected = frame.body.to_vec();
+            expected[16..32].fill(0);
+            assert_eq!(record.metadata.outcome, CaptureOutcome::Sanitized);
+            assert_eq!(record.metadata.length, 162);
+            assert_eq!(sanitized.body.as_ref(), expected);
+        }
+        let debug = format!("{tap:?}");
+        assert!(!debug.contains("1202TEST00000000"));
+
+        // The shared state serial is only cleared for the measured layout.
+        let frame = decode(include_bytes!("../../../data/d1202-pilot-state.bin"));
+        let truncated = make_frame(
+            Direction::Inbound,
+            [0x01, 0x01],
+            &frame.body[..frame.body.len() - 1],
+        );
+        tap.record_frame(Duration::ZERO, Some(ModelDriver::D1202), &truncated);
+        let record = tap.records().last().unwrap();
+        assert_eq!(record.metadata.outcome, CaptureOutcome::MetadataOnly);
+        assert!(record.frame_bytes().is_none());
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

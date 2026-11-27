@@ -25,6 +25,7 @@ mod tests {
                 StaleSnapshotDevice { split_at },
                 ConnectTarget {
                     mac: RedactedMac::from_octets([0; 6]),
+                    service: None,
                 },
             );
             let original = handle.confirmed_view().await.expect("baseline state");

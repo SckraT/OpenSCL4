@@ -49,7 +49,7 @@ jobs:
       - name: Generate HTML test coverage report
         run: cargo llvm-cov report --html
       - name: Test the virtual CLI pilots
-        run: cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028
+        run: cargo test --locked -p openscq30-cli --test pilot_a3954 --test pilot_a3062 --test pilot_a3949 --test pilot_a3028 --test pilot_d1202
       - name: Package the Linux A3954 pilot CLI
         run: |
           mkdir -p "$RUNNER_TEMP/openscl4-pilot"

@@ -135,6 +135,7 @@ mod tests {
             },
             ConnectTarget {
                 mac: RedactedMac::from_octets([0; 6]),
+                service: None,
             },
             policy,
         )

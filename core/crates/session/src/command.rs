@@ -1,6 +1,7 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
     Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    SPATIAL_AUDIO_COMMAND, SpatialAudio,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -71,8 +72,10 @@ pub enum SessionCommand {
     SetAmbientSoundMode(SoundMode),
     /// Enable or disable gaming mode on a supported device.
     SetGamingMode(bool),
-    /// Set the auto power off value on a device that reports its extra fields.
+    /// Set the auto power off value on a device that reports it.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Enable or disable spatial audio on a device that reports it.
+    SetSpatialAudio(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -98,6 +101,9 @@ impl SessionCommand {
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
             }
+            Self::SetSpatialAudio(_) if !capabilities.spatial_audio_write => {
+                Err(ModelError::InvalidSpatialAudioWrite)
+            }
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
             }
@@ -120,6 +126,8 @@ impl SessionCommand {
 
 /// A requested write resolved against a fresh state response.
 pub struct ResolvedWrite {
+    /// The command to transmit, when it differs from the target's default.
+    pub command: Option<[u8; 2]>,
     /// The command body to transmit.
     pub body: Vec<u8>,
     /// The value a read-back must report for an auto power off write.
@@ -138,6 +146,8 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A spatial audio change.
+    SpatialAudio(bool),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,6 +159,7 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::SpatialAudio(_) => SPATIAL_AUDIO_COMMAND,
             Self::Equalizer(_) => model.equalizer_command(),
         }
     }
@@ -163,6 +174,7 @@ impl WriteTarget {
         raw_state: &[u8],
     ) -> Result<ResolvedWrite, ModelError> {
         let mut resolved = ResolvedWrite {
+            command: None,
             body: Vec::new(),
             expected_auto_power_off: None,
         };
@@ -173,11 +185,21 @@ impl WriteTarget {
             {
                 state.family_sound_mode_write(mode)?.to_vec()
             }
+            Self::AmbientMode(mode)
+                if matches!(state.model, ModelDriver::D1202 | ModelDriver::D1202C) =>
+            {
+                state.d1202_sound_mode_write(mode)?.to_vec()
+            }
             Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
             Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
             Self::AutoPowerOff(setting) => {
                 let write = state.auto_power_off_write(setting)?;
                 resolved.expected_auto_power_off = Some(write.expected());
+                write.body().to_vec()
+            }
+            Self::SpatialAudio(enabled) => {
+                let write = state.spatial_audio_write(enabled, raw_state)?;
+                resolved.command = Some(write.command());
                 write.body().to_vec()
             }
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
@@ -197,6 +219,9 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::SpatialAudio(enabled) => {
+                state.spatial_audio.map(|setting| setting.enabled) == Some(enabled)
+            }
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -289,6 +314,16 @@ pub enum CommandError {
         requested: AutoPowerOffSetting,
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
+    },
+    /// The read-back did not match the requested spatial audio flag.
+    #[error(
+        "spatial audio did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    SpatialAudioMismatch {
+        /// The requested flag.
+        requested: bool,
+        /// The spatial audio reported by the device.
+        observed: Option<SpatialAudio>,
     },
     /// The read-back did not match the requested mode or position.
     #[error(

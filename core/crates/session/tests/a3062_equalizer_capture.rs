@@ -64,6 +64,7 @@ mod tests {
             replay,
             ConnectTarget {
                 mac: RedactedMac::from_octets([0; 6]),
+                service: None,
             },
         );
         let view = handle.confirmed_view().await.expect("measured baseline");

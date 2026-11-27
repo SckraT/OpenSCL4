@@ -58,6 +58,22 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The P31i and R60i NC pilots use the same legacy driver. Both devices report the
+same state serial: its four-digit model number is `1202` for the whole family.
+The session selects the public code from the recorded Soundcore RFCOMM service
+UUID, which the Windows and BlueZ transports read during discovery; the virtual
+pilot passes the recorded value for `--mock-model`. Without that connection
+metadata the family resolves to its canonical `D1202` code, and the read-only
+fallback still applies. Both fixtures report two earbud batteries, the charging
+case, both firmware versions, the noise-canceling mode, spatial audio and auto
+power off. Add `--cycle-mode` to write the Normal → ANC → Normal sequence, each
+confirmed by a fresh state response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model D1202
+cargo run --locked -p openscq30-cli -- pilot --mock-model D1202C
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

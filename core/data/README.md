@@ -193,3 +193,43 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## D1202 and D1202C pilot states
+
+[d1202-pilot-state.bin](d1202-pilot-state.bin) is a 152-byte inbound `01 01`
+frame built from the P31i state capture reported in upstream OpenSCQ30
+[issue #237](https://github.com/Oppzippy/OpenSCQ30/issues/237). The source body
+SHA-256 is
+`305f6b6a4b927e1397013422ec6c838056310b21c346d7fa48eb7118a5a104b5`.
+The capture carried a real 16-byte device serial at body offsets 16–31. The
+fixture replaces the full serial with the synthetic `1202TEST00000000` value and
+recalculates the frame checksum; the masked body SHA-256 is
+`d26352f448a6a0d769c7fb977cbc779520386bb861c38d2e0fe278e08643ddea` and the
+resulting frame SHA-256 is
+`8fb597056759f1f5a4ff3485f2067a86d3d87e82c7fe39bc7748802347004cbc`.
+
+[d1202c-pilot-state.bin](d1202c-pilot-state.bin) is a 152-byte inbound `01 01`
+frame built from the R60i NC state capture reported in upstream OpenSCQ30
+[issue #311](https://github.com/Oppzippy/OpenSCQ30/issues/311). The source body
+SHA-256 is
+`e4c48b275f980c5705b5ad022bb1cbc9d8bf7f6100cd6d09d06aaac3a1b6119d`.
+It masks the same serial offset with the same synthetic value and recalculates
+the checksum; the masked body SHA-256 is
+`18cc8d949704226527849494a0fd1875aeb977c87bb352e1e17a410223822396` and the
+resulting frame SHA-256 is
+`6e8a44b07276c14edcb91d3eee92adabd68829f59f4796c132b0d39c079241b6`.
+
+The measured body parses with the legacy D1202 parser as 139 bytes of fields and
+thirteen trailing bytes. Both public codes report the four-digit model number
+`1202` in the state serial, so the state response names the family but not the
+code. The public code is selected from connection metadata: the inherited device
+faker research configurations record the Soundcore RFCOMM service UUID
+`0cf12d31-fac3-4553-bd80-d6832e7d1202` for P31i and
+`0cf12d31-fac3-4553-bd80-d6832e71202c` for R60i NC. The R60i NC value is
+confirmed by the Windows discovery log of a physical device in upstream
+OpenSCQ30 [issue #350](https://github.com/Oppzippy/OpenSCQ30/issues/350)
+(`found uuids: [... 0cf12d31-fac3-4553-bd80-d6832e71202c ...]`). The fixtures
+therefore share the synthetic serial and differ only in the
+recorded service metadata. The synthetic serial deliberately keeps the family
+prefix so tests cover the overlapping identification strings. No real serial,
+MAC address or pairing data is committed.

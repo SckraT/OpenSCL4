@@ -84,6 +84,7 @@ mod tests {
             provider,
             ConnectTarget {
                 mac: RedactedMac::from_octets([0; 6]),
+                service: None,
             },
         )
     }

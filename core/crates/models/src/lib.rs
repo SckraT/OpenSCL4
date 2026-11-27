@@ -7,6 +7,7 @@ use std::fmt;
 mod a3028;
 mod a3062;
 mod a3949;
+mod d1202;
 pub mod registry;
 
 pub use a3028::{
@@ -15,6 +16,13 @@ pub use a3028::{
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
+pub use d1202::{
+    AUTO_POWER_OFF as D1202_AUTO_POWER_OFF, D1202_SERVICE_ID, D1202C_SERVICE_ID,
+    EQUALIZER_BANDS as D1202_EQUALIZER_BANDS, EQUALIZER_COMMAND as D1202_EQUALIZER_COMMAND,
+    EQUALIZER_PRESET as D1202_EQUALIZER_PRESET, SOUND_MODE as D1202_SOUND_MODE,
+    SOUND_MODE_FIELDS as D1202_SOUND_MODE_FIELDS, SPATIAL_AUDIO as D1202_SPATIAL_AUDIO,
+    SPATIAL_AUDIO_COMMAND,
+};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -51,6 +59,10 @@ pub enum ModelDriver {
     A3949,
     /// Soundcore Liberty 4 Pro.
     A3954,
+    /// Soundcore P31i.
+    D1202,
+    /// Soundcore R60i NC.
+    D1202C,
 }
 
 impl ModelDriver {
@@ -63,10 +75,20 @@ impl ModelDriver {
     pub const fn capabilities(self) -> Capabilities {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
-            ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
+            ambient_sound_mode_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::D1202 | Self::D1202C
+            ),
+            equalizer_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3062 | Self::D1202 | Self::D1202C
+            ),
             gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            auto_power_off_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::D1202 | Self::D1202C
+            ),
+            spatial_audio_write: matches!(self, Self::D1202 | Self::D1202C),
         }
     }
 
@@ -78,7 +100,17 @@ impl ModelDriver {
             Self::A3062 => "A3062",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
+            Self::D1202 => "D1202",
+            Self::D1202C => "D1202C",
         }
+    }
+
+    /// Returns the recorded connection metadata that selects this public code.
+    ///
+    /// Only the D1202 family needs it: both codes report the same state serial,
+    /// so the recorded Soundcore RFCOMM service UUID is the discriminator.
+    pub fn service_id(self) -> Option<[u8; 16]> {
+        d1202::service_id(self)
     }
 
     /// Returns the request and reply command for the initial state.
@@ -90,7 +122,7 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            Self::A3062 | Self::A3949 | Self::A3954 | Self::D1202 | Self::D1202C => EQUALIZER_BANDS,
         }
     }
 
@@ -98,6 +130,7 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
+            Self::D1202 | Self::D1202C => d1202::EQUALIZER_COMMAND,
             Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
         }
     }
@@ -118,6 +151,7 @@ impl ModelDriver {
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
+            Self::D1202 | Self::D1202C => d1202::decode_state(self, body),
         }
     }
 
@@ -126,13 +160,21 @@ impl ModelDriver {
     /// The general decoder accepts trailing data for diagnostics and future
     /// layouts; a write is admitted only from the confirmed state formats. An
     /// A3954 state also needs the measured serial evidence used for redaction,
-    /// and the A3028 family needs the serial that selects its public code.
+    /// and the A3028 family needs the serial that selects its public code. The
+    /// D1202 family shares one measured layout and one state serial, so it is
+    /// confirmed by that shared layout rather than by the serial's model number.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
+        if matches!(self, Self::D1202 | Self::D1202C) {
+            return d1202::has_confirmed_layout(body)
+                .then(|| self.decode_state(body).ok())
+                .flatten();
+        }
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
+            Self::D1202 | Self::D1202C => false,
         };
         let serial_matches = match self {
             Self::A3028 | Self::A3029 => {
@@ -140,6 +182,7 @@ impl ModelDriver {
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
+            Self::D1202 | Self::D1202C => false,
         };
         (layout_matches && serial_matches)
             .then(|| self.decode_state(body).ok())
@@ -172,6 +215,8 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            spatial_audio: None,
+            connection: None,
         })
     }
 
@@ -188,7 +233,23 @@ impl ModelDriver {
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
+            Self::D1202 | Self::D1202C => d1202::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+        }
+    }
+
+    /// Builds the driver's spatial audio change from a fresh state response.
+    pub fn spatial_audio_write(
+        self,
+        setting: SpatialAudio,
+        state: &DeviceState,
+        raw_state: &[u8],
+    ) -> Result<d1202::SpatialAudioWrite, ModelError> {
+        match self {
+            Self::D1202 | Self::D1202C => d1202::spatial_audio_write(setting, state, raw_state),
+            Self::A3028 | Self::A3029 | Self::A3062 | Self::A3949 | Self::A3954 => {
+                Err(ModelError::InvalidSpatialAudioWrite)
+            }
         }
     }
 }
@@ -206,6 +267,8 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the spatial audio setting.
+    pub spatial_audio_write: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -213,6 +276,7 @@ enum SoundModeControls {
     A3028([u8; 3]),
     A3062([u8; 5]),
     A3954(A3954SoundModeControls),
+    D1202([u8; 7]),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,6 +308,10 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Spatial audio reported by a model that supports it.
+    pub spatial_audio: Option<SpatialAudio>,
+    /// Read-only connection settings reported by a model that supports them.
+    pub connection: Option<ConnectionSettings>,
 }
 
 impl DeviceState {
@@ -284,6 +352,30 @@ impl DeviceState {
             return Err(ModelError::InvalidSoundModeWrite);
         };
         a3028::sound_mode_write(mode, controls)
+    }
+
+    /// Builds the eight-byte ambient-mode write of the D1202 family.
+    pub fn d1202_sound_mode_write(self, mode: SoundMode) -> Result<[u8; 8], ModelError> {
+        let Some(SoundModeControls::D1202(controls)) = self.sound_mode_controls else {
+            return Err(ModelError::InvalidSoundModeWrite);
+        };
+        d1202::ambient_sound_mode_write(mode, controls)
+    }
+
+    /// Builds a spatial audio change from the fresh state response.
+    pub fn spatial_audio_write(
+        self,
+        enabled: bool,
+        raw_state: &[u8],
+    ) -> Result<d1202::SpatialAudioWrite, ModelError> {
+        if !self.model.capabilities().spatial_audio_write {
+            return Err(ModelError::InvalidSpatialAudioWrite);
+        }
+        let current = self
+            .spatial_audio
+            .ok_or(ModelError::InvalidSpatialAudioWrite)?;
+        self.model
+            .spatial_audio_write(SpatialAudio { enabled, ..current }, &self, raw_state)
     }
 
     /// Builds a gaming-mode write for a device that reports the measured flag.
@@ -344,6 +436,136 @@ pub struct BatteryLevels {
     pub right: Option<u8>,
     /// Charging case percentage.
     pub case: Option<u8>,
+}
+
+/// The side of the pair that hosts the current connection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HostDevice {
+    /// The left earbud hosts the connection.
+    Left,
+    /// The right earbud hosts the connection.
+    Right,
+}
+
+impl HostDevice {
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Left => "Left",
+            Self::Right => "Right",
+        }
+    }
+}
+
+/// Spatial audio reported and written by a model that supports it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SpatialAudio {
+    /// Whether spatial audio is enabled.
+    pub enabled: bool,
+    /// The spatial audio mode.
+    pub mode: SpatialAudioMode,
+}
+
+/// Spatial audio modes of the D1202 family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpatialAudioMode {
+    /// Music.
+    Music,
+    /// Movie.
+    Movie,
+    /// Gaming.
+    Gaming,
+}
+
+impl SpatialAudioMode {
+    /// Decodes the measured mode byte; the legacy structure clamps an
+    /// unrecognized byte to the default music mode.
+    fn decode(byte: u8) -> Self {
+        match byte {
+            2 => Self::Movie,
+            3 => Self::Gaming,
+            _ => Self::Music,
+        }
+    }
+
+    const fn wire(self) -> u8 {
+        match self {
+            Self::Music => 0,
+            Self::Movie => 2,
+            Self::Gaming => 3,
+        }
+    }
+
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Music => "Music",
+            Self::Movie => "Movie",
+            Self::Gaming => "Gaming",
+        }
+    }
+}
+
+/// High-volume limit reported by the D1202 family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LimitHighVolume {
+    /// Whether the limit is enabled.
+    pub enabled: bool,
+    /// The decibel limit.
+    pub db_limit: u8,
+    /// How often the reading is refreshed.
+    pub refresh_rate: DecibelReadingRefreshRate,
+}
+
+/// Refresh rate of the high-volume decibel reading.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DecibelReadingRefreshRate {
+    /// Every reading.
+    RealTime,
+    /// Every ten seconds.
+    TenSeconds,
+    /// Every minute.
+    OneMinute,
+}
+
+impl DecibelReadingRefreshRate {
+    /// Decodes the measured rate byte; the legacy structure clamps an
+    /// unrecognized byte to the default real-time reading.
+    fn decode(byte: u8) -> Self {
+        match byte {
+            1 => Self::TenSeconds,
+            2 => Self::OneMinute,
+            _ => Self::RealTime,
+        }
+    }
+
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::RealTime => "RealTime",
+            Self::TenSeconds => "10s",
+            Self::OneMinute => "1m",
+        }
+    }
+}
+
+/// Read-only connection settings reported by the D1202 family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ConnectionSettings {
+    /// Whether the earbuds are connected to each other.
+    pub tws_connected: bool,
+    /// The side that hosts the current connection.
+    pub host_device: HostDevice,
+    /// Whether multipoint connections are enabled.
+    pub dual_connections_enabled: bool,
+    /// Whether LDAC is enabled.
+    pub ldac: bool,
+    /// Whether the touch tone is enabled.
+    pub touch_tone: bool,
+    /// Whether the low battery prompt is enabled.
+    pub low_battery_prompt: bool,
+    /// The high-volume limit.
+    pub limit_high_volume: LimitHighVolume,
 }
 
 /// Sound mode values reported by the device.
@@ -526,14 +748,14 @@ impl EqualizerSetting {
 pub struct AutoPowerOff {
     /// Whether the device powers off after the selected idle duration.
     pub enabled: bool,
-    /// Index into the family's half-hour duration table.
+    /// Index into the model's four-entry duration table.
     pub duration: u8,
 }
 
 /// A requested auto power off change.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AutoPowerOffSetting {
-    /// Enable auto power off with an index into the half-hour duration table.
+    /// Enable auto power off with an index into the model's duration table.
     Enabled(u8),
     /// Disable auto power off and keep the device's previous duration index.
     Disabled,
@@ -622,6 +844,12 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable spatial audio setting.
+    #[error("unsupported device spatial audio write")]
+    InvalidSpatialAudioWrite,
+    /// A state field carries an unrecognized value.
+    #[error("invalid device state value")]
+    InvalidStateValue,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,
@@ -650,6 +878,11 @@ impl<'a> RedactedSerial<'a> {
     fn identifies(&self, model: ModelDriver) -> bool {
         let code = model.code().as_bytes();
         self.0.starts_with(code) || self.0.starts_with(&code[1..])
+    }
+
+    /// Whether the serial starts with an ASCII prefix.
+    fn starts_with(&self, prefix: &[u8]) -> bool {
+        self.0.starts_with(prefix)
     }
 }
 
