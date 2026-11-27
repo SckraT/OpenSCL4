@@ -73,6 +73,8 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
             right: None,
             case: None,
         },
+        battery_charging: None,
+        volume: None,
         sound_mode: Some(sound_mode),
         sound_mode_controls: Some(SoundModeControls::A3028([
             noise_canceling,
@@ -82,6 +84,7 @@ pub fn decode_state(model: ModelDriver, body: &[u8]) -> Result<DeviceState, Mode
         equalizer: equalizer_setting(body),
         auto_power_off: auto_power_off(body),
         gaming_mode: None,
+        voice_prompt: None,
         firmware_device: FirmwareVersion::parse(&body[FIRMWARE])?,
         firmware_left: None,
         firmware_right: None,

@@ -8,7 +8,7 @@ use std::{
     },
 };
 
-use openscl4_protocol::{Direction, Frame, encode_frame};
+use openscl4_protocol::{ChecksumKind, Direction, Frame, encode_frame_with};
 use openscl4_transport::{
     ConnectTarget, LinkRx, LinkTx, TransportError, TransportLink, TransportProvider,
 };
@@ -302,12 +302,16 @@ impl SessionRunner {
     ) {
         let mut active = None;
         let mut last_disconnected = 0;
+        let mut checksum_kind = ChecksumKind::Suffix;
         let mut effect = self.machine.open(started.elapsed());
 
         loop {
             let generation = self.machine.view().generation;
             let input = match effect {
-                Effect::Open { deadline } => {
+                Effect::Open {
+                    deadline,
+                    checksum_kind: requested,
+                } => {
                     self.publish();
                     let opening = async {
                         timeout_at(started + deadline, provider.connect(&target))
@@ -317,8 +321,12 @@ impl SessionRunner {
                     };
                     match until_close(&mut self.close_requested, opening).await {
                         Ok(link) => {
-                            let decoder =
-                                CaptureDecoder::new(self.capture.clone(), self.view.subscribe());
+                            checksum_kind = requested;
+                            let decoder = CaptureDecoder::new(
+                                self.capture.clone(),
+                                self.view.subscribe(),
+                                checksum_kind,
+                            );
                             active = Some(ActiveLink::new(link, self.events.clone(), decoder));
                             Input::Opened
                         }
@@ -360,7 +368,12 @@ impl SessionRunner {
                     };
                     let connection = self.machine.view().connection;
                     let sending = async {
-                        let request = encode_frame(frame.direction, frame.command, &frame.body)?;
+                        let request = encode_frame_with(
+                            checksum_kind,
+                            frame.direction,
+                            frame.command,
+                            &frame.body,
+                        )?;
                         let receive_cutoff = link.receive_order.load(Ordering::SeqCst);
                         timeout_at(started + deadline, async {
                             send_started = true;

@@ -157,6 +157,55 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3116 state and voice prompt reference
+
+[a3116-state-reference.json](a3116-state-reference.json) records the A3116 state
+and command reference. The state body comes from the legacy driver test
+`manually_crafted_packet_matches_soundcore_app` in
+[`lib/src/devices/soundcore/a3116.rs`](../../lib/src/devices/soundcore/a3116.rs)
+at the matrix revision `7e90bb78`. The reference replaces the legacy fixture's
+synthetic `ABCDEFABCDEFABCD` serial at body offsets 10–25 with the model-prefixed
+`3116TEST00000000` value. No real serial number or MAC address is present.
+
+The A3116 frames carry **no trailing checksum**. The little-endian length field
+counts the nine header bytes and the body; a 36-byte body in an `01 01` response
+therefore has length 45. There is no checksum to mask or recompute. The new
+session starts with the checksummed framing used by the other models and retries
+the same connection without a checksum when no measured state arrives, which is
+also how the virtual transport proves the framing. [A3116 driver](../../lib/src/devices/soundcore/a3116.rs)
+
+The state body is charging at 0, battery level at 1, volume at 2, an unknown byte
+at 3, the auto power off duration byte at 4, firmware `38.39` at 5–9, the serial
+at 10–25, the equalizer preset id at 26 and nine whole-dB band bytes at 27–35.
+The legacy volume scale ends at 16, and the auto power off byte is one-based over
+the 5, 10, 30 and 60 minute table.
+
+[The pilot fixture](a3116-pilot-state.bin) is a 45-byte inbound `01 01` frame
+with the synthetic serial and firmware 38.39; its SHA-256 is
+`270d6caba495808d2ffea3cb89e9f4711493c209277a09acbc5182c047c8db7d`.
+[The old-firmware fixture](a3116-old-firmware-state.bin) changes only the five
+firmware bytes to `00.99`; its SHA-256 is
+`c76dd7152a1bf53d5c7522b43a3b3248918f519e57a0491b4019cc2a0779ee63`.
+Firmware below 38.39 does not answer the targeted `01 10` voice prompt read, so
+the new session reports the flag as unavailable and rejects its write before
+transmission. Firmware 38.39 and newer is read once during synchronization and
+read back after the `01 90` write.
+[The voice-prompt on reply](a3116-voice-prompt-on.bin) and
+[the off reply](a3116-voice-prompt-off.bin) are 10-byte inbound `01 10` frames
+with a one-byte flag; their SHA-256 values are
+`5cda820c414c0d179977a3117eb42bfa8d1467fd7dc5dc9bf471b03ca51b1256` and
+`ac8777331aaea8d907783db8e84fd0ae323eab5ebec19c1957c28ec0fadb8876`.
+
+The golden write frames in the reference come from the legacy builders:
+`01 81` carries the volume byte, `02 81` the one-byte preset id, `02 83` the nine
+band bytes, `01 83` the one-based duration, `01 90` the voice prompt flag and
+`01 85` the empty power off action. The virtual device applies each write to its
+stored state and answers the state or targeted read that confirms it. The power
+off action is confirmed by the empty `01 85` acknowledgement; the expected link
+termination is triggered separately in the virtual scenario.
+**No physical A3116 capture exists** for these sessions; the fixtures are derived
+from the legacy driver test and its builders.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

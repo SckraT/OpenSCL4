@@ -1,6 +1,7 @@
 use openscl4_models::{
-    AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
-    Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    A3116_VOICE_PROMPT_READ_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff,
+    AutoPowerOffSetting, Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError,
+    SOUND_MODE_COMMAND,
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +74,12 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Set the reported volume on a model that carries it in its state.
+    SetVolume(u8),
+    /// Enable or disable voice prompts on a model with the targeted flag.
+    SetVoicePrompt(bool),
+    /// Power the device off. There is no readable state to confirm the result.
+    PowerOff,
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -98,6 +105,15 @@ impl SessionCommand {
             Self::SetAutoPowerOff(_) if !capabilities.auto_power_off_write => {
                 Err(ModelError::InvalidAutoPowerOffWrite)
             }
+            Self::SetVolume(volume)
+                if !capabilities.volume_write || !model.volume_is_writable(volume) =>
+            {
+                Err(ModelError::InvalidVolumeWrite)
+            }
+            Self::SetVoicePrompt(_) if !capabilities.voice_prompt_write => {
+                Err(ModelError::InvalidVoicePromptWrite)
+            }
+            Self::PowerOff if !capabilities.power_off => Err(ModelError::InvalidPowerOffAction),
             Self::ApplyQuickPreset(preset) if preset.mode_unsupported(capabilities) => {
                 Err(ModelError::InvalidSoundModeWrite)
             }
@@ -108,7 +124,14 @@ impl SessionCommand {
             {
                 Err(ModelError::InvalidEqualizerWrite)
             }
-            _ => Ok(()),
+            Self::PowerOff
+            | Self::SetSoundMode(_)
+            | Self::SetAmbientSoundMode(_)
+            | Self::SetGamingMode(_)
+            | Self::SetAutoPowerOff(_)
+            | Self::SetVolume(_)
+            | Self::SetVoicePrompt(_)
+            | Self::ApplyQuickPreset(_) => Ok(()),
         }
     }
 
@@ -120,8 +143,8 @@ impl SessionCommand {
 
 /// A requested write resolved against a fresh state response.
 pub struct ResolvedWrite {
-    /// The command body to transmit.
-    pub body: Vec<u8>,
+    /// The wire requests to transmit, in order.
+    pub requests: Vec<([u8; 2], Vec<u8>)>,
     /// The value a read-back must report for an auto power off write.
     pub expected_auto_power_off: Option<AutoPowerOff>,
 }
@@ -138,22 +161,37 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A volume change.
+    Volume(u8),
+    /// A voice prompt flag change.
+    VoicePrompt(bool),
+    /// The power off action.
+    PowerOff,
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
 
 impl WriteTarget {
-    /// The wire command that carries this write for the selected model.
-    pub(crate) fn command(self, model: ModelDriver) -> [u8; 2] {
+    /// Whether this write is an action without a readable confirmation.
+    pub(crate) fn is_action(self) -> bool {
+        matches!(self, Self::PowerOff)
+    }
+
+    /// The command whose response confirms the write.
+    pub(crate) fn read_back_command(self, model: ModelDriver) -> [u8; 2] {
         match self {
-            Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
-            Self::GamingMode(_) => GAMING_MODE_COMMAND,
-            Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
-            Self::Equalizer(_) => model.equalizer_command(),
+            Self::VoicePrompt(_) => A3116_VOICE_PROMPT_READ_COMMAND,
+            Self::SoundMode(_)
+            | Self::AmbientMode(_)
+            | Self::GamingMode(_)
+            | Self::AutoPowerOff(_)
+            | Self::Volume(_)
+            | Self::PowerOff
+            | Self::Equalizer(_) => model.state_command(),
         }
     }
 
-    /// Builds the write body from a fresh state response and its raw bytes.
+    /// Builds the write requests from a fresh state response and its raw bytes.
     ///
     /// The equalizer write echoes the state's hear-id fields, so it needs the
     /// raw response next to the decoded one.
@@ -163,24 +201,49 @@ impl WriteTarget {
         raw_state: &[u8],
     ) -> Result<ResolvedWrite, ModelError> {
         let mut resolved = ResolvedWrite {
-            body: Vec::new(),
+            requests: Vec::new(),
             expected_auto_power_off: None,
         };
-        resolved.body = match self {
-            Self::SoundMode(setting) => state.sound_mode_write(setting)?.bytes().to_vec(),
+        let request = |command: [u8; 2], body: Vec<u8>| vec![(command, body)];
+        resolved.requests = match self {
+            Self::SoundMode(setting) => request(
+                SOUND_MODE_COMMAND,
+                state.sound_mode_write(setting)?.bytes().to_vec(),
+            ),
             Self::AmbientMode(mode)
                 if matches!(state.model, ModelDriver::A3028 | ModelDriver::A3029) =>
             {
-                state.family_sound_mode_write(mode)?.to_vec()
+                request(
+                    SOUND_MODE_COMMAND,
+                    state.family_sound_mode_write(mode)?.to_vec(),
+                )
             }
-            Self::AmbientMode(mode) => state.ambient_sound_mode_write(mode)?.to_vec(),
-            Self::GamingMode(enabled) => state.gaming_mode_write(enabled)?.to_vec(),
+            Self::AmbientMode(mode) => request(
+                SOUND_MODE_COMMAND,
+                state.ambient_sound_mode_write(mode)?.to_vec(),
+            ),
+            Self::GamingMode(enabled) => request(
+                GAMING_MODE_COMMAND,
+                state.gaming_mode_write(enabled)?.to_vec(),
+            ),
             Self::AutoPowerOff(setting) => {
                 let write = state.auto_power_off_write(setting)?;
                 resolved.expected_auto_power_off = Some(write.expected());
-                write.body().to_vec()
+                request(write.command(), write.body().to_vec())
             }
-            Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
+            Self::Volume(volume) => {
+                let (command, body) = state.volume_write(volume)?;
+                request(command, body)
+            }
+            Self::VoicePrompt(enabled) => {
+                let (command, body) = state.voice_prompt_write(enabled)?;
+                request(command, body)
+            }
+            Self::PowerOff => {
+                let (command, body) = state.power_off_request()?;
+                request(command, body)
+            }
+            Self::Equalizer(setting) => state.model.equalizer_write_requests(setting, raw_state)?,
         };
         Ok(resolved)
     }
@@ -197,7 +260,12 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::Volume(volume) => state.volume == Some(volume),
+            Self::VoicePrompt(enabled) => state.voice_prompt == Some(enabled),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
+            // The power off action has no readable state; its acknowledgement
+            // completes the command instead of a read-back.
+            Self::PowerOff => false,
         }
     }
 }
@@ -207,6 +275,10 @@ impl WriteTarget {
 pub enum CommandOutcome {
     /// A read-back confirmed the requested value.
     Applied(DeviceState),
+    /// The device acknowledged an action that has no readable confirmation.
+    ///
+    /// The snapshot is the last state confirmed before the action.
+    Accepted(DeviceState),
 }
 
 /// Failure to accept a command.
@@ -290,6 +362,29 @@ pub enum CommandError {
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
     },
+    /// The read-back did not match the requested volume.
+    #[error(
+        "volume did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    VolumeMismatch {
+        /// The volume requested by the command.
+        requested: u8,
+        /// The volume reported by the device, if it reported one.
+        observed: Option<u8>,
+    },
+    /// The targeted read-back did not match the requested voice prompt flag.
+    #[error(
+        "voice prompt did not match the device read-back (requested {requested}, observed {observed:?})"
+    )]
+    VoicePromptMismatch {
+        /// The flag requested by the command.
+        requested: bool,
+        /// The flag reported by the device, if it reported one.
+        observed: Option<bool>,
+    },
+    /// The power off action was not acknowledged by the device.
+    #[error("power off was not acknowledged by the device")]
+    PowerOffUnconfirmed,
     /// The read-back did not match the requested mode or position.
     #[error(
         "sound mode did not match the device read-back (requested {requested:?}, observed {observed:?})"

@@ -305,7 +305,8 @@
                 "lib/src/devices/soundcore/a3116/modules/auto_power_off/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3116.rs::writes_the_auto_power_off_duration_and_confirms_it"
         },
         "a3116_equalizer": {
             "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_equalizer",
@@ -318,7 +319,8 @@
                 "lib/src/devices/soundcore/a3116/modules/equalizer/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3116.rs::writes_the_two_frame_equalizer_and_confirms_the_curve"
         },
         "a3116_power_off": {
             "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_power_off",
@@ -331,7 +333,8 @@
                 "lib/src/devices/soundcore/a3116/modules/power_off/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "accepted",
+            "test": "core/crates/session/tests/a3116.rs::power_off_is_accepted_on_the_acknowledgement_and_the_link_ends"
         },
         "a3116_volume": {
             "registration": "lib/src/devices/soundcore/a3116/modules.rs::a3116_volume",
@@ -344,7 +347,8 @@
                 "lib/src/devices/soundcore/a3116/modules/volume/state_modifier.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending"
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3116.rs::writes_volume_and_confirms_it_from_a_fresh_state"
         },
         "a3388_equalizer": {
             "registration": "lib/src/devices/soundcore/a3388/modules.rs::a3388_equalizer",
@@ -1534,7 +1538,8 @@
                 "lib/src/devices/soundcore/common/modules/flag.rs"
             ],
             "evidence": "legacy",
-            "result": "parityPending",
+            "result": "confirmedReadBack",
+            "test": "core/crates/session/tests/a3116.rs::writes_the_voice_prompt_and_confirms_it_with_the_targeted_read",
             "inboundUpdates": [
                 "lib/src/devices/soundcore/common/modules/flag/packet_handler.rs"
             ]
@@ -2315,7 +2320,74 @@
                 "noChecksum",
                 "voicePromptSince38.39"
             ],
-            "stateParserSource": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "38.39",
+                    "outbound": "core/data/a3116-state-reference.json",
+                    "inbound": "core/data/a3116-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "38.39",
+                    "outbound": "core/data/a3116-state-reference.json",
+                    "inbound": "core/data/a3116-state-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readTargetedVoicePrompt",
+                    "core": "protocolFixture",
+                    "firmware": "38.39 and newer",
+                    "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs::request_voice_prompt",
+                    "inbound": "core/data/a3116-voice-prompt-on.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeVolume",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_volume",
+                    "inbound": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3116.rs::writes_volume_and_confirms_it_from_a_fresh_state"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_equalizer_preset",
+                    "inbound": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3116.rs::writes_the_two_frame_equalizer_and_confirms_the_curve"
+                },
+                {
+                    "operation": "writeVoicePrompt",
+                    "core": "protocolFixture",
+                    "firmware": "38.39 and newer",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::voice_prompt_targeted",
+                    "inbound": "core/data/a3116-voice-prompt-off.bin",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3116.rs::writes_the_voice_prompt_and_confirms_it_with_the_targeted_read"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs::set_auto_power_off",
+                    "inbound": "lib/src/devices/soundcore/a3116/packets/inbound.rs::A3116StateUpdatePacket",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3116.rs::writes_the_auto_power_off_duration_and_confirms_it"
+                },
+                {
+                    "operation": "powerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3116/packets/outbound.rs::power_off",
+                    "inbound": "core/crates/session/tests/a3116.rs",
+                    "result": "accepted",
+                    "test": "core/crates/session/tests/a3116.rs::power_off_is_accepted_on_the_acknowledgement_and_the_link_ends"
+                }
+            ]
         },
         {
             "code": "A3330",

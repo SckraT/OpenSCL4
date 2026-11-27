@@ -8,4 +8,5 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+openscl4-protocol.workspace = true
 thiserror.workspace = true

@@ -78,6 +78,17 @@ cargo run --locked -p openscq30-cli -- pilot --mock-scenario unknown-identity
 cargo run --locked -p openscq30-cli -- pilot --mock-scenario incompatible-state
 ```
 
+The Motion+ pilot reads the A3116 state from frames without a trailing checksum.
+The session first tries the checksummed framing and retries the same connection
+without a checksum when the measured state does not arrive. The JSON reports the
+charging flag, device battery, firmware 38.39, volume, nine-band equalizer,
+auto power off and the targeted voice prompt flag from the reference in
+[`core/data`](../core/data/README.md#a3116-state-and-voice-prompt-reference).
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3116
+```
+
 On Windows and Linux, select a connected Liberty 4 Pro by its name in Bluetooth settings to run the same pilot over RFCOMM. Linux uses BlueZ on the system D-Bus.
 
 ```sh

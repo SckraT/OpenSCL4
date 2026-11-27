@@ -5528,6 +5528,7 @@ dependencies = [
 name = "openscl4-models"
 version = "2.14.0"
 dependencies = [
+ "openscl4-protocol",
  "thiserror 2.0.21",
 ]
 

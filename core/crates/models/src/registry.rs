@@ -1,12 +1,13 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3116, a3949};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 6] = [
     ModelDriver::A3028,
     ModelDriver::A3029,
     ModelDriver::A3062,
+    ModelDriver::A3116,
     ModelDriver::A3949,
     ModelDriver::A3954,
 ];
@@ -32,6 +33,12 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
     if a3028::has_confirmed_layout(body) {
         return match from_serial(&a3028::state_serial(body)?)? {
             model @ (ModelDriver::A3028 | ModelDriver::A3029) => Ok(model),
+            _ => Err(ModelError::UnknownModel),
+        };
+    }
+    if a3116::has_confirmed_layout(body) {
+        return match from_serial(&a3116::state_serial(body)?)? {
+            ModelDriver::A3116 => Ok(ModelDriver::A3116),
             _ => Err(ModelError::UnknownModel),
         };
     }
