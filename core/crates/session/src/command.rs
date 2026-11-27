@@ -1,6 +1,7 @@
 use openscl4_models::{
     AUTO_POWER_OFF_COMMAND, AUTO_POWER_OFF_DURATION_COUNT, AutoPowerOff, AutoPowerOffSetting,
     Capabilities, EqualizerSetting, GAMING_MODE_COMMAND, ModelError, SOUND_MODE_COMMAND,
+    d1301::{D1301Setting, ListeningMode, PostSleepAudio},
 };
 
 use crate::{DeviceState, ModelDriver, SessionError, SoundMode, SoundModeSetting};
@@ -73,6 +74,16 @@ pub enum SessionCommand {
     SetGamingMode(bool),
     /// Set the auto power off value on a device that reports its extra fields.
     SetAutoPowerOff(AutoPowerOffSetting),
+    /// Set the current listening mode of a D1301.
+    SetListeningMode(ListeningMode),
+    /// Set the listening mode a D1301 selects when it powers on.
+    SetDefaultListeningMode(ListeningMode),
+    /// Enable or disable the noise canceling flag of a D1301.
+    SetNoiseCanceling(bool),
+    /// Set the action a D1301 applies after it detects sleep.
+    SetPostSleepAudio(PostSleepAudio),
+    /// Enable or disable the post-sleep audio switch of a D1301.
+    SetAutoSwitchOnceAsleep(bool),
     /// Apply the enabled fields of one quick preset, one write at a time.
     ApplyQuickPreset(QuickPresetValues),
 }
@@ -89,6 +100,21 @@ impl SessionCommand {
             }
             Self::SetGamingMode(_) if !capabilities.gaming_mode_write => {
                 Err(ModelError::InvalidGamingModeWrite)
+            }
+            Self::SetListeningMode(_) if !capabilities.listening_mode_write => {
+                Err(ModelError::InvalidSleepSettingWrite)
+            }
+            Self::SetDefaultListeningMode(_) if !capabilities.default_listening_mode_write => {
+                Err(ModelError::InvalidSleepSettingWrite)
+            }
+            Self::SetNoiseCanceling(_) if !capabilities.noise_canceling_write => {
+                Err(ModelError::InvalidSleepSettingWrite)
+            }
+            Self::SetPostSleepAudio(_) if !capabilities.post_sleep_audio_write => {
+                Err(ModelError::InvalidSleepSettingWrite)
+            }
+            Self::SetAutoSwitchOnceAsleep(_) if !capabilities.auto_switch_once_asleep_write => {
+                Err(ModelError::InvalidSleepSettingWrite)
             }
             Self::SetAutoPowerOff(AutoPowerOffSetting::Enabled(index))
                 if !capabilities.auto_power_off_write || index >= AUTO_POWER_OFF_DURATION_COUNT =>
@@ -138,6 +164,8 @@ pub enum WriteTarget {
     GamingMode(bool),
     /// An auto power off value change.
     AutoPowerOff(AutoPowerOffSetting),
+    /// A D1301 sleep setting change.
+    D1301(D1301Setting),
     /// An equalizer curve change.
     Equalizer(EqualizerSetting),
 }
@@ -149,6 +177,7 @@ impl WriteTarget {
             Self::SoundMode(_) | Self::AmbientMode(_) => SOUND_MODE_COMMAND,
             Self::GamingMode(_) => GAMING_MODE_COMMAND,
             Self::AutoPowerOff(_) => AUTO_POWER_OFF_COMMAND,
+            Self::D1301(setting) => setting.command(),
             Self::Equalizer(_) => model.equalizer_command(),
         }
     }
@@ -180,6 +209,12 @@ impl WriteTarget {
                 resolved.expected_auto_power_off = Some(write.expected());
                 write.body().to_vec()
             }
+            Self::D1301(setting) => {
+                if !setting.is_reported(state) {
+                    return Err(ModelError::InvalidSleepSettingWrite);
+                }
+                setting.write_body()
+            }
             Self::Equalizer(setting) => state.model.equalizer_write_body(setting, raw_state)?,
         };
         Ok(resolved)
@@ -197,6 +232,7 @@ impl WriteTarget {
             Self::GamingMode(enabled) => state.gaming_mode == Some(enabled),
             Self::AutoPowerOff(_) => expected_auto_power_off
                 .is_some_and(|expected| state.auto_power_off == Some(expected)),
+            Self::D1301(setting) => setting.matches(state),
             Self::Equalizer(setting) => state.equalizer == Some(setting),
         }
     }
@@ -289,6 +325,16 @@ pub enum CommandError {
         requested: AutoPowerOffSetting,
         /// The value reported by the device, if it reported a recognized one.
         observed: Option<AutoPowerOff>,
+    },
+    /// The read-back did not match the requested D1301 sleep setting.
+    #[error(
+        "sleep setting did not match the device read-back (requested {requested:?}, observed {observed:?})"
+    )]
+    SleepSettingMismatch {
+        /// The setting requested by the command.
+        requested: D1301Setting,
+        /// The same setting as the device reported it, if it reported one.
+        observed: Option<D1301Setting>,
     },
     /// The read-back did not match the requested mode or position.
     #[error(

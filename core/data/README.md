@@ -193,3 +193,69 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## D1301 sleep states
+
+[d1301-post-sleep-keep.bin](d1301-post-sleep-keep.bin),
+[d1301-post-sleep-pause.bin](d1301-post-sleep-pause.bin) and
+[d1301-post-sleep-play-local.bin](d1301-post-sleep-play-local.bin) are 150-byte
+`01 01` state bodies captured from a Sleep A30 on firmware `01.91`. They are the
+three values the official app offers for switching audio after the device detects
+sleep: keep audio (switch disabled), pause audio and play local audio. The source
+is the legacy driver test
+[`state_update.rs`](../../lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs)
+at revision `1791f1518581271f95247272c05903b50df616b0`; each fixture frames the
+captured body with the measured command and checksum.
+
+The capture contained the measured serial at body offsets 14–29. Every fixture
+replaces it with the synthetic `1301TEST00000000` value and recalculates the
+checksum. The six unidentified bytes at offsets 30–35 are zeroed as a precaution
+because the block has the width of a Bluetooth address; the legacy parser ignores
+them. The resulting frame SHA-256 values are
+`5e939a0aa6a74bc6a94be04ec3a85d9bde94d8d56be31293786c4ef223426573` (keep),
+`101ad13628d666c80449183a23e716e8c08c60aafb9c361d6f4fe777bdb69bc6` (pause) and
+`4e7e88fb85604666c0fd83c1eba70d7ecf822658e988fdd214d1e903560ef3a1` (play local).
+
+The legacy parser reads the left and right levels at body offsets 2 and 3 on the
+ten-step scale with offset 1 (both are 9, displayed as 100%), both `01.91`
+firmware versions at offsets 4–8 and 9–13, the listening mode at 65, the default
+listening mode at 66, the noise canceling flag at 140, the post-sleep action at
+144 and its enable flag at 148. The legacy test asserts the values at 144 and 148
+for every capture. The three captures also differ at body offset 61 together with
+the action; the legacy parser ignores that byte and its meaning is unidentified.
+The parser consumes 149 of the 150 bytes, and the reference decoder keeps the
+measured length as its confirmed layout. The virtual transport serves the pause
+state and has no measured identity response, so the session discovers the model
+from this state.
+
+## D1301 sleep reference
+
+[d1301-sleep-reference.json](d1301-sleep-reference.json) records the remaining
+D1301 reference data from the same legacy revision. The JSON SHA-256 is
+`bcc0bfb1ad481efe992d9e4979f838cede39a4115ae8d97aca56628fe2c545eb`.
+It documents the body offsets, the decoded examples and the captured outbound
+alarm frames. The `timerExample` is the `15 03` reply from the legacy
+`settings_match_soundcore_app` test: disabled, 30 minutes, unidentified byte `01`
+and 60 seconds left. The alarm examples are the two records of the same test and
+a changed list that applies the captured `14 81` update of slot 0 to the filled
+list; the changed list is derived, while both `14 81` record writes and the
+`14 82` delete are captured frames.
+
+| Fixture                                                 | Command    | SHA-256                                                            |
+| ------------------------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| [d1301-auto-stop-timer.bin](d1301-auto-stop-timer.bin)  | `15 03`    | `514c602360d79debaac860ebb0705169af01a123a21610746f0be59d1f4c759c` |
+| [d1301-alarms-empty.bin](d1301-alarms-empty.bin)        | `14 01`    | `907e793686160bdc6b132905a88d8faf6c7575c62dd3b6a34cb7ba322f7014a7` |
+| [d1301-alarms-filled.bin](d1301-alarms-filled.bin)      | `14 01`    | `37b4ec25b5858658c7b507cb490be22d60c823d1077c1a273e8a331f5c751b79` |
+| [d1301-alarms-changed.bin](d1301-alarms-changed.bin)    | `14 01`    | `d23b25590742cac658b4417a5035dc6cb1bf031ae8f26520cb6b0436906a666e` |
+
+The alarm writers are the request body builders documented in the legacy
+`packets/outbound.rs`. The auto-stop timer write repeats the enable flag, the
+little-endian duration and the unidentified byte of the `15 03` reply; the
+post-sleep action write keeps the timer fields as the three `FF` sentinels used by
+the official app. The model tests in
+[`core/crates/models/tests/d1301_reference.rs`](../crates/models/tests/d1301_reference.rs)
+decode every fixture and re-encode the captured alarm lists and records. The
+session currently confirms only the five settings carried by the `01 01` state;
+the timer and the alarm list need their own reads, which the session does not
+issue yet. The `15 85` timer body and the alarm mutations are therefore
+protocol-verified but not session-confirmed.

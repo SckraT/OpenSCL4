@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import unittest
@@ -7,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = ROOT / "docs/model-parity-1.2.json"
 REFERENCE_PATH = ROOT / "core/data/a3028-a3029-mode-reference.json"
+D1301_REFERENCE_PATH = ROOT / "core/data/d1301-sleep-reference.json"
 
 
 class ModelParityTest(unittest.TestCase):
@@ -108,3 +110,100 @@ class ModelParityTest(unittest.TestCase):
         self.assertEqual(int.from_bytes(frame[7:9], "little"), len(frame))
         self.assertEqual(frame[-1], sum(frame[:-1]) & 0xff)
         return frame
+
+    def test_d1301_sleep_reference_frames(self):
+        reference = json.loads(D1301_REFERENCE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(reference["sourceModelPrefix"], "1301")
+        offsets = reference["stateBodyOffsets"]
+        self.assertEqual(offsets["serial"], 14)
+        self.assertEqual(offsets["postSleepAudio"], 144)
+        self.assertEqual(offsets["autoSwitchOnceAsleep"], 148)
+
+        commands = {
+            "postSleepKeep": bytes.fromhex("01 01"),
+            "postSleepPause": bytes.fromhex("01 01"),
+            "postSleepPlayLocal": bytes.fromhex("01 01"),
+            "autoStopTimer": bytes.fromhex("15 03"),
+            "alarmsEmpty": bytes.fromhex("14 01"),
+            "alarmsFilled": bytes.fromhex("14 01"),
+            "alarmsChanged": bytes.fromhex("14 01"),
+        }
+        frames = {}
+        for name, expected in commands.items():
+            entry = reference["inbound"][name]
+            path = ROOT / "core/data" / entry["file"]
+            self.assertTrue(path.is_file(), entry["file"])
+            self.assertEqual(
+                hashlib.sha256(path.read_bytes()).hexdigest(),
+                entry["sha256"],
+                entry["file"],
+            )
+            frame = path.read_bytes()
+            frames[name] = self.assert_frame(frame.hex(" "), bytes.fromhex("09 ff"), expected)
+
+        for name, expected in (
+            ("postSleepKeep", (1, 0)),
+            ("postSleepPause", (0, 1)),
+            ("postSleepPlayLocal", (1, 1)),
+        ):
+            body = frames[name][9:-1]
+            self.assertEqual(len(body), 150, name)
+            self.assertEqual(
+                body[offsets["serial"]:offsets["serial"] + 16],
+                b"1301TEST00000000",
+                name,
+            )
+            self.assertEqual(
+                (
+                    body[offsets["postSleepAudio"]],
+                    body[offsets["autoSwitchOnceAsleep"]],
+                ),
+                expected,
+                name,
+            )
+            self.assertEqual(body[offsets["firmware"]:offsets["firmware"] + 5], b"01.91")
+
+        timer = frames["autoStopTimer"][9:-1]
+        self.assertEqual(timer, bytes.fromhex("00 1e 00 01 3c 00 00 00"))
+        self.assertEqual(len(frames["alarmsEmpty"][9:-1]), 0)
+        filled = frames["alarmsFilled"][9:-1]
+        changed = frames["alarmsChanged"][9:-1]
+        self.assertEqual(len(filled), 16)
+        self.assertEqual(len(changed), 16)
+        self.assertEqual(filled[8:], changed[8:], "only the first alarm changes")
+        self.assertNotEqual(filled[:8], changed[:8])
+        self.assertEqual(len(reference["alarmRecords"]["filled"]), 2)
+        self.assertEqual(len(reference["alarmRecords"]["changed"]), 2)
+
+        captured = {
+            "setAlarm": bytes.fromhex("14 81"),
+            "updateAlarm": bytes.fromhex("14 81"),
+            "deleteAlarm": bytes.fromhex("14 82"),
+        }
+        for name, command in captured.items():
+            self.assert_frame(reference["outbound"][name], bytes.fromhex("08 ee"), command)
+
+    def test_d1301_core_coverage_uses_the_published_fixtures(self):
+        matrix = json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
+        model = next(entry for entry in matrix["models"] if entry["code"] == "D1301")
+        coverage = {entry["operation"]: entry for entry in model["coreCoverage"]}
+        for operation in (
+            "identifyFromState",
+            "readState",
+            "readAutoStopTimer",
+            "readAlarms",
+            "writePostSleepAudio",
+            "writeAutoSwitchOnceAsleep",
+            "writeListeningMode",
+            "writeDefaultListeningMode",
+            "writeNoiseCanceling",
+        ):
+            with self.subTest(operation=operation):
+                self.assertIn(operation, coverage)
+        for entry in coverage.values():
+            for field in ("inbound", "outbound", "test"):
+                reference = entry.get(field)
+                if reference:
+                    self.assert_source_exists(reference)
+        self.assertIn("d1301-sleep-reference", model["variants"])
+        self.assertEqual(model["reference"], "core/data/d1301-sleep-reference.json")

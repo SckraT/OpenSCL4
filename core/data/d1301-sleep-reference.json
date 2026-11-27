@@ -1,0 +1,117 @@
+{
+    "legacyRevision": "1791f1518581271f95247272c05903b50df616b0",
+    "evidence": "legacyFixture",
+    "sourceModelPrefix": "1301",
+    "derivation": "The D1301 driver tests keep three captured 01 01 sleep states, one 15 03 timer report, two 14 01 alarm list examples and three captured alarm writes: two 14 81 records and one 14 82 delete. Every published inbound frame masks the measured serial at body offsets 14-29 with the synthetic 1301TEST00000000 value, zeroes the unidentified six-byte block at offsets 30-35 and recomputes the checksum. The changed alarm list applies the captured update of slot 0 to the filled list; it is derived, not measured, and keeps the slot ids.",
+    "sources": {
+        "postSleepStates": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs::tests",
+        "autoStopTimer": "lib/src/devices/soundcore/d1301.rs::tests::settings_match_soundcore_app",
+        "alarms": "lib/src/devices/soundcore/d1301.rs::tests::settings_match_soundcore_app",
+        "alarmWrites": "lib/src/devices/soundcore/d1301/packets/outbound.rs::tests",
+        "outboundBuilders": "lib/src/devices/soundcore/d1301/packets/outbound.rs"
+    },
+    "stateBodyOffsets": {
+        "battery": 2,
+        "firmware": 4,
+        "serial": 14,
+        "listeningMode": 65,
+        "defaultListeningMode": 66,
+        "noiseCanceling": 140,
+        "postSleepAudio": 144,
+        "autoSwitchOnceAsleep": 148
+    },
+    "firmwareInExample": "01.91",
+    "inbound": {
+        "postSleepKeep": {
+            "file": "d1301-post-sleep-keep.bin",
+            "sha256": "5e939a0aa6a74bc6a94be04ec3a85d9bde94d8d56be31293786c4ef223426573"
+        },
+        "postSleepPause": {
+            "file": "d1301-post-sleep-pause.bin",
+            "sha256": "101ad13628d666c80449183a23e716e8c08c60aafb9c361d6f4fe777bdb69bc6"
+        },
+        "postSleepPlayLocal": {
+            "file": "d1301-post-sleep-play-local.bin",
+            "sha256": "4e7e88fb85604666c0fd83c1eba70d7ecf822658e988fdd214d1e903560ef3a1"
+        },
+        "autoStopTimer": {
+            "file": "d1301-auto-stop-timer.bin",
+            "sha256": "514c602360d79debaac860ebb0705169af01a123a21610746f0be59d1f4c759c"
+        },
+        "alarmsEmpty": {
+            "file": "d1301-alarms-empty.bin",
+            "sha256": "907e793686160bdc6b132905a88d8faf6c7575c62dd3b6a34cb7ba322f7014a7"
+        },
+        "alarmsFilled": {
+            "file": "d1301-alarms-filled.bin",
+            "sha256": "37b4ec25b5858658c7b507cb490be22d60c823d1077c1a273e8a331f5c751b79"
+        },
+        "alarmsChanged": {
+            "file": "d1301-alarms-changed.bin",
+            "sha256": "d23b25590742cac658b4417a5035dc6cb1bf031ae8f26520cb6b0436906a666e"
+        }
+    },
+    "outbound": {
+        "requestAutoStopTimer": "08 EE 00 00 00 15 03 0A 00 18",
+        "requestAlarms": "08 EE 00 00 00 14 01 0A 00 15",
+        "setPostSleepAudioPause": "08 EE 00 00 00 15 85 0E 00 FF FF FF 00 9B",
+        "setPostSleepAudioPlayLocal": "08 EE 00 00 00 15 85 0E 00 FF FF FF 01 9C",
+        "setAutoSwitchOnceAsleepOff": "08 EE 00 00 00 15 8F 0B 00 00 A5",
+        "setAutoSwitchOnceAsleepOn": "08 EE 00 00 00 15 8F 0B 00 01 A6",
+        "setListeningModeLocal": "08 EE 00 00 00 01 A9 0B 00 01 AC",
+        "setDefaultListeningModeLocal": "08 EE 00 00 00 10 95 0B 00 01 A7",
+        "setNoiseCancelingOn": "08 EE 00 00 00 06 87 0B 00 01 8F",
+        "setNoiseCancelingOff": "08 EE 00 00 00 06 87 0B 00 00 8E",
+        "setAlarm": "08 EE 00 00 00 14 81 12 00 01 01 30 02 82 00 32 0A 8F",
+        "updateAlarm": "08 EE 00 00 00 14 81 12 00 00 01 D1 01 00 01 32 05 A8",
+        "deleteAlarm": "08 EE 00 00 00 14 82 0B 00 01 98"
+    },
+    "alarmRecords": {
+        "filled": [
+            {
+                "id": 0,
+                "enabled": false,
+                "time": 405,
+                "repeat": "00",
+                "tune": 3,
+                "volume": 50,
+                "snooze": 10
+            },
+            {
+                "id": 1,
+                "enabled": true,
+                "time": 661,
+                "repeat": "80",
+                "tune": 0,
+                "volume": 75,
+                "snooze": 5
+            }
+        ],
+        "changed": [
+            {
+                "id": 0,
+                "enabled": true,
+                "time": 465,
+                "repeat": "00",
+                "tune": 1,
+                "volume": 50,
+                "snooze": 5
+            },
+            {
+                "id": 1,
+                "enabled": true,
+                "time": 661,
+                "repeat": "80",
+                "tune": 0,
+                "volume": 75,
+                "snooze": 5
+            }
+        ]
+    },
+    "timerExample": {
+        "enabled": false,
+        "durationMinutes": 30,
+        "unknown": 1,
+        "timeLeftSeconds": 60
+    }
+}

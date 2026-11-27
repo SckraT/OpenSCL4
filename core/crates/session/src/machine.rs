@@ -2,7 +2,7 @@ use std::{collections::VecDeque, time::Duration};
 
 use openscl4_models::{
     AutoPowerOff, DeviceState, EqualizerSetting, IDENTITY_COMMAND, ModelDriver, ModelError,
-    STATE_COMMAND, registry,
+    STATE_COMMAND, d1301::D1301Setting, registry,
 };
 use openscl4_protocol::{Direction, Frame};
 use openscl4_transport::TransportError;
@@ -420,6 +420,25 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetListeningMode(mode) => {
+                    (WriteTarget::D1301(D1301Setting::ListeningMode(mode)), None)
+                }
+                SessionCommand::SetDefaultListeningMode(mode) => (
+                    WriteTarget::D1301(D1301Setting::DefaultListeningMode(mode)),
+                    None,
+                ),
+                SessionCommand::SetNoiseCanceling(enabled) => (
+                    WriteTarget::D1301(D1301Setting::NoiseCanceling(enabled)),
+                    None,
+                ),
+                SessionCommand::SetPostSleepAudio(action) => (
+                    WriteTarget::D1301(D1301Setting::PostSleepAudio(action)),
+                    None,
+                ),
+                SessionCommand::SetAutoSwitchOnceAsleep(enabled) => (
+                    WriteTarget::D1301(D1301Setting::AutoSwitchOnceAsleep(enabled)),
+                    None,
+                ),
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -923,6 +942,10 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
             observed: state.auto_power_off,
+        },
+        WriteTarget::D1301(requested) => CommandError::SleepSettingMismatch {
+            requested,
+            observed: requested.observed(state),
         },
     }
 }
