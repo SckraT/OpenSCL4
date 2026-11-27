@@ -91,6 +91,54 @@ mod tests {
     }
 
     #[test]
+    fn clears_the_q20i_q11i_and_life2neo_state_serials() {
+        let fixtures = [
+            (
+                ModelDriver::A3004,
+                include_bytes!("../../../data/a3004-pilot-state.bin").as_slice(),
+                7,
+            ),
+            (
+                ModelDriver::A3005,
+                include_bytes!("../../../data/a3005-pilot-state.bin").as_slice(),
+                7,
+            ),
+            (
+                ModelDriver::A3033,
+                include_bytes!("../../../data/a3033-pilot-state.bin").as_slice(),
+                17,
+            ),
+        ];
+        let mut tap = WireTap::new(NonZeroUsize::new(fixtures.len()).unwrap());
+        tap.set_enabled(true);
+        for (model, fixture, start) in fixtures {
+            let frame = decode(fixture);
+            tap.record_frame(Duration::ZERO, Some(model), &frame);
+            let record = tap.records().last().unwrap();
+            assert_eq!(
+                record.metadata.outcome,
+                CaptureOutcome::Sanitized,
+                "{} state is sanitized",
+                model.code()
+            );
+            assert_eq!(record.metadata.length, frame.body.len() + 10);
+            let sanitized = decode(record.frame_bytes().unwrap());
+            let mut expected = frame.body.to_vec();
+            expected[start..start + 16].fill(0);
+            assert_eq!(
+                sanitized.body.as_ref(),
+                expected,
+                "{} serial is cleared",
+                model.code()
+            );
+        }
+        let debug = format!("{tap:?}");
+        for serial in ["3004TEST00000000", "3005TEST00000000", "3033TEST00000000"] {
+            assert!(!debug.contains(serial), "the export keeps no serial");
+        }
+    }
+
+    #[test]
     fn clears_identity_serial_and_outbound_mac_addresses() {
         let mut tap = WireTap::new(NonZeroUsize::new(4).unwrap());
         tap.set_enabled(true);

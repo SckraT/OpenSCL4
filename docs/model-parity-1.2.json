@@ -1615,6 +1615,92 @@
         },
         {
             "models": [
+                "A3004"
+            ],
+            "operation": "sound_modes",
+            "inbound": "lib/src/devices/soundcore/a3004/packets/state_update_packet.rs::A3004StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs::SetSoundModes",
+            "evidence": "captureReplay",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The capture does not show a different noise-canceling or transparency control value; the model exposes only the ambient mode and its unexposed control bytes are echoed unchanged."
+        },
+        {
+            "models": [
+                "A3004"
+            ],
+            "operation": "equalizer_with_drc",
+            "inbound": "lib/src/devices/soundcore/a3004/packets/state_update_packet.rs::A3004StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs::set_equalizer_with_drc",
+            "evidence": "captureReplay",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The captured state carries the signature curve; the write itself is verified against the legacy DRC builder, not a captured write."
+        },
+        {
+            "models": [
+                "A3005"
+            ],
+            "operation": "equalizer_with_drc",
+            "inbound": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs::set_equalizer_with_drc",
+            "evidence": "captureReplay",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The captured state carries the signature curve; the write itself is verified against the legacy DRC builder, not a captured write."
+        },
+        {
+            "models": [
+                "A3005"
+            ],
+            "operation": "auto_power_off",
+            "inbound": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
+            "command": "0186",
+            "evidence": "captureReplay",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The captured state carries the enabled flag and duration index; the timer write itself is verified against the legacy builder."
+        },
+        {
+            "models": [
+                "A3005"
+            ],
+            "operation": "dual_connections",
+            "inbound": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::set_dual_connections_enabled",
+            "command": "0B84",
+            "evidence": "captureReplay",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "The 0B 84 enable write is confirmed by the state flag. No A3005 peer-list capture exists, and the 0B 01 peer read and per-peer commands are not ported."
+        },
+        {
+            "models": [
+                "A3033"
+            ],
+            "operation": "equalizer",
+            "inbound": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::A3033StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs::set_equalizer",
+            "evidence": "protocolFixture",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "No A3033 capture exists; the outbound frame is the fixed legacy set_equalizer example and the state body is derived."
+        },
+        {
+            "models": [
+                "A3033"
+            ],
+            "operation": "wearing_detection",
+            "inbound": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::A3033StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::WearingDetection",
+            "evidence": "protocolFixture",
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "result": "confirmedReadBack",
+            "missing": "No A3033 capture exists; the flag write is verified against the derived state and the legacy flag command."
+        },
+        {
+            "models": [
                 "D1301"
             ],
             "operation": "d1301_auto_stop_timer",
@@ -1672,7 +1758,46 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3004/packets/state_update_packet.rs::A3004StateUpdatePacket"
+            "variants": [
+                "a3004-a3005-a3033-reference",
+                "unparsedStateTail"
+            ],
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/a3004/packets/state_update_packet.rs::A3004StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "captureReplay",
+                    "firmware": "00.26",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "00.26",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "captureReplay",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_the_a3004_ambient_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "captureReplay",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_the_a3004_ten_band_curve_from_preset_replies"
+                }
+            ]
         },
         {
             "code": "A3005",
@@ -1712,7 +1837,57 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket"
+            "variants": [
+                "a3004-a3005-a3033-reference",
+                "capturedAutoPowerOffExtras",
+                "dualConnectionsPeersPending",
+                "unparsedStateTail"
+            ],
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/a3005/packets/inbound/state_update.rs::A3005StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "captureReplay",
+                    "firmware": "01.21",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "captureReplay",
+                    "firmware": "01.21",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "captureReplay",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_the_a3005_ten_band_curve_from_preset_replies"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "captureReplay",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_a3005_auto_power_off_and_dual_connections"
+                },
+                {
+                    "operation": "writeDualConnections",
+                    "core": "captureReplay",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/dual_connections.rs::set_dual_connections_enabled",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_a3005_auto_power_off_and_dual_connections",
+                    "missing": "Peer-list reads (0B 01) and per-peer commands are not ported; no A3005 peer capture exists."
+                }
+            ]
         },
         {
             "code": "A3027",
@@ -2042,7 +2217,47 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::A3033StateUpdatePacket"
+            "variants": [
+                "a3004-a3005-a3033-reference",
+                "derivedStateLayout",
+                "batteryPairOrderLegacyInconsistency"
+            ],
+            "reference": "core/data/a3004-a3005-a3033-reference.json",
+            "stateParserSource": "lib/src/devices/soundcore/a3033/packets/state_update_packet.rs::A3033StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "protocolFixture",
+                    "firmware": "01.21",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "protocolFixture",
+                    "firmware": "01.21",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_a3033_wearing_detection_and_the_eight_band_curve"
+                },
+                {
+                    "operation": "writeWearingDetection",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs::WearingDetection",
+                    "inbound": "core/data/a3004-a3005-a3033-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3004_a3005_a3033.rs::confirms_a3033_wearing_detection_and_the_eight_band_curve"
+                }
+            ]
         },
         {
             "code": "A3035",

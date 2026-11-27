@@ -3,11 +3,14 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use openscl4_models::{
-    A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
-    A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3004_EQUALIZER_BANDS, A3004_EQUALIZER_PRESET, A3004_SOUND_MODE_FIELDS, A3005_AUTO_POWER_OFF,
+    A3005_DUAL_CONNECTIONS, A3005_EQUALIZER_BANDS, A3005_EQUALIZER_PRESET, A3028_AUTO_POWER_OFF,
+    A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
+    A3028_SOUND_MODE_FIELDS, A3033_EQUALIZER_BANDS, A3033_EQUALIZER_PRESET,
+    A3033_WEARING_DETECTION, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, DUAL_CONNECTIONS_COMMAND,
+    EQUALIZER_COMMAND, EQUALIZER_WITH_DRC_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND,
+    ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND, SoundModeWrite, WEARING_DETECTION_COMMAND,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -15,6 +18,9 @@ use openscl4_transport::{ConnectTarget, TransportError, TransportLink, Transport
 use crate::{MockDisconnect, WithoutSoundModeAck, open_link};
 
 const IDENTITY_REPLY: &[u8] = b"\x09\xff\0\0\x01\x01\x05\x24\x0004.2904.29A3954DEMO0000000\xb8";
+const A3004_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3004-pilot-state.bin");
+const A3005_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3005-pilot-state.bin");
+const A3033_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3033-pilot-state.bin");
 const A3949_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3949-pilot-state.bin");
 const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-off.bin"),
@@ -48,7 +54,8 @@ const A3029_STATE_BODY: &[u8] = &[
 /// ambient and battery alert prompt tones. The matrix lists this block as
 /// derived from the known layout, not a separate capture.
 const AUTO_POWER_OFF_EXTRA_FIELDS: [u8; 7] = [0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01];
-const DUAL_CONNECTIONS_COMMAND: [u8; 2] = [0x0b, 0x01];
+/// The dual-connections device-list read; the write uses the models command.
+const PEER_LIST_COMMAND: [u8; 2] = [0x0b, 0x01];
 const SOUND_MODE_ACK: &[u8] = b"\x09\xff\0\0\x01\x06\x81\x0a\0\x9a";
 
 /// A virtual Soundcore Liberty 4 Pro with per-connection sound-mode state.
@@ -120,6 +127,57 @@ impl TransportProvider for WithoutEqualizerWrite {
 
 /// A virtual P20i with a gaming-mode flag backed by measured responses.
 pub struct VirtualA3949;
+
+/// A virtual Q20i that answers state reads from the captured reference.
+pub struct VirtualA3004;
+
+/// A virtual Q11i that answers state reads from the captured reference.
+pub struct VirtualA3005;
+
+/// A virtual Life 2 Neo that answers state reads from the derived reference.
+pub struct VirtualA3033;
+
+fn single_battery_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3004 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(single_battery_link(ModelDriver::A3004))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3005 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(single_battery_link(ModelDriver::A3005))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3033 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(single_battery_link(ModelDriver::A3033))
+    }
+}
 
 /// A virtual A3028 that answers state reads from the family reference.
 pub struct VirtualA3028;
@@ -332,7 +390,7 @@ impl DeviceResponder {
                     replies.extend_from_slice(&state);
                 }
             } else if self.model == ModelDriver::A3954
-                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && frame.command == PEER_LIST_COMMAND
                 && frame.body.is_empty()
             {
                 // The fixture has no stored peers. Reply with one empty list segment.
@@ -358,6 +416,20 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3033
+                && frame.command == A3028_EQUALIZER_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, A3028_EQUALIZER_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if matches!(self.model, ModelDriver::A3004 | ModelDriver::A3005)
+                && frame.command == EQUALIZER_WITH_DRC_COMMAND
+                && self.options.acknowledge_writes
+                && self.equalizer_applied(&frame.body)
+                && let Ok(ack) = encode_frame(Direction::Inbound, EQUALIZER_WITH_DRC_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
             } else if self.model == ModelDriver::A3949
                 && frame.command == GAMING_MODE_COMMAND
                 && self.apply_gaming_mode(&frame.body)
@@ -365,11 +437,27 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, GAMING_MODE_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
-            } else if matches!(self.model, ModelDriver::A3028 | ModelDriver::A3029)
-                && frame.command == AUTO_POWER_OFF_COMMAND
+            } else if matches!(
+                self.model,
+                ModelDriver::A3005 | ModelDriver::A3028 | ModelDriver::A3029
+            ) && frame.command == AUTO_POWER_OFF_COMMAND
                 && self.auto_power_off_applied(&frame.body)
                 && self.options.acknowledge_writes
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3033
+                && frame.command == WEARING_DETECTION_COMMAND
+                && self.wearing_detection_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, WEARING_DETECTION_COMMAND, &[])
+            {
+                replies.extend_from_slice(&ack);
+            } else if self.model == ModelDriver::A3005
+                && frame.command == DUAL_CONNECTIONS_COMMAND
+                && self.dual_connections_applied(&frame.body)
+                && self.options.acknowledge_writes
+                && let Ok(ack) = encode_frame(Direction::Inbound, DUAL_CONNECTIONS_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
             }
@@ -402,14 +490,19 @@ impl DeviceResponder {
                 state[A3062_SOUND_MODE_FIELDS].copy_from_slice(&captured[A3062_SOUND_MODE_FIELDS]);
                 true
             }
-            ModelDriver::A3028 | ModelDriver::A3029 => {
-                let [_mode @ 0..=2, _nc @ 0..=3, _transparency @ 0..=1, _custom] = body else {
+            ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3004 => {
+                let [_mode @ 0..=2, _nc, _transparency, _custom] = body else {
                     return false;
                 };
-                state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
+                let fields = if self.model == ModelDriver::A3004 {
+                    A3004_SOUND_MODE_FIELDS
+                } else {
+                    A3028_SOUND_MODE_FIELDS
+                };
+                state[fields].copy_from_slice(body);
                 true
             }
-            ModelDriver::A3949 => false,
+            ModelDriver::A3005 | ModelDriver::A3033 | ModelDriver::A3949 => false,
         }
     }
 
@@ -439,20 +532,69 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
+            ModelDriver::A3033 => {
+                // The plain eight-band write is the preset followed by the bands.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(2..10)) else {
+                    return false;
+                };
+                state[A3033_EQUALIZER_PRESET].copy_from_slice(preset);
+                state[A3033_EQUALIZER_BANDS].copy_from_slice(bands);
+                true
+            }
+            ModelDriver::A3004 | ModelDriver::A3005 => {
+                // The write is the preset, the ten bands and then the DRC block;
+                // only the requested curve is applied to the state.
+                let (Some(preset), Some(bands)) = (body.get(0..2), body.get(2..12)) else {
+                    return false;
+                };
+                let (preset_offsets, band_offsets) = if self.model == ModelDriver::A3004 {
+                    (A3004_EQUALIZER_PRESET, A3004_EQUALIZER_BANDS)
+                } else {
+                    (A3005_EQUALIZER_PRESET, A3005_EQUALIZER_BANDS)
+                };
+                state[preset_offsets].copy_from_slice(preset);
+                state[band_offsets].copy_from_slice(bands);
+                true
+            }
             ModelDriver::A3949 | ModelDriver::A3954 => false,
         }
     }
 
-    /// Applies an auto power off write only when the state carries extra fields.
+    /// Applies an auto power off write only when the state carries the fields.
     fn auto_power_off_applied(&self, body: &[u8]) -> bool {
         let [_enabled @ 0..=1, _duration] = body else {
             return false;
         };
         let mut state = self.state.lock().expect("virtual state lock");
-        let Some(value) = state.get_mut(A3028_AUTO_POWER_OFF) else {
+        let offsets = if self.model == ModelDriver::A3005 {
+            A3005_AUTO_POWER_OFF
+        } else {
+            A3028_AUTO_POWER_OFF
+        };
+        let Some(value) = state.get_mut(offsets) else {
             return false;
         };
         value.copy_from_slice(body);
+        true
+    }
+
+    /// Applies a wearing-detection write to the model's flag.
+    fn wearing_detection_applied(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3033_WEARING_DETECTION] = *enabled;
+        true
+    }
+
+    /// Applies a dual-connections write to the model's enabled flag.
+    fn dual_connections_applied(&self, body: &[u8]) -> bool {
+        let [enabled @ 0..=1] = body else {
+            return false;
+        };
+        let mut state = self.state.lock().expect("virtual state lock");
+        state[A3005_DUAL_CONNECTIONS] = *enabled;
         true
     }
 }
@@ -538,8 +680,11 @@ impl ReadOnlyResponder {
 
 fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
     let bytes = match model {
+        ModelDriver::A3004 => fixture_body(model, A3004_STATE_REPLY),
+        ModelDriver::A3005 => fixture_body(model, A3005_STATE_REPLY),
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
+        ModelDriver::A3033 => fixture_body(model, A3033_STATE_REPLY),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),

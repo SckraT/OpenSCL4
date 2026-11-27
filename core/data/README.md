@@ -157,6 +157,69 @@ signature curve is
 **No physical A3028 or A3029 capture exists** for these sessions; the virtual
 transport replays the reference bodies with their checksums recomputed.
 
+## A3004, A3005 and A3033 state references
+
+[a3004-a3005-a3033-reference.json](a3004-a3005-a3033-reference.json) records the
+state bodies and write frames for the Q20i (A3004), Q11i (A3005) and Life 2 Neo
+(A3033) at the legacy revision above. The reference carries the full state body,
+the outbound frames and the expected read-back frames for every operation. All
+published frames replace the device serial with the synthetic model-prefixed
+ASCII value `3004TEST00000000`, `3005TEST00000000` or `3033TEST00000000` at the
+parser's serial offsets and recalculate the checksum. The A3004 capture carried a
+MAC-derived serial; no real serial or MAC remains.
+
+| Fixture                                                | Source                                                       | SHA-256                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [a3004-pilot-state.bin](a3004-pilot-state.bin)         | captured Q20i state in `tools/soundcore-device-faker/devices/a3004.toml` | `1627262a78d6f2fe37b5769f5da5351efc9b932662b0e9965618c61b3d1f06a4` |
+| [a3005-pilot-state.bin](a3005-pilot-state.bin)         | captured example in `lib/src/devices/soundcore/a3005.rs::matches_soundcore_app` | `1645021f2bf9c8ce44d068f0ba491dcb15bb681abb3db8d9aca788ba22c820eb` |
+| [a3033-pilot-state.bin](a3033-pilot-state.bin)         | derived from the legacy serializer                           | `636b097acc75a5626fa3612de4812ecbc6321d2ac22699cdfc44ecc72a1d5f66` |
+
+The A3004 body is 61 bytes and the legacy parser consumes a 39-byte prefix: a
+single battery at 0, firmware `00.26` at 2–6, the 16-byte serial at 7–22, the
+ten-band equalizer preset at 23–24 with its bands at 25–34, and the four
+sound-mode bytes at 35–38. The remaining 22 bytes are preserved verbatim and are
+not interpreted; the legacy driver ignores them as well. The ambient mode at 35
+is `NoiseCanceling`; the model exposes no noise-canceling or transparency
+submode, so the captured control bytes 36–38 (`3F 02 FF`) are echoed unchanged
+on a `06 81` ambient-mode write.
+
+The A3005 body is 55 bytes and the legacy parser consumes a 48-byte prefix: a
+single battery at 0 on the ten-step scale with a one-step offset (raw `7` is
+`80%`), firmware `01.21` at 2–6, the 16-byte serial at 7–22, the equalizer at
+23–34, six unknown bytes, the dual-connections enabled flag at 41, four unknown
+bytes and the auto power off flag and duration index at 46–47. The remaining
+seven bytes are preserved verbatim and are not interpreted; the legacy driver
+ignores them as well. The captured state has dual connections enabled and auto
+power off enabled at duration index 1 (`60m` in the half-hour table). The
+two-point enable/disable flag is written with `0B 84` and confirmed by the state
+flag; the `0B 01` peer list is **not captured for this model** and is not ported,
+so no peer address or name is published.
+
+No A3033 capture exists. Its 34-byte body is derived from the legacy serializer:
+a single battery at 0 on the five-step scale, the eight-band equalizer preset at
+2–3 with its bands at 4–11, firmware `01.21` at 12–16, the 16-byte serial at
+17–32 and the wearing-detection flag at 33. The legacy serializer writes the
+battery pair as charging-then-level while its parser reads level-then-charging;
+the published body follows the parser, which is the path real device responses
+take. The reference firmware `01.21` and the signature curve are synthetic.
+
+The A3004 and A3005 equalizer writes use `02 83` and carry the ten-band curve
+followed by a ten-band DRC block. The block is the legacy
+`VolumeAdjustments::apply_drc` transform: for the legacy DRC test curve
+`-60, 60, 23, 120, 22, -120, -4, 16, 0, -120` its first eight bytes are the
+legacy test values `6D 86 70 88 7B 66 7E 79`, and the transform appends the
+fixed defaults `78 00` for the last two bands. The write body is
+`FE FE 3C B4 8F F0 8E 00 74 88 78 00 6D 86 70 88 7B 66 7E 79 78 00`.
+The A3033 equalizer write uses the plain eight-band `02 81` builder; the
+reference frame `08 EE 00 00 00 02 81 14 00 FE FE 3C B4 8F A0 8E B4 74 88 E6`
+is the fixed example from the legacy `set_equalizer` tests.
+
+The session tests replay these bodies on the virtual transport and compare both
+the outbound write and the read-back response for the ambient mode, the
+equalizer and the model-specific flags. **None of the three models has a
+physical run recorded**; the reference bodies are replayed with their checksums
+recomputed.
+
 ## A3949 pilot state
 
 [a3949-pilot-state.bin](a3949-pilot-state.bin) is a 98-byte `01 01` state response

@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = ROOT / "docs/model-parity-1.2.json"
 REFERENCE_PATH = ROOT / "core/data/a3028-a3029-mode-reference.json"
+Q20I_Q11I_LIFE2NEO_PATH = ROOT / "core/data/a3004-a3005-a3033-reference.json"
 
 
 class ModelParityTest(unittest.TestCase):
@@ -101,10 +102,54 @@ class ModelParityTest(unittest.TestCase):
                 self.assertEqual(initial[mode_offset + 1:], noise_canceling[mode_offset + 1:])
         self.assertEqual(set(reference["inbound"]), {"A3028", "A3029"})
 
+    def test_a3004_a3005_a3033_reference_frames(self):
+        reference = json.loads(Q20I_Q11I_LIFE2NEO_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(set(reference["models"]), {"A3004", "A3005", "A3033"})
+        expected_lengths = {"A3004": 61, "A3005": 55, "A3033": 34}
+        for code, model in reference["models"].items():
+            with self.subTest(model=code):
+                offsets = model["stateBodyOffsets"]
+                body = bytes.fromhex(model["stateBody"])
+                self.assertEqual(len(body), expected_lengths[code])
+                self.assertEqual(len(body), len(bytes.fromhex(model["inbound"]["initial"])) - 10)
+                for name, hex_frame in model["inbound"].items():
+                    frame = self.assert_frame(
+                        hex_frame, bytes.fromhex("09 ff"), bytes.fromhex("01 01")
+                    )
+                    frame_body = frame[9:-1]
+                    serial = frame_body[offsets["serial"]:offsets["serial"] + 16]
+                    self.assertEqual(
+                        serial, f"{code[1:]}TEST00000000".encode("ascii"), name
+                    )
+                    if name == "initial":
+                        self.assertEqual(frame_body, body)
+                if code == "A3004":
+                    self.assertEqual(len(body), offsets["soundModes"] + 4 + 22)
+                if code == "A3005":
+                    self.assertEqual(len(body), offsets["autoPowerOff"] + 2 + 7)
+                for name, hex_frame in model["outbound"].items():
+                    self.assert_frame(hex_frame, bytes.fromhex("08 ee"), None)
+        drc = reference["drc"]
+        self.assert_frame(
+            drc["outboundFrame"], bytes.fromhex("08 ee"), bytes.fromhex("02 83")
+        )
+        self.assertEqual(
+            bytes.fromhex(drc["writeBody"]),
+            bytes.fromhex(drc["outboundFrame"])[9:-1],
+        )
+        self.assertEqual(
+            bytes.fromhex(reference["models"]["A3033"]["outbound"]["writeEqualizer"]),
+            bytes.fromhex(
+                "08 EE 00 00 00 02 81 14 00 FE FE 3C B4 8F A0 8E B4 74 88 E6"
+            ),
+            "the Life 2 Neo equalizer frame stays the legacy set_equalizer example",
+        )
+
     def assert_frame(self, hex_frame, prefix, command):
         frame = bytes.fromhex(hex_frame)
         self.assertEqual(frame[:2], prefix)
-        self.assertEqual(frame[5:7], command)
+        if command is not None:
+            self.assertEqual(frame[5:7], command)
         self.assertEqual(int.from_bytes(frame[7:9], "little"), len(frame))
         self.assertEqual(frame[-1], sum(frame[:-1]) & 0xff)
         return frame

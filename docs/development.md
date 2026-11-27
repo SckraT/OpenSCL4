@@ -58,6 +58,20 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The Q20i (A3004), Q11i (A3005) and Life 2 Neo (A3033) pilots read the reference
+states in [`core/data`](../core/data/README.md#a3004-a3005-and-a3033-state-references).
+The Q20i reports firmware 00.26, one device battery at 80% and noise canceling;
+add `--cycle-mode` to switch it to normal and back. The Q11i reports firmware
+01.21, 80% and the dual-connections flag. The Life 2 Neo reports firmware 01.21,
+80% and the wearing-detection flag. Every write is confirmed by a fresh state
+response.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3004
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3005
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3033
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

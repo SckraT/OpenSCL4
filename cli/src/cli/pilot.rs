@@ -5,8 +5,8 @@ use openscl4_session::{
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3004, VirtualA3005, VirtualA3028, VirtualA3029, VirtualA3033, VirtualA3062,
+    VirtualA3949, VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -25,8 +25,11 @@ pub async fn handle(
             Some("unknown-identity") => SessionRunner::start(VirtualUnknownIdentity, target),
             Some("incompatible-state") => SessionRunner::start(VirtualIncompatibleA3954, target),
             _ => match mock_model {
+                ModelDriver::A3004 => SessionRunner::start(VirtualA3004, target),
+                ModelDriver::A3005 => SessionRunner::start(VirtualA3005, target),
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
+                ModelDriver::A3033 => SessionRunner::start(VirtualA3033, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
@@ -112,7 +115,7 @@ fn mode_cycle_commands(initial: DeviceState) -> anyhow::Result<(SessionCommand, 
         ));
     }
     let Some(original_mode) = initial.sound_mode else {
-        anyhow::bail!("device model is read-only in the pilot");
+        anyhow::bail!("the pilot has no sound mode or gaming mode to cycle for this model");
     };
     let target = match original_mode {
         SoundMode::NoiseCanceling | SoundMode::Transparency => SoundModeSetting::NORMAL,
@@ -168,7 +171,12 @@ fn unidentified_json(state: UnidentifiedState) -> Value {
 
 fn snapshot_json(device: DeviceState) -> Value {
     let (firmware, battery) = match device.model {
-        ModelDriver::A3028 | ModelDriver::A3029 | ModelDriver::A3062 => (
+        ModelDriver::A3004
+        | ModelDriver::A3005
+        | ModelDriver::A3028
+        | ModelDriver::A3029
+        | ModelDriver::A3033
+        | ModelDriver::A3062 => (
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
@@ -199,6 +207,12 @@ fn snapshot_json(device: DeviceState) -> Value {
     }
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
+    }
+    if let Some(enabled) = device.wearing_detection {
+        snapshot["wearingDetection"] = json!(enabled);
+    }
+    if let Some(enabled) = device.dual_connections {
+        snapshot["dualConnections"] = json!(enabled);
     }
     snapshot
 }

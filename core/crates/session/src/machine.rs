@@ -420,6 +420,12 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetWearingDetection(enabled) => {
+                    (WriteTarget::WearingDetection(enabled), None)
+                }
+                SessionCommand::SetDualConnections(enabled) => {
+                    (WriteTarget::DualConnections(enabled), None)
+                }
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -923,6 +929,14 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
             observed: state.auto_power_off,
+        },
+        WriteTarget::WearingDetection(requested) => CommandError::WearingDetectionMismatch {
+            requested,
+            observed: state.wearing_detection,
+        },
+        WriteTarget::DualConnections(requested) => CommandError::DualConnectionsMismatch {
+            requested,
+            observed: state.dual_connections,
         },
     }
 }
