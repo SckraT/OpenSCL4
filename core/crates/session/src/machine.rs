@@ -420,6 +420,10 @@ impl SessionMachine {
                 SessionCommand::SetAutoPowerOff(setting) => {
                     (WriteTarget::AutoPowerOff(setting), None)
                 }
+                SessionCommand::SetButtonsEnabled(enabled) => {
+                    (WriteTarget::ButtonsEnabled(enabled), None)
+                }
+                SessionCommand::SetLdac(enabled) => (WriteTarget::Ldac(enabled), None),
                 SessionCommand::ApplyQuickPreset(preset) => match preset.first_field() {
                     Some((target, rest)) => (target, Some(rest)),
                     None => {
@@ -923,6 +927,14 @@ fn write_failure(write: ActiveWrite, state: DeviceState) -> CommandError {
         WriteTarget::AutoPowerOff(requested) => CommandError::AutoPowerOffMismatch {
             requested,
             observed: state.auto_power_off,
+        },
+        WriteTarget::ButtonsEnabled(requested) => CommandError::ButtonsEnabledMismatch {
+            requested,
+            observed: state.paired.and_then(|paired| paired.buttons_enabled),
+        },
+        WriteTarget::Ldac(requested) => CommandError::LdacMismatch {
+            requested,
+            observed: state.paired.and_then(|paired| paired.ldac),
         },
     }
 }

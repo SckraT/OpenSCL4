@@ -58,6 +58,24 @@ cargo run --locked -p openscq30-cli -- pilot --mock-model A3028
 cargo run --locked -p openscq30-cli -- pilot --mock-model A3029
 ```
 
+The C30i, AeroClip, V20i and C50i pilots read the paired reference states in
+[`core/data`](../core/data/README.md#a3330-a3388-a3876-and-d1101-paired-state-references).
+They report both earbud batteries, the case battery where the model has one,
+the two firmware versions, the TWS side, the decoded equalizer and the
+model-specific flags: touch tone and low battery prompt for the C30i and
+AeroClip; lights, volume balance, voice prompt, auto power off and gaming mode
+for the V20i; LDAC, button controls and auto power off for the C50i. Add
+`--cycle-mode` on the V20i to switch gaming mode and restore it, each result
+confirmed by a fresh state response. The other three have no writable mode in
+the pilot and report the state only.
+
+```sh
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3330
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3388
+cargo run --locked -p openscq30-cli -- pilot --mock-model A3876 --cycle-mode
+cargo run --locked -p openscq30-cli -- pilot --mock-model D1101
+```
+
 The P20i pilot reports both earbud batteries, firmware versions and gaming mode
 from a captured A3949 state response. Add `--cycle-mode` to switch gaming mode
 and restore its original value. Each result requires a fresh state response.

@@ -1,14 +1,18 @@
 //! Selection of the measured model drivers supported by the pilot.
 
-use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949};
+use crate::{ModelDriver, ModelError, RedactedSerial, a3028, a3062, a3949, dual_with_peers};
 
 /// Models implemented by the new session.
-pub const DRIVERS: [ModelDriver; 5] = [
+pub const DRIVERS: [ModelDriver; 9] = [
     ModelDriver::A3028,
     ModelDriver::A3029,
     ModelDriver::A3062,
+    ModelDriver::A3330,
+    ModelDriver::A3388,
+    ModelDriver::A3876,
     ModelDriver::A3949,
     ModelDriver::A3954,
+    ModelDriver::D1101,
 ];
 
 /// Finds a registered driver by its stable model code.
@@ -35,6 +39,9 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
             _ => Err(ModelError::UnknownModel),
         };
     }
+    if let Some(model) = dual_with_peers::identify_state(body) {
+        return Ok(model);
+    }
     match a3062::state_serial(body).and_then(|serial| from_serial(&serial)) {
         Ok(ModelDriver::A3062) => Ok(ModelDriver::A3062),
         _ if a3949::state_serial(body)
@@ -42,8 +49,7 @@ pub fn identify_state(body: &[u8]) -> Result<ModelDriver, ModelError> {
         {
             Ok(ModelDriver::A3949)
         }
-        Ok(_) => Err(ModelError::UnknownModel),
-        Err(error) => Err(error),
+        Ok(_) | Err(_) => Err(ModelError::UnknownModel),
     }
 }
 

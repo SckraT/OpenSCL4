@@ -7,6 +7,7 @@ use std::fmt;
 mod a3028;
 mod a3062;
 mod a3949;
+mod dual_with_peers;
 pub mod registry;
 
 pub use a3028::{
@@ -15,6 +16,7 @@ pub use a3028::{
 };
 pub use a3062::{A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET, A3062_SOUND_MODE_FIELDS};
 pub use a3949::A3949_GAMING_MODE;
+pub use dual_with_peers::{PairedLayout, layout as paired_layout};
 
 /// Probe for the firmware versions and the device identifier.
 pub const IDENTITY_COMMAND: [u8; 2] = [0x01, 0x05];
@@ -34,6 +36,12 @@ pub const GAMING_MODE_COMMAND: [u8; 2] = [0x01, 0x87];
 /// Write the auto power off value of a model that reports its extra fields.
 pub const AUTO_POWER_OFF_COMMAND: [u8; 2] = [0x01, 0x86];
 
+/// Write the LDAC flag of a model that reports it in its state.
+pub const LDAC_COMMAND: [u8; 2] = [0x01, 0xFF];
+
+/// Write the inverted "disable all buttons" flag of a model that reports it.
+pub const BUTTONS_ENABLED_COMMAND: [u8; 2] = [0x10, 0x94];
+
 const A3954_STATE_LENGTH: usize = 165;
 const A3954_CASE_BATTERY: usize = 37;
 const A3954_SOUND_MODE: usize = 125;
@@ -47,10 +55,18 @@ pub enum ModelDriver {
     A3029,
     /// Soundcore Space One Pro.
     A3062,
+    /// Soundcore C30i (A3330).
+    A3330,
+    /// Soundcore AeroClip (A3388).
+    A3388,
+    /// Soundcore V20i (A3876).
+    A3876,
     /// Soundcore P20i, P25i and R50i.
     A3949,
     /// Soundcore Liberty 4 Pro.
     A3954,
+    /// Soundcore C50i (D1101).
+    D1101,
 }
 
 impl ModelDriver {
@@ -64,9 +80,26 @@ impl ModelDriver {
         Capabilities {
             positioned_sound_mode_write: matches!(self, Self::A3954),
             ambient_sound_mode_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            equalizer_write: matches!(self, Self::A3028 | Self::A3029 | Self::A3062),
-            gaming_mode_write: matches!(self, Self::A3949),
-            auto_power_off_write: matches!(self, Self::A3028 | Self::A3029),
+            equalizer_write: matches!(
+                self,
+                Self::A3028
+                    | Self::A3029
+                    | Self::A3062
+                    | Self::A3330
+                    | Self::A3388
+                    | Self::A3876
+                    | Self::D1101
+            ),
+            gaming_mode_write: matches!(self, Self::A3876 | Self::A3949),
+            auto_power_off_write: matches!(
+                self,
+                Self::A3028 | Self::A3029 | Self::A3876 | Self::D1101
+            ),
+            buttons_enabled_write: matches!(self, Self::A3330 | Self::A3388 | Self::D1101),
+            ldac_write: matches!(self, Self::D1101),
+            case_battery: matches!(self, Self::A3330 | Self::A3388 | Self::A3954),
+            colorful_lights: matches!(self, Self::A3876),
+            volume_balance: matches!(self, Self::A3876),
         }
     }
 
@@ -76,8 +109,12 @@ impl ModelDriver {
             Self::A3028 => "A3028",
             Self::A3029 => "A3029",
             Self::A3062 => "A3062",
+            Self::A3330 => "A3330",
+            Self::A3388 => "A3388",
+            Self::A3876 => "A3876",
             Self::A3949 => "A3949",
             Self::A3954 => "A3954",
+            Self::D1101 => "D1101",
         }
     }
 
@@ -90,7 +127,7 @@ impl ModelDriver {
     pub const fn equalizer_bands(self) -> usize {
         match self {
             Self::A3028 | Self::A3029 => a3028::EQUALIZER_BAND_COUNT,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_BANDS,
+            _ => EQUALIZER_BANDS,
         }
     }
 
@@ -98,7 +135,9 @@ impl ModelDriver {
     pub const fn equalizer_command(self) -> [u8; 2] {
         match self {
             Self::A3028 | Self::A3029 => a3028::A3028_EQUALIZER_COMMAND,
-            Self::A3062 | Self::A3949 | Self::A3954 => EQUALIZER_COMMAND,
+            Self::A3330 | Self::A3388 | Self::A3876 => [0x02, 0x83],
+            Self::D1101 => [0x02, 0x81],
+            _ => EQUALIZER_COMMAND,
         }
     }
 
@@ -113,11 +152,15 @@ impl ModelDriver {
 
     /// Decodes the state response for the selected model.
     pub fn decode_state(self, body: &[u8]) -> Result<DeviceState, ModelError> {
+        if dual_with_peers::layout(self).is_some() {
+            return dual_with_peers::decode_state(self, body);
+        }
         match self {
             Self::A3028 | Self::A3029 => a3028::decode_state(self, body),
             Self::A3062 => a3062::decode_state(body),
             Self::A3949 => a3949::decode_state(body),
             Self::A3954 => self.decode_a3954_state(body),
+            _ => Err(ModelError::UnknownModel),
         }
     }
 
@@ -128,11 +171,19 @@ impl ModelDriver {
     /// A3954 state also needs the measured serial evidence used for redaction,
     /// and the A3028 family needs the serial that selects its public code.
     pub fn decode_confirmed_state(self, body: &[u8]) -> Option<DeviceState> {
+        if let Some(layout) = dual_with_peers::layout(self) {
+            return (body.len() == layout.state_length
+                && dual_with_peers::state_serial(body)
+                    .is_ok_and(|serial| serial.identifies(self)))
+            .then(|| self.decode_state(body).ok())
+            .flatten();
+        }
         let layout_matches = match self {
             Self::A3028 | Self::A3029 => a3028::has_confirmed_layout(body),
             Self::A3062 => body.len() == a3062::STATE_LENGTH,
             Self::A3949 => body.len() == a3949::STATE_LENGTH,
             Self::A3954 => body.len() == A3954_STATE_LENGTH,
+            _ => false,
         };
         let serial_matches = match self {
             Self::A3028 | Self::A3029 => {
@@ -140,6 +191,7 @@ impl ModelDriver {
             }
             Self::A3954 => a3954_state_serial_is_recognized(body),
             Self::A3062 | Self::A3949 => true,
+            _ => false,
         };
         (layout_matches && serial_matches)
             .then(|| self.decode_state(body).ok())
@@ -172,6 +224,7 @@ impl ModelDriver {
             auto_power_off: None,
             firmware_left: FirmwareVersion::parse(&body[6..11])?,
             firmware_right: FirmwareVersion::parse(&body[11..16])?,
+            paired: None,
         })
     }
 
@@ -185,10 +238,14 @@ impl ModelDriver {
         setting: EqualizerSetting,
         state: &[u8],
     ) -> Result<Vec<u8>, ModelError> {
+        if dual_with_peers::layout(self).is_some() {
+            return dual_with_peers::equalizer_write_body(self, setting);
+        }
         match self {
             Self::A3028 | Self::A3029 => a3028::equalizer_write_body(setting, state),
             Self::A3062 => a3062::equalizer_write_body(setting, state),
             Self::A3949 | Self::A3954 => Err(ModelError::InvalidEqualizerWrite),
+            _ => Err(ModelError::InvalidEqualizerWrite),
         }
     }
 }
@@ -206,6 +263,129 @@ pub struct Capabilities {
     pub gaming_mode_write: bool,
     /// The session can confirm writes of the auto power off value.
     pub auto_power_off_write: bool,
+    /// The session can confirm writes of the buttons-enabled flag.
+    pub buttons_enabled_write: bool,
+    /// The session can confirm writes of the LDAC flag.
+    pub ldac_write: bool,
+    /// The state reports a charging-case battery level.
+    pub case_battery: bool,
+    /// The state reports the colorful-light settings.
+    pub colorful_lights: bool,
+    /// The state reports a volume balance value.
+    pub volume_balance: bool,
+}
+
+/// The side of the pair that hosts the current connection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HostDevice {
+    /// The left earbud.
+    Left,
+    /// The right earbud.
+    Right,
+}
+
+impl HostDevice {
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Left => "Left",
+            Self::Right => "Right",
+        }
+    }
+}
+
+/// The measured TWS status of a dualWithPeers state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TwsStatus {
+    /// Whether the earbuds are connected to each other.
+    pub connected: bool,
+    /// The side that hosts the connection.
+    pub host: HostDevice,
+}
+
+/// Colorful-light mode of a model that reports the light settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ColorfulLightsMode {
+    /// A steady light.
+    LightOn,
+    /// A breathing effect.
+    Breathing,
+    /// A flashing effect.
+    Flash,
+    /// The light follows the music.
+    MusicFollows,
+}
+
+impl ColorfulLightsMode {
+    /// Decodes a measured mode byte; an unrecognized byte reports the default
+    /// steady light rather than failing the whole state.
+    fn decode(byte: u8) -> Self {
+        match byte {
+            1 => Self::Breathing,
+            2 => Self::Flash,
+            3 => Self::MusicFollows,
+            _ => Self::LightOn,
+        }
+    }
+
+    /// Returns the stable CLI identifier.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::LightOn => "LightOn",
+            Self::Breathing => "Breathing",
+            Self::Flash => "Flash",
+            Self::MusicFollows => "MusicFollows",
+        }
+    }
+}
+
+/// Color reported by the colorful-light settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RgbColor {
+    /// Red channel.
+    pub red: u8,
+    /// Green channel.
+    pub green: u8,
+    /// Blue channel.
+    pub blue: u8,
+}
+
+/// Colorful-light settings reported by the A3876 state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ColorfulLights {
+    /// Whether the lights are enabled.
+    pub enabled: bool,
+    /// Brightness on the model's one-to-ten scale.
+    pub brightness: u8,
+    /// Inactivity period before the lights turn off, in minutes.
+    pub auto_lights_off_minutes: u8,
+    /// Selected light mode.
+    pub mode: ColorfulLightsMode,
+    /// Selected color.
+    pub color: RgbColor,
+}
+
+/// Read-only settings reported by the dualWithPeers state layouts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PairedState {
+    /// TWS connection status.
+    pub tws: TwsStatus,
+    /// Whether the button controls are enabled, when the model reports them.
+    pub buttons_enabled: Option<bool>,
+    /// Whether LDAC is enabled, when the model reports the flag.
+    pub ldac: Option<bool>,
+    /// Colorful-light settings, when the model reports them.
+    pub colorful_lights: Option<ColorfulLights>,
+    /// Volume balance, when the model reports it.
+    pub volume_balance: Option<i8>,
+    /// Low battery prompt, when the model reports it.
+    pub low_battery_prompt: Option<bool>,
+    /// Touch tone, when the model reports it.
+    pub touch_tone: Option<bool>,
+    /// Voice prompt, when the model reports it.
+    pub voice_prompt: Option<bool>,
+    /// Whether multipoint connections are enabled, when the model reports it.
+    pub dual_connections_enabled: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,6 +424,8 @@ pub struct DeviceState {
     pub firmware_left: Option<FirmwareVersion>,
     /// Right earbud firmware, if reported.
     pub firmware_right: Option<FirmwareVersion>,
+    /// Read-only paired-model settings, when the model reports them.
+    pub paired: Option<PairedState>,
 }
 
 impl DeviceState {
@@ -330,6 +512,31 @@ impl DeviceState {
             ),
         };
         Ok(AutoPowerOffWrite { body, expected })
+    }
+
+    /// Builds the inverted buttons-enabled write of a paired model.
+    ///
+    /// The legacy setting is inverted: the wire flag disables all buttons.
+    pub fn buttons_enabled_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().buttons_enabled_write
+            || self
+                .paired
+                .and_then(|paired| paired.buttons_enabled)
+                .is_none()
+        {
+            return Err(ModelError::InvalidButtonsEnabledWrite);
+        }
+        Ok([u8::from(!enabled)])
+    }
+
+    /// Builds the LDAC flag write of a model that reports the flag in its state.
+    pub fn ldac_write(self, enabled: bool) -> Result<[u8; 1], ModelError> {
+        if !self.model.capabilities().ldac_write
+            || self.paired.and_then(|paired| paired.ldac).is_none()
+        {
+            return Err(ModelError::InvalidLdacWrite);
+        }
+        Ok([u8::from(enabled)])
     }
 }
 
@@ -622,6 +829,15 @@ pub enum ModelError {
     /// The device does not report a writable auto power off value.
     #[error("unsupported device auto power off write")]
     InvalidAutoPowerOffWrite,
+    /// The device does not report a writable buttons-enabled flag.
+    #[error("unsupported device buttons write")]
+    InvalidButtonsEnabledWrite,
+    /// The device does not report a writable LDAC flag.
+    #[error("unsupported device LDAC write")]
+    InvalidLdacWrite,
+    /// A state field carries an unrecognized value.
+    #[error("invalid device state value")]
+    InvalidStateValue,
     /// A firmware string does not follow the reported version format.
     #[error("invalid device firmware version")]
     InvalidFirmware,

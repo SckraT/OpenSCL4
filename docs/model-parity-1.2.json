@@ -1637,6 +1637,142 @@
             "reference": "lib/src/devices/soundcore/d1301/packets/inbound/state_update.rs",
             "result": "parityPending",
             "missing": "Replay the captured PostSleepAudio variants with the three FF timer sentinels in the outgoing body and verify the selected action."
+        },
+        {
+            "models": [
+                "A3330"
+            ],
+            "operation": "equalizer_with_drc",
+            "inbound": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3388"
+            ],
+            "operation": "a3388_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3388/packets/outbound.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3876"
+            ],
+            "operation": "a3876_equalizer",
+            "inbound": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/a3876/packets/outbound.rs",
+            "command": "0283",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "D1101"
+            ],
+            "operation": "equalizer",
+            "inbound": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+            "command": "0281",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3876"
+            ],
+            "operation": "gaming_mode",
+            "inbound": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "0187",
+            "evidence": "legacyFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3876"
+            ],
+            "operation": "auto_power_off",
+            "availability": "The state carries the auto power off flag and duration index; the model table is 10, 20, 30 and 60 minutes.",
+            "availabilitySource": "lib/src/devices/soundcore/a3876.rs",
+            "inbound": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "D1101"
+            ],
+            "operation": "auto_power_off",
+            "availability": "The state carries the auto power off flag and duration index; the model table is 30, 60, 90 and 120 minutes.",
+            "availabilitySource": "lib/src/devices/soundcore/d1101.rs",
+            "inbound": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+            "command": "0186",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "D1101"
+            ],
+            "operation": "ldac",
+            "inbound": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "01FF",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3330"
+            ],
+            "operation": "disable_all_buttons",
+            "inbound": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "1094",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "A3388"
+            ],
+            "operation": "disable_all_buttons",
+            "inbound": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "1094",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
+        },
+        {
+            "models": [
+                "D1101"
+            ],
+            "operation": "disable_all_buttons",
+            "inbound": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+            "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+            "command": "1094",
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/dual_with_peers.rs",
+            "result": "confirmedReadBack"
         }
     ],
     "models": [
@@ -2379,7 +2515,56 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket",
+            "reference": "core/data/README.md",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "04.27",
+                    "outbound": "core/data/a3330-paired-state.bin",
+                    "inbound": "core/data/a3330-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3330-paired-state.bin",
+                    "inbound": "core/data/a3330-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readCaseBattery",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3330-paired-state.bin",
+                    "inbound": "core/data/a3330-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer_with_drc.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_the_paired_equalizer_writes"
+                },
+                {
+                    "operation": "writeButtonsEnabled",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_button_controls_on_the_c30i_and_aeroclip"
+                },
+                {
+                    "operation": "readButtonConfiguration",
+                    "core": "legacy",
+                    "outbound": "lib/src/devices/soundcore/a3330.rs",
+                    "inbound": "lib/src/devices/soundcore/a3330/packets/inbound/state_update.rs::A3330StateUpdatePacket",
+                    "result": "parityPending",
+                    "missing": "The session has no button-configuration command; the fixture keeps the gesture block and the reset remains legacy-only."
+                }
+            ]
         },
         {
             "code": "A3388",
@@ -2437,7 +2622,56 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket",
+            "reference": "core/data/README.md",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.49",
+                    "outbound": "core/data/a3388-paired-state.bin",
+                    "inbound": "core/data/a3388-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3388-paired-state.bin",
+                    "inbound": "core/data/a3388-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readCaseBattery",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3388-paired-state.bin",
+                    "inbound": "core/data/a3388-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3388/packets/outbound.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_the_paired_equalizer_writes"
+                },
+                {
+                    "operation": "writeButtonsEnabled",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_button_controls_on_the_c30i_and_aeroclip"
+                },
+                {
+                    "operation": "readButtonConfiguration",
+                    "core": "legacy",
+                    "outbound": "lib/src/devices/soundcore/a3388.rs",
+                    "inbound": "lib/src/devices/soundcore/a3388/packets/inbound/state_update.rs::A3388StateUpdatePacket",
+                    "result": "parityPending",
+                    "missing": "The session has no button-configuration command; the fixture keeps the gesture block and the reset remains legacy-only."
+                }
+            ]
         },
         {
             "code": "A3876",
@@ -2505,7 +2739,71 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket",
+            "reference": "core/data/README.md",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "03.15",
+                    "outbound": "core/data/a3876-paired-state.bin",
+                    "inbound": "core/data/a3876-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3876-paired-state.bin",
+                    "inbound": "core/data/a3876-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readColorfulLights",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3876-paired-state.bin",
+                    "inbound": "core/data/a3876-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readVolumeBalance",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3876-paired-state.bin",
+                    "inbound": "core/data/a3876-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/a3876/packets/outbound.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_the_paired_equalizer_writes"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_gaming_mode_and_auto_power_off_on_the_v20i"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_gaming_mode_and_auto_power_off_on_the_v20i"
+                },
+                {
+                    "operation": "readButtonConfiguration",
+                    "core": "legacy",
+                    "outbound": "lib/src/devices/soundcore/a3876.rs",
+                    "inbound": "lib/src/devices/soundcore/a3876/packets/inbound/state_update.rs::A3876StateUpdatePacket",
+                    "result": "parityPending",
+                    "missing": "The session has no button-configuration command; the fixture keeps the gesture block and the reset remains legacy-only."
+                }
+            ]
         },
         {
             "code": "A3909",
@@ -4063,7 +4361,72 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+            "reference": "core/data/README.md",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.28",
+                    "outbound": "core/data/d1101-paired-state.bin",
+                    "inbound": "core/data/d1101-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/d1101-paired-state.bin",
+                    "inbound": "core/data/d1101-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readLdac",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/d1101-paired-state.bin",
+                    "inbound": "core/data/d1101-paired-state.bin",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_the_paired_equalizer_writes"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_ldac_and_button_controls_on_the_c50i"
+                },
+                {
+                    "operation": "writeLdac",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_ldac_and_button_controls_on_the_c50i"
+                },
+                {
+                    "operation": "writeButtonsEnabled",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/flag.rs",
+                    "inbound": "core/crates/session/tests/dual_with_peers.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_with_peers.rs::confirms_ldac_and_button_controls_on_the_c50i"
+                },
+                {
+                    "operation": "readButtonConfiguration",
+                    "core": "legacy",
+                    "outbound": "lib/src/devices/soundcore/d1101.rs",
+                    "inbound": "lib/src/devices/soundcore/d1101/packets/inbound/state_update.rs::D1101StateUpdatePacket",
+                    "result": "parityPending",
+                    "missing": "The session has no button-configuration command; the fixture keeps the gesture block and the reset remains legacy-only."
+                }
+            ]
         },
         {
             "code": "D1202",

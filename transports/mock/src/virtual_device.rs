@@ -5,9 +5,9 @@ use bytes::{Bytes, BytesMut};
 use openscl4_models::{
     A3028_AUTO_POWER_OFF, A3028_EQUALIZER_BANDS, A3028_EQUALIZER_COMMAND, A3028_EQUALIZER_PRESET,
     A3028_SOUND_MODE_FIELDS, A3062_EQUALIZER_BANDS, A3062_EQUALIZER_PRESET,
-    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, EQUALIZER_COMMAND,
-    GAMING_MODE_COMMAND, IDENTITY_COMMAND, ModelDriver, SOUND_MODE_COMMAND, STATE_COMMAND,
-    SoundModeWrite,
+    A3062_SOUND_MODE_FIELDS, A3949_GAMING_MODE, AUTO_POWER_OFF_COMMAND, BUTTONS_ENABLED_COMMAND,
+    EQUALIZER_COMMAND, GAMING_MODE_COMMAND, IDENTITY_COMMAND, LDAC_COMMAND, ModelDriver,
+    SOUND_MODE_COMMAND, STATE_COMMAND, SoundModeWrite, paired_layout,
 };
 use openscl4_protocol::{Direction, FrameDecoder, encode_frame};
 use openscl4_transport::{ConnectTarget, TransportError, TransportLink, TransportProvider};
@@ -21,6 +21,13 @@ const A3949_GAMING_REPLIES: [&[u8]; 2] = [
     include_bytes!("../../../core/data/a3949-gaming-on.bin"),
 ];
 const A3954_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3954-pilot-state.bin");
+/// Measured dualWithPeers state responses from `core/data`. The serial at body
+/// offsets 14–29 is replaced with the synthetic model-specific value and the
+/// checksum is recomputed; see `core/data/README.md`.
+const A3330_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3330-paired-state.bin");
+const A3388_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3388-paired-state.bin");
+const A3876_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/a3876-paired-state.bin");
+const D1101_STATE_REPLY: &[u8] = include_bytes!("../../../core/data/d1101-paired-state.bin");
 const A3062_MODE_REPLIES: [&[u8]; 3] = [
     include_bytes!("../../../core/data/a3062-mode-noise-canceling.bin"),
     include_bytes!("../../../core/data/a3062-mode-transparency.bin"),
@@ -209,6 +216,71 @@ impl TransportProvider for VirtualA3949 {
     }
 }
 
+/// A virtual C30i that answers state reads from the paired reference.
+pub struct VirtualA3330;
+
+/// A virtual AeroClip that answers state reads from the paired reference.
+pub struct VirtualA3388;
+
+/// A virtual V20i that answers state reads from the paired reference.
+pub struct VirtualA3876;
+
+/// A virtual C50i that answers state reads from the paired reference.
+pub struct VirtualD1101;
+
+/// Opens a virtual paired-model link with identity and state replies.
+fn paired_link(model: ModelDriver) -> Box<dyn TransportLink> {
+    open_link(Some(Responder::with_state(
+        model,
+        ResponderOptions {
+            acknowledge_writes: true,
+            apply_equalizer: true,
+        },
+        initial_state(model),
+    )))
+    .0
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3330 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(paired_link(ModelDriver::A3330))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3388 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(paired_link(ModelDriver::A3388))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualA3876 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(paired_link(ModelDriver::A3876))
+    }
+}
+
+#[async_trait]
+impl TransportProvider for VirtualD1101 {
+    async fn connect(
+        &self,
+        _target: &ConnectTarget,
+    ) -> Result<Box<dyn TransportLink>, TransportError> {
+        Ok(paired_link(ModelDriver::D1101))
+    }
+}
+
 /// A virtual device whose state is shared by successive connections.
 pub struct SharedVirtualSoundcoreDevice {
     state: Arc<Mutex<Vec<u8>>>,
@@ -323,8 +395,9 @@ impl DeviceResponder {
                 continue;
             }
             if frame.command == IDENTITY_COMMAND && frame.body.is_empty() {
-                if self.model == ModelDriver::A3954 {
-                    replies.extend_from_slice(IDENTITY_REPLY);
+                let state = self.state.lock().expect("virtual state lock");
+                if let Some(identity) = identity_reply(self.model, &state) {
+                    replies.extend_from_slice(&identity);
                 }
             } else if frame.command == self.model.state_command() && frame.body.is_empty() {
                 let state = self.state.lock().expect("virtual state lock");
@@ -372,6 +445,8 @@ impl DeviceResponder {
                 && let Ok(ack) = encode_frame(Direction::Inbound, AUTO_POWER_OFF_COMMAND, &[])
             {
                 replies.extend_from_slice(&ack);
+            } else if let Some(ack) = self.paired_write_ack(&frame) {
+                replies.extend_from_slice(&ack);
             }
         }
         (!replies.is_empty()).then(|| replies.freeze())
@@ -409,8 +484,71 @@ impl DeviceResponder {
                 state[A3028_SOUND_MODE_FIELDS].copy_from_slice(body);
                 true
             }
-            ModelDriver::A3949 => false,
+            ModelDriver::A3330
+            | ModelDriver::A3388
+            | ModelDriver::A3876
+            | ModelDriver::D1101
+            | ModelDriver::A3949 => false,
         }
+    }
+
+    /// Applies a write for a paired model and answers it with an empty ACK.
+    ///
+    /// The body formats come from the legacy builders: the equalizer write is
+    /// the preset followed by the curve, the flag writes are one byte, and the
+    /// auto power off write is the enabled flag followed by the duration index.
+    fn paired_write_ack(&self, frame: &openscl4_protocol::Frame) -> Option<Bytes> {
+        let layout = paired_layout(self.model)?;
+        let command = frame.command;
+        let mut state = self.state.lock().expect("virtual state lock");
+        let applied = match command {
+            command if command == self.model.equalizer_command() => {
+                if !self.options.apply_equalizer {
+                    return None;
+                }
+                let preset = frame.body.get(0..2)?;
+                let bands = frame.body.get(2..12)?;
+                state[layout.equalizer_preset.clone()].copy_from_slice(preset);
+                state[layout.equalizer_bands.clone()].copy_from_slice(bands);
+                true
+            }
+            GAMING_MODE_COMMAND => {
+                let offset = layout.gaming_mode?;
+                let [enabled @ 0..=1] = frame.body.as_ref() else {
+                    return None;
+                };
+                state[offset] = *enabled;
+                true
+            }
+            AUTO_POWER_OFF_COMMAND => {
+                let range = layout.auto_power_off?;
+                let [_enabled @ 0..=1, _duration] = frame.body.as_ref() else {
+                    return None;
+                };
+                state[range].copy_from_slice(&frame.body);
+                true
+            }
+            LDAC_COMMAND => {
+                let offset = layout.ldac?;
+                let [enabled @ 0..=1] = frame.body.as_ref() else {
+                    return None;
+                };
+                state[offset] = *enabled;
+                true
+            }
+            BUTTONS_ENABLED_COMMAND => {
+                let offset = layout.buttons_disabled?;
+                let [disabled @ 0..=1] = frame.body.as_ref() else {
+                    return None;
+                };
+                state[offset] = *disabled;
+                true
+            }
+            _ => false,
+        };
+        (applied && self.options.acknowledge_writes)
+            .then(|| encode_frame(Direction::Inbound, command, &[]).ok())
+            .flatten()
     }
 
     /// Applies an equalizer write; a withheld application answers nothing.
@@ -439,7 +577,12 @@ impl DeviceResponder {
                 state[A3028_EQUALIZER_BANDS].copy_from_slice(bands);
                 true
             }
-            ModelDriver::A3949 | ModelDriver::A3954 => false,
+            ModelDriver::A3330
+            | ModelDriver::A3388
+            | ModelDriver::A3876
+            | ModelDriver::D1101
+            | ModelDriver::A3949
+            | ModelDriver::A3954 => false,
         }
     }
 
@@ -541,10 +684,28 @@ fn initial_state(model: ModelDriver) -> Arc<Mutex<Vec<u8>>> {
         ModelDriver::A3028 => A3028_STATE_BODY.to_vec(),
         ModelDriver::A3029 => A3029_STATE_BODY.to_vec(),
         ModelDriver::A3062 => fixture_body(model, A3062_MODE_REPLIES[2]),
+        ModelDriver::A3330 => fixture_body(model, A3330_STATE_REPLY),
+        ModelDriver::A3388 => fixture_body(model, A3388_STATE_REPLY),
+        ModelDriver::A3876 => fixture_body(model, A3876_STATE_REPLY),
         ModelDriver::A3949 => fixture_body(model, A3949_STATE_REPLY),
         ModelDriver::A3954 => fixture_body(model, A3954_STATE_REPLY),
+        ModelDriver::D1101 => fixture_body(model, D1101_STATE_REPLY),
     };
     Arc::new(Mutex::new(bytes))
+}
+
+/// Builds the identity response of a virtual paired model from its state:
+/// the two firmware strings and the synthetic serial.
+fn identity_reply(model: ModelDriver, state: &[u8]) -> Option<Bytes> {
+    if model == ModelDriver::A3954 {
+        return Some(Bytes::from_static(IDENTITY_REPLY));
+    }
+    paired_layout(model)?;
+    let mut body = Vec::with_capacity(26);
+    body.extend_from_slice(state.get(4..9)?);
+    body.extend_from_slice(state.get(9..14)?);
+    body.extend_from_slice(state.get(14..30)?);
+    encode_frame(Direction::Inbound, IDENTITY_COMMAND, &body).ok()
 }
 
 fn fixture_body(model: ModelDriver, bytes: &[u8]) -> Vec<u8> {
