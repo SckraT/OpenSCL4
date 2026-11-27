@@ -1583,8 +1583,8 @@
             "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_sound_modes.rs",
             "evidence": "legacyFixture",
             "reference": "core/data/a3028-a3029-mode-reference.json",
-            "result": "parityPending",
-            "missing": "Replay the reference cycle in the new session. Add a separate outgoing sequence and read-back when changing ANC submode from Normal or Transparency."
+            "result": "confirmedReadBack",
+            "missing": "Changing the ANC submode from Normal or Transparency needs a separate outgoing sequence and read-back."
         },
         {
             "models": [
@@ -1594,10 +1594,9 @@
             "operation": "equalizer",
             "inbound": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket",
             "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
-            "evidence": "legacyFixture",
-            "reference": "core/data/a3028-a3029-mode-reference.json",
-            "result": "parityPending",
-            "missing": "The legacy example supports reading the eight-band curve. Build the write and the before/after replies independently from the legacy builder and layout."
+            "evidence": "protocolFixture",
+            "reference": "core/crates/session/tests/a3028_family.rs",
+            "result": "confirmedReadBack"
         },
         {
             "models": [
@@ -1610,9 +1609,9 @@
             "inbound": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::ExtraFields",
             "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs::SetAutoPowerOff",
             "command": "0186",
-            "evidence": "legacy",
-            "result": "parityPending",
-            "missing": "Derive replies with and without ExtraFields from its known layout and add before/after replies for a supported duration."
+            "evidence": "protocolFixture",
+            "result": "confirmedReadBack",
+            "reference": "core/crates/session/tests/a3028_family.rs"
         },
         {
             "models": [
@@ -1793,7 +1792,48 @@
                 "legacyMultiWriteSoundModes"
             ],
             "reference": "core/data/a3028-a3029-mode-reference.json",
-            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "02.30",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/crates/session/tests/a3028_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_the_family_eight_band_curve_from_preset_replies"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/a3028_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_enable_and_disable_from_preset_extra_field_replies"
+                }
+            ]
         },
         {
             "code": "A3029",
@@ -1836,7 +1876,48 @@
                 "legacyMultiWriteSoundModes"
             ],
             "reference": "core/data/a3028-a3029-mode-reference.json",
-            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3028/packets/state_update_packet.rs::A3028StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "02.30",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedState"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "legacyFixture",
+                    "outbound": "core/data/a3028-a3029-mode-reference.json",
+                    "inbound": "core/data/a3028-a3029-mode-reference.json",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_the_reference_mode_cycle_from_preset_replies"
+                },
+                {
+                    "operation": "writeEqualizer",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_equalizer.rs",
+                    "inbound": "core/crates/session/tests/a3028_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_the_family_eight_band_curve_from_preset_replies"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/a3028_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/a3028_family.rs::confirms_enable_and_disable_from_preset_extra_field_replies"
+                }
+            ]
         },
         {
             "code": "A3030",

@@ -31,7 +31,7 @@ mod tests {
         let identity_request = encode_frame(Direction::Outbound, IDENTITY_COMMAND, &[]).unwrap();
         let mut exchanges = VecDeque::from([
             (identity_request, None),
-            (state_request.clone(), Some(OFF_STATE)),
+            (state_request.clone(), Some(Bytes::from_static(OFF_STATE))),
         ]);
         // At the session's 100 ms poll interval, the changed value first appears
         // on the poll after the corresponding hardware delay (1022 or 1247 ms).
@@ -40,13 +40,13 @@ mod tests {
             (false, DISABLE, ON_STATE, OFF_STATE, 13, 1247),
         ];
         for (_, request, before, after, stale_reads, _) in cycle {
-            exchanges.push_back((state_request.clone(), Some(before)));
-            exchanges.push_back((Bytes::from_static(request), Some(ACK)));
+            exchanges.push_back((state_request.clone(), Some(Bytes::from_static(before))));
+            exchanges.push_back((Bytes::from_static(request), Some(Bytes::from_static(ACK))));
             exchanges.extend(std::iter::repeat_n(
-                (state_request.clone(), Some(before)),
+                (state_request.clone(), Some(Bytes::from_static(before))),
                 stale_reads,
             ));
-            exchanges.push_back((state_request.clone(), Some(after)));
+            exchanges.push_back((state_request.clone(), Some(Bytes::from_static(after))));
         }
 
         let handle = SessionRunner::start(
