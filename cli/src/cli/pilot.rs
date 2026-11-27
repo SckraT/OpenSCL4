@@ -1,12 +1,12 @@
 use openscl4_session::{
-    CommandOutcome, ConnectionState, DeviceState, ModelDriver, SessionCommand, SessionError,
-    SessionHandle, SessionRunner, SoundMode, SoundModeSetting, UnidentifiedReason,
-    UnidentifiedState,
+    AmbientSoundModeCycle, CommandOutcome, ConnectionState, DeviceState, ModelDriver,
+    SessionCommand, SessionError, SessionHandle, SessionRunner, SoundMode, SoundModeCycle,
+    SoundModeSetting, UnidentifiedReason, UnidentifiedState,
 };
 use openscl4_transport::{ConnectTarget, RedactedMac};
 use openscl4_transport_mock::{
-    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3949, VirtualIncompatibleA3954,
-    VirtualSoundcoreDevice, VirtualUnknownIdentity,
+    VirtualA3028, VirtualA3029, VirtualA3062, VirtualA3936, VirtualA3949, VirtualA3952,
+    VirtualA3968, VirtualIncompatibleA3954, VirtualSoundcoreDevice, VirtualUnknownIdentity,
 };
 use serde_json::{Value, json};
 
@@ -28,8 +28,11 @@ pub async fn handle(
                 ModelDriver::A3028 => SessionRunner::start(VirtualA3028, target),
                 ModelDriver::A3029 => SessionRunner::start(VirtualA3029, target),
                 ModelDriver::A3062 => SessionRunner::start(VirtualA3062, target),
+                ModelDriver::A3936 => SessionRunner::start(VirtualA3936, target),
                 ModelDriver::A3949 => SessionRunner::start(VirtualA3949, target),
+                ModelDriver::A3952 => SessionRunner::start(VirtualA3952, target),
                 ModelDriver::A3954 => SessionRunner::start(VirtualSoundcoreDevice, target),
+                ModelDriver::A3968 => SessionRunner::start(VirtualA3968, target),
             },
         },
     };
@@ -172,12 +175,19 @@ fn snapshot_json(device: DeviceState) -> Value {
             json!({"device": device.firmware_device.map(|version| version.to_string())}),
             json!({"devicePercent": device.battery.device}),
         ),
-        ModelDriver::A3949 | ModelDriver::A3954 => {
+        ModelDriver::A3936
+        | ModelDriver::A3949
+        | ModelDriver::A3952
+        | ModelDriver::A3954
+        | ModelDriver::A3968 => {
             let mut battery = json!({
                 "leftPercent": device.battery.left,
                 "rightPercent": device.battery.right,
             });
-            if device.model == ModelDriver::A3954 {
+            if matches!(
+                device.model,
+                ModelDriver::A3936 | ModelDriver::A3952 | ModelDriver::A3954 | ModelDriver::A3968
+            ) {
                 battery["casePercent"] = json!(device.battery.case);
             }
             (
@@ -200,5 +210,37 @@ fn snapshot_json(device: DeviceState) -> Value {
     if let Some(enabled) = device.gaming_mode {
         snapshot["gamingMode"] = json!(enabled);
     }
+    if let Some(tws) = device.tws_status {
+        snapshot["twsStatus"] = json!({
+            "connected": tws.connected,
+            "host": if tws.host_is_left { "Left" } else { "Right" },
+        });
+    }
+    if let Some(cycle) = device.ambient_sound_mode_cycle {
+        snapshot["ambientCycle"] = ambient_cycle_json(cycle);
+    }
     snapshot
+}
+
+fn ambient_cycle_json(cycle: AmbientSoundModeCycle) -> Value {
+    match cycle {
+        AmbientSoundModeCycle::Shared(cycle) => json!({"shared": sound_mode_cycle_json(cycle)}),
+        AmbientSoundModeCycle::Tws {
+            enabled,
+            disconnected,
+        } => json!({
+            "tws": {
+                "enabled": sound_mode_cycle_json(enabled),
+                "disconnected": sound_mode_cycle_json(disconnected),
+            },
+        }),
+    }
+}
+
+fn sound_mode_cycle_json(cycle: SoundModeCycle) -> Value {
+    json!({
+        "noiseCanceling": cycle.noise_canceling,
+        "transparency": cycle.transparency,
+        "normal": cycle.normal,
+    })
 }

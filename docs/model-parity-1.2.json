@@ -2945,7 +2945,51 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3936/packets/state_update_packet.rs::A3936StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3936/packets/state_update_packet.rs::A3936StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "04.19",
+                    "outbound": "core/data/a3936-pilot-state.bin",
+                    "inbound": "core/data/a3936-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/dual_battery_family.rs::identifies_every_registered_dual_battery_code_from_its_state"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "04.19",
+                    "outbound": "core/data/a3936-pilot-state.bin",
+                    "inbound": "core/data/a3936-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::reads_the_recorded_state_of_each_dual_battery_model"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_an_ambient_mode_change_from_an_independent_state_reply"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_the_auto_power_off_pair_from_a_state_reply"
+                },
+                {
+                    "operation": "writeGamingMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/write.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_the_space_a40_gaming_mode_flag_from_a_state_reply"
+                }
+            ]
         },
         {
             "code": "A3939",
@@ -3465,7 +3509,43 @@
                     "resetButtonsToDefault"
                 ]
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3952/packets/inbound/state_update.rs::A3952StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3952/packets/inbound/state_update.rs::A3952StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "04.96",
+                    "outbound": "core/data/a3952-pilot-state.bin",
+                    "inbound": "core/data/a3952-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/dual_battery_family.rs::identifies_every_registered_dual_battery_code_from_its_state"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "04.96",
+                    "outbound": "core/data/a3952-pilot-state.bin",
+                    "inbound": "core/data/a3952-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::reads_the_recorded_state_of_each_dual_battery_model"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_an_ambient_mode_change_from_an_independent_state_reply"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_the_auto_power_off_pair_from_a_state_reply"
+                }
+            ]
         },
         {
             "code": "A3953",
@@ -4004,7 +4084,43 @@
                 ],
                 "actions": []
             },
-            "stateParserSource": "lib/src/devices/soundcore/a3968/packets/inbound/state_update.rs::A3968StateUpdatePacket"
+            "stateParserSource": "lib/src/devices/soundcore/a3968/packets/inbound/state_update.rs::A3968StateUpdatePacket",
+            "coreCoverage": [
+                {
+                    "operation": "identify",
+                    "core": "legacyFixture",
+                    "firmware": "01.65",
+                    "outbound": "core/data/a3968-pilot-state.bin",
+                    "inbound": "core/data/a3968-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/models/tests/dual_battery_family.rs::identifies_every_registered_dual_battery_code_from_its_state"
+                },
+                {
+                    "operation": "readState",
+                    "core": "legacyFixture",
+                    "firmware": "01.65",
+                    "outbound": "core/data/a3968-pilot-state.bin",
+                    "inbound": "core/data/a3968-pilot-state.bin",
+                    "result": "confirmedState",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::reads_the_recorded_state_of_each_dual_battery_model"
+                },
+                {
+                    "operation": "writeAmbientSoundMode",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/modules/sound_modes_v2/state_modifier.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_an_ambient_mode_change_from_an_independent_state_reply"
+                },
+                {
+                    "operation": "writeAutoPowerOff",
+                    "core": "protocolFixture",
+                    "outbound": "lib/src/devices/soundcore/common/packet/outbound/set_auto_power_off.rs",
+                    "inbound": "core/crates/session/tests/dual_battery_family.rs",
+                    "result": "confirmedReadBack",
+                    "test": "core/crates/session/tests/dual_battery_family.rs::confirms_the_auto_power_off_pair_from_a_state_reply"
+                }
+            ]
         },
         {
             "code": "D1101",

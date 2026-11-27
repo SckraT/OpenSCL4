@@ -193,3 +193,52 @@ counted. The device kept reporting the previous mode for four state reads before
 the on write appeared, 1022 ms after the write, and for five reads before the off
 write appeared, 1247 ms after the write. A session test that confirms A3949
 gaming-mode writes by read-back must hold its window past both delays.
+
+## A3936, A3952 and A3968 state references
+
+[a3936-pilot-state.bin](a3936-pilot-state.bin), [a3952-pilot-state.bin](a3952-pilot-state.bin)
+and [a3968-pilot-state.bin](a3968-pilot-state.bin) are 153-, 163- and 153-byte inbound `01 01`
+frames rebuilt from the legacy test vectors at revision
+`7e90bb787a6f7a4f925f1c10a98f48f4b5006413`. No physical capture of the new session exists for
+these models: the bodies are the ones the legacy parsers assert on, not frames measured by this
+pilot.
+
+| Fixture                                        | Legacy source                                                    | State body | Unread tail                     | SHA-256                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------- | ---------- | ------------------------------- | ------------------------------------------------------------------ |
+| [a3936-pilot-state.bin](a3936-pilot-state.bin) | [`a3936.rs`](../../lib/src/devices/soundcore/a3936.rs) `it_parses_settings_correctly` | 143 bytes  | 12 reserved zero bytes          | `77c56dbf998c1c770273eb0514cadace4ba21fb7282904cea463308537f3a162` |
+| [a3952-pilot-state.bin](a3952-pilot-state.bin) | [`a3952.rs`](../../lib/src/devices/soundcore/a3952.rs) `with_packet_from_github_issue_134` | 153 bytes  | 13 bytes the parser does not read | `733df93735def45c77e9260322cb7349bbe3b049cf9ccc92b13b01a900c3903f` |
+| [a3968-pilot-state.bin](a3968-pilot-state.bin) | [`a3968.rs`](../../lib/src/devices/soundcore/a3968.rs) `parses_state_update_packet_from_issue_170` | 143 bytes  | 13 reserved bytes               | `a4eeb3043f7ffe523b3fbacb6626ecc597918a294b4d892903060bd0fb9449fb` |
+
+Each fixture replaces the 16-character serial at body offsets 16–32 with the synthetic
+`3936TEST00000000`, `3952TEST00000000` or `3968TEST00000000` value and recalculates the frame
+checksum. The rest of the body is unchanged. The serial is the only device identifier the vectors
+carry; the legacy tests call them state update packets for these models. The A3952 and A3968 test
+comments cite issues whose current content is not the capture, so this document cites the test
+vectors instead of the issue numbers.
+
+The shared layout starts with a two-byte TWS status, a four-byte dual battery (left level, right
+level, left charging flag, right charging flag), two five-byte firmware versions, the serial, a
+two-channel equalizer configuration, a hear-id block and a six-byte sound-mode block. The fields
+the modular core reads are at these body offsets:
+
+| Field                          | A3936              | A3952              | A3968              |
+| ------------------------------ | ------------------ | ------------------ | ------------------ |
+| TWS status (host, connected)   | 0, 1               | 0, 1               | 0, 1               |
+| Battery levels (left, right)   | 2, 3 (five steps)  | 2, 3 (five steps)  | 2, 3 (five steps)  |
+| Firmware versions              | 6–16               | 6–16               | 6–16               |
+| Serial                         | 16–32              | 16–32              | 16–32              |
+| Equalizer preset and channel 1 | 32–44              | 32–44              | 38–50              |
+| Charging case                  | 124 (ten steps)    | 130 (five steps)   | 37 (five steps)    |
+| Ambient sound mode cycle       | 116 (shared)       | 120 (shared)       | 116 (TWS variant)  |
+| Sound-mode block               | 117–123            | 121–127            | 117–123            |
+| Auto power off pair            | 128–130            | 138–140            | 128–130            |
+| Gaming-mode flag               | 130                | absent             | absent             |
+
+The write bodies come from the legacy builders rather than from a capture. A `06 81` write
+carries the whole six-byte sound-mode block, and a single ambient-mode change keeps every other
+byte as reported; the A3968 writer fixes the block's last byte at `FF`. An `01 86` write carries
+the pair `[enabled, duration index]`; A3936 and A3952 use the half-hour table and A3968 uses the
+ten, twenty, thirty and sixty minute table. An `01 87` write carries the one-byte gaming-mode
+flag. The session waits for an empty acknowledgement of the same command before reading the state
+back; the measured A3062 `06 81` reply has that shape, but no acknowledgement is recorded for
+these three models.
